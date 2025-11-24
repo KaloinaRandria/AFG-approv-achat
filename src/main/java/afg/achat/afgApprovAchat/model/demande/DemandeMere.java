@@ -1,6 +1,5 @@
 package afg.achat.afgApprovAchat.model.demande;
 
-import afg.achat.afgApprovAchat.model.Consommateur;
 import afg.achat.afgApprovAchat.model.util.Adresse;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -20,8 +19,6 @@ public class DemandeMere {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_demande_mere")
     int id;
-    @ManyToOne @JoinColumn(name = "id_consommateur", referencedColumnName = "id_consommateur")
-    Consommateur consommateur;
     @ManyToOne @JoinColumn(name = "id_adresse", referencedColumnName = "id_adresse")
     Adresse adresse;
     @Column(name = "date_demande")
@@ -48,8 +45,7 @@ public class DemandeMere {
     public void setDateSortie(String dateSortie) {
         this.dateSortie = LocalDateTime.parse(dateSortie);
     }
-    public DemandeMere(Consommateur consommateur, Adresse adresse, String dateDemande, String dateSortie, Boolean estValider) {
-        this.setConsommateur(consommateur);
+    public DemandeMere(Adresse adresse, String dateDemande, String dateSortie, Boolean estValider) {
         this.setAdresse(adresse);
         this.setDateDemande(dateDemande);
         this.setDateSortie(dateSortie);
