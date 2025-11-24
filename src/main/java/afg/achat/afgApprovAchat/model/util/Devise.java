@@ -21,9 +21,13 @@ public class Devise {
     @Column(name = "cours_ariary")
     double coursAriary;
 
-    public Devise(String acronyme,String designation, double coursAriary) {
+    public Devise(String acronyme,String designation, String coursAriary) {
         this.setAcronyme(acronyme);
         this.setDesignation(designation);
         this.setCoursAriary(coursAriary);
+    }
+
+    public void setCoursAriary(String coursAriary) {
+        this.coursAriary = Double.parseDouble(coursAriary);
     }
 }
