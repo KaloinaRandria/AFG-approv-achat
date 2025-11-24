@@ -34,4 +34,4 @@ build/
 
 ### propreties ###
 src/main/resources/application.properties
-
+src/main/resources/static
