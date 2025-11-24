@@ -1,4 +1,4 @@
-package afg.achat.afgApprovAchat.model.util;
+package afg.achat.afgApprovAchat.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -11,15 +11,13 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "udm")
-public class Udm {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_udm")
+@Table(name = "famille")
+public class Famille {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_famille")
     int id;
     String description;
-    String acronyme;
 
-    public Udm(String description, String acronyme) {
+    public Famille(String description) {
         this.setDescription(description);
-        this.setAcronyme(acronyme);
     }
 }
