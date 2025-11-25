@@ -20,8 +20,15 @@ public class Utilisateur {
     String mail;
     @ManyToOne @JoinColumn(name = "id_role", referencedColumnName = "id_role")
     Role role;
-    @ManyToOne @JoinColumn(name = "id_superieur", referencedColumnName = "id_utilisateur")
+    @ManyToOne @JoinColumn(name = "id_superieur", referencedColumnName = "id_utilisateur", nullable = true)
     Utilisateur superieurHierarchique;
 
+    public Utilisateur(String nom, String prenom, String mail, Role role, Utilisateur superieurHierarchique) {
+        this.setNom(nom);
+        this.setPrenom(prenom);
+        this.setMail(mail);
+        this.setRole(role);
+        this.setSuperieurHierarchique(superieurHierarchique);
+    }
 
 }
