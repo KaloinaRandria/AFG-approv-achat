@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.model.demande;
 
 import afg.achat.afgApprovAchat.model.util.Adresse;
+import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -19,6 +20,8 @@ public class DemandeMere {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_demande_mere")
     int id;
+    @ManyToOne @JoinColumn(name = "id_demandeur", referencedColumnName = "id_utilisateur")
+    Utilisateur demandeur;
     @ManyToOne @JoinColumn(name = "id_adresse", referencedColumnName = "id_adresse")
     Adresse adresse;
     @Column(name = "date_demande")
