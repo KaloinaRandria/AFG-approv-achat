@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 
 import javax.naming.NamingException;
 import java.util.Collection;
-import java.util.Collections;
 
 
 @Component
