@@ -28,7 +28,7 @@ public class Utilisateur {
         this.setPrenom(prenom);
         this.setMail(mail);
         this.setRole(role);
-        this.setSuperieurHierarchique(superieurHierarchique);
+       
     }
 
 }
