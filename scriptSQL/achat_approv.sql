@@ -30,6 +30,15 @@ create sequence s_code_article
     cache 1;
 
 -- SIMULATION STOCK
+INSERT INTO utilisateur(nom, prenom, mail)
+VALUES ('Randria','Kaloina','kaloina.randriambololona@afgbank.mg');
+
+INSERT INTO role(role)
+VALUES ('ADMIN');
+
+INSERT INTO utilisateur_role(id_utilisateur, id_role)
+VALUES (1, 1);
+
 INSERT INTO fournisseur (nom, mail, contact)
 VALUES ('Fourniline SARL', 'contact@fourniline.mg', '0321234567')
 RETURNING id_fournisseur;
@@ -107,18 +116,18 @@ RETURNING id_bl_mere;
 
 
 INSERT INTO stock_mere (id_bl_mere)
-VALUES (2)
+VALUES (1)
 RETURNING id_stock_mere;
 
 INSERT INTO stock_fille (entree, sortie, id_article, id_stock_mere)
 VALUES
-    (10, 0, 11, 1),  -- Imprimantes
-    (25, 0, 12, 1),  -- Claviers
-    (30, 0, 13, 1),  -- Souris
-    (8,  0, 14, 1),  -- UC Dell
-    (15, 0, 15, 1),  -- Ecrans
-    (5,  0, 16, 1),  -- Routeurs
-    (50, 0, 17, 1);  -- Câbles RJ45
+    (10, 0, 1, 1),  -- Imprimantes
+    (25, 0, 2, 1),  -- Claviers
+    (30, 0, 3, 1),  -- Souris
+    (8,  0, 4, 1),  -- UC Dell
+    (15, 0, 5, 1),  -- Ecrans
+    (5,  0, 6, 1),  -- Routeurs
+    (50, 0, 7, 1);  -- Câbles RJ45
 
 
 INSERT INTO adresse (adresse)
@@ -145,12 +154,12 @@ RETURNING id_stock_mere;
 
 
 INSERT INTO stock_fille (entree, sortie, id_article, id_stock_mere)
-VALUES (0, 2, 11, 2), -- 2 imprimantes sorties
-       (0, 5, 12, 2), -- 5 claviers
-       (0, 3, 13, 2);   -- 3 souris
+VALUES (0, 2, 1, 1), -- 2 imprimantes sorties
+       (0, 5, 2, 1), -- 5 claviers
+       (0, 3, 3, 1);   -- 3 souris
 
 INSERT INTO stock_fille (entree, sortie, id_article, id_stock_mere) VALUES
-                                                                        (0,7,15,2);
+                                                                        (0,7,5,1);
 
 CREATE OR REPLACE VIEW etat_stock AS
 SELECT
