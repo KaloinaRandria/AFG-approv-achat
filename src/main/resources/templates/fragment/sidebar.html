@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="sidebar">
+  <div id="sidebar" class="d-flex flex-column flex-shrink-0 vh-100 position-fixed border-end" style="width: 250px; background-color: #001051; overflow-y: auto;">
+ 
+    <!-- Logo -->
+    <a href="/" class="d-flex align-items-center justify-content-center mb-4 text-decoration-none py-4 border-bottom">
+      <img th:src="@{/img/logo_afg.png}" alt="Logo" height="64">
+    </a>
+ 
+    <!-- Menus RH-->
+    <div class="px-2 mb-2" sec:authorize="hasAnyAuthority('ROLE_RH')">
+	  <a class="nav-link text-white d-flex align-items-center" th:href="@{/rh/dashboard}">
+	    <i class="fas fa-tachometer-alt me-3"></i> Tableau de bord
+	  </a>
+	</div>
+    <div class="accordion accordion-flush px-2" id="sidebarAccordion" sec:authorize="hasAnyAuthority('ROLE_RH')">
+    
+      <div class="accordion-item bg-transparent border-0">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-transparent text-start text-white " type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+            <i class="fas fa-calendar-times me-3"></i>Absences
+          </button>
+        </h2>
+        <div id="collapseThree" class="accordion-collapse" data-bs-parent="#sidebarAccordion">
+          <div class="accordion-body p-0">
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/demande/list}">Mes demandes</a></li>
+             <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/rh/list}">Liste des demandes d'absence</a></li>
+             <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/demande/rm/list}">Liste des repos maladie</a></li>
+             <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/rh/list/interim}">Liste des interims</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="accordion-item bg-transparent border-0">
+        <h2 class="accordion-header">
+          <button  class="accordion-button collapsed bg-transparent text-start text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+            <i class="fas fa-users me-3"></i> Collaborateurs
+          </button>
+        </h2>
+        <div id="collapseOne" class="accordion-collapse" data-bs-parent="#sidebarAccordion">
+          <div class="accordion-body p-0">
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/rh/list_collabo}">Liste des collaborateurs</a></li>
+            </ul>
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/rh/org}">Organigramme AFG BANK MADA</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="accordion-item bg-transparent border-0">
+        <h2 class="accordion-header">
+          <button  class="accordion-button collapsed bg-transparent text-start text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+            <i class="fas fa-cog me-3"></i> Paramètrages
+          </button>
+        </h2>
+        <div id="collapseTwo" class="accordion-collapse" data-bs-parent="#sidebarAccordion">
+          <div class="accordion-body p-0">
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/parametrage/list}">Jours fériés</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+	 <div class="px-2 mb-2" sec:authorize="hasAnyAuthority('ROLE_RH')">
+		  <a class="nav-link text-white d-flex align-items-center" th:href="@{/rh/dashboard}">
+		    <i class="fas fa-file-excel me-3"></i> Extraction
+		  </a>
+	</div>
+	
+	<!-- MENU MANAGER -->
+	 <div class="px-2 mb-2" sec:authorize="hasAnyAuthority('ROLE_Manager')">
+	  <a class="nav-link text-white d-flex align-items-center" th:href="@{/manager/dashboard}">
+	    <i class="fas fa-tachometer-alt me-3"></i> Tableau de bord
+	  </a>
+	</div>
+	<div class="accordion accordion-flush px-2" id="sidebarAccordion" sec:authorize="hasAnyAuthority('ROLE_Manager')">
+    
+      <div class="accordion-item bg-transparent border-0">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-transparent text-start text-white " type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+            <i class="fas fa-calendar-times me-3"></i>Absences
+          </button>
+        </h2>
+        <div id="collapseThree" class="accordion-collapse" data-bs-parent="#sidebarAccordion">
+        	<!-- <div class="accordion-body p-0">
+	            <ul class="nav flex-column">
+	              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/manager/calendrier}">Calendrier des absences</a></li> 
+	            </ul>
+	          </div>  -->
+          <div class="accordion-body p-0">
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/demande/list}">Mes demandes</a></li> 
+            </ul>
+          </div>
+          <div class="accordion-body p-0">
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/manager/all}" th:text="${'Toutes les demandes de la '+#authentication.principal.direction.metier}"></a></li> 
+            </ul>
+          </div>
+        </div>
+        <div id="collapseThree" class="accordion-collapse" data-bs-parent="#sidebarAccordion">
+          <div class="accordion-body p-0">
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/manager/demande_a_valider}">Demandes à valider</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="accordion-item bg-transparent border-0">
+        <h2 class="accordion-header">
+          <button  class="accordion-button collapsed bg-transparent text-start text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+            <i class="fas fa-users me-3"></i> Mes collaborateurs
+          </button>
+        </h2>
+        <div id="collapseOne" class="accordion-collapse" data-bs-parent="#sidebarAccordion">
+          <div class="accordion-body p-0">
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/manager/org}">Liste des collaborateurs</a></li>
+            </ul>
+          </div>
+        </div>
+        
+      </div>
+    </div>	
+	<!-- ----------------------------- -->
+	<!-- MENU COLLABORATEUR -->
+	
+	<div class="px-2 mb-2" sec:authorize="hasAnyAuthority('ROLE_Employe')">
+	  <a class="nav-link text-white d-flex align-items-center" th:href="@{/collaborateur/dashboard}">
+	    <i class="fas fa-tachometer-alt me-3"></i> Tableau de bord
+	  </a>
+	</div>
+	<div class="accordion accordion-flush px-2" id="sidebarAccordion" sec:authorize="hasAnyAuthority('ROLE_Employe')">
+    
+      <div class="accordion-item bg-transparent border-0">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-transparent text-start text-white " type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+            <i class="fas fa-calendar-times me-3"></i>Absences
+          </button>
+        </h2>
+        <div id="collapseThree" class="accordion-collapse" data-bs-parent="#sidebarAccordion">
+          <div class="accordion-body p-0">
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/demande/list}">Mes demandes</a></li> 
+            </ul>
+          </div>
+        </div>
+        <!--<div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#sidebarAccordion">
+          <div class="accordion-body p-0">
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/collaborateur/demande_en_cours}">Demandes en cours</a>
+              </li>
+            </ul>
+          </div>
+        </div> -->
+      </div>
+      
+    </div>	
+	<!-- ---------------------- -->
+	<!-- MENU MANAGER -->
+	 <div class="px-2 mb-2" sec:authorize="hasAnyAuthority('ROLE_Directeur')">
+	  <a class="nav-link text-white d-flex align-items-center" th:href="@{/manager/dashboard}">
+	    <i class="fas fa-tachometer-alt me-3"></i> Tableau de bord
+	  </a>
+	</div>
+	<div class="accordion accordion-flush px-2" id="sidebarAccordion" sec:authorize="hasAnyAuthority('ROLE_Directeur')">
+    
+      <div class="accordion-item bg-transparent border-0">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-transparent text-start text-white " type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+            <i class="fas fa-calendar-times me-3"></i>Absences
+          </button>
+        </h2>
+        <div id="collapseThree" class="accordion-collapse" data-bs-parent="#sidebarAccordion">
+        	<!-- <div class="accordion-body p-0">
+	            <ul class="nav flex-column">
+	              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/manager/calendrier}">Calendrier des absences</a></li> 
+	            </ul>
+	          </div> -->
+          <div class="accordion-body p-0">
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/demande/list}">Mes demandes</a></li> 
+            </ul>
+          </div>
+          <div class="accordion-body p-0">
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/manager/all}" th:text="${'Toutes les demandes de '+#authentication.principal.direction.metier}"></a></li> 
+            </ul>
+          </div>
+        </div>
+        <div id="collapseThree" class="accordion-collapse" data-bs-parent="#sidebarAccordion">
+          <div class="accordion-body p-0">
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/manager/demande_a_valider}">Demandes à valider</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="accordion-item bg-transparent border-0">
+        <h2 class="accordion-header">
+          <button  class="accordion-button collapsed bg-transparent text-start text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+            <i class="fas fa-users me-3"></i> Mes collaborateurs
+          </button>
+        </h2>
+        <div id="collapseOne" class="accordion-collapse" data-bs-parent="#sidebarAccordion">
+          <div class="accordion-body p-0">
+            <ul class="nav flex-column">
+              <li><a class="nav-link ps-4 py-2 link-dark rounded-0 text-white" th:href="@{/manager/org}">Liste des collaborateurs</a></li>
+            </ul>
+          </div>
+        </div>
+        
+      </div>
+    </div>	
+	<!-- ----------------------------- -->
+    <div class="dropdown mt-auto p-3 border-top">
+      <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
+        <img th:if="${#authentication.principal.pdp != null && #authentication.principal.pdp.thumbnail != null}" th:src="'data:image/jpeg;base64,' + ${#authentication.principal.pdp.thumbnail}" alt="Avatar" width="40" height="40" class="rounded-circle me-2">
+        <img th:if="${#authentication.principal.pdp == null || #authentication.principal.pdp.thumbnail == '' }" th:src="@{/img/avatar.png}" alt="Avatar" width="40" height="40" class="rounded-circle me-2">
+        <strong style="max-width: 200px; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"  class="text-white" th:text="${#authentication.principal.prenom + ' ' + #authentication.principal.nom}"></strong>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-end text-small shadow" aria-labelledby="dropdownUser">
+      	<li><a class="dropdown-item" th:href="@{/ma-fiche}">Ma fiche</a></li>
+        <li><a class="dropdown-item" th:href="@{/logout}">Déconnexion</a></li>
+      </ul>
+    </div>
+ 
+  </div>
+</html>
