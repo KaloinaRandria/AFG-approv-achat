@@ -10,3 +10,5 @@ select
 from utilisateur_role
 join public.role r on r.id_role = utilisateur_role.id_role
 join public.utilisateur u on u.id_utilisateur = utilisateur_role.id_utilisateur;
+
+select * from article_id_article_seq;
