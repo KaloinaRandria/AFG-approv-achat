@@ -20,7 +20,7 @@ public class LoginSuccessHandler extends SavedRequestAwareAuthenticationSuccessH
 		HttpSession session = request.getSession(true);
 		String roleCurrentUser = authentication.getAuthorities().iterator().next().getAuthority().trim();
         String redirectURL = request.getContextPath();
-        System.out.println(roleCurrentUser);
+        System.out.println("User Role : " + roleCurrentUser);
         if(roleCurrentUser.equals("ROLE_RH")) {
         	redirectURL = "rh";
         }
