@@ -39,6 +39,6 @@ public class Article {
     }
 
     public void setCodeArticle(IdGenerator idGenerator) {
-        this.codeArticle = idGenerator.generateId("PRD", "article_id_article_seq");
+        this.codeArticle = idGenerator.generateId("PRD", "s_code_article");
     }
 }
