@@ -21,7 +21,8 @@ public class MyAuthenticationProvider implements AuthenticationProvider{
 
 	@Autowired
 	private ActiveDirectory activeDir ; 
-	
+
+    @Autowired
     private UtilisateurService utilisateurService;
 	
 	@Override

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<link rel="icon" th:href="@{/img/favicon.png}" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ACHAT-APPROV     - LOGIN</title>
+	<th:block th:include="fragment/load_css :: load_css"></th:block>
+	<th:block th:include="fragment/font :: font"></th:block>
+</head>
+<body>
+	<div class="vh-100 d-flex justify-content-center align-items-center">
+		<div class="container">
+			<div class="row d-flex justify-content-center">
+				<div class="col-12 col-md-8 col-lg-5">
+					<div class="card bg-white" style="border-radius : 15px">
+						<div class="card-body p-5" style="background-color : #001051; border-radius : 15px">
+						<img th:src="@{/img/logo_afg_email.png}" style="margin-left: auto;margin-right: auto;display: block;">
+							<form class="mb-3 mt-md-4" th:action="@{/login}" method="post">
+							<div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert" th:text="${errorMessage}"></div>
+								<div class="mb-3">
+									<label class="form-label" style="color:white"><strong>Email</strong></label> <input
+										type="text" class="form-control" name="email"
+										placeholder="xxxxxxxx@afgbank.mg" value="" required>
+								</div>
+								<div class="mb-3">
+									<label class="form-label" style="color:white"><strong>Mot de passe</strong></label> <input
+										type="password" class="form-control" name="password"
+										placeholder="*******" value="" required>
+								</div>
+								<br>
+								<div class="col-md-4" style="margin-left: auto;margin-right: auto;display: block;">
+									<div class="d-grid">
+										<button class="btn btn-success btn-sm" type="submit"><i class="fas fa-door-open"></i> Se connecter</button>
+									</div>
+								</div>
+								
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+
+</html>
