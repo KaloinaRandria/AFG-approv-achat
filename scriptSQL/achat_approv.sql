@@ -12,3 +12,13 @@ join public.role r on r.id_role = utilisateur_role.id_role
 join public.utilisateur u on u.id_utilisateur = utilisateur_role.id_utilisateur;
 
 select * from article_id_article_seq;
+
+
+select gsf.id_gisement_stock_fille,
+       gsf.date_mouvement,
+       gsf.quantite_in,
+       gsf.quantite_out,
+       a.designation
+from gisement_stock_fille as gsf
+join public.article a on a.id_article = gsf.id_article;
+
