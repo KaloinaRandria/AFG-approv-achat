@@ -149,7 +149,8 @@ VALUES (0, 2, 11, 2), -- 2 imprimantes sorties
        (0, 5, 12, 2), -- 5 claviers
        (0, 3, 13, 2);   -- 3 souris
 
-
+INSERT INTO stock_fille (entree, sortie, id_article, id_stock_mere) VALUES
+                                                                        (0,7,15,2);
 
 CREATE OR REPLACE VIEW etat_stock AS
 SELECT
@@ -167,7 +168,10 @@ FROM article a
 GROUP BY a.id_article
 ORDER BY a.id_article;
 
-select * from stock_fille;
+
 select * from stock_mere;
+select * from stock_fille;
+
 select * from article;
 select * from demande_mere;
+select * from bon_livraison_mere;
