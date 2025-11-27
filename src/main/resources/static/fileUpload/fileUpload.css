@@ -1,0 +1,63 @@
+:root {
+    --file-container-bg:  #eeeeee;
+    --file-bg:  #f8f8f8;
+    --file-border-color: #606060;
+    --file-rounded: 15px;
+    --file-color: #2b2b2b;
+    --font-size: 0.875em;
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --shadow: 0px 8px 15px -8px rgba(0, 0, 0, 0.5);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.file-container {
+    width: 100%;
+    font-family: var(--font-family);
+}
+
+.file-container .file-upload {
+    width: 100%;
+    display: flex;
+    /*background-color: var(--file-container-bg);
+    border-radius: var(--file-rounded);
+    transition: all 0.3s;
+    /* box-shadow removed on hover */
+}
+
+.file-container .file-upload > div {
+    width: 100%;
+    /*background-color: var(--file-bg);
+    /*padding: 8px;
+    margin: 8px;*/
+    border-radius: 10px;
+    border: 1px dashed var(--file-border-color);
+    text-align: center;
+    cursor: pointer;
+    min-height: 90px;
+}
+
+.file-container .file-upload > div > i {
+    font-size: 3.125em;
+    color: var(--file-color);
+}
+
+.file-container .file-upload > div > p,
+.file-container .file-upload > div > span,
+.file-container .file-upload > div > div {
+    font-size: var(--font-size);
+    line-height: 20px;
+    color: var(--file-color);
+}
+
+.file-container .file-upload > div > div {
+    width: max-content;
+    padding: 0 10px;
+    margin: 0 auto;
+    border: 1px solid var(--file-border-color);
+    border-radius: 8px;
+}
