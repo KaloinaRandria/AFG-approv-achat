@@ -29,6 +29,8 @@ create sequence s_code_article
     no maxvalue
     cache 1;
 
+
+
 -- SIMULATION STOCK
 INSERT INTO utilisateur(nom, prenom, mail)
 VALUES ('Randria','Kaloina','kaloina.randriambololona@afgbank.mg');
@@ -40,8 +42,7 @@ INSERT INTO utilisateur_role(id_utilisateur, id_role)
 VALUES (1, 1);
 
 INSERT INTO fournisseur (nom, mail, contact)
-VALUES ('Fourniline SARL', 'contact@fourniline.mg', '0321234567')
-RETURNING id_fournisseur;
+VALUES ('Fourniline SARL', 'contact@fourniline.mg', '0321234567');
 
 INSERT INTO udm (acronyme, description)
 VALUES
@@ -111,13 +112,13 @@ VALUES
 
 
 INSERT INTO bon_livraison_mere (date_reception, description, id_fournisseur, id_devise)
-VALUES (NOW(), 'Réception matériel informatique', 1, 1)
-RETURNING id_bl_mere;
+VALUES (NOW(), 'Réception matériel informatique', 1, 1);
+
 
 
 INSERT INTO stock_mere (id_bl_mere)
-VALUES (1)
-RETURNING id_stock_mere;
+VALUES (1);
+
 
 INSERT INTO stock_fille (entree, sortie, id_article, id_stock_mere)
 VALUES
@@ -145,12 +146,12 @@ VALUES
 
 
 INSERT INTO demande_mere (date_demande, est_valider, nature_demande, id_demandeur, id_adresse)
-VALUES (NOW(), TRUE, 'OPEX', 1, 1)
-RETURNING id_demande_mere;
+VALUES (NOW(), TRUE, 'OPEX', 1, 1);
+
 
 INSERT INTO stock_mere (id_demande_mere)
-VALUES (1)
-RETURNING id_stock_mere;
+VALUES (1);
+
 
 
 INSERT INTO stock_fille (entree, sortie, id_article, id_stock_mere)
@@ -158,9 +159,11 @@ VALUES (0, 2, 1, 2), -- 2 imprimantes sorties
        (0, 5, 2, 2), -- 5 claviers
        (0, 3, 3, 2);   -- 3 souris
 
-INSERT INTO stock_fille (entree, sortie, id_article, id_stock_mere) VALUES
-                                                                        (0,7,5,1);
+-- Test nanao sortie anah stock
+INSERT INTO stock_fille (entree, sortie, id_article, id_stock_mere)
+VALUES (0,7,5,2);
 
+-- View Pour afficher l'état du stock
 CREATE OR REPLACE VIEW etat_stock AS
 SELECT
     a.id_article,
@@ -177,10 +180,3 @@ FROM article a
 GROUP BY a.id_article
 ORDER BY a.id_article;
 
-
-select * from stock_mere;
-select * from stock_fille;
-
-select * from article;
-select * from demande_mere;
-select * from bon_livraison_mere;
