@@ -163,6 +163,11 @@ VALUES (0, 2, 1, 2), -- 2 imprimantes sorties
 INSERT INTO stock_fille (entree, sortie, id_article, id_stock_mere)
 VALUES (0,7,5,2);
 
+INSERT INTO stock_fille (entree, sortie, id_article, id_stock_mere)
+VALUES (0,25,7,2);
+
+
+
 -- View Pour afficher l'état du stock
 CREATE OR REPLACE VIEW etat_stock AS
 SELECT
