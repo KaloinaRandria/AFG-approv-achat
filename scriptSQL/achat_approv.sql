@@ -161,7 +161,7 @@ VALUES (0, 2, 1, 1), -- 2 imprimantes sorties
 INSERT INTO stock_fille (entree, sortie, id_article, id_stock_mere) VALUES
                                                                         (0,7,5,1);
 
-CREATE OR REPLACE VIEW etat_stock AS
+CREATE OR \REPLACE VIEW etat_stock AS
 SELECT
     a.id_article,
     a.code_article,
