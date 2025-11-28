@@ -154,9 +154,9 @@ RETURNING id_stock_mere;
 
 
 INSERT INTO stock_fille (entree, sortie, id_article, id_stock_mere)
-VALUES (0, 2, 1, 1), -- 2 imprimantes sorties
-       (0, 5, 2, 1), -- 5 claviers
-       (0, 3, 3, 1);   -- 3 souris
+VALUES (0, 2, 1, 2), -- 2 imprimantes sorties
+       (0, 5, 2, 2), -- 5 claviers
+       (0, 3, 3, 2);   -- 3 souris
 
 INSERT INTO stock_fille (entree, sortie, id_article, id_stock_mere) VALUES
                                                                         (0,7,5,1);
