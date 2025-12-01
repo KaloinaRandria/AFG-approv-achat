@@ -46,8 +46,17 @@ public class StockController {
     }
 
     @PostMapping("/save-sortie")
-    public String insertSortieStock(@RequestParam(name = "codeArticle") String codeArticle,@RequestParam(name = "quantite") String quantiteSortie) {
+    public String insertSortieStock(@RequestParam(name = "codeArticle") String codeArticle,@RequestParam(name = "quantite") String quantiteSortie, Model model) {
         Article article = articleService.getArticleByCodeArticle(codeArticle);
+
+        VEtatStock etat = vEtatStockService.getEtatStockByCode(codeArticle);
+        double stockDisponible = Double.parseDouble(etat.getStockDisponible());
+        if (Double.parseDouble(quantiteSortie) > stockDisponible) {
+            model.addAttribute("error", "La quantité de sortie dépasse le stock disponible. Quantité disponible: " + stockDisponible);
+            model.addAttribute("article", article);
+            model.addAttribute("quantiteSortie", quantiteSortie);
+            return "stock/sortie-saisie";
+        }
 
         StockMere stockMere = new StockMere();
 

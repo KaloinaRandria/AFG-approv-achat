@@ -10,6 +10,10 @@
 <section>
     <h1 class="mb-3">Simulation de sortie en stock</h1>
 
+    <!-- Affichage du message d'erreur -->
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+
     <form th:action="@{/admin/stock/save-sortie}" method="post">
         <!-- ID de l'article caché -->
         <input type="hidden" name="codeArticle" th:value="${article.getCodeArticle()}">
@@ -21,7 +25,7 @@
 
         <div class="mb-3">
             <label>Quantité</label>
-            <input type="number" class="form-control" name="quantite" min="1" required>
+            <input type="number" class="form-control" name="quantite" th:value="${quantiteSortie}"  min="1" required>
         </div>
 
         <button type="submit" class="btn btn-primary">Valider</button>
