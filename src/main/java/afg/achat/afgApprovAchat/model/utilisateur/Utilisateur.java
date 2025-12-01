@@ -30,13 +30,17 @@ public class Utilisateur {
     private Set<Role> roles = new HashSet<>();
     @ManyToOne @JoinColumn(name = "id_superieur", referencedColumnName = "id_utilisateur", nullable = true)
     Utilisateur superieurHierarchique;
+    String adresse;
+    String contact;
 
-    public Utilisateur(String nom, String prenom, String mail, Set<Role> roles, Utilisateur superieurHierarchique) {
+    public Utilisateur(String nom, String prenom, String mail, Set<Role> roles, Utilisateur superieurHierarchique, String adresse , String contact) {
         this.setNom(nom);
         this.setPrenom(prenom);
         this.setMail(mail);
         this.setRoles(roles);
         this.setSuperieurHierarchique(superieurHierarchique);
+        this.setAdresse(adresse);
+        this.setContact(contact);
     }
 
 }
