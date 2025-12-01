@@ -29,18 +29,29 @@ public class StockController {
     VEtatStockService vEtatStockService;
 
     @PostMapping("/save-entree")
-    public String insertEntreeStock(@RequestParam(name = "codeArticle") String codeArticle,@RequestParam(name = "quantite") String quantiteEntree) {
+    public String insertEntreeStock(@RequestParam(name = "codeArticle") String codeArticle,
+                                    @RequestParam(name = "quantite") String quantiteEntree,
+                                    Model model) {
         Article article = articleService.getArticleByCodeArticle(codeArticle);
+        model.addAttribute("article", article);
 
-        StockMere stockMere = new StockMere();
+        try {
+            StockMere stockMere = new StockMere();
 
-        StockFille stockFille = new StockFille();
-        stockFille.setArticle(article);
-        stockFille.setEntree(quantiteEntree);
-        stockFille.setStockMere(stockMere);
+            StockFille stockFille = new StockFille();
+            stockFille.setArticle(article);
+            stockFille.setEntree(quantiteEntree);
+            stockFille.setStockMere(stockMere);
 
-        stockMereService.insertStockMere(stockMere);
-        stockFilleService.insertStockFille(stockFille);
+            stockMereService.insertStockMere(stockMere);
+            stockFilleService.insertStockFille(stockFille);
+            
+        } catch (IllegalArgumentException e) {
+            model.addAttribute("error", "Quantité d'entrée invalide.");
+            model.addAttribute("quantiteEntree", quantiteEntree);
+            return "stock/entree-saisie";
+        }
+
 
         return "redirect:/admin/stock/etat-stock";
     }
