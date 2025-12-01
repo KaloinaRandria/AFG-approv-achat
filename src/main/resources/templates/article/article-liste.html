@@ -11,6 +11,11 @@
 <section>
     <h1 class="mb-3">Liste des articles</h1>
 
+    <!-- Bouton pour voir l'état de stock -->
+    <div class="mb-3">
+        <a th:href="@{/admin/stock/etat-stock}" class="btn btn-info">Voir l'état de stock</a>
+    </div>
+
     <table class="table table-striped">
         <thead>
         <tr>
@@ -31,7 +36,7 @@
             <td>
                 <!-- Boutons Entrée et Sortie -->
                 <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}" class="btn btn-success btn-sm">Entrée</a>
-                <a th:href="@{/article/sortie/{id}(id=${a.id})}" class="btn btn-danger btn-sm">Sortie</a>
+                <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}" class="btn btn-danger btn-sm">Sortie</a>
             </td>
         </tr>
         </tbody>
