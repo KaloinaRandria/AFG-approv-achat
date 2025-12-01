@@ -39,7 +39,7 @@ public class Article {
     }
 
     public void setCodeArticle(IdGenerator idGenerator) {
-        this.codeArticle = idGenerator.generateId("PRD", "s_code_article");
+        this.codeArticle = idGenerator.generateId("ART-", "s_code_article");
     }
 
     public void setCodeArticle(String codeArticle) {

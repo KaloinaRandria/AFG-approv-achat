@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="modele/base :: layout(~{::title}, ~{::section})">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulation Entrée Stock</title>
+</head>
+<body>
+<section>
+    <h1 class="mb-3">Simulation d'entrée en stock</h1>
+
+    <form th:action="@{/article/entree}" method="post">
+        <!-- ID de l'article caché -->
+        <input type="hidden" name="idArticle" th:value="${article.id}">
+
+        <div class="mb-3">
+            <label>Article</label>
+            <input type="text" class="form-control" th:value="${article.codeArticle} + ' - ' + ${article.designation}" readonly>
+        </div>
+
+        <div class="mb-3">
+            <label>Quantité</label>
+            <input type="number" class="form-control" name="quantite" min="1" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Valider</button>
+        <a th:href="@{/articles}" class="btn btn-secondary">Annuler</a>
+    </form>
+</section>
+</body>
+</html>
