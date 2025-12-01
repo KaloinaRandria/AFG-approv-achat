@@ -4,6 +4,54 @@
 
 <head>
     <title>Alertes de Stock</title>
+
+    <style>
+        .notif-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .notif-card {
+            padding: 18px;
+            border-radius: 10px;
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .rupture {
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
+        }
+
+        .seuil {
+            background: linear-gradient(135deg, #ffca28, #fbc02d);
+            color: #4e3b02;
+        }
+
+        .notif-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .notif-details {
+            margin-top: 5px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .notif-badge {
+            margin-top: 10px;
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: bold;
+            background: rgba(255,255,255,0.25);
+        }
+    </style>
 </head>
 
 <body>
@@ -11,34 +59,29 @@
 
     <h1>Notifications</h1>
 
-    <table class="table">
-        <thead>
-        <tr>
-            <th>Article</th>
-            <th>Stock</th>
-            <th>Seuil</th>
-            <th>Alerte</th>
-        </tr>
-        </thead>
+    <div class="notif-container">
 
-        <tbody>
-        <tr th:each="a : ${alertes}">
-            <td th:text="${a.codeArticle + ' - ' + a.designation}"></td>
-            <td th:text="${a.stockDisponible}"></td>
-            <td th:text="${a.seuilMin}"></td>
-            <td>
-                <span th:if="${a.typeAlerte == 'RUPTURE'}" class="badge bg-danger">
-                    Stock épuisé
-                </span>
+        <div th:each="a : ${alertes}"
+             th:class="'notif-card ' + (a.typeAlerte == 'RUPTURE' ? 'rupture' : 'seuil')">
 
-                <span th:if="${a.typeAlerte == 'SEUIL'}" class="badge bg-warning text-dark">
-                    Seuil minimum atteint
-                </span>
-            </td>
-        </tr>
-        </tbody>
+            <div class="notif-title" th:text="${a.codeArticle + ' - ' + a.designation}"></div>
 
-    </table>
+            <div class="notif-details">
+                Stock disponible :
+                <strong th:text="${a.stockDisponible}"></strong>
+            </div>
+
+            <div class="notif-details">
+                Seuil minimum :
+                <strong th:text="${a.seuilMin}"></strong>
+            </div>
+
+            <div class="notif-badge"
+                 th:text="${a.typeAlerte == 'RUPTURE' ? 'Stock épuisé' : 'Seuil minimum atteint'}">
+            </div>
+        </div>
+
+    </div>
 
 </section>
 </body>
