@@ -20,6 +20,8 @@ public class VEtatStock {
     int idArticle;
     @Column(name = "code_article")
     String codeArticle;
+    @Column(name = "seuil_min")
+    String seuilMin;
     String designation;
     @Column(name = "total_entree")
     String totalEntree;

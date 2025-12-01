@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="modele/base :: layout(~{::title}, ~{::section})">
+
+<head>
+    <title>Alertes de Stock</title>
+</head>
+
+<body>
+<section>
+
+    <h1>Notifications</h1>
+
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Article</th>
+            <th>Stock</th>
+            <th>Seuil</th>
+            <th>Alerte</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        <tr th:each="a : ${alertes}">
+            <td th:text="${a.codeArticle + ' - ' + a.designation}"></td>
+            <td th:text="${a.stockDisponible}"></td>
+            <td th:text="${a.seuilMin}"></td>
+            <td>
+                <span th:if="${a.typeAlerte == 'RUPTURE'}" class="badge bg-danger">
+                    Stock épuisé
+                </span>
+
+                <span th:if="${a.typeAlerte == 'SEUIL'}" class="badge bg-warning text-dark">
+                    Seuil minimum atteint
+                </span>
+            </td>
+        </tr>
+        </tbody>
+
+    </table>
+
+</section>
+</body>
+</html>
