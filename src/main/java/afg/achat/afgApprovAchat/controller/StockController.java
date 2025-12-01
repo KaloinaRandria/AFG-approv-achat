@@ -38,4 +38,21 @@ public class StockController {
 
         return "stock/stock-liste";
     }
+
+    @PostMapping("/save-sortie")
+    public String insertSortieStock(@RequestParam(name = "codeArticle") String codeArticle,@RequestParam(name = "quantite") String quantiteSortie) {
+        Article article = articleService.getArticleByCodeArticle(codeArticle);
+
+        StockMere stockMere = new StockMere();
+
+        StockFille stockFille = new StockFille();
+        stockFille.setArticle(article);
+        stockFille.setSortie(quantiteSortie);
+        stockFille.setStockMere(stockMere);
+
+        stockMereService.insertStockMere(stockMere);
+        stockFilleService.insertStockFille(stockFille);
+
+        return "stock/stock-liste";
+    }
 }

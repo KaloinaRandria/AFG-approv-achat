@@ -28,4 +28,11 @@ public class ArticleController {
         model.addAttribute("article", article);
         return "stock/entree-saisie";
     }
+
+    @GetMapping("/sortie-saisie/{codeArticle}")
+    public String sortieArticle(@PathVariable String codeArticle, Model model) {
+        Article article = articleService.getArticleByCodeArticle(codeArticle);
+        model.addAttribute("article", article);
+        return "stock/sortie-saisie";
+    }
 }

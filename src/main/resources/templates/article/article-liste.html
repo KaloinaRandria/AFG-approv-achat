@@ -31,7 +31,7 @@
             <td>
                 <!-- Boutons Entrée et Sortie -->
                 <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}" class="btn btn-success btn-sm">Entrée</a>
-                <a th:href="@{/article/sortie/{id}(id=${a.id})}" class="btn btn-danger btn-sm">Sortie</a>
+                <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}" class="btn btn-danger btn-sm">Sortie</a>
             </td>
         </tr>
         </tbody>
