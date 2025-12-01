@@ -1,10 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="modele/base :: layout(~{::title}, ~{::section})">
+
 <head>
-    <meta charset="UTF-8">
-    <title>Stock Liste</title>
+    <title>Etat de Stock</title>
 </head>
+
 <body>
-    <h1>Stock Liste eh</h1>
+<section>
+    <h1 class="mb-3">Etat de Stock</h1>
+
+    <!-- Bouton pour voir l'état de stock -->
+    <div class="mb-3">
+        <a th:href="@{/admin}" class="btn btn-info">Liste Article</a>
+    </div>
+
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Code Article</th>
+            <th>Entree</th>
+            <th>Sortie</th>
+            <th>Stock Disponible</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        <tr th:each="e : ${etatStocks}">
+            <td th:text="${e.getCodeArticle()} + ' - ' + ${e.getDesignation()}"></td>
+            <td th:text="${e.getTotalEntree()}"></td>
+            <td th:text="${e.getTotalSortie()}"></td>
+            <td th:text="${e.getStockDisponible() }"></td>
+        </tr>
+        </tbody>
+    </table>
+</section>
 </body>
 </html>

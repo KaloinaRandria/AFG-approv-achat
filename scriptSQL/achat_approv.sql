@@ -169,7 +169,7 @@ VALUES (0,25,7,2);
 
 
 -- View Pour afficher l'état du stock
-CREATE OR REPLACE VIEW etat_stock AS
+CREATE OR REPLACE VIEW v_etat_stock AS
 SELECT
     a.id_article,
     a.code_article,
@@ -186,4 +186,4 @@ GROUP BY a.id_article
 ORDER BY a.id_article;
 
 select * from stock_fille;
-select * from etat_stock;
+select * from v_etat_stock;

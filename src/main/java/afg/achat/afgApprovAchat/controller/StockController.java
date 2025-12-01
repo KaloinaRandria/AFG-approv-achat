@@ -1,13 +1,17 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.Article;
+import afg.achat.afgApprovAchat.model.VEtatStock;
 import afg.achat.afgApprovAchat.model.stock.StockFille;
 import afg.achat.afgApprovAchat.model.stock.StockMere;
 import afg.achat.afgApprovAchat.service.ArticleService;
+import afg.achat.afgApprovAchat.service.VEtatStockService;
 import afg.achat.afgApprovAchat.service.stock.StockFilleService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,6 +25,8 @@ public class StockController {
     StockFilleService stockFilleService;
     @Autowired
     ArticleService articleService;
+    @Autowired
+    VEtatStockService vEtatStockService;
 
     @PostMapping("/save-entree")
     public String insertEntreeStock(@RequestParam(name = "codeArticle") String codeArticle,@RequestParam(name = "quantite") String quantiteEntree) {
@@ -36,7 +42,7 @@ public class StockController {
         stockMereService.insertStockMere(stockMere);
         stockFilleService.insertStockFille(stockFille);
 
-        return "stock/stock-liste";
+        return "redirect:/admin/stock/etat-stock";
     }
 
     @PostMapping("/save-sortie")
@@ -53,6 +59,13 @@ public class StockController {
         stockMereService.insertStockMere(stockMere);
         stockFilleService.insertStockFille(stockFille);
 
+        return "redirect:/admin/stock/etat-stock";
+    }
+
+    @GetMapping("/etat-stock")
+    public String getEtatStock(Model model) {
+        VEtatStock[] etatStocks = vEtatStockService.getAllEtatStocks();
+        model.addAttribute("etatStocks", etatStocks);
         return "stock/stock-liste";
     }
 }
