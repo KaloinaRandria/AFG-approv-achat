@@ -46,27 +46,37 @@ public class StockController {
     }
 
     @PostMapping("/save-sortie")
-    public String insertSortieStock(@RequestParam(name = "codeArticle") String codeArticle,@RequestParam(name = "quantite") String quantiteSortie, Model model) {
+    public String insertSortieStock(@RequestParam(name = "codeArticle") String codeArticle,
+                                    @RequestParam(name = "quantite") String quantiteSortie,
+                                    Model model) {
         Article article = articleService.getArticleByCodeArticle(codeArticle);
+        model.addAttribute("article", article);
 
-        VEtatStock etat = vEtatStockService.getEtatStockByCode(codeArticle);
-        double stockDisponible = Double.parseDouble(etat.getStockDisponible());
-        if (Double.parseDouble(quantiteSortie) > stockDisponible) {
-            model.addAttribute("error", "La quantité de sortie dépasse le stock disponible. Quantité disponible: " + stockDisponible);
-            model.addAttribute("article", article);
+        try {
+            double qSortie = Double.parseDouble(quantiteSortie);
+            VEtatStock etat = vEtatStockService.getEtatStockByCode(codeArticle);
+            double stockDisponible = Double.parseDouble(etat.getStockDisponible());
+
+            if (qSortie > stockDisponible) {
+                model.addAttribute("error", "La quantité de sortie dépasse le stock disponible. Quantité disponible: " + stockDisponible);
+                model.addAttribute("quantiteSortie", quantiteSortie);
+                return "stock/sortie-saisie";
+            }
+
+            StockMere stockMere = new StockMere();
+            StockFille stockFille = new StockFille();
+            stockFille.setArticle(article);
+            stockFille.setSortie(quantiteSortie); // ici le setter peut lancer IllegalArgumentException
+            stockFille.setStockMere(stockMere);
+
+            stockMereService.insertStockMere(stockMere);
+            stockFilleService.insertStockFille(stockFille);
+
+        } catch (IllegalArgumentException e) {
+            model.addAttribute("error", "Quantité de sortie invalide.");
             model.addAttribute("quantiteSortie", quantiteSortie);
             return "stock/sortie-saisie";
         }
-
-        StockMere stockMere = new StockMere();
-
-        StockFille stockFille = new StockFille();
-        stockFille.setArticle(article);
-        stockFille.setSortie(quantiteSortie);
-        stockFille.setStockMere(stockMere);
-
-        stockMereService.insertStockMere(stockMere);
-        stockFilleService.insertStockFille(stockFille);
 
         return "redirect:/admin/stock/etat-stock";
     }
