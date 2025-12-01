@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="modele/base :: layout(~{::title}, ~{::section})">
+
+<head>
+    <title>Liste des Articles</title>
+</head>
+
+<body>
+<section>
+    <h1 class="mb-3">Liste des articles</h1>
+
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Code</th>
+            <th>Libellé</th>
+            <th>UDM</th>
+            <th>Famille</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        <tr th:each="a : ${articles}">
+            <td th:text="${a.getCodeArticle()}"></td>
+            <td th:text="${a.getDesignation()}"></td>
+            <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
+            <td th:text="${a.famille != null ? a.famille.getDescription() : '---'}"></td>
+        </tr>
+        </tbody>
+    </table>
+</section>
+</body>
+</html>

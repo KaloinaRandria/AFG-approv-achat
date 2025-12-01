@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout (title, content)">
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" th:fragment="layout (title, content)">
 <head>
     <meta charset="UTF-8">
     <title th:replace="${title}">Titre par défaut</title>
@@ -9,7 +9,7 @@
 <body>
 <div class="d-flex">
     <!-- Inclusion de la sidebar -->
-    <div th:replace="fragments/sidebar :: sidebar"></div>
+<!--    <div th:replace="fragment/sidebar :: sidebar"></div>-->
 
     <!-- Zone de contenu dynamique -->
     <div class="flex-grow-1 p-4">
