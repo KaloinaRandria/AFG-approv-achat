@@ -185,3 +185,5 @@ FROM article a
 GROUP BY a.id_article
 ORDER BY a.id_article;
 
+select * from stock_fille;
+select * from etat_stock;

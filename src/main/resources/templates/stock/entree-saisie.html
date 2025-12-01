@@ -10,13 +10,13 @@
 <section>
     <h1 class="mb-3">Simulation d'entrée en stock</h1>
 
-    <form th:action="@{/article/entree}" method="post">
+    <form th:action="@{/admin/stock/save-entree}" method="post">
         <!-- ID de l'article caché -->
-        <input type="hidden" name="idArticle" th:value="${article.id}">
+        <input type="hidden" name="codeArticle" th:value="${article.getCodeArticle()}">
 
         <div class="mb-3">
             <label>Article</label>
-            <input type="text" class="form-control" th:value="${article.codeArticle} + ' - ' + ${article.designation}" readonly>
+            <input type="text" class="form-control" th:value="${article.getCodeArticle()} + ' - ' + ${article.getDesignation()}" readonly>
         </div>
 
         <div class="mb-3">
@@ -25,7 +25,7 @@
         </div>
 
         <button type="submit" class="btn btn-primary">Valider</button>
-        <a th:href="@{/articles}" class="btn btn-secondary">Annuler</a>
+        <a th:href="@{/admin}" class="btn btn-secondary">Annuler</a>
     </form>
 </section>
 </body>
