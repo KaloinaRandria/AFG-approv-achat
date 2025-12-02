@@ -5,14 +5,30 @@
     <title th:replace="${title}">Titre par défaut</title>
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <style>
+        .main-content {
+            margin-left: 250px; /* Largeur de la sidebar */
+            width: calc(100% - 250px); /* Calculer la largeur restante */
+            transition: margin-left 0.3s ease; /* Animation optionnelle */
+        }
+
+        /* Pour les petits écrans, on peut réduire la sidebar */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-<div class="d-flex">
-    <!-- Inclusion de la sidebar -->
+<div class="d-flex" style="height:100vh; overflow:hidden;">
+    <!-- Sidebar fixe -->
     <div th:replace="fragment/sidebar :: sidebar"></div>
 
     <!-- Zone de contenu dynamique -->
-    <div class="flex-grow-1 p-4">
+    <div class="main-content flex-grow-1 overflow-auto p-4">
         <div th:replace="${content}"></div>
     </div>
 </div>
