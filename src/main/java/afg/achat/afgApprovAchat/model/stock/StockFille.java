@@ -24,11 +24,19 @@ public class StockFille {
     double sortie;
 
     public void setEntree(String entree) {
-        this.entree = Double.parseDouble(entree);
+        double val = Double.parseDouble(entree);
+        if (val < 0) {
+            throw new IllegalArgumentException("La valeur d'entrée ne peut pas être négative");
+        }
+        this.entree = val;
     }
 
     public void setSortie(String sortie) {
-        this.sortie = Double.parseDouble(sortie);
+        double val = Double.parseDouble(sortie);
+        if (val < 0) {
+            throw new IllegalArgumentException("La valeur de sortie ne peut pas être négative");
+        }
+        this.sortie = val;
     }
 
     public StockFille(StockMere stockMere, Article article, String entree, String sortie) {

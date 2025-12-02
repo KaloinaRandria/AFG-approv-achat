@@ -13,4 +13,8 @@ public class VEtatStockService {
     public VEtatStock[] getAllEtatStocks() {
         return vEtatStockRepo.findAll().toArray(new VEtatStock[0]);
     }
+
+    public VEtatStock getEtatStockByCode(String codeArticle) {
+        return vEtatStockRepo.findByCodeArticle(codeArticle);
+    }
 }

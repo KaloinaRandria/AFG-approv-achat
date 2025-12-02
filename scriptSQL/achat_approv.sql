@@ -173,6 +173,7 @@ CREATE OR REPLACE VIEW v_etat_stock AS
 SELECT
     a.id_article,
     a.code_article,
+    a.seuil_min,
     a.designation,
     COALESCE(SUM(sf.entree), 0) AS total_entree,
     COALESCE(SUM(sf.sortie), 0) AS total_sortie,
