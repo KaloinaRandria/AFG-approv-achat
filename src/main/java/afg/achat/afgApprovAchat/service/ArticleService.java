@@ -17,4 +17,9 @@ public class ArticleService {
     public Article getArticleByCodeArticle(String codeArticle) {
         return articleRepo.findArticleByCodeArticle(codeArticle);
     }
+
+    public Article saveArticle(Article article) {
+        articleRepo.save(article);
+        return article;
+    }
 }

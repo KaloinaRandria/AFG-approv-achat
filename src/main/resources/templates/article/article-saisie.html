@@ -6,9 +6,6 @@
     <meta charset="UTF-8">
     <title>Ajouter un nouvel article</title>
 
-    <!-- CSS Select2 -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 </head>
 <body>
 <section>
@@ -70,9 +67,10 @@
                                    id="seuilMinimum"
                                    name="seuilMinimum"
                                    th:field="*{seuilMin}"
-                                   min="0"
+                                   min="1"
                                    step="1"
                                    placeholder="Ex: 10"
+                                   value="1"
                                    required>
                             <div class="form-text">
                                 Quantité en dessous de laquelle une alerte sera déclenchée
@@ -187,63 +185,5 @@
         </div>
     </div>
 </section>
-
-<!-- Script pour améliorer l'expérience utilisateur -->
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Focus sur le premier champ
-        document.getElementById('designation').focus();
-
-        // Validation en temps réel
-        const inputs = document.querySelectorAll('input, select');
-        inputs.forEach(input => {
-            input.addEventListener('change', function() {
-                if (this.checkValidity()) {
-                    this.classList.remove('is-invalid');
-                    this.classList.add('is-valid');
-                } else {
-                    this.classList.remove('is-valid');
-                    this.classList.add('is-invalid');
-                }
-            });
-        });
-    });
-</script>
-
-<!-- Script Select2 -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script>
-    $(document).ready(function() {
-        // Initialiser tous les select avec la classe select2-searchable
-        $('.select2-searchable').select2({
-            theme: 'bootstrap-5',
-            placeholder: function() {
-                return $(this).data('placeholder');
-            },
-            allowClear: true,
-            width: '100%',
-            language: {
-                noResults: function() {
-                    return "Aucun résultat trouvé";
-                },
-                searching: function() {
-                    return "Recherche en cours...";
-                }
-            }
-        });
-
-        // S'assurer que Select2 fonctionne avec la validation Bootstrap
-        $('.select2-searchable').on('change', function() {
-            $(this).trigger('blur'); // Déclencher la validation
-        });
-
-        // Empêcher le formulaire de se soumettre avec Enter dans les champs Select2
-        $('.select2-searchable').on('keydown', function(e) {
-            if (e.keyCode === 13) {
-                e.preventDefault();
-            }
-        });
-    });
-</script>
 </body>
 </html>
