@@ -5,8 +5,6 @@
 
 <head>
     <title>Liste des Articles</title>
-    <!-- Ajouter FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body>
@@ -22,7 +20,7 @@
         <thead>
         <tr>
             <th>Code</th>
-            <th>Libellé</th>
+            <th>Désignation</th>
             <th>Unite</th>
             <th>Famille</th>
             <th>Actions</th>
@@ -44,7 +42,7 @@
                         th:data-codearticle="${a.getCodeArticle()}"
                         th:data-designation="${a.getDesignation()}"
                         th:data-idudm="${a.udm != null ? a.udm.getId() : ''}"
-                        th:data-idfamille="${a.famille != null ? a.famille.getDescription() : ''}"
+                        th:data-idfamille="${a.famille != null ? a.famille.getId() : ''}"
                         title="Modifier l'article">
                     <i class="fas fa-edit"></i>
                 </button>
@@ -80,7 +78,7 @@
                         <input type="hidden" id="modalCodeArticle" name="codeArticle" th:field="*{codeArticle}">
 
                         <div class="mb-3">
-                            <label for="modalDesignation" class="form-label">Libellé</label>
+                            <label for="modalDesignation" class="form-label">Désignation</label>
                             <input type="text" class="form-control" id="modalDesignation"
                                    name="designation" th:field="*{designation}" required>
                         </div>
@@ -103,7 +101,7 @@
                                 <option th:each="famille : ${familles}"
                                         th:value="${famille.getId()}"
                                         th:text="${famille.getDescription()}">
-                                </option>
+                                 </option>
                             </select>
                         </div>
 
@@ -137,13 +135,12 @@
             modifierModal.addEventListener('show.bs.modal', function(event) {
                 var button = event.relatedTarget;
 
-                // Récupérer les données des attributs data-*
                 var codeArticle = button.getAttribute('data-codearticle');
                 var designation = button.getAttribute('data-designation');
                 var idUdm = button.getAttribute('data-idudm') || '';
                 var idFamille = button.getAttribute('data-idfamille') || '';
 
-                // Mettre à jour les champs du modal
+                // Mettre à jour les champs
                 document.getElementById('modalCodeArticle').value = codeArticle;
                 document.getElementById('modalDesignation').value = designation;
 
@@ -151,7 +148,7 @@
                 var udmSelect = document.getElementById('modalUdm');
                 if (udmSelect) {
                     for (var i = 0; i < udmSelect.options.length; i++) {
-                        if (udmSelect.options[i].value === idUdm) {
+                        if (udmSelect.options[i].value == idUdm) {  // <-- ici
                             udmSelect.selectedIndex = i;
                             break;
                         }
@@ -162,14 +159,14 @@
                 var familleSelect = document.getElementById('modalFamille');
                 if (familleSelect) {
                     for (var i = 0; i < familleSelect.options.length; i++) {
-                        if (familleSelect.options[i].value === idFamille) {
+                        if (familleSelect.options[i].value == idFamille) {  // <-- ici
                             familleSelect.selectedIndex = i;
                             break;
                         }
                     }
                 }
 
-                // Mettre à jour le titre du modal
+                // Titre du modal
                 var modalTitle = modifierModal.querySelector('.modal-title');
                 modalTitle.textContent = 'Modifier l\'article: ' + codeArticle;
             });
