@@ -13,7 +13,14 @@
 
     <div class="d-flex flex-column gap-3">
 
+        <!-- Si aucune alerte -->
+        <div th:if="${#lists.isEmpty(alertes)}" class="p-3 rounded shadow-sm border-secondary bg-light text-center">
+            Aucune notification pour le moment.
+        </div>
+
+        <!-- Boucle sur les alertes -->
         <div th:each="a : ${alertes}"
+             th:unless="${#lists.isEmpty(alertes)}"
              class="p-3 rounded shadow-sm"
              th:classappend="${a.getTypeAlerte() == 'RUPTURE'} ? 'border-danger bg-danger bg-opacity-10'
                              : 'border-warning bg-warning bg-opacity-10'">
@@ -45,5 +52,6 @@
     </div>
 
 </section>
+
 </body>
 </html>
