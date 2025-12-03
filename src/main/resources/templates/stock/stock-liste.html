@@ -4,37 +4,81 @@
       th:replace="modele/base :: layout(~{::title}, ~{::section})">
 
 <head>
-    <title>Etat de Stock</title>
+    <title>État de Stock</title>
 </head>
 
 <body>
 <section>
-    <h1 class="mb-3">Etat de Stock</h1>
 
-    <!-- Bouton pour voir l'état de stock -->
-    <div class="mb-3">
-        <a th:href="@{/admin}" class="btn btn-primary">Liste Article</a>
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="fw-bold">
+            <i class="fas fa-boxes me-2 text-primary"></i> État de Stock
+        </h1>
+
+        <a th:href="@{/admin}" class="btn btn-outline-primary btn-lg">
+            <i class="fas fa-list me-2"></i> Liste des Articles
+        </a>
     </div>
 
-    <table class="table table-striped">
-        <thead>
-        <tr>
-            <th>Code Article</th>
-            <th>Entree</th>
-            <th>Sortie</th>
-            <th>Stock Disponible</th>
-        </tr>
-        </thead>
+    <!-- Carte contenant le tableau -->
+    <div class="card shadow-lg border-0">
+        <div class="card-body">
 
-        <tbody>
-        <tr th:each="e : ${etatStocks}">
-            <td th:text="${e.getCodeArticle()} + ' - ' + ${e.getDesignation()}"></td>
-            <td th:text="${e.getTotalEntree()}"></td>
-            <td th:text="${e.getTotalSortie()}"></td>
-            <td th:text="${e.getStockDisponible() }"></td>
-        </tr>
-        </tbody>
-    </table>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-primary">
+                    <tr>
+                        <th scope="col">Article</th>
+                        <th scope="col">Entrée</th>
+                        <th scope="col">Sortie</th>
+                        <th scope="col">Stock Disponible</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    <tr th:each="e : ${etatStocks}">
+
+
+                    <!-- Code + Designation -->
+                        <td>
+                            <div class="fw-semibold text-dark">
+                                <i class="fas fa-tag text-secondary me-1"></i>
+                                <span th:text="${e.codeArticle}"></span>
+                            </div>
+                            <div class="text-muted small" th:text="${e.designation}"></div>
+                        </td>
+
+                        <!-- Entree -->
+                        <td>
+                            <span class="badge bg-success fs-6 px-3"
+                                  th:text="${e.totalEntree}"></span>
+                        </td>
+
+                        <!-- Sortie -->
+                        <td>
+                            <span class="badge bg-danger fs-6 px-3"
+                                  th:text="${e.totalSortie}"></span>
+                        </td>
+
+                        <!-- Stock Disponible -->
+                        <td>
+                            <span class="fs-6 px-3"
+                                  th:text="${e.stockDisponible}">
+                            </span>
+                        </td>
+
+
+
+
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
 </section>
 </body>
 </html>
