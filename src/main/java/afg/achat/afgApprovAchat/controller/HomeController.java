@@ -20,7 +20,7 @@ public class HomeController {
 
     @GetMapping("/admin")
     public String home() {
-        return "index";
+        return "redirect:/admin/article/list";
     }
 
     @RequestMapping(value="")

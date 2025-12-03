@@ -23,7 +23,7 @@ public class IdGenerator {
             preparedStatement.setString(1, sequenceName);
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
-                productId = productIdPrefix + String.format("%04d", resultSet.getInt(1));
+                productId = productIdPrefix + String.format("%d", resultSet.getInt(1));
             } else {
                 throw new SQLException("Impossible de recuperer la prochaine valeur de la sequence");
             }

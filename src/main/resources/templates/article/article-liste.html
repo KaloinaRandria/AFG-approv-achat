@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="modele/base :: layout(~{::title}, ~{::section})">
+
+<head>
+    <title>Liste des Articles</title>
+</head>
+
+<body>
+<section>
+    <h1 class="mb-3">Liste des articles</h1>
+
+    <!-- Bouton pour voir l'état de stock -->
+    <div class="mb-3">
+        <a th:href="@{/admin/stock/etat-stock}" class="btn btn-primary">Voir l'état de stock</a>
+    </div>
+
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Code</th>
+            <th>Libellé</th>
+            <th>Unite</th>
+            <th>Famille</th>
+            <th>Action (simulation mouvement stock)</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        <tr th:each="a : ${articles}">
+            <td th:text="${a.getCodeArticle()}"></td>
+            <td th:text="${a.getDesignation()}"></td>
+            <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
+            <td th:text="${a.famille != null ? a.famille.getDescription() : '---'}"></td>
+            <td>
+                <!-- Boutons Entrée et Sortie -->
+                <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}" class="btn btn-success btn-sm">Entrée</a>
+                <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}" class="btn btn-danger btn-sm">Sortie</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</section>
+</body>
+</html>
