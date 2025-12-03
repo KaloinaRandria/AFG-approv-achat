@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.Article;
+import afg.achat.afgApprovAchat.model.ArticleModificationDto;
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.Famille;
 import afg.achat.afgApprovAchat.model.util.Udm;
@@ -15,6 +16,8 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin/article")
@@ -34,7 +37,18 @@ public class ArticleController {
     @GetMapping("/list")
     public String listArticles(Model model) {
         Article[] articles = articleService.getAllArticles();
+        Udm[] udms = udmService.getAllUdms();
+        Famille[] familles = familleService.getAllFamilles();
+        CentreBudgetaire[] centres = centreBudgetaireService.getAllCentreBudgetaires();
+
         model.addAttribute("articles", articles);
+        model.addAttribute("udms", udms);
+        model.addAttribute("familles", familles);
+        model.addAttribute("centres", centres);
+
+        // Ajouter un DTO vide pour le formulaire
+        model.addAttribute("articleDto", new ArticleModificationDto());
+
         return "article/article-liste";
     }
 

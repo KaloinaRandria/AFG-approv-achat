@@ -5,6 +5,8 @@
 
 <head>
     <title>Liste des Articles</title>
+    <!-- Ajouter FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body>
@@ -23,7 +25,7 @@
             <th>Libellé</th>
             <th>Unite</th>
             <th>Famille</th>
-            <th>Action (simulation mouvement stock)</th>
+            <th>Actions</th>
         </tr>
         </thead>
 
@@ -34,13 +36,145 @@
             <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
             <td th:text="${a.famille != null ? a.famille.getDescription() : '---'}"></td>
             <td>
-                <!-- Boutons Entrée et Sortie -->
-                <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}" class="btn btn-success btn-sm">Entrée</a>
-                <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}" class="btn btn-danger btn-sm">Sortie</a>
+                <!-- Bouton pour ouvrir le modal de modification -->
+                <button type="button"
+                        class="btn btn-warning btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modifierModal"
+                        th:data-codearticle="${a.getCodeArticle()}"
+                        th:data-designation="${a.getDesignation()}"
+                        th:data-idudm="${a.udm != null ? a.udm.getId() : ''}"
+                        th:data-idfamille="${a.famille != null ? a.famille.getDescription() : ''}"
+                        title="Modifier l'article">
+                    <i class="fas fa-edit"></i>
+                </button>
+
+                <!-- Boutons Entrée et Sortie avec icônes -->
+                <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
+                   class="btn btn-success btn-sm"
+                   title="Entrée en stock">
+                    <i class="fas fa-plus-circle"> Entrée</i>
+                </a>
+                <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
+                   class="btn btn-danger btn-sm"
+                   title="Sortie de stock">
+                    <i class="fas fa-minus-circle"> Sortie</i>
+                </a>
             </td>
         </tr>
         </tbody>
     </table>
+
+    <!-- Modal pour la modification d'article -->
+    <div class="modal fade" id="modifierModal" tabindex="-1" aria-labelledby="modifierModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modifierModalLabel">Modifier l'article</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <!-- Utilisez un nom d'objet unique, pas "articles" -->
+                <form th:action="@{/admin/article/modifier}" method="post" th:object="${articleDto}">
+                    <div class="modal-body">
+                        <!-- Champ caché pour le code article -->
+                        <input type="hidden" id="modalCodeArticle" name="codeArticle" th:field="*{codeArticle}">
+
+                        <div class="mb-3">
+                            <label for="modalDesignation" class="form-label">Libellé</label>
+                            <input type="text" class="form-control" id="modalDesignation"
+                                   name="designation" th:field="*{designation}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="modalUdm" class="form-label">Unité de mesure</label>
+                            <select class="form-control" id="modalUdm" name="idUdm" th:field="*{idUdm}">
+                                <option value="">Sélectionner une unité</option>
+                                <option th:each="udm : ${udms}"
+                                        th:value="${udm.getId()}"
+                                        th:text="${udm.getDescription() + ' - ' + udm.getAcronyme()}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="modalFamille" class="form-label">Famille</label>
+                            <select class="form-control" id="modalFamille" name="idFamille" th:field="*{idFamille}">
+                                <option value="">Sélectionner une famille</option>
+                                <option th:each="famille : ${familles}"
+                                        th:value="${famille.getId()}"
+                                        th:text="${famille.getDescription()}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="modalCentre" class="form-label">Centre Budgetaire</label>
+                            <select class="form-control" id="modalCentre" name="idCentreBudgetaire" th:field="*{idCentreBudgetaire}">
+                                <option value="">Sélectionner un centre</option>
+                                <option th:each="centre : ${centres}"
+                                        th:value="${centre.getId()}"
+                                        th:text="${centre.getCodeCentre()}">
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </section>
+
+<!-- Script JavaScript pour remplir le modal -->
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        var modifierModal = document.getElementById('modifierModal');
+
+        if (modifierModal) {
+            modifierModal.addEventListener('show.bs.modal', function(event) {
+                var button = event.relatedTarget;
+
+                // Récupérer les données des attributs data-*
+                var codeArticle = button.getAttribute('data-codearticle');
+                var designation = button.getAttribute('data-designation');
+                var idUdm = button.getAttribute('data-idudm') || '';
+                var idFamille = button.getAttribute('data-idfamille') || '';
+
+                // Mettre à jour les champs du modal
+                document.getElementById('modalCodeArticle').value = codeArticle;
+                document.getElementById('modalDesignation').value = designation;
+
+                // Sélectionner l'unité de mesure
+                var udmSelect = document.getElementById('modalUdm');
+                if (udmSelect) {
+                    for (var i = 0; i < udmSelect.options.length; i++) {
+                        if (udmSelect.options[i].value === idUdm) {
+                            udmSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                // Sélectionner la famille
+                var familleSelect = document.getElementById('modalFamille');
+                if (familleSelect) {
+                    for (var i = 0; i < familleSelect.options.length; i++) {
+                        if (familleSelect.options[i].value === idFamille) {
+                            familleSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                // Mettre à jour le titre du modal
+                var modalTitle = modifierModal.querySelector('.modal-title');
+                modalTitle.textContent = 'Modifier l\'article: ' + codeArticle;
+            });
+        }
+    });
+</script>
 </body>
 </html>
