@@ -5,6 +5,8 @@ import afg.achat.afgApprovAchat.repository.CentreBudgetaireRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class CentreBudgetaireService {
     @Autowired
@@ -12,5 +14,9 @@ public class CentreBudgetaireService {
 
     public CentreBudgetaire[] getAllCentreBudgetaires() {
         return centreBudgetaireRepo.findAll().toArray(new CentreBudgetaire[0]);
+    }
+
+    public Optional<CentreBudgetaire> getCentreBudgetaireById(int id) {
+        return centreBudgetaireRepo.findById(id);
     }
 }
