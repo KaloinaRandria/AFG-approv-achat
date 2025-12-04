@@ -5,25 +5,44 @@
 
 <head>
     <title>Liste des Articles</title>
+
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+
+    <style>
+        .dataTables_wrapper {
+            margin-top: 20px;
+        }
+        .btn-sm {
+            margin: 2px;
+        }
+        .table th {
+            background-color: #f8f9fa;
+            border-top: none;
+        }
+    </style>
 </head>
 
 <body>
 <section>
     <h1 class="mb-3">Liste des articles</h1>
 
-    <!-- Bouton pour voir l'état de stock -->
     <div class="mb-3">
-        <a th:href="@{/admin/stock/etat-stock}" class="btn btn-primary">Voir l'état de stock</a>
+        <a th:href="@{/admin/stock/etat-stock}" class="btn btn-primary">
+            <i class="fas fa-chart-bar"></i> Voir l'état de stock
+        </a>
     </div>
 
-    <table class="table table-striped">
+    <table id="articlesTable" class="table table-striped table-hover">
         <thead>
         <tr>
             <th>Code</th>
-            <th>Libellé</th>
+            <th>Désignation</th>
             <th>Unite</th>
             <th>Famille</th>
-            <th>Action (simulation mouvement stock)</th>
+            <th>Actions</th>
+            <th>Simulation Stock</th>
         </tr>
         </thead>
 
@@ -34,13 +53,145 @@
             <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
             <td th:text="${a.famille != null ? a.famille.getDescription() : '---'}"></td>
             <td>
-                <!-- Boutons Entrée et Sortie -->
-                <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}" class="btn btn-success btn-sm">Entrée</a>
-                <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}" class="btn btn-danger btn-sm">Sortie</a>
+                <button type="button"
+                        class="btn btn-warning btn-sm edit-btn"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modifierModal"
+                        th:data-codearticle="${a.getCodeArticle()}"
+                        th:data-designation="${a.getDesignation()}"
+                        th:data-idudm="${a.udm != null ? a.udm.getId() : ''}"
+                        th:data-idfamille="${a.famille != null ? a.famille.getId() : ''}"
+                        th:data-idcentre="${a.centreBudgetaire != null ? a.centreBudgetaire.getId() : ''}"
+                        title="Modifier l'article">
+                    <i class="fas fa-edit"></i> Modifier
+                </button>
+            </td>
+            <td>
+                <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
+                   class="btn btn-success btn-sm"
+                   title="Entrée en stock">
+                    <i class="fas fa-plus-circle"></i> Entrée
+                </a>
+                <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
+                   class="btn btn-danger btn-sm"
+                   title="Sortie de stock">
+                    <i class="fas fa-minus-circle"></i> Sortie
+                </a>
             </td>
         </tr>
         </tbody>
     </table>
+
+    <!-- Modal pour la modification d'article -->
+    <div class="modal fade" id="modifierModal" tabindex="-1" aria-labelledby="modifierModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modifierModalLabel">Modifier l'article</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form th:action="@{/admin/article/modifier}" method="post" id="articleForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="modalCodeArticle" name="codeArticle">
+
+                        <div class="mb-3">
+                            <label for="modalDesignation" class="form-label">Désignation *</label>
+                            <input type="text" class="form-control" id="modalDesignation"
+                                   name="designation" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="modalUdm" class="form-label">Unité de mesure</label>
+                            <select class="form-control" id="modalUdm" name="idUdm">
+                                <option value="">Sélectionner une unité</option>
+                                <option th:each="udm : ${udms}"
+                                        th:value="${udm.getId()}"
+                                        th:text="${udm.getDescription() + ' - ' + udm.getAcronyme()}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="modalFamille" class="form-label">Famille</label>
+                            <select class="form-control" id="modalFamille" name="idFamille">
+                                <option value="">Sélectionner une famille</option>
+                                <option th:each="famille : ${familles}"
+                                        th:value="${famille.getId()}"
+                                        th:text="${famille.getDescription()}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="modalCentre" class="form-label">Centre Budgetaire</label>
+                            <select class="form-control" id="modalCentre" name="idCentreBudgetaire">
+                                <option value="">Sélectionner un centre</option>
+                                <option th:each="centre : ${centres}"
+                                        th:value="${centre.getId()}"
+                                        th:text="${centre.getCodeCentre()}">
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </section>
+
+<!-- Scripts JavaScript à la fin du body -->
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- DataTables -->
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    // Initialiser DataTables quand le document est prêt
+    $(document).ready(function() {
+        // Configuration simple de DataTables
+        $('#articlesTable').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
+            },
+            pageLength: 10,
+            lengthMenu: [10, 25, 50, 100],
+            order: [[0, 'asc']],
+            responsive: true
+        });
+
+        // Gérer l'ouverture du modal
+        $('#modifierModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+
+            // Récupérer les données
+            var codeArticle = button.data('codearticle');
+            var designation = button.data('designation');
+            var idUdm = button.data('idudm') || '';
+            var idFamille = button.data('idfamille') || '';
+            var idCentre = button.data('idcentre') || '';
+
+            // Mettre à jour les champs
+            $('#modalCodeArticle').val(codeArticle);
+            $('#modalDesignation').val(designation);
+            $('#modalUdm').val(idUdm);
+            $('#modalFamille').val(idFamille);
+            $('#modalCentre').val(idCentre);
+
+            // Mettre à jour le titre
+            $('#modifierModalLabel').text('Modifier l\'article: ' + codeArticle);
+        });
+
+        // Réinitialiser le formulaire quand le modal se ferme
+        $('#modifierModal').on('hidden.bs.modal', function() {
+            $('#articleForm')[0].reset();
+        });
+    });
+</script>
+
 </body>
 </html>
