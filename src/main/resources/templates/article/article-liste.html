@@ -7,19 +7,6 @@
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
 
-    <style>
-        .dataTables_wrapper {
-            margin-top: 20px;
-        }
-        .btn-sm {
-            margin: 2px;
-        }
-        .table th {
-            background-color: #f8f9fa;
-            border-top: none;
-        }
-    </style>
-
 </head>
 
 <body>
@@ -72,12 +59,12 @@
                         <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
                            class="btn btn-success btn-sm"
                            title="Entrée en stock">
-                            <i class="fas fa-plus-circle"></i> Entrée
+                            <i class="fas fa-plus-circle"></i>
                         </a>
                         <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
                            class="btn btn-danger btn-sm"
                            title="Sortie de stock">
-                            <i class="fas fa-minus-circle"></i> Sortie
+                            <i class="fas fa-minus-circle"></i>
                         </a>
                     </td>
                 </tr>
