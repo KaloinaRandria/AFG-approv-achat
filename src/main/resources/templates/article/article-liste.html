@@ -145,5 +145,55 @@
             </div>
         </section>
     </div>
+    <script th:inline="none">
+        /*<![CDATA[*/
+        // Attendre que le DOM soit complètement chargé
+        document.addEventListener('DOMContentLoaded', function() {
+            // Vérifier que jQuery est chargé
+            if (typeof jQuery === 'undefined') {
+                console.error('jQuery n\'est pas chargé !');
+                return;
+            }
+
+            // Initialiser DataTables - configuration simplifiée
+            $('#articlesTable').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
+                },
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                order: [[0, 'asc']],
+                responsive: true
+            });
+
+            // Gérer l'ouverture du modal avec les données
+            $('#modifierModal').on('show.bs.modal', function(event) {
+                var button = $(event.relatedTarget);
+
+                // Récupérer les données
+                var codeArticle = button.data('codearticle');
+                var designation = button.data('designation');
+                var idUdm = button.data('idudm') || '';
+                var idFamille = button.data('idfamille') || '';
+                var idCentre = button.data('idcentre') || '';
+
+                // Mettre à jour les champs
+                $('#modalCodeArticle').val(codeArticle);
+                $('#modalDesignation').val(designation);
+                $('#modalUdm').val(idUdm);
+                $('#modalFamille').val(idFamille);
+                $('#modalCentre').val(idCentre);
+
+                // Mettre à jour le titre
+                $('#modifierModalLabel').text('Modifier l\'article: ' + codeArticle);
+            });
+
+            // Réinitialiser le formulaire quand le modal se ferme
+            $('#modifierModal').on('hidden.bs.modal', function() {
+                $('#articleForm')[0].reset();
+            });
+        });
+        /*]]>*/
+    </script>
 </body>
 </html>
