@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.Article;
+import afg.achat.afgApprovAchat.model.ArticleModificationDto;
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.Famille;
 import afg.achat.afgApprovAchat.model.util.Udm;
@@ -15,6 +16,8 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin/article")
@@ -34,7 +37,18 @@ public class ArticleController {
     @GetMapping("/list")
     public String listArticles(Model model) {
         Article[] articles = articleService.getAllArticles();
+        Udm[] udms = udmService.getAllUdms();
+        Famille[] familles = familleService.getAllFamilles();
+        CentreBudgetaire[] centres = centreBudgetaireService.getAllCentreBudgetaires();
+
         model.addAttribute("articles", articles);
+        model.addAttribute("udms", udms);
+        model.addAttribute("familles", familles);
+        model.addAttribute("centres", centres);
+
+        // Ajouter un DTO vide pour le formulaire
+        model.addAttribute("articleDto", new ArticleModificationDto());
+
         return "article/article-liste";
     }
 
@@ -129,6 +143,52 @@ public class ArticleController {
 
             return "admin/article/article-saisie";
         }
+    }
 
+    @PostMapping("/modifier")
+    public String modifierArticle(@RequestParam(name = "codeArticle") String codeArticle,
+                                  @RequestParam(name = "designation") String designation,
+                                  @RequestParam(name = "idUdm") String idUdm,
+                                  @RequestParam(name = "idFamille") String idFamille,
+                                  @RequestParam(name = "idCentreBudgetaire") String idCentreBudgetaire,
+                                  RedirectAttributes redirectAttributes){
+        try {
+            // Validation des données
+            if (codeArticle == null || codeArticle.trim().isEmpty()) {
+                throw new IllegalArgumentException("Le code article est obligatoire");
+            }
+
+            if (designation == null || designation.trim().isEmpty()) {
+                throw new IllegalArgumentException("La désignation est obligatoire");
+            }
+
+            // Appel du service de modification
+            Article articleModifie = articleService.modifierArticle(
+                    codeArticle.trim(),
+                    designation.trim(),
+                    idUdm != null && !idUdm.isEmpty() ? idUdm : null,
+                    idFamille != null && !idFamille.isEmpty() ? idFamille : null,
+                    idCentreBudgetaire != null && !idCentreBudgetaire.isEmpty() ? idCentreBudgetaire : null
+            );
+
+            // Message de succès
+            redirectAttributes.addFlashAttribute("success",
+                    "✅ Article <strong>" + articleModifie.getCodeArticle() + "</strong> modifié avec succès !");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error",
+                    "❌ Erreur de validation : " + e.getMessage());
+            redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
+            redirectAttributes.addFlashAttribute("designation", designation);
+            redirectAttributes.addFlashAttribute("idUdm", idUdm);
+            redirectAttributes.addFlashAttribute("idFamille", idFamille);
+            redirectAttributes.addFlashAttribute("idCentreBudgetaire", idCentreBudgetaire);
+
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error",
+                    "❌ Erreur lors de la modification : " + e.getMessage());
+            redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
+        }
+
+        return "redirect:/admin/article/list";
     }
 }

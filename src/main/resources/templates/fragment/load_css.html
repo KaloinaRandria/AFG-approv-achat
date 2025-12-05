@@ -12,6 +12,8 @@
 	
 	<!-- DataTables core -->
 	<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<!--    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">-->
+
 	<!-- DataTables Bootstrap 5 styling 
 	<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">-->
 	<link rel="stylesheet" th:href="@{/css/datatables.css}" />
@@ -24,4 +26,20 @@
     <!-- Dans le head de base.html ou de cette page -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+    <style>
+        .main-content {
+            margin-left: 250px; /* Largeur de la sidebar */
+            width: calc(100% - 250px); /* Calculer la largeur restante */
+            transition: margin-left 0.3s ease; /* Animation optionnelle */
+        }
+
+        /* Pour les petits écrans, on peut réduire la sidebar */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+    </style>
 </div>

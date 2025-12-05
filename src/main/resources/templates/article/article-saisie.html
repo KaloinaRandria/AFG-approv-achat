@@ -1,189 +1,194 @@
 <!DOCTYPE html>
 <html lang="fr"
-      xmlns:th="http://www.thymeleaf.org"
-      th:replace="modele/base :: layout(~{::title}, ~{::section})">
+      xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <title>Ajouter un nouvel article</title>
-
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
 </head>
 <body>
-<section>
-    <div class="container">
-        <!-- En-tête avec titre et bouton retour -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="mb-0">Ajouter un nouvel article</h1>
-            <a th:href="@{/admin/article/list}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Retour à la liste
-            </a>
-        </div>
+    <div th:replace="fragment/sidebar :: sidebar"></div>
+    <div class="main-content">
+        <section>
+            <div class="container">
+                <!-- En-tête avec titre et bouton retour -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="mb-0">Ajouter un nouvel article</h1>
+                    <a th:href="@{/admin/article/list}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+                    </a>
+                </div>
 
-        <!-- Messages d'erreur/succès -->
-        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
-            <span th:text="${successMessage}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+                <!-- Messages d'erreur/succès -->
+                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <span th:text="${successMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
 
-        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
-            <span th:text="${errorMessage}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+                <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span th:text="${errorMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
 
-        <!-- Formulaire d'insertion -->
-        <div class="card shadow">
-            <div class="card-body">
-                <form th:action="@{/admin/article/save}" method="post" th:object="${article}" id="articleForm">
+                <!-- Formulaire d'insertion -->
+                <div class="card shadow">
+                    <div class="card-body">
+                        <form th:action="@{/admin/article/save}" method="post" th:object="${article}" id="articleForm">
 
-                    <!-- Désignation -->
-                    <div class="mb-3">
-                        <label for="designation" class="form-label fw-bold">
-                            Désignation <span class="text-danger">*</span>
-                        </label>
-                        <input type="text"
-                               class="form-control"
-                               id="designation"
-                               name="designation"
-                               th:field="*{designation}"
-                               placeholder="Ex: Ordinateur portable Dell XPS 13"
-                               required
-                               minlength="3"
-                               maxlength="200">
-                        <div class="form-text">
-                            Nom complet de l'article (3 à 200 caractères)
-                        </div>
-                        <div th:if="${#fields.hasErrors('designation')}" class="text-danger">
-                            <small th:errors="*{designation}"></small>
-                        </div>
+                            <!-- Désignation -->
+                            <div class="mb-3">
+                                <label for="designation" class="form-label fw-bold">
+                                    Désignation <span class="text-danger">*</span>
+                                </label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="designation"
+                                       name="designation"
+                                       th:field="*{designation}"
+                                       placeholder="Ex: Ordinateur portable Dell XPS 13"
+                                       required
+                                       minlength="3"
+                                       maxlength="200">
+                                <div class="form-text">
+                                    Nom complet de l'article (3 à 200 caractères)
+                                </div>
+                                <div th:if="${#fields.hasErrors('designation')}" class="text-danger">
+                                    <small th:errors="*{designation}"></small>
+                                </div>
+                            </div>
+
+                            <!-- Seuil minimum -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="seuilMinimum" class="form-label fw-bold">
+                                        Seuil minimum <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="number"
+                                           class="form-control"
+                                           id="seuilMinimum"
+                                           name="seuilMinimum"
+                                           th:field="*{seuilMin}"
+                                           min="1"
+                                           step="1"
+                                           placeholder="Ex: 10"
+                                           value="1"
+                                           required>
+                                    <div class="form-text">
+                                        Quantité en dessous de laquelle une alerte sera déclenchée
+                                    </div>
+                                    <div th:if="${#fields.hasErrors('seuilMin')}" class="text-danger">
+                                        <small th:errors="*{seuilMin}"></small>
+                                    </div>
+                                </div>
+
+                                <!-- Unité de mesure -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="udm" class="form-label fw-bold">
+                                        Unité de mesure <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select select2-searchable"
+                                            id="udm"
+                                            name="udm"
+                                            th:field="*{udm}"
+                                            data-placeholder="Recherchez ou sélectionnez une unité..."
+                                            required>
+                                        <option value=""></option> <!-- Option vide pour le placeholder -->
+                                        <option th:each="unite : ${unites}"
+                                                th:value="${unite.getId()}"
+                                                th:text="${unite.getDescription()  + ' - ' + unite.getAcronyme()}">
+                                        </option>
+                                    </select>
+                                    <div class="form-text">
+                                        Unité utilisée pour la gestion du stock
+                                    </div>
+                                    <div th:if="${#fields.hasErrors('udm')}" class="text-danger">
+                                        <small th:errors="*{udm}"></small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Famille -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="famille" class="form-label fw-bold">
+                                        Famille <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select select2-searchable"
+                                            id="famille"
+                                            name="famille"
+                                            th:field="*{famille}"
+                                            data-placeholder="Recherchez ou sélectionnez une famille..."
+                                            required>
+                                        <option value=""></option>
+                                        <option th:each="fam : ${familles}"
+                                                th:value="${fam.getId()}"
+                                                th:text="${fam.getDescription()}">
+                                        </option>
+                                    </select>
+                                    <div class="form-text">
+                                        Catégorie à laquelle appartient l'article
+                                    </div>
+                                    <div th:if="${#fields.hasErrors('famille')}" class="text-danger">
+                                        <small th:errors="*{famille}"></small>
+                                    </div>
+                                </div>
+
+                                <!-- Centre budgétaire -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="centreBudgetaire" class="form-label fw-bold">
+                                        Centre budgétaire <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select select2-searchable"
+                                            id="centreBudgetaire"
+                                            name="centreBudgetaire"
+                                            th:field="*{centreBudgetaire}"
+                                            data-placeholder="Recherchez ou sélectionnez un centre..."
+                                            required>
+                                        <option value=""></option>
+                                        <option th:each="centre : ${centres}"
+                                                th:value="${centre.getId()}"
+                                                th:text="${centre.getCodeCentre()}">
+                                        </option>
+                                    </select>
+                                    <div class="form-text">
+                                        Centre responsable du budget de l'article
+                                    </div>
+                                    <div th:if="${#fields.hasErrors('centreBudgetaire')}" class="text-danger">
+                                        <small th:errors="*{centreBudgetaire}"></small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Boutons d'action -->
+                            <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                                <a th:href="@{/admin/article/list}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-2"></i>Annuler
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Enregistrer l'article
+                                </button>
+                            </div>
+                        </form>
                     </div>
+                </div>
 
-                    <!-- Seuil minimum -->
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="seuilMinimum" class="form-label fw-bold">
-                                Seuil minimum <span class="text-danger">*</span>
-                            </label>
-                            <input type="number"
-                                   class="form-control"
-                                   id="seuilMinimum"
-                                   name="seuilMinimum"
-                                   th:field="*{seuilMin}"
-                                   min="1"
-                                   step="1"
-                                   placeholder="Ex: 10"
-                                   value="1"
-                                   required>
-                            <div class="form-text">
-                                Quantité en dessous de laquelle une alerte sera déclenchée
-                            </div>
-                            <div th:if="${#fields.hasErrors('seuilMin')}" class="text-danger">
-                                <small th:errors="*{seuilMin}"></small>
-                            </div>
-                        </div>
-
-                        <!-- Unité de mesure -->
-                        <div class="col-md-6 mb-3">
-                            <label for="udm" class="form-label fw-bold">
-                                Unité de mesure <span class="text-danger">*</span>
-                            </label>
-                            <select class="form-select select2-searchable"
-                                    id="udm"
-                                    name="udm"
-                                    th:field="*{udm}"
-                                    data-placeholder="Recherchez ou sélectionnez une unité..."
-                                    required>
-                                <option value=""></option> <!-- Option vide pour le placeholder -->
-                                <option th:each="unite : ${unites}"
-                                        th:value="${unite.getId()}"
-                                        th:text="${unite.getDescription()  + ' - ' + unite.getAcronyme()}">
-                                </option>
-                            </select>
-                            <div class="form-text">
-                                Unité utilisée pour la gestion du stock
-                            </div>
-                            <div th:if="${#fields.hasErrors('udm')}" class="text-danger">
-                                <small th:errors="*{udm}"></small>
-                            </div>
-                        </div>
+                <!-- Informations additionnelles -->
+                <div class="mt-4">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Informations</h6>
+                        <ul class="mb-0">
+                            <li>Le code article sera généré automatiquement</li>
+                            <li>Le stock initial sera de 0 unités</li>
+                            <li>Une alerte sera déclenchée lorsque le stock atteindra le seuil minimum</li>
+                            <li>Tous les champs marqués d'un astérisque (<span class="text-danger">*</span>) sont obligatoires</li>
+                        </ul>
                     </div>
-
-                    <!-- Famille -->
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="famille" class="form-label fw-bold">
-                                Famille <span class="text-danger">*</span>
-                            </label>
-                            <select class="form-select select2-searchable"
-                                    id="famille"
-                                    name="famille"
-                                    th:field="*{famille}"
-                                    data-placeholder="Recherchez ou sélectionnez une famille..."
-                                    required>
-                                <option value=""></option>
-                                <option th:each="fam : ${familles}"
-                                        th:value="${fam.getId()}"
-                                        th:text="${fam.getDescription()}">
-                                </option>
-                            </select>
-                            <div class="form-text">
-                                Catégorie à laquelle appartient l'article
-                            </div>
-                            <div th:if="${#fields.hasErrors('famille')}" class="text-danger">
-                                <small th:errors="*{famille}"></small>
-                            </div>
-                        </div>
-
-                        <!-- Centre budgétaire -->
-                        <div class="col-md-6 mb-3">
-                            <label for="centreBudgetaire" class="form-label fw-bold">
-                                Centre budgétaire <span class="text-danger">*</span>
-                            </label>
-                            <select class="form-select select2-searchable"
-                                    id="centreBudgetaire"
-                                    name="centreBudgetaire"
-                                    th:field="*{centreBudgetaire}"
-                                    data-placeholder="Recherchez ou sélectionnez un centre..."
-                                    required>
-                                <option value=""></option>
-                                <option th:each="centre : ${centres}"
-                                        th:value="${centre.getId()}"
-                                        th:text="${centre.getCodeCentre()}">
-                                </option>
-                            </select>
-                            <div class="form-text">
-                                Centre responsable du budget de l'article
-                            </div>
-                            <div th:if="${#fields.hasErrors('centreBudgetaire')}" class="text-danger">
-                                <small th:errors="*{centreBudgetaire}"></small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Boutons d'action -->
-                    <div class="d-flex justify-content-between mt-4 pt-3 border-top">
-                        <a th:href="@{/admin/article/list}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-2"></i>Annuler
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i>Enregistrer l'article
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
-
-        <!-- Informations additionnelles -->
-        <div class="mt-4">
-            <div class="alert alert-info">
-                <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Informations</h6>
-                <ul class="mb-0">
-                    <li>Le code article sera généré automatiquement</li>
-                    <li>Le stock initial sera de 0 unités</li>
-                    <li>Une alerte sera déclenchée lorsque le stock atteindra le seuil minimum</li>
-                    <li>Tous les champs marqués d'un astérisque (<span class="text-danger">*</span>) sont obligatoires</li>
-                </ul>
-            </div>
-        </div>
+        </section>
     </div>
-</section>
+
 </body>
 </html>
