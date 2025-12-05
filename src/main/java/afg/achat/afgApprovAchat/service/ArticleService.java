@@ -60,7 +60,7 @@ public class ArticleService {
 
         // Récupérer l'utilisateur courant
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String utilisateur = user != null ? user.getNom() : "Admin";
+        String utilisateur = user != null ? user.getNom() + user.getPrenom() : "Admin";
 
         List<ArticleHistorique> historiques = new ArrayList<>();
 

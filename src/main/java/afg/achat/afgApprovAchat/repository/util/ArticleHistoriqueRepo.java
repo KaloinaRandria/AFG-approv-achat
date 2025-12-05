@@ -8,6 +8,5 @@ import java.util.List;
 
 @Repository
 public interface ArticleHistoriqueRepo extends JpaRepository<ArticleHistorique,Integer> {
-    static List<ArticleHistorique> findByArticleCodeArticleOrderByDateModificationDesc(String codeArticle);
-    static List<ArticleHistorique> findByArticleIdOrderByDateModificationDesc(Long articleId);
+
 }

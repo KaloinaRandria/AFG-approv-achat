@@ -143,6 +143,52 @@ public class ArticleController {
 
             return "admin/article/article-saisie";
         }
+    }
 
+    @PostMapping("/modifier")
+    public String modifierArticle(@RequestParam(name = "codeArticle") String codeArticle,
+                                  @RequestParam(name = "designation") String designation,
+                                  @RequestParam(name = "idUdm") String idUdm,
+                                  @RequestParam(name = "idFamille") String idFamille,
+                                  @RequestParam(name = "idCentreBudgetaire") String idCentreBudgetaire,
+                                  RedirectAttributes redirectAttributes){
+        try {
+            // Validation des données
+            if (codeArticle == null || codeArticle.trim().isEmpty()) {
+                throw new IllegalArgumentException("Le code article est obligatoire");
+            }
+
+            if (designation == null || designation.trim().isEmpty()) {
+                throw new IllegalArgumentException("La désignation est obligatoire");
+            }
+
+            // Appel du service de modification
+            Article articleModifie = articleService.modifierArticle(
+                    codeArticle.trim(),
+                    designation.trim(),
+                    idUdm != null && !idUdm.isEmpty() ? idUdm : null,
+                    idFamille != null && !idFamille.isEmpty() ? idFamille : null,
+                    idCentreBudgetaire != null && !idCentreBudgetaire.isEmpty() ? idCentreBudgetaire : null
+            );
+
+            // Message de succès
+            redirectAttributes.addFlashAttribute("success",
+                    "✅ Article <strong>" + articleModifie.getCodeArticle() + "</strong> modifié avec succès !");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error",
+                    "❌ Erreur de validation : " + e.getMessage());
+            redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
+            redirectAttributes.addFlashAttribute("designation", designation);
+            redirectAttributes.addFlashAttribute("idUdm", idUdm);
+            redirectAttributes.addFlashAttribute("idFamille", idFamille);
+            redirectAttributes.addFlashAttribute("idCentreBudgetaire", idCentreBudgetaire);
+
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error",
+                    "❌ Erreur lors de la modification : " + e.getMessage());
+            redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
+        }
+
+        return "redirect:/admin/article/list";
     }
 }
