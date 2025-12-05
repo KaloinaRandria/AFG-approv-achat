@@ -172,10 +172,10 @@ public class ArticleController {
             );
 
             // Message de succès
-            redirectAttributes.addFlashAttribute("success",
+            redirectAttributes.addFlashAttribute("ok",
                     "✅ Article <strong>" + articleModifie.getCodeArticle() + "</strong> modifié avec succès !");
         } catch (IllegalArgumentException e) {
-            redirectAttributes.addFlashAttribute("error",
+            redirectAttributes.addFlashAttribute("ko",
                     "❌ Erreur de validation : " + e.getMessage());
             redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
             redirectAttributes.addFlashAttribute("designation", designation);
@@ -184,7 +184,7 @@ public class ArticleController {
             redirectAttributes.addFlashAttribute("idCentreBudgetaire", idCentreBudgetaire);
 
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error",
+            redirectAttributes.addFlashAttribute("ko",
                     "❌ Erreur lors de la modification : " + e.getMessage());
             redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
         }
