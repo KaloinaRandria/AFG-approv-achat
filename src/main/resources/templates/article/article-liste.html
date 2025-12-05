@@ -6,7 +6,37 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <style>
+        /* Style pour centrer le champ de recherche DataTables */
+        div.dataTables_wrapper .dataTables_filter {
+            text-align: center !important;
+            float: none !important;
+            margin: 10px 0 20px 0 !important;
+        }
 
+        div.dataTables_wrapper .dataTables_filter label {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            justify-content: center !important;
+            width: 100% !important;
+        }
+
+        div.dataTables_wrapper .dataTables_filter input {
+            width: 300px !important;
+            display: inline-block !important;
+            margin: 0 auto !important;
+        }
+
+        /* Pour garder les autres éléments alignés */
+        div.dataTables_wrapper .dataTables_length {
+            float: left;
+        }
+
+        div.dataTables_wrapper .dataTables_paginate {
+            float: right;
+        }
+    </style>
 </head>
 
 <body>
@@ -155,7 +185,18 @@
             // Initialiser DataTables - configuration simplifiée
             $('#articlesTable').DataTable({
                 language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
+                    "zeroRecords": "Aucun article correspondant trouvé",
+                    "search": "<i class='fas fa-search'></i> Rechercher :",
+                    "lengthMenu": "Afficher _MENU_ lignes",
+                    "info": "Lignes _START_ à _END_ sur _TOTAL_",
+                    "infoEmpty": "Aucune ligne à afficher",
+                    "infoFiltered": "(filtré sur _MAX_ lignes totales)",
+                    "paginate": {
+                        "first": "début",
+                        "last": "fin",
+                        "next": "suivant ›",
+                        "previous": "‹ précédent"
+                    }
                 },
                 pageLength: 10,
                 lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
