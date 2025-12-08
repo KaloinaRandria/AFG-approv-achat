@@ -1,0 +1,44 @@
+<!-- maintenance.html (Thymeleaf) - place this file in src/main/resources/templates/ -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Maintenance</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <style>
+        html,body { height:100%; }
+        .centered { min-height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:2rem; }
+        .card { max-width:720px; width:100%; border-radius:1rem; box-shadow:0 10px 30px rgba(0,0,0,0.08); }
+        .headline { font-weight:700; letter-spacing:0.02em; }
+        .sub { color:#555; }
+    </style>
+</head>
+<body>
+<div th:replace="fragment/sidebar :: sidebar"></div>
+<div class="main-content">
+    <div class="centered">
+        <div class="card p-4 text-center">
+            <div class="mb-3">
+                <!-- simple SVG icon -->
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M12 2v4" stroke="#f39c12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 18v4" stroke="#f39c12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="12" r="7" stroke="#f39c12" stroke-width="2"/>
+                    <path d="M9 12h6" stroke="#f39c12" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <h1 class="headline">Site en maintenance</h1>
+            <p class="sub mb-3">Nous effectuons actuellement des opérations de maintenance pour améliorer le service.</p>
+            <p class="mb-0">Merci de revenir dans <strong>24 heures</strong>.</p>
+            <hr/>
+<!--            <small class="text-muted">Si le problème persiste, contactez <a href="mailto:support@example.com">support@example.com</a></small>-->
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
+
