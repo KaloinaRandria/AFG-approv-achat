@@ -17,8 +17,9 @@
     <!-- MENU -->
     <div class="px-3 mb-2">
         <a class="nav-link text-white d-flex align-items-center sidebar-link"
-           th:href="@{/admin/maintenance}">
-            <i class="fas fa-chart-line me-3"></i> Tableau de bord
+           th:href="@{/admin/maintenance}"
+           th:classappend="${currentUri == '/admin/maintenance'} ? 'active' : ''">
+        <i class="fas fa-chart-line me-3"></i> Tableau de bord
         </a>
     </div>
 
@@ -27,16 +28,30 @@
         <!-- ARTICLES -->
         <div class="accordion-item bg-transparent border-0">
             <h2 class="accordion-header">
-                <button class="accordion-button collapsed bg-transparent text-start text-white sidebar-button"
-                        type="button" data-bs-toggle="collapse"
-                        data-bs-target="#menuArticle">
-                    <i class="fas fa-box me-3"></i> Articles
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#menuArticle"
+                        th:classappend="${currentUri.contains('/admin/article')} ? '' : 'collapsed'">
+                <i class="fas fa-box me-3"></i> Articles
                 </button>
             </h2>
-            <div id="menuArticle" class="accordion-collapse collapse">
-                <ul class="nav flex-column px-3">
-                    <li><a class="nav-link text-white sidebar-sub" th:href="@{/admin/article/list}">Liste des articles</a></li>
-                    <li><a class="nav-link text-white sidebar-sub" th:href="@{/admin/article/add}">Ajouter un article</a></li>
+            <div id="menuArticle"
+                 class="accordion-collapse collapse"
+                 th:classappend="${currentUri.contains('/admin/article')} ? 'show' : ''">
+            <ul class="nav flex-column px-3">
+                    <li><a class="nav-link text-white sidebar-sub"
+                           th:href="@{/admin/article/list}"
+                           th:classappend="${currentUri == '/admin/article/list'} ? 'active' : ''">
+                        Liste des articles
+                    </a>
+                    </li>
+                    <li><a class="nav-link text-white sidebar-sub"
+                           th:href="@{/admin/article/add}"
+                           th:classappend="${currentUri == '/admin/article/add'} ? 'active' : ''">
+                        Ajouter un article
+                    </a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -44,16 +59,32 @@
         <!-- STOCK -->
         <div class="accordion-item bg-transparent border-0">
             <h2 class="accordion-header">
-                <button class="accordion-button collapsed bg-transparent text-start text-white sidebar-button"
-                        type="button" data-bs-toggle="collapse"
-                        data-bs-target="#menuStock">
-                    <i class="fas fa-warehouse me-3"></i> Stock
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#menuStock"
+                        th:classappend="${currentUri.contains('/admin/stock')
+                         or currentUri.contains('/admin/message')} ? '' : 'collapsed'">
+                <i class="fas fa-warehouse me-3"></i> Stock
                 </button>
             </h2>
-            <div id="menuStock" class="accordion-collapse collapse">
-                <ul class="nav flex-column px-3">
-                    <li><a class="nav-link text-white sidebar-sub" th:href="@{/admin/stock/etat-stock}">État du stock</a></li>
-                    <li><a class="nav-link text-white sidebar-sub" th:href="@{/admin/message/alertes-stock}">Alertes de stock</a></li>
+            <div id="menuStock"
+                 class="accordion-collapse collapse"
+                 th:classappend="${currentUri.contains('/admin/stock')
+                      or currentUri.contains('/admin/message')} ? 'show' : ''">
+            <ul class="nav flex-column px-3">
+                    <li><a class="nav-link text-white sidebar-sub"
+                           th:href="@{/admin/stock/etat-stock}"
+                           th:classappend="${currentUri == '/admin/stock/etat-stock'} ? 'active' : ''">
+                        État du stock
+                    </a>
+                    </li>
+                    <li><a class="nav-link text-white sidebar-sub"
+                           th:href="@{/admin/message/alertes-stock}"
+                           th:classappend="${currentUri == '/admin/message/alertes-stock'} ? 'active' : ''">
+                        Alertes de stock
+                    </a>
+                    </li>
                 </ul>
             </div>
         </div>

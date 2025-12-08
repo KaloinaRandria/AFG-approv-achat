@@ -10,6 +10,7 @@ import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.FamilleService;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.util.UdmService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -35,12 +36,13 @@ public class ArticleController {
 
 
     @GetMapping("/list")
-    public String listArticles(Model model) {
+    public String listArticles(Model model, HttpServletRequest request) {
         Article[] articles = articleService.getAllArticles();
         Udm[] udms = udmService.getAllUdms();
         Famille[] familles = familleService.getAllFamilles();
         CentreBudgetaire[] centres = centreBudgetaireService.getAllCentreBudgetaires();
 
+        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("articles", articles);
         model.addAttribute("udms", udms);
         model.addAttribute("familles", familles);
@@ -67,12 +69,13 @@ public class ArticleController {
     }
 
     @GetMapping("/add")
-    public String addArticlePage(Model model) {
+    public String addArticlePage(Model model, HttpServletRequest request) {
 
         // Si l'article n'existe pas encore dans le modèle, en créer un nouveau
         if (!model.containsAttribute("article")) {
             model.addAttribute("article", new Article());
         }
+        model.addAttribute("currentUri", request.getRequestURI());
 
         // Toujours ajouter les listes de données
         model.addAttribute("unites", udmService.getAllUdms());
