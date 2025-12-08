@@ -7,6 +7,54 @@
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
 
+    <style>
+        /* Ajustements pour la sidebar */
+        .main-content {
+            margin-left: 250px; /* Ajuster selon la largeur de votre sidebar */
+            padding: 20px;
+        }
+
+        /* Pour les écrans plus petits */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+
+        /* Ajustement pour les boutons d'action */
+        .btn-group-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* Ajustement pour le conteneur de titre */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        /* Ajustement pour les filtres DataTables */
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter {
+            padding: 10px 0;
+        }
+
+        /* Cacher la pagination du haut */
+        .dataTables_wrapper .dataTables_info {
+            padding-top: 10px !important;
+        }
+
+        /* Ajustement pour le conteneur mobile */
+        .mobile-search-container {
+            margin-bottom: 15px;
+        }
+    </style>
+
 </head>
 
 <body>
@@ -15,24 +63,28 @@
 <!-- Contenu principal -->
 <div class="main-content">
     <section>
-        <h1 class="mb-3">Liste des articles</h1>
+        <!-- En-tête avec titre et boutons -->
+        <div class="page-header">
+            <h1 class="mb-0">Liste des articles</h1>
+            <div class="btn-group-actions">
+                <a th:href="@{/admin/stock/etat-stock}" class="btn btn-primary">
+                    <i class="fas fa-chart-bar me-2"></i>État de stock
+                </a>
+                <a th:href="@{/admin/article/add}" class="btn btn-success">
+                    <i class="fas fa-plus-circle me-2"></i>Nouvel article
+                </a>
+            </div>
+        </div>
 
         <div th:replace="fragment/load_pop_up :: pop_up"></div>
-
-
-        <div class="mb-3">
-            <a th:href="@{/admin/stock/etat-stock}" class="btn btn-primary">
-                <i class="fas fa-chart-bar"></i> Voir l'état de stock
-            </a>
-        </div>
 
         <table id="articlesTable" class="table table-striped table-hover">
             <thead>
             <tr>
                 <th>Code</th>
                 <th>Désignation</th>
-                <th>Unite</th>
                 <th>Famille</th>
+                <th>UDM</th>
                 <th>Actions</th>
                 <th>Simulation Stock</th>
             </tr>
@@ -42,8 +94,8 @@
             <tr th:each="a : ${articles}">
                 <td th:text="${a.getCodeArticle()}"></td>
                 <td th:text="${a.getDesignation()}"></td>
-                <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
                 <td th:text="${a.famille != null ? a.famille.getDescription() : '---'}"></td>
+                <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
                 <td>
                     <button type="button"
                             class="btn btn-outline-secondary btn-sm edit-btn"
@@ -145,11 +197,11 @@
             return;
         }
 
-        // Initialiser DataTables avec recherche par colonnes seulement
+        // Initialiser DataTables avec configuration corrigée
         const table = $('#articlesTable').DataTable({
             language: {
                 "zeroRecords": "Aucun article correspondant trouvé",
-                "search": "", // Vide pour masquer le label
+                "search": "Rechercher:",
                 "lengthMenu": "Afficher _MENU_ articles",
                 "info": "Affichage de _START_ à _END_ sur _TOTAL_ articles",
                 "infoEmpty": "Aucun article à afficher",
@@ -169,8 +221,12 @@
             lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
             order: [[0, 'asc']],
             responsive: true,
-            // Configuration DOM sans 'f' (filter) pour masquer la recherche globale
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"i>><"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+            // Configuration DOM MODIFIÉE :
+            // "l" = length menu (nombre d'entrées)
+            // "f" = search filter (recherche globale)
+            // "i" = info (affichage informations)
+            // "p" = pagination
+            dom: '<"row"<"col-md-6"l><"col-md-6"f>><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
             initComplete: function () {
                 const api = this.api();
 
@@ -180,7 +236,7 @@
                 // Ajouter les champs de recherche pour chaque colonne
                 $('#articlesTable thead tr:eq(1) th').each(function (i) {
                     // Ne pas ajouter de champ de recherche pour les colonnes Actions et Simulation Stock
-                    if (i < 4) { // Colonnes 0 à 3 : Code, Désignation, Unité, Famille
+                    if (i < 4) { // Colonnes 0 à 3 : Code, Désignation, Famille, UDM
                         const columnTitle = $('#articlesTable thead tr:first-child th').eq(i).text();
                         $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer ' + columnTitle + '" style="width: 100%;" />');
 
@@ -243,8 +299,7 @@
                         $(this).html('<i class="fas fa-redo me-1"></i>Réinitialiser tous les filtres');
                         $(this).removeClass('btn-success').addClass('btn-outline-secondary');
                     }, 1500);
-                }
-                );
+                });
 
                 // Ajouter des tooltips aux champs de recherche
                 $('#articlesTable thead tr:eq(1) th input').attr('title', 'Tapez pour filtrer cette colonne');
@@ -259,9 +314,11 @@
                     if ($(window).width() <= 768) {
                         $('.mobile-search-container').show();
                         $('#articlesTable thead tr:eq(1)').hide();
+                        $('.dataTables_filter').hide(); // Cacher la recherche globale sur mobile
                     } else {
                         $('.mobile-search-container').hide();
                         $('#articlesTable thead tr:eq(1)').show();
+                        $('.dataTables_filter').show(); // Afficher la recherche globale sur desktop
                     }
                 }
 
