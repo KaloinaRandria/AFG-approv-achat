@@ -68,11 +68,16 @@ public class ArticleController {
 
     @GetMapping("/add")
     public String addArticlePage(Model model) {
-        model.addAttribute("article", new Article());
 
+        // Si l'article n'existe pas encore dans le modèle, en créer un nouveau
+        if (!model.containsAttribute("article")) {
+            model.addAttribute("article", new Article());
+        }
+
+        // Toujours ajouter les listes de données
         model.addAttribute("unites", udmService.getAllUdms());
         model.addAttribute("familles", familleService.getAllFamilles());
-        model.addAttribute("centres",centreBudgetaireService.getAllCentreBudgetaires());
+        model.addAttribute("centres", centreBudgetaireService.getAllCentreBudgetaires());
 
         return "article/article-saisie";
     }
@@ -84,28 +89,29 @@ public class ArticleController {
                                 BindingResult bindingResult,
                                 RedirectAttributes redirectAttributes,
                                 Model model) {
+
         try {
+            // Validation de base
             if (bindingResult.hasErrors()) {
-                model.addAttribute("unites", udmService.getAllUdms());
-                model.addAttribute("familles", familleService.getAllFamilles());
-                model.addAttribute("centres", centreBudgetaireService.getAllCentreBudgetaires());
-                return "article/article-saisie";
+                redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.article", bindingResult);
+                redirectAttributes.addFlashAttribute("article", article);
+                redirectAttributes.addFlashAttribute("ko", "Veuillez corriger les erreurs dans le formulaire");
+                return "redirect:/admin/article/add";
             }
+
             if (article.getDesignation() == null || article.getDesignation().trim().isEmpty()) {
-                bindingResult.rejectValue("designation", "notempty", "La désignation est obligatoire");
+                redirectAttributes.addFlashAttribute("ko", "La désignation est obligatoire");
+                redirectAttributes.addFlashAttribute("article", article);
+                return "redirect:/admin/article/add";
             }
 
             if (article.getSeuilMin() <= 0) {
-                bindingResult.rejectValue("seuilMin", "min.value", "Le seuil minimum doit être positif");
+                redirectAttributes.addFlashAttribute("ko", "Le seuil minimum doit être positif");
+                redirectAttributes.addFlashAttribute("article", article);
+                return "redirect:/admin/article/add";
             }
 
-            if (bindingResult.hasErrors()) {
-                model.addAttribute("unites", udmService.getAllUdms());
-                model.addAttribute("familles", familleService.getAllFamilles());
-                model.addAttribute("centres", centreBudgetaireService.getAllCentreBudgetaires());
-                return "admin/article/article-saisie";
-            }
-
+            // Récupération des objets liés
             Udm udm = udmService.getUdmById(Integer.parseInt(udmId))
                     .orElseThrow(() -> new IllegalArgumentException("Unité de mesure invalide"));
 
@@ -115,36 +121,36 @@ public class ArticleController {
             CentreBudgetaire centreBudgetaire = centreBudgetaireService.getCentreBudgetaireById(Integer.parseInt(centreBudgetaireId))
                     .orElseThrow(() -> new IllegalArgumentException("Centre budgétaire invalide"));
 
+            // Génération du code
             article.setCodeArticle(idGenerator);
             article.setUdm(udm);
             article.setFamille(famille);
             article.setCentreBudgetaire(centreBudgetaire);
 
+            // Sauvegarde
             Article savedArticle = articleService.saveArticle(article);
 
             // Message de succès
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Article '" + savedArticle.getDesignation() + "' ajouté avec succès (Code: " + savedArticle.getCodeArticle() + ")");
+            redirectAttributes.addFlashAttribute("ok",
+                    "Article '" + savedArticle.getDesignation() +
+                            "' ajouté avec succès (Code: " + savedArticle.getCodeArticle() + ")");
 
             return "redirect:/admin/article/list";
 
         } catch (IllegalArgumentException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("unites", udmService.getAllUdms());
-            model.addAttribute("familles", familleService.getAllFamilles());
-            model.addAttribute("centres",centreBudgetaireService.getAllCentreBudgetaires());
+            // Pour les erreurs de validation, rediriger vers le formulaire
+            redirectAttributes.addFlashAttribute("ko", "Erreur : " + e.getMessage());
+            redirectAttributes.addFlashAttribute("article", article);
+            return "redirect:/admin/article/add";
 
-            return "article/article-saisie";
         } catch (Exception e) {
-            model.addAttribute("errorMessage", "Erreur lors de l'ajout de l'article: " + e.getMessage());
-            model.addAttribute("unites", udmService.getAllUdms());
-            model.addAttribute("familles", familleService.getAllFamilles());
-            model.addAttribute("centres", centreBudgetaireService.getAllCentreBudgetaires());
-
-            return "admin/article/article-saisie";
+            // Pour les autres erreurs
+            redirectAttributes.addFlashAttribute("ko",
+                    "Erreur lors de l'ajout de l'article: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("article", article);
+            return "redirect:/admin/article/add";
         }
     }
-
     @PostMapping("/modifier")
     public String modifierArticle(@RequestParam(name = "codeArticle") String codeArticle,
                                   @RequestParam(name = "designation") String designation,
@@ -176,7 +182,7 @@ public class ArticleController {
                     "✅ Article <strong>" + articleModifie.getCodeArticle() + "</strong> modifié avec succès !");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("ko",
-                    "❌ Erreur de validation : " + e.getMessage());
+                    "Erreur de validation : " + e.getMessage());
             redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
             redirectAttributes.addFlashAttribute("designation", designation);
             redirectAttributes.addFlashAttribute("idUdm", idUdm);
@@ -185,8 +191,8 @@ public class ArticleController {
 
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("ko",
-                    "❌ Erreur lors de la modification : " + e.getMessage());
-            redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
+                    "Erreur lors de la modification : " + e.getMessage());
+//            redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
         }
 
         return "redirect:/admin/article/list";
