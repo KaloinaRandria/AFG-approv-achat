@@ -8,6 +8,7 @@ import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.VEtatStockService;
 import afg.achat.afgApprovAchat.service.stock.StockFilleService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -93,8 +94,9 @@ public class StockController {
     }
 
     @GetMapping("/etat-stock")
-    public String getEtatStock(Model model) {
+    public String getEtatStock(Model model, HttpServletRequest request) {
         VEtatStock[] etatStocks = vEtatStockService.getAllEtatStocks();
+        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("etatStocks", etatStocks);
         return "stock/stock-liste";
     }

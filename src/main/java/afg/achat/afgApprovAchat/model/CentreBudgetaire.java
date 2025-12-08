@@ -16,7 +16,7 @@ public class CentreBudgetaire {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_centre_budgetaire")
     int id;
     String codeCentre;
-
+    String description;
     public CentreBudgetaire(String codeCentre){
         this.setCodeCentre(codeCentre);
     }

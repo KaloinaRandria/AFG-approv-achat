@@ -6,191 +6,204 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
-
 </head>
 
 <body>
-    <div th:replace="fragment/sidebar :: sidebar"></div>
+<div th:replace="fragment/sidebar :: sidebar"></div>
 
-    <!-- Contenu principal -->
-    <div class="main-content">
-        <section>
-            <h1 class="mb-3">Liste des articles</h1>
-
-            <!-- Messages de succès/erreur -->
-            <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
-                <span th:utext="${success}"></span>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
-                <span th:text="${error}"></span>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-
-            <div class="mb-3">
-                <a th:href="@{/admin/stock/etat-stock}" class="btn btn-primary">
-                    <i class="fas fa-chart-bar"></i> Voir l'état de stock
+<div class="main-content">
+    <section>
+        <!-- En-tête -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold">
+                <i class="fas fa-box me-3 text-primary"></i> Liste des Articles
+            </h1>
+            <div>
+                <a th:href="@{/admin/stock/etat-stock}" class="btn btn-primary me-2">
+                    <i class="fas fa-warehouse me-3"></i>État de stock
+                </a>
+                <a th:href="@{/admin/article/add}" class="btn btn-success">
+                    <i class="fas fa-plus-circle me-1"></i>Nouvel article
                 </a>
             </div>
+        </div>
 
-            <table id="articlesTable" class="table table-striped table-hover">
-                <thead>
-                <tr>
-                    <th>Code</th>
-                    <th>Désignation</th>
-                    <th>Unite</th>
-                    <th>Famille</th>
-                    <th>Actions</th>
-                    <th>Simulation Stock</th>
-                </tr>
-                </thead>
+        <div th:replace="fragment/load_pop_up :: pop_up"></div>
 
-                <tbody>
-                <tr th:each="a : ${articles}">
-                    <td th:text="${a.getCodeArticle()}"></td>
-                    <td th:text="${a.getDesignation()}"></td>
-                    <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
-                    <td th:text="${a.famille != null ? a.famille.getDescription() : '---'}"></td>
-                    <td>
-                        <button type="button"
-                                class="btn btn-warning btn-sm edit-btn"
-                                data-bs-toggle="modal"
-                                data-bs-target="#modifierModal"
-                                th:data-codearticle="${a.getCodeArticle()}"
-                                th:data-designation="${a.getDesignation()}"
-                                th:data-idudm="${a.udm != null ? a.udm.getId() : ''}"
-                                th:data-idfamille="${a.famille != null ? a.famille.getId() : ''}"
-                                th:data-idcentre="${a.centreBudgetaire != null ? a.centreBudgetaire.getId() : ''}"
-                                title="Modifier l'article">
-                            <i class="fas fa-edit"></i> Modifier
-                        </button>
-                    </td>
-                    <td>
-                        <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
-                           class="btn btn-success btn-sm"
-                           title="Entrée en stock">
-                            <i class="fas fa-plus-circle"></i>
-                        </a>
-                        <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
-                           class="btn btn-danger btn-sm"
-                           title="Sortie de stock">
-                            <i class="fas fa-minus-circle"></i>
-                        </a>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
+        <!-- Carte contenant le tableau -->
+        <div class="card shadow-lg border-0">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="articlesTable" class="table table-striped table-hover">
+                        <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Désignation</th>
+                            <th>Famille</th>
+                            <th>Seuil Minimum</th>
+                            <th>UDM</th>
+                            <th>Actions</th>
+                            <th>Simulation Stock</th>
+                        </tr>
+                        </thead>
 
-            <!-- Modal pour la modification d'article -->
-            <div class="modal fade" id="modifierModal" tabindex="-1" aria-labelledby="modifierModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="modifierModalLabel">Modifier l'article</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <form th:action="@{/admin/article/modifier}" method="post" id="articleForm">
-                            <div class="modal-body">
-                                <input type="hidden" id="modalCodeArticle" name="codeArticle">
-
-                                <div class="mb-3">
-                                    <label for="modalDesignation" class="form-label">Désignation *</label>
-                                    <input type="text" class="form-control" id="modalDesignation"
-                                           name="designation" required>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="modalUdm" class="form-label">Unité de mesure</label>
-                                    <select class="form-control" id="modalUdm" name="idUdm">
-                                        <option value="">Sélectionner une unité</option>
-                                        <option th:each="udm : ${udms}"
-                                                th:value="${udm.getId()}"
-                                                th:text="${udm.getDescription() + ' - ' + udm.getAcronyme()}">
-                                        </option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="modalFamille" class="form-label">Famille</label>
-                                    <select class="form-control" id="modalFamille" name="idFamille">
-                                        <option value="">Sélectionner une famille</option>
-                                        <option th:each="famille : ${familles}"
-                                                th:value="${famille.getId()}"
-                                                th:text="${famille.getDescription()}">
-                                        </option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="modalCentre" class="form-label">Centre Budgetaire</label>
-                                    <select class="form-control" id="modalCentre" name="idCentreBudgetaire">
-                                        <option value="">Sélectionner un centre</option>
-                                        <option th:each="centre : ${centres}"
-                                                th:value="${centre.getId()}"
-                                                th:text="${centre.getCodeCentre()}">
-                                        </option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                <button type="submit" class="btn btn-primary">Enregistrer</button>
-                            </div>
-                        </form>
-                    </div>
+                        <tbody>
+                        <tr th:each="a : ${articles}">
+                            <td th:text="${a.getCodeArticle()}"></td>
+                            <td th:text="${a.getDesignation()}"></td>
+                            <td th:text="${a.famille != null ? a.famille.getDescription() : '---'}"></td>
+                            <td th:text="${a.seuilMin}"></td>
+                            <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
+                            <td>
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm edit-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modifierModal"
+                                        th:data-codearticle="${a.getCodeArticle()}"
+                                        th:data-designation="${a.getDesignation()}"
+                                        th:data-idudm="${a.udm != null ? a.udm.getId() : ''}"
+                                        th:data-idfamille="${a.famille != null ? a.famille.getId() : ''}"
+                                        th:data-idcentre="${a.centreBudgetaire != null ? a.centreBudgetaire.getId() : ''}"
+                                        title="Modifier l'article">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                            <td>
+                                <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
+                                   class="btn btn-success btn-sm" title="Entrée en stock">
+                                    <i class="fas fa-plus-circle"></i>
+                                </a>
+                                <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
+                                   class="btn btn-danger btn-sm" title="Sortie de stock">
+                                    <i class="fas fa-minus-circle"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </section>
-    </div>
-    <script th:inline="none">
-        /*<![CDATA[*/
-        // Attendre que le DOM soit complètement chargé
-        document.addEventListener('DOMContentLoaded', function() {
-            // Vérifier que jQuery est chargé
-            if (typeof jQuery === 'undefined') {
-                console.error('jQuery n\'est pas chargé !');
-                return;
+        </div>
+
+        <!-- Modal pour la modification d'article -->
+        <div class="modal fade" id="modifierModal" tabindex="-1" aria-labelledby="modifierModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modifierModalLabel">Modifier l'article</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form th:action="@{/admin/article/modifier}" method="post" id="articleForm">
+                        <div class="modal-body">
+                            <input type="hidden" id="modalCodeArticle" name="codeArticle">
+                            <div class="mb-3">
+                                <label for="modalDesignation" class="form-label">Désignation *</label>
+                                <input type="text" class="form-control" id="modalDesignation" name="designation" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="modalUdm" class="form-label">Unité de mesure</label>
+                                <select class="form-control" id="modalUdm" name="idUdm">
+                                    <option value="">Sélectionner une unité</option>
+                                    <option th:each="udm : ${udms}" th:value="${udm.getId()}" th:text="${udm.getDescription() + ' - ' + udm.getAcronyme()}"></option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="modalFamille" class="form-label">Famille</label>
+                                <select class="form-control" id="modalFamille" name="idFamille">
+                                    <option value="">Sélectionner une famille</option>
+                                    <option th:each="famille : ${familles}" th:value="${famille.getId()}" th:text="${famille.getDescription()}"></option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="modalCentre" class="form-label">Centre Budgetaire</label>
+                                <select class="form-control" id="modalCentre" name="idCentreBudgetaire">
+                                    <option value="">Sélectionner un centre</option>
+                                    <option th:each="centre : ${centres}" th:value="${centre.getId()}" th:text="${centre.getCodeCentre()}"></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </section>
+</div>
+
+<script th:inline="none">
+    /*<![CDATA[*/
+    document.addEventListener('DOMContentLoaded', function() {
+        const table = $('#articlesTable').DataTable({
+            language: {
+                zeroRecords: "Aucun article correspondant trouvé",
+                search: "Rechercher:",
+                lengthMenu: "Afficher _MENU_",
+                info: "Affichage de _START_ à _END_ sur _TOTAL_ articles",
+                infoEmpty: "Aucun article à afficher",
+                infoFiltered: "(filtrés sur _MAX_ articles au total)",
+                paginate: {first: "Première", last: "Dernière", next: "Suivante", previous: "Précédente"}
+            },
+            pageLength: 10,
+            lengthMenu: [[10,25,50,100],[10,25,50,100]],
+            responsive: true,
+            dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
+            initComplete: function() {
+                const api = this.api();
+                // Cloner header pour filtres
+                $('#articlesTable thead tr').clone(true).appendTo('#articlesTable thead');
+                $('#articlesTable thead tr:eq(1) th').each(function(i){
+                    if(i<5){ // filtres sur Code, Désignation, Famille, Seuil, UDM
+                        $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
+                        $('input', this).on('keyup change', function() {
+                            if(api.column(i).search()!==this.value){ api.column(i).search(this.value).draw(); }
+                        });
+                    } else { $(this).html('<div style="height:32px;"></div>'); }
+                });
+
+                // Recherche mobile
+                $('<div class="mobile-search-container mb-3">' +
+                    '<div class="input-group">' +
+                    '<span class="input-group-text"><i class="fas fa-search"></i></span>' +
+                    '<input type="text" class="form-control" id="mobileGlobalSearch" placeholder="Rechercher...">' +
+                    '</div></div>').insertBefore('#articlesTable');
+
+                $('#mobileGlobalSearch').on('keyup', function(){ api.search(this.value).draw(); });
+
+                function toggleMobileSearch(){
+                    if($(window).width()<=768){
+                        $('.mobile-search-container').show();
+                        $('#articlesTable thead tr:eq(1)').hide();
+                        $('.dataTables_filter').hide();
+                    } else{
+                        $('.mobile-search-container').hide();
+                        $('#articlesTable thead tr:eq(1)').show();
+                        $('.dataTables_filter').show();
+                    }
+                }
+
+                toggleMobileSearch();
+                $(window).on('resize', toggleMobileSearch);
             }
-
-            // Initialiser DataTables - configuration simplifiée
-            $('#articlesTable').DataTable({
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
-                },
-                pageLength: 10,
-                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-                order: [[0, 'asc']],
-                responsive: true
-            });
-
-            // Gérer l'ouverture du modal avec les données
-            $('#modifierModal').on('show.bs.modal', function(event) {
-                var button = $(event.relatedTarget);
-
-                // Récupérer les données
-                var codeArticle = button.data('codearticle');
-                var designation = button.data('designation');
-                var idUdm = button.data('idudm') || '';
-                var idFamille = button.data('idfamille') || '';
-                var idCentre = button.data('idcentre') || '';
-
-                // Mettre à jour les champs
-                $('#modalCodeArticle').val(codeArticle);
-                $('#modalDesignation').val(designation);
-                $('#modalUdm').val(idUdm);
-                $('#modalFamille').val(idFamille);
-                $('#modalCentre').val(idCentre);
-
-                // Mettre à jour le titre
-                $('#modifierModalLabel').text('Modifier l\'article: ' + codeArticle);
-            });
-
-            // Réinitialiser le formulaire quand le modal se ferme
-            $('#modifierModal').on('hidden.bs.modal', function() {
-                $('#articleForm')[0].reset();
-            });
         });
-        /*]]>*/
-    </script>
+
+        // Modal pour modifier
+        $('#modifierModal').on('show.bs.modal', function(event){
+            var button = $(event.relatedTarget);
+            $('#modalCodeArticle').val(button.data('codearticle'));
+            $('#modalDesignation').val(button.data('designation'));
+            $('#modalUdm').val(button.data('idudm') || '');
+            $('#modalFamille').val(button.data('idfamille') || '');
+            $('#modalCentre').val(button.data('idcentre') || '');
+            $('#modifierModalLabel').text('Modifier l\'article: ' + button.data('codearticle'));
+        });
+        $('#modifierModal').on('hidden.bs.modal', function(){ $('#articleForm')[0].reset(); });
+    });
+    /*]]>*/
+</script>
+
 </body>
 </html>
