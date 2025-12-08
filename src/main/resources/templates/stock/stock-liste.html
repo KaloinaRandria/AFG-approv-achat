@@ -10,14 +10,14 @@
 </head>
 
 <body>
-    <div th:replace="fragment/sidebar :: sidebar"></div>
+    <div th:replace="~{fragment/sidebar :: sidebar}"></div>
     <div class="main-content">
         <section>
 
             <!-- En-tête -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="fw-bold">
-                    <i class="fas fa-warehouse me-3 text-primary"></i> État de Stock
+                    <i class="fas fa-warehouse me-3 icon-gradient-blue"></i> État de Stock
                 </h1>
 
                 <a th:href="@{/admin}" class="btn btn-outline-primary btn-lg">
@@ -32,13 +32,15 @@
                     <div class="table-responsive">
                         <table id="etatStockTable" class="table table-striped table-hover">
                             <thead>
+
                             <tr>
-                                <th>Article</th>
-                                <th>Seuil minimum</th>
-                                <th>Entrée</th>
-                                <th>Sortie</th>
-                                <th>Stock Disponible</th>
+                                <th><i class="fas fa-box me-2 icon-gradient-blue"></i>Article</th>
+                                <th><i class="fas fa-exclamation-triangle me-2 icon-gradient-blue"></i>Seuil minimum</th>
+                                <th><i class="fas fa-sign-in-alt me-2 icon-gradient-blue"></i>Entrée</th>
+                                <th><i class="fas fa-sign-out-alt me-2 icon-gradient-blue"></i>Sortie</th>
+                                <th><i class="fas fa-chart-pie me-2 icon-gradient-blue"></i>Stock Disponible</th>
                             </tr>
+
                             </thead>
 
                             <tbody>
