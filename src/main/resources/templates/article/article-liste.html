@@ -46,7 +46,7 @@
                 <td th:text="${a.famille != null ? a.famille.getDescription() : '---'}"></td>
                 <td>
                     <button type="button"
-                            class="btn btn-warning btn-sm edit-btn"
+                            class="btn btn-outline-secondary btn-sm edit-btn"
                             data-bs-toggle="modal"
                             data-bs-target="#modifierModal"
                             th:data-codearticle="${a.getCodeArticle()}"
@@ -55,7 +55,7 @@
                             th:data-idfamille="${a.famille != null ? a.famille.getId() : ''}"
                             th:data-idcentre="${a.centreBudgetaire != null ? a.centreBudgetaire.getId() : ''}"
                             title="Modifier l'article">
-                        <i class="fas fa-edit"></i> Modifier
+                        <i class="fas fa-edit"></i>
                     </button>
                 </td>
                 <td>
