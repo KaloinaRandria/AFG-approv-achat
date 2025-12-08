@@ -19,4 +19,9 @@ public class CentreBudgetaireService {
     public Optional<CentreBudgetaire> getCentreBudgetaireById(int id) {
         return centreBudgetaireRepo.findById(id);
     }
+
+    public CentreBudgetaire getCentreBudgetaireByCodeCentre(String codeCentre) {
+        return this.centreBudgetaireRepo.findCentreBudgetaireByCodeCentre(codeCentre);
+    }
+
 }
