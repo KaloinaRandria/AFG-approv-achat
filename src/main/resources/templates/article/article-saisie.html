@@ -52,27 +52,24 @@
 
                             <!-- Seuil minimum -->
                             <div class="row">
-                                <div class="col-md-6 mb-3">
                                     <label for="seuilMinimum" class="form-label fw-bold">
                                         Seuil minimum <span class="text-danger">*</span>
                                     </label>
                                     <input type="number"
                                            class="form-control"
                                            id="seuilMinimum"
-                                           name="seuilMinimum"
+                                           name="seuilMin"
                                            th:field="*{seuilMin}"
                                            min="1"
                                            step="1"
                                            placeholder="Ex: 10"
-                                           value="1"
                                            required>
                                     <div class="form-text">
-                                        Quantité en dessous de laquelle une alerte sera déclenchée
+                                        Quantité en dessous de laquelle une alerte sera déclenchée (entier positif)
                                     </div>
                                     <div th:if="${#fields.hasErrors('seuilMin')}" class="text-danger">
                                         <small th:errors="*{seuilMin}"></small>
                                     </div>
-                                </div>
 
                                 <!-- Unité de mesure -->
                                 <div class="col-md-6 mb-3">
