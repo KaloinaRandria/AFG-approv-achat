@@ -16,6 +16,8 @@ public class Famille {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_famille")
     int id;
     String description;
+    @ManyToOne @JoinColumn(name = "id_sous_famille" , referencedColumnName = "id_famille")
+    Famille sousFamille;
 
     public Famille(String description) {
         this.setDescription(description);

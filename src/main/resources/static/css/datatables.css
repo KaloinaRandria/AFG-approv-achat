@@ -137,3 +137,134 @@ table.dataTable tbody tr:hover {
   background: none !important;
   border: none !important;
 }
+
+/* ============================= */
+/* ===== LAYOUT AVEC SIDEBAR ==== */
+/* ============================= */
+
+/* Empêcher tout débordement horizontal */
+body {
+    overflow-x: hidden;
+}
+
+/* Sidebar fixée */
+#sidebar {
+    width: 250px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+}
+
+/* Contenu principal décalé */
+.main-content {
+    margin-left: 250px;
+    padding: 20px;
+    transition: margin 0.3s ease;
+}
+
+/* Responsive mobile */
+@media (max-width: 768px) {
+    #sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+}
+
+/* ============================= */
+/* ===== BOUTONS ET HEADER ===== */
+/* ============================= */
+
+.btn-group-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+/* ============================= */
+/* ===== DATATABLES UI ========= */
+/* ============================= */
+
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+    padding: 10px 0;
+}
+
+.dataTables_wrapper .dataTables_info {
+    padding-top: 10px !important;
+}
+
+.mobile-search-container {
+    margin-bottom: 15px;
+}
+
+/* ============================= */
+/* ===== FIX FINAL SIDEBAR ===== */
+/* ============================= */
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* Sidebar */
+#sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100vh;
+    z-index: 999;
+}
+
+/* Contenu principal */
+.main-content {
+    margin-left: 250px !important;
+    padding: 25px;
+    min-height: 100vh;
+    background: #f8f9fa;
+    position: relative;
+    z-index: 1;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    #sidebar {
+        position: relative !important;
+        width: 100%;
+        height: auto;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+    }
+}
+
+.sidebar-sub.active,
+.sidebar-link.active {
+    background-color: #ffc107;
+    color: #000 !important;
+    border-radius: 6px;
+    font-weight: bold;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: rgba(255, 193, 7, 0.2);
+    font-weight: bold;
+}

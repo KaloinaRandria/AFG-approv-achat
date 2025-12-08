@@ -1,0 +1,33 @@
+<div th:fragment="pop_up">
+    <div th:if="${ok}">
+
+        <script th:inline="javascript">
+            let message = /*[[${ok}]]*/ "";
+            Swal.fire({
+                icon: 'success',
+                html: message,
+                showConfirmButton: true,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                backdrop: true,
+                confirmButtonColor: '#28a745'
+            });
+        </script>
+    </div>
+
+    <!-- Error -->
+    <div th:if="${ko}">
+        <script th:inline="javascript">
+            let message = /*[[${ko}]]*/ "";
+            Swal.fire({
+                icon: 'error',
+                html: message,
+                showConfirmButton: true,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                backdrop: true,
+                confirmButtonColor: '#d33'
+            });
+        </script>
+    </div>
+</div>

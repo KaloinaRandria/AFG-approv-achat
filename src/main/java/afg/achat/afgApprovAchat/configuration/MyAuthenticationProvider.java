@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import javax.naming.NamingException;
 import java.util.Collection;
+import java.util.Collections;
 
 
 @Component
@@ -52,17 +53,23 @@ public class MyAuthenticationProvider implements AuthenticationProvider{
 				return new UsernamePasswordAuthenticationToken(user, null,
 				        Collections.singletonList(new SimpleGrantedAuthority("ROLE_"+user.getRole().getLibelle())));
 			}*/
-//			if(email.equals("fenohasina.andrianantoandro@afgbank.mg") && password.equals("fenohasina.andrianantoandro@afgbank.mg")) {
-//				Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-//				return new UsernamePasswordAuthenticationToken(user, null,
-//				        Collections.singletonList(new SimpleGrantedAuthority("ROLE_"+user.getRole().getLibelle())));
-//			}
-//
-//			if(email.equals("s.dago@atlantic-group.net") && password.equals("P@ssword01")) {
-//				Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-//				return new UsernamePasswordAuthenticationToken(user, null,
-//				        Collections.singletonList(new SimpleGrantedAuthority("ROLE_"+user.getRole().getLibelle())));
-//			}
+			if(email.equals("fenohasina.andrianantoandro@afgbank.mg") && password.equals("fenohasina.andrianantoandro@afgbank.mg")) {
+				Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+                        .toList();
+
+                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+			}
+
+			if(email.equals("s.dago@atlantic-group.net") && password.equals("P@ssword01")) {
+				Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+                        .toList();
+
+                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+			}
 			if(activeDir.authentify(email, password)) {
                 Utilisateur user = utilisateurService.getUtilisateurByMail(email);
                 if (user == null) {

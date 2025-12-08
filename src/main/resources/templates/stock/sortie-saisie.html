@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulation Sortie Stock</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+</head>
+<body>
+<div th:replace="fragment/sidebar :: sidebar"></div>
+<div class="main-content">
+    <section>
+        <h1 class="mb-3">Simulation de sortie en stock</h1>
+
+        <!-- Affichage du message d'erreur -->
+        <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+
+        <form th:action="@{/admin/stock/save-sortie}" method="post">
+            <!-- ID de l'article caché -->
+            <input type="hidden" name="codeArticle" th:value="${article.getCodeArticle()}">
+
+            <div class="mb-3">
+                <label>Article</label>
+                <input type="text" class="form-control" th:value="${article.getCodeArticle()} + ' - ' + ${article.getDesignation()}" readonly>
+            </div>
+
+            <div class="mb-3">
+                <label>Quantité</label>
+                <input type="number" class="form-control" name="quantite" th:value="${quantiteSortie}"  min="1" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Valider</button>
+            <a th:href="@{/admin}" class="btn btn-secondary">Annuler</a>
+        </form>
+    </section>
+</div>
+
+</body>
+</html>

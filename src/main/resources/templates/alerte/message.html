@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="modele/base :: layout(~{::title}, ~{::section})">
+
+<head>
+    <title>Alertes de Stock</title>
+</head>
+
+<body>
+<section>
+
+    <h1 class="mb-4">Notifications</h1>
+
+    <div class="d-flex flex-column gap-3">
+
+        <!-- Si aucune alerte -->
+        <div th:if="${#lists.isEmpty(alertes)}" class="p-3 rounded shadow-sm border-secondary bg-light text-center">
+            Aucune notification pour le moment.
+        </div>
+
+        <!-- Boucle sur les alertes -->
+        <div th:each="a : ${alertes}"
+             th:unless="${#lists.isEmpty(alertes)}"
+             class="p-3 rounded shadow-sm"
+             th:classappend="${a.getTypeAlerte() == 'RUPTURE'} ? 'border-danger bg-danger bg-opacity-10'
+                             : 'border-warning bg-warning bg-opacity-10'">
+
+            <h5 class="fw-bold" th:text="${a.getCodeArticle() + ' - ' + a.getDesignation()}"></h5>
+
+            <p class="mb-1">
+                <strong>Stock :</strong>
+                <span th:text="${a.getStockDisponible()}"></span>
+            </p>
+
+            <p class="mb-1">
+                <strong>Seuil minimum :</strong>
+                <span th:text="${a.getSeuilMin()}"></span>
+            </p>
+
+            <span th:if="${a.getTypeAlerte() == 'RUPTURE'}"
+                  class="badge bg-danger text-light">
+                Stock épuisé
+            </span>
+
+            <span th:if="${a.getTypeAlerte() == 'SEUIL'}"
+                  class="badge bg-warning text-dark">
+                Seuil minimum atteint
+            </span>
+
+        </div>
+
+    </div>
+
+</section>
+
+</body>
+</html>
