@@ -471,3 +471,26 @@ table.dataTable tbody tr:hover {
     height: 2px;
     background: linear-gradient(90deg, #001051, #0d6efd);
 }
+
+
+/* ✅ BACKDROP derrière tout */
+.modal-backdrop {
+    z-index: 1040 !important;
+    opacity: 0.4;
+}
+
+/* ✅ MODAL toujours au-dessus */
+.modal {
+    z-index: 1060 !important;
+    pointer-events: auto !important;
+}
+
+/* ✅ SIDEBAR en dessous du modal */
+#sidebar {
+    z-index: 1000 !important;
+}
+
+/* ✅ MAIN CONTENT en dessous */
+.main-content {
+    z-index: 1 !important;
+}
