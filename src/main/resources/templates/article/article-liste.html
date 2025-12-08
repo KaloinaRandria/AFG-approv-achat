@@ -11,71 +11,79 @@
 <body>
 <div th:replace="fragment/sidebar :: sidebar"></div>
 
-<!-- Contenu principal -->
 <div class="main-content">
     <section>
-        <!-- En-tête avec titre et boutons -->
-        <div class="page-header">
-            <h1 class="mb-0">Liste des articles</h1>
-            <div class="btn-group-actions">
-                <a th:href="@{/admin/stock/etat-stock}" class="btn btn-primary">
-                    <i class="fas fa-chart-bar me-2"></i>État de stock
+        <!-- En-tête -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold">
+                <i class="fas fa-box me-3 text-primary"></i> Liste des Articles
+            </h1>
+            <div>
+                <a th:href="@{/admin/stock/etat-stock}" class="btn btn-primary me-2">
+                    <i class="fas fa-warehouse me-3"></i>État de stock
                 </a>
                 <a th:href="@{/admin/article/add}" class="btn btn-success">
-                    <i class="fas fa-plus-circle me-2"></i>Nouvel article
+                    <i class="fas fa-plus-circle me-1"></i>Nouvel article
                 </a>
             </div>
         </div>
 
         <div th:replace="fragment/load_pop_up :: pop_up"></div>
 
-        <table id="articlesTable" class="table table-striped table-hover">
-            <thead>
-            <tr>
-                <th>Code</th>
-                <th>Désignation</th>
-                <th>Famille</th>
-                <th>UDM</th>
-                <th>Actions</th>
-                <th>Simulation Stock</th>
-            </tr>
-            </thead>
+        <!-- Carte contenant le tableau -->
+        <div class="card shadow-lg border-0">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="articlesTable" class="table table-striped table-hover">
+                        <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Désignation</th>
+                            <th>Famille</th>
+                            <th>Seuil Minimum</th>
+                            <th>UDM</th>
+                            <th>Actions</th>
+                            <th>Simulation Stock</th>
+                        </tr>
+                        </thead>
 
-            <tbody>
-            <tr th:each="a : ${articles}">
-                <td th:text="${a.getCodeArticle()}"></td>
-                <td th:text="${a.getDesignation()}"></td>
-                <td th:text="${a.famille != null ? a.famille.getDescription() : '---'}"></td>
-                <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
-                <td>
-                    <button type="button"
-                            class="btn btn-outline-secondary btn-sm edit-btn"
-                            data-bs-toggle="modal"
-                            data-bs-target="#modifierModal"
-                            th:data-codearticle="${a.getCodeArticle()}"
-                            th:data-designation="${a.getDesignation()}"
-                            th:data-idudm="${a.udm != null ? a.udm.getId() : ''}"
-                            th:data-idfamille="${a.famille != null ? a.famille.getId() : ''}"
-                            th:data-idcentre="${a.centreBudgetaire != null ? a.centreBudgetaire.getId() : ''}"
-                            title="Modifier l'article">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                </td>
-                <td>
-                    <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
-                       class="btn btn-success btn-sm"
-                       title="Entrée en stock">
-                        <i class="fas fa-plus-circle"></i>
-                    </a>
-                    <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
-                       class="btn btn-danger btn-sm"
-                       title="Sortie de stock">
-                        <i class="fas fa-minus-circle"></i>
-                    </a>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+                        <tbody>
+                        <tr th:each="a : ${articles}">
+                            <td th:text="${a.getCodeArticle()}"></td>
+                            <td th:text="${a.getDesignation()}"></td>
+                            <td th:text="${a.famille != null ? a.famille.getDescription() : '---'}"></td>
+                            <td th:text="${a.seuilMin}"></td>
+                            <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
+                            <td>
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm edit-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modifierModal"
+                                        th:data-codearticle="${a.getCodeArticle()}"
+                                        th:data-designation="${a.getDesignation()}"
+                                        th:data-idudm="${a.udm != null ? a.udm.getId() : ''}"
+                                        th:data-idfamille="${a.famille != null ? a.famille.getId() : ''}"
+                                        th:data-idcentre="${a.centreBudgetaire != null ? a.centreBudgetaire.getId() : ''}"
+                                        title="Modifier l'article">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                            <td>
+                                <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
+                                   class="btn btn-success btn-sm" title="Entrée en stock">
+                                    <i class="fas fa-plus-circle"></i>
+                                </a>
+                                <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
+                                   class="btn btn-danger btn-sm" title="Sortie de stock">
+                                    <i class="fas fa-minus-circle"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
         <!-- Modal pour la modification d'article -->
         <div class="modal fade" id="modifierModal" tabindex="-1" aria-labelledby="modifierModalLabel" aria-hidden="true">
@@ -88,43 +96,29 @@
                     <form th:action="@{/admin/article/modifier}" method="post" id="articleForm">
                         <div class="modal-body">
                             <input type="hidden" id="modalCodeArticle" name="codeArticle">
-
                             <div class="mb-3">
                                 <label for="modalDesignation" class="form-label">Désignation *</label>
-                                <input type="text" class="form-control" id="modalDesignation"
-                                       name="designation" required>
+                                <input type="text" class="form-control" id="modalDesignation" name="designation" required>
                             </div>
-
                             <div class="mb-3">
                                 <label for="modalUdm" class="form-label">Unité de mesure</label>
                                 <select class="form-control" id="modalUdm" name="idUdm">
                                     <option value="">Sélectionner une unité</option>
-                                    <option th:each="udm : ${udms}"
-                                            th:value="${udm.getId()}"
-                                            th:text="${udm.getDescription() + ' - ' + udm.getAcronyme()}">
-                                    </option>
+                                    <option th:each="udm : ${udms}" th:value="${udm.getId()}" th:text="${udm.getDescription() + ' - ' + udm.getAcronyme()}"></option>
                                 </select>
                             </div>
-
                             <div class="mb-3">
                                 <label for="modalFamille" class="form-label">Famille</label>
                                 <select class="form-control" id="modalFamille" name="idFamille">
                                     <option value="">Sélectionner une famille</option>
-                                    <option th:each="famille : ${familles}"
-                                            th:value="${famille.getId()}"
-                                            th:text="${famille.getDescription()}">
-                                    </option>
+                                    <option th:each="famille : ${familles}" th:value="${famille.getId()}" th:text="${famille.getDescription()}"></option>
                                 </select>
                             </div>
-
                             <div class="mb-3">
                                 <label for="modalCentre" class="form-label">Centre Budgetaire</label>
                                 <select class="form-control" id="modalCentre" name="idCentreBudgetaire">
                                     <option value="">Sélectionner un centre</option>
-                                    <option th:each="centre : ${centres}"
-                                            th:value="${centre.getId()}"
-                                            th:text="${centre.getCodeCentre()}">
-                                    </option>
+                                    <option th:each="centre : ${centres}" th:value="${centre.getId()}" th:text="${centre.getCodeCentre()}"></option>
                                 </select>
                             </div>
                         </div>
@@ -136,182 +130,80 @@
                 </div>
             </div>
         </div>
+
     </section>
 </div>
+
 <script th:inline="none">
     /*<![CDATA[*/
-    // Attendre que le DOM soit complètement chargé
     document.addEventListener('DOMContentLoaded', function() {
-        // Vérifier que jQuery est chargé
-        if (typeof jQuery === 'undefined') {
-            console.error('jQuery n\'est pas chargé !');
-            return;
-        }
-
-        // Initialiser DataTables avec configuration corrigée
         const table = $('#articlesTable').DataTable({
             language: {
-                "zeroRecords": "Aucun article correspondant trouvé",
-                "search": "Rechercher:",
-                "lengthMenu": "Afficher _MENU_",
-                "info": "Affichage de _START_ à _END_ sur _TOTAL_ articles",
-                "infoEmpty": "Aucun article à afficher",
-                "infoFiltered": "(filtrés sur _MAX_ articles au total)",
-                "paginate": {
-                    "first": "Première",
-                    "last": "Dernière",
-                    "next": "Suivante",
-                    "previous": "Précédente"
-                },
-                "aria": {
-                    "sortAscending": ": tri croissant",
-                    "sortDescending": ": tri décroissant"
-                }
+                zeroRecords: "Aucun article correspondant trouvé",
+                search: "Rechercher:",
+                lengthMenu: "Afficher _MENU_",
+                info: "Affichage de _START_ à _END_ sur _TOTAL_ articles",
+                infoEmpty: "Aucun article à afficher",
+                infoFiltered: "(filtrés sur _MAX_ articles au total)",
+                paginate: {first: "Première", last: "Dernière", next: "Suivante", previous: "Précédente"}
             },
             pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-            order: [[0, 'asc']],
+            lengthMenu: [[10,25,50,100],[10,25,50,100]],
             responsive: true,
-            // Configuration DOM MODIFIÉE :
-            // "l" = length menu (nombre d'entrées)
-            // "f" = search filter (recherche globale)
-            // "i" = info (affichage informations)
-            // "p" = pagination
             dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
-            initComplete: function () {
+            initComplete: function() {
                 const api = this.api();
-
-                // Ajouter une deuxième ligne dans le header pour les champs de recherche
+                // Cloner header pour filtres
                 $('#articlesTable thead tr').clone(true).appendTo('#articlesTable thead');
-
-                // Ajouter les champs de recherche pour chaque colonne
-                $('#articlesTable thead tr:eq(1) th').each(function (i) {
-                    // Ne pas ajouter de champ de recherche pour les colonnes Actions et Simulation Stock
-                    if (i < 4) { // Colonnes 0 à 3 : Code, Désignation, Famille, UDM
-                        const columnTitle = $('#articlesTable thead tr:first-child th').eq(i).text();
-                        $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer ' + columnTitle + '" style="width: 100%;" />');
-
-                        // Événement pour la recherche en temps réel
-                        $('input', this).on('keyup change', function () {
-                            if (api.column(i).search() !== this.value) {
-                                api.column(i).search(this.value).draw();
-                            }
+                $('#articlesTable thead tr:eq(1) th').each(function(i){
+                    if(i<5){ // filtres sur Code, Désignation, Famille, Seuil, UDM
+                        $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
+                        $('input', this).on('keyup change', function() {
+                            if(api.column(i).search()!==this.value){ api.column(i).search(this.value).draw(); }
                         });
-                    } else {
-                        // Pour les colonnes Actions et Simulation Stock, on met un espace vide
-                        $(this).html('<div style="height: 32px;"></div>');
-                    }
+                    } else { $(this).html('<div style="height:32px;"></div>'); }
                 });
 
-                // Ajouter un champ de recherche mobile (caché sur desktop)
-                $('<div class="mobile-search-container">' +
-                    '<div class="input-group mb-3">' +
+                // Recherche mobile
+                $('<div class="mobile-search-container mb-3">' +
+                    '<div class="input-group">' +
                     '<span class="input-group-text"><i class="fas fa-search"></i></span>' +
-                    '<input type="text" class="form-control" id="mobileGlobalSearch" placeholder="Rechercher dans tous les articles...">' +
-                    '<button class="btn btn-outline-secondary" type="button" id="mobileSearchReset"><i class="fas fa-times"></i></button>' +
-                    '</div>' +
-                    '</div>').insertBefore('#articlesTable');
+                    '<input type="text" class="form-control" id="mobileGlobalSearch" placeholder="Rechercher...">' +
+                    '</div></div>').insertBefore('#articlesTable');
 
-                // Recherche globale mobile
-                $('#mobileGlobalSearch').on('keyup', function() {
-                    api.search(this.value).draw();
-                });
+                $('#mobileGlobalSearch').on('keyup', function(){ api.search(this.value).draw(); });
 
-                // Réinitialiser la recherche mobile
-                $('#mobileSearchReset').on('click', function() {
-                    $('#mobileGlobalSearch').val('');
-                    api.search('').draw();
-                });
-
-                // Ajouter un bouton pour réinitialiser tous les filtres
-                // $('<div class="text-center mt-3 mb-3">' +
-                //     '<button id="resetFilters" class="btn btn-outline-secondary">' +
-                //     '<i class="fas fa-redo me-1"></i>Réinitialiser tous les filtres' +
-                //     '</button>' +
-                //     '</div>').insertAfter('#articlesTable');
-
-                // Événement pour réinitialiser tous les filtres
-                // $('#resetFilters').on('click', function() {
-                //     // Réinitialiser tous les champs de recherche dans le header
-                //     $('#articlesTable thead tr:eq(1) th input').val('');
-                //
-                //     // Réinitialiser la recherche mobile
-                //     $('#mobileGlobalSearch').val('');
-                //
-                //     // Réinitialiser toutes les recherches DataTables
-                //     api.columns().search('').draw();
-                //     api.search('').draw();
-                //
-                //     // Feedback visuel
-                //     $(this).html('<i class="fas fa-check me-1"></i>Filtres réinitialisés');
-                //     $(this).removeClass('btn-outline-secondary').addClass('btn-success');
-                //
-                //     setTimeout(() => {
-                //         $(this).html('<i class="fas fa-redo me-1"></i>Réinitialiser tous les filtres');
-                //         $(this).removeClass('btn-success').addClass('btn-outline-secondary');
-                //     }, 1500);
-                // });
-
-                // Ajouter des tooltips aux champs de recherche
-                $('#articlesTable thead tr:eq(1) th input').attr('title', 'Tapez pour filtrer cette colonne');
-
-                // Ajuster la largeur des colonnes après l'initialisation
-                setTimeout(function() {
-                    table.columns.adjust().responsive.recalc();
-                }, 100);
-
-                // Afficher/masquer la recherche mobile selon la taille de l'écran
-                function toggleMobileSearch() {
-                    if ($(window).width() <= 768) {
+                function toggleMobileSearch(){
+                    if($(window).width()<=768){
                         $('.mobile-search-container').show();
                         $('#articlesTable thead tr:eq(1)').hide();
-                        $('.dataTables_filter').hide(); // Cacher la recherche globale sur mobile
-                    } else {
+                        $('.dataTables_filter').hide();
+                    } else{
                         $('.mobile-search-container').hide();
                         $('#articlesTable thead tr:eq(1)').show();
-                        $('.dataTables_filter').show(); // Afficher la recherche globale sur desktop
+                        $('.dataTables_filter').show();
                     }
                 }
 
-                // Exécuter au chargement
                 toggleMobileSearch();
-
-                // Exécuter lors du redimensionnement
-                $(window).on('resize', function() {
-                    toggleMobileSearch();
-                    table.columns.adjust().responsive.recalc();
-                });
+                $(window).on('resize', toggleMobileSearch);
             }
         });
 
-        // Gérer l'ouverture du modal avec les données
-        $('#modifierModal').on('show.bs.modal', function(event) {
+        // Modal pour modifier
+        $('#modifierModal').on('show.bs.modal', function(event){
             var button = $(event.relatedTarget);
-
-            // Récupérer les données
-            var codeArticle = button.data('codearticle');
-            var designation = button.data('designation');
-            var idUdm = button.data('idudm') || '';
-            var idFamille = button.data('idfamille') || '';
-            var idCentre = button.data('idcentre') || '';
-
-            // Mettre à jour les champs
-            $('#modalCodeArticle').val(codeArticle);
-            $('#modalDesignation').val(designation);
-            $('#modalUdm').val(idUdm);
-            $('#modalFamille').val(idFamille);
-            $('#modalCentre').val(idCentre);
-
-            // Mettre à jour le titre
-            $('#modifierModalLabel').text('Modifier l\'article: ' + codeArticle);
+            $('#modalCodeArticle').val(button.data('codearticle'));
+            $('#modalDesignation').val(button.data('designation'));
+            $('#modalUdm').val(button.data('idudm') || '');
+            $('#modalFamille').val(button.data('idfamille') || '');
+            $('#modalCentre').val(button.data('idcentre') || '');
+            $('#modifierModalLabel').text('Modifier l\'article: ' + button.data('codearticle'));
         });
-
-        // Réinitialiser le formulaire quand le modal se ferme
-        $('#modifierModal').on('hidden.bs.modal', function() {
-            $('#articleForm')[0].reset();
-        });
+        $('#modifierModal').on('hidden.bs.modal', function(){ $('#articleForm')[0].reset(); });
     });
     /*]]>*/
 </script>
+
 </body>
 </html>
