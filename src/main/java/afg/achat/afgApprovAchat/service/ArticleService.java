@@ -61,7 +61,7 @@ public class ArticleService {
 
         // Récupérer l'utilisateur courant
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String utilisateur = user != null ? user.getNom() + user.getPrenom() : "Admin";
+        String utilisateur = user != null ? user.getNom() + " " + user.getPrenom() : "Admin";
 
         List<ArticleHistorique> historiques = new ArrayList<>();
 
@@ -79,7 +79,7 @@ public class ArticleService {
             article.setDesignation(designation);
         }
         // 2. Seuil Minimum
-        if (seuilMin != null && !seuilMin.equals(article.getSeuilMin())) {
+        if (seuilMin != null && Integer.parseInt(seuilMin) != article.getSeuilMin()) {
             historiques.add(new ArticleHistorique(
                     article,
                     "Seuil Minimum",

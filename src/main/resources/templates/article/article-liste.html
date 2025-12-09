@@ -190,7 +190,6 @@
                         <tr>
                             <th><i class="fas fa-calendar me-1"></i>Date</th>
                             <th><i class="fas fa-user me-1"></i>Utilisateur</th>
-                            <th><i class="fas fa-tag me-1"></i>Type</th>
                             <th><i class="fas fa-info-circle me-1"></i>Description</th>
                             <th><i class="fas fa-database me-1"></i>Ancienne valeur</th>
                             <th><i class="fas fa-database me-1"></i>Nouvelle valeur</th>
@@ -351,11 +350,6 @@
                     <tr>
                         <td>${historique.date || '-'}</td>
                         <td>${historique.modifiePar || 'Système'}</td>
-                        <td>
-                            <span class="badge ${getBadgeClass(typeModification)}">
-                                ${typeModification}
-                            </span>
-                        </td>
                         <td>${description || historique.champ || 'Modification'}</td>
                         <td>${historique.ancienneValeur || '-'}</td>
                         <td>${historique.nouvelleValeur || '-'}</td>
