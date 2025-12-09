@@ -55,15 +55,17 @@ public class ArticleController {
     }
 
     @GetMapping("/entree-saisie/{codeArticle}")
-    public String entreeArticle(@PathVariable String codeArticle, Model model) {
+    public String entreeArticle(@PathVariable String codeArticle, Model model, HttpServletRequest request) {
         Article article = articleService.getArticleByCodeArticle(codeArticle);
+        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("article", article);
         return "stock/entree-saisie";
     }
 
     @GetMapping("/sortie-saisie/{codeArticle}")
-    public String sortieArticle(@PathVariable String codeArticle, Model model) {
+    public String sortieArticle(@PathVariable String codeArticle, Model model, HttpServletRequest request) {
         Article article = articleService.getArticleByCodeArticle(codeArticle);
+        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("article", article);
         return "stock/sortie-saisie";
     }

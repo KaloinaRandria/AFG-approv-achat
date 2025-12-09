@@ -91,13 +91,13 @@
                                 État du stock
                             </a>
                         </li>
-                        <li>
-                            <a class="nav-link text-white sidebar-sub"
-                               th:href="@{/admin/message/alertes-stock}"
-                               th:classappend="${currentUri == '/admin/message/alertes-stock'} ? 'active' : ''">
-                                Alertes de stock
-                            </a>
-                        </li>
+<!--                        <li>-->
+<!--                            <a class="nav-link text-white sidebar-sub"-->
+<!--                               th:href="@{/admin/message/alertes-stock}"-->
+<!--                               th:classappend="${currentUri == '/admin/message/alertes-stock'} ? 'active' : ''">-->
+<!--                                Alertes de stock-->
+<!--                            </a>-->
+<!--                        </li>-->
                     </ul>
                 </div>
             </div>
@@ -107,12 +107,11 @@
 
     <div class="dropdown mt-auto p-3 border-top">
         <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
-<!--            <img th:if="${#authentication.principal.pdp != null && #authentication.principal.pdp.thumbnail != null}" th:src="'data:image/jpeg;base64,' + ${#authentication.principal.pdp.thumbnail}" alt="Avatar" width="40" height="40" class="rounded-circle me-2">-->
+            <img th:if="${#authentication.principal.pdp != null && #authentication.principal.pdp.thumbnail != null}" th:src="'data:image/jpeg;base64,' + ${#authentication.principal.pdp.thumbnail}" alt="Avatar" width="40" height="40" class="rounded-circle me-2">
             <img th:src="@{/img/avatar.png}" alt="Avatar" width="40" height="40" class="rounded-circle me-2">
             <strong style="max-width: 200px; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"  class="text-white" th:text="${#authentication.principal.prenom + ' ' + #authentication.principal.nom}"></strong>
         </a>
         <ul class="dropdown-menu dropdown-menu-end text-small shadow" aria-labelledby="dropdownUser">
-            <li><a class="dropdown-item" th:href="@{/ma-fiche}">Ma fiche</a></li>
             <li><a class="dropdown-item" th:href="@{/logout}">Déconnexion</a></li>
         </ul>
     </div>

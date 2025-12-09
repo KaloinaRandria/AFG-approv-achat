@@ -7,160 +7,305 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
-    <style>
-        /* Entrée → Vert */
-        #etatStockTable tbody td.text-entree {
-            color: #16a34a !important;
-        }
-
-        /* Sortie → Rouge */
-        #etatStockTable tbody td.text-sortie {
-            color: #dc2626 !important;
-        }
-
-        /* Stock disponible → Bleu foncé */
-        #etatStockTable tbody td.text-stock {
-            color: #1d4ed8 !important;
-        }
-    </style>
 </head>
 
 <body>
-    <div th:replace="~{fragment/sidebar :: sidebar}"></div>
-    <div class="main-content">
-        <section>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
 
-            <!-- En-tête -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="fw-bold">
-                    <i class="fas fa-warehouse me-3 icon-gradient-blue"></i> État de Stock
-                </h1>
+        <!-- En-tête -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold">
+                <i class="fas fa-warehouse me-3 icon-gradient-blue"></i> État de Stock
+            </h1>
+
+            <div>
+                <!-- Bouton pour voir toutes les notifications -->
+                <a th:href="@{/admin/message/alertes-stock}" class="btn btn-gradient-orange btn-lg me-2 position-relative">
+                    <i class="fas fa-bell me-2"></i> Notifications
+                    <span th:if="${alertesCount != null && alertesCount > 0}"
+                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            <span th:text="${alertesCount}"></span>
+                            <span class="visually-hidden">alertes non lues</span>
+                        </span>
+                </a>
 
                 <a th:href="@{/admin}" class="btn btn-gradient-blue btn-lg">
                     <i class="fas fa-box me-3"></i> Liste des Articles
                 </a>
             </div>
+        </div>
 
-            <!-- Carte contenant le tableau -->
-            <div class="card shadow-lg border-0">
-                <div class="card-body">
+        <!-- Carte contenant le tableau -->
+        <div class="card shadow-lg border-0">
+            <div class="card-body">
 
-                    <div class="table-responsive">
-                        <table id="etatStockTable" class="table table-striped table-hover">
-                            <thead>
+                <div class="table-responsive">
+                    <table id="etatStockTable" class="table table-striped table-hover">
+                        <thead>
+                        <tr>
+                            <th><i class="fas fa-box me-2 icon-gradient-light-blue"></i>Article</th>
+                            <th><i class="fas fa-exclamation-triangle me-2 icon-gradient-light-blue"></i>Seuil minimum</th>
+                            <th><i class="fas fa-sign-in-alt me-2 icon-gradient-light-blue"></i>Entrée</th>
+                            <th><i class="fas fa-sign-out-alt me-2 icon-gradient-light-blue"></i>Sortie</th>
+                            <th><i class="fas fa-chart-pie me-2 icon-gradient-light-blue"></i>Stock Disponible</th>
+                            <th><i class="fas fa-bell me-2 icon-gradient-light-blue"></i>Notification</th>
+                        </tr>
+                        </thead>
 
-                            <tr>
-                                <th><i class="fas fa-box me-2 icon-gradient-blue"></i>Article</th>
-                                <th><i class="fas fa-exclamation-triangle me-2 icon-gradient-blue"></i>Seuil minimum</th>
-                                <th><i class="fas fa-sign-in-alt me-2 icon-gradient-blue"></i>Entrée</th>
-                                <th><i class="fas fa-sign-out-alt me-2 icon-gradient-blue"></i>Sortie</th>
-                                <th><i class="fas fa-chart-pie me-2 icon-gradient-blue"></i>Stock Disponible</th>
-                            </tr>
+                        <tbody>
+                        <tr th:each="e : ${etatStocks}">
+                            <td>
+                                <strong th:text="${e.codeArticle}"></strong><br>
+                                <small class="text-muted" th:text="${e.designation}"></small>
+                            </td>
+                            <td class="text-end fw-bold text-seuil"
+                                th:text="${e.seuilMin}">
+                            </td>
 
-                            </thead>
+                            <td class="text-end fw-bold text-entree"
+                                th:text="${e.totalEntree}">
+                            </td>
 
-                            <tbody>
-                            <tr th:each="e : ${etatStocks}">
-                                <td>
-                                    <strong th:text="${e.codeArticle}"></strong><br>
-                                    <small class="text-muted" th:text="${e.designation}"></small>
-                                </td>
-                                <td class="text-end fw-bold text-seuil"
-                                    th:text="${e.seuilMin}">
-                                </td>
+                            <td class="text-end fw-bold text-sortie"
+                                th:text="${e.totalSortie}">
+                            </td>
 
-                                <td class="text-end fw-bold text-entree"
-                                    th:text="${e.totalEntree}">
-                                </td>
+                            <td class="text-end fw-bold text-stock"
+                                th:text="${e.stockDisponible}">
+                            </td>
 
-                                <td class="text-end fw-bold text-sortie"
-                                    th:text="${e.totalSortie}">
-                                </td>
+                            <td class="text-center">
+                                <!-- Vérifier si l'article a une alerte -->
+                                <th:block th:if="${e.alerte != null}">
+                                    <!-- Rupture de stock -->
+                                    <th:block th:if="${e.alerte.typeAlerte == 'RUPTURE'}">
+            <span class="notification-badge badge bg-danger text-light p-2 notification-pulse"
+                  title="Rupture de stock - Cliquez pour voir les détails"
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="top"
+                  th:data-code="${e.codeArticle}"
+                  th:data-designation="${e.designation}"
+                  th:data-stock="${e.stockDisponible}"
+                  th:data-seuil="${e.seuilMin}"
+                  th:data-type="RUPTURE"
+                  onclick="showAlertFromRow(this)">
+                <i class="fas fa-exclamation-circle me-1"></i> Rupture
+            </span>
+                                    </th:block>
 
-                                <td class="text-end fw-bold text-stock"
-                                    th:text="${e.stockDisponible}">
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+                                    <!-- Seuil minimum atteint -->
+                                    <th:block th:if="${e.alerte.typeAlerte == 'SEUIL'}">
+            <span class="notification-badge badge bg-warning text-dark p-2"
+                  title="Seuil minimum atteint - Cliquez pour voir les détails"
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="top"
+                  th:data-code="${e.codeArticle}"
+                  th:data-designation="${e.designation}"
+                  th:data-stock="${e.stockDisponible}"
+                  th:data-seuil="${e.seuilMin}"
+                  th:data-type="SEUIL"
+                  onclick="showAlertFromRow(this)">
+                <i class="fas fa-exclamation-triangle me-1"></i> Seuil
+            </span>
+                                    </th:block>
+                                </th:block>
 
-                    </div>
+                                <!-- Pas d'alerte -->
+                                <th:block th:unless="${e.alerte != null}">
+        <span class="badge bg-success text-light p-2"
+              title="Stock normal"
+              data-bs-toggle="tooltip"
+              data-bs-placement="top">
+            <i class="fas fa-check-circle me-1"></i> OK
+        </span>
+                                </th:block>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
 
                 </div>
+
             </div>
+        </div>
 
-        </section>
+    </section>
+</div>
+
+<!-- Modal pour afficher les détails de l'alerte -->
+<div class="modal fade" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="alertModalLabel">Détails de l'Alerte</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert" id="alertModalType">
+                    <h4 id="alertModalArticle"></h4>
+                    <p><strong>État du stock :</strong> <span id="alertModalStock"></span></p>
+                    <p><strong>Seuil minimum :</strong> <span id="alertModalSeuil"></span></p>
+                    <p id="alertModalMessage"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+<!--                <button type="button" class="btn btn-primary" onclick="goToArticle()">-->
+<!--                    <i class="fas fa-edit me-1"></i> Modifier l'article-->
+<!--                </button>-->
+            </div>
+        </div>
     </div>
-    <script th:inline="none">
-        /*<![CDATA[*/
-        document.addEventListener('DOMContentLoaded', function() {
-            const table = $('#etatStockTable').DataTable({
-                language: {
-                    zeroRecords: "Aucun résultat trouvé",
-                    search: "Rechercher:",
-                    lengthMenu: "Afficher _MENU_",
-                    info: "Affichage de _START_ à _END_ sur _TOTAL_ lignes",
-                    infoEmpty: "Aucune donnée disponible",
-                    paginate: {
-                        first: "Première",
-                        last: "Dernière",
-                        next: "Suivante",
-                        previous: "Précédente"
-                    }
-                },
-                pageLength: 10,
-                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-                responsive: true,
-                dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
+</div>
 
-                initComplete: function () {
-                    const api = this.api();
-
-                    // Clonage de la ligne d'entête pour les filtres
-                    $('#etatStockTable thead tr').clone(true).appendTo('#etatStockTable thead');
-
-                    $('#etatStockTable thead tr:eq(1) th').each(function (i) {
-                        if (i < 5) {
-                            $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
-                            $('input', this).on('keyup change', function () {
-                                if (api.column(i).search() !== this.value) {
-                                    api.column(i).search(this.value).draw();
-                                }
-                            });
-                        }
-                    });
-
-                    // ✅ Recherche mobile
-                    $('<div class="mobile-search-container mb-3">' +
-                        '<div class="input-group">' +
-                        '<span class="input-group-text"><i class="fas fa-search"></i></span>' +
-                        '<input type="text" class="form-control" id="mobileSearchStock" placeholder="Rechercher dans le stock...">' +
-                        '</div>' +
-                        '</div>').insertBefore('#etatStockTable');
-
-                    $('#mobileSearchStock').on('keyup', function() {
-                        api.search(this.value).draw();
-                    });
-
-                    function toggleMobileSearch() {
-                        if ($(window).width() <= 768) {
-                            $('.mobile-search-container').show();
-                            $('#etatStockTable thead tr:eq(1)').hide();
-                            $('.dataTables_filter').hide();
-                        } else {
-                            $('.mobile-search-container').hide();
-                            $('#etatStockTable thead tr:eq(1)').show();
-                            $('.dataTables_filter').show();
-                        }
-                    }
-
-                    toggleMobileSearch();
-                    $(window).on('resize', toggleMobileSearch);
-                }
-            });
+<script th:inline="none">
+    /*<![CDATA[*/
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialiser les tooltips Bootstrap
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
         });
 
-        /*]]>*/
-    </script>
+        const table = $('#etatStockTable').DataTable({
+            language: {
+                zeroRecords: "Aucun résultat trouvé",
+                search: "Rechercher:",
+                lengthMenu: "Afficher _MENU_",
+                info: "Affichage de _START_ à _END_ sur _TOTAL_ lignes",
+                infoEmpty: "Aucune donnée disponible",
+                paginate: {
+                    first: "Première",
+                    last: "Dernière",
+                    next: "Suivante",
+                    previous: "Précédente"
+                }
+            },
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+            responsive: true,
+            dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
+            columnDefs: [
+                {
+                    targets: [5], // Colonne notification (index 5)
+                    orderable: false, // Désactiver le tri sur cette colonne
+                    searchable: false // Désactiver la recherche sur cette colonne
+                }
+            ],
+
+            initComplete: function () {
+                const api = this.api();
+
+                // Clonage de la ligne d'entête pour les filtres
+                $('#etatStockTable thead tr').clone(true).appendTo('#etatStockTable thead');
+
+                $('#etatStockTable thead tr:eq(1) th').each(function (i) {
+                    if (i < 5) { // Exclure la colonne notification du filtre
+                        $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
+                        $('input', this).on('keyup change', function () {
+                            if (api.column(i).search() !== this.value) {
+                                api.column(i).search(this.value).draw();
+                            }
+                        });
+                    } else {
+                        $(this).html('<span class="text-muted">-</span>');
+                    }
+                });
+
+                // ✅ Recherche mobile
+                $('<div class="mobile-search-container mb-3">' +
+                    '<div class="input-group">' +
+                    '<span class="input-group-text"><i class="fas fa-search"></i></span>' +
+                    '<input type="text" class="form-control" id="mobileSearchStock" placeholder="Rechercher dans le stock...">' +
+                    '</div>' +
+                    '</div>').insertBefore('#etatStockTable');
+
+                $('#mobileSearchStock').on('keyup', function() {
+                    api.search(this.value).draw();
+                });
+
+                function toggleMobileSearch() {
+                    if ($(window).width() <= 768) {
+                        $('.mobile-search-container').show();
+                        $('#etatStockTable thead tr:eq(1)').hide();
+                        $('.dataTables_filter').hide();
+                    } else {
+                        $('.mobile-search-container').hide();
+                        $('#etatStockTable thead tr:eq(1)').show();
+                        $('.dataTables_filter').show();
+                    }
+                }
+
+                toggleMobileSearch();
+                $(window).on('resize', toggleMobileSearch);
+            }
+        });
+    });
+
+    // Fonction pour afficher les détails de l'alerte à partir de l'élément
+    function showAlertDetailsFromElement(element) {
+        const codeArticle = element.getAttribute('data-code-article');
+        const designation = element.getAttribute('data-designation');
+        const stock = element.getAttribute('data-stock');
+        const seuil = element.getAttribute('data-seuil');
+        const type = element.getAttribute('data-alerte-type');
+
+        showAlertDetails(codeArticle, designation, type, stock, seuil);
+    }
+
+    // Fonction existante modifiée (facultatif - pour gérer aussi l'appel direct)
+    function showAlertDetails(codeArticle, designation, type, stock, seuil) {
+        const modal = new bootstrap.Modal(document.getElementById('alertModal'));
+        const alertDiv = document.getElementById('alertModalType');
+        const articleSpan = document.getElementById('alertModalArticle');
+        const stockSpan = document.getElementById('alertModalStock');
+        const seuilSpan = document.getElementById('alertModalSeuil');
+        const messageSpan = document.getElementById('alertModalMessage');
+
+        // Décoder les valeurs si nécessaire (pour les apostrophes, etc.)
+        const decodedDesignation = decodeHtmlEntities(designation);
+
+        // Mettre à jour le contenu
+        articleSpan.textContent = codeArticle + ' - ' + decodedDesignation;
+        stockSpan.textContent = stock;
+        seuilSpan.textContent = seuil;
+
+        // Configurer selon le type d'alerte
+        if (type === 'RUPTURE') {
+            alertDiv.className = 'alert alert-danger';
+            messageSpan.textContent = 'Le stock est épuisé. Une commande urgente est nécessaire.';
+            document.getElementById('alertModalLabel').textContent = '🚨 Rupture de Stock';
+        } else if (type === 'SEUIL') {
+            alertDiv.className = 'alert alert-warning';
+            messageSpan.textContent = 'Le stock est inférieur au seuil minimum. Pensez à réapprovisionner.';
+            document.getElementById('alertModalLabel').textContent = '⚠️ Seuil Minimum Atteint';
+        }
+
+        // Stocker le code article pour le bouton "Modifier"
+        alertDiv.dataset.articleCode = codeArticle;
+
+        modal.show();
+    }
+
+    // Fonction utilitaire pour décoder les entités HTML
+    function decodeHtmlEntities(text) {
+        const textArea = document.createElement('textarea');
+        textArea.innerHTML = text;
+        return textArea.value;
+    }
+
+    function showAlertFromRow(element) {
+        const codeArticle = element.getAttribute('data-code');
+        const designation = element.getAttribute('data-designation');
+        const stock = element.getAttribute('data-stock');
+        const seuil = element.getAttribute('data-seuil');
+        const type = element.getAttribute('data-type');
+
+        showAlertDetails(codeArticle, designation, type, stock, seuil);
+    }
+    /*]]>*/
+</script>
 </body>
 </html>
