@@ -160,6 +160,7 @@ public class ArticleController {
                                   @RequestParam(name = "idUdm") String idUdm,
                                   @RequestParam(name = "idFamille") String idFamille,
                                   @RequestParam(name = "idCentreBudgetaire") String idCentreBudgetaire,
+                                  @RequestParam(name = "seuilMinimum") String seuilMinimum,
                                   RedirectAttributes redirectAttributes){
         try {
             // Validation des données
@@ -171,10 +172,15 @@ public class ArticleController {
                 throw new IllegalArgumentException("La désignation est obligatoire");
             }
 
+            if (seuilMinimum == null || seuilMinimum.trim().isEmpty()) {
+                throw new IllegalArgumentException("Le seuil minimum est obligatoire");
+            }
+
             // Appel du service de modification
             Article articleModifie = articleService.modifierArticle(
                     codeArticle.trim(),
                     designation.trim(),
+                    seuilMinimum.trim(),
                     idUdm != null && !idUdm.isEmpty() ? idUdm : null,
                     idFamille != null && !idFamille.isEmpty() ? idFamille : null,
                     idCentreBudgetaire != null && !idCentreBudgetaire.isEmpty() ? idCentreBudgetaire : null
@@ -188,6 +194,7 @@ public class ArticleController {
                     "Erreur de validation : " + e.getMessage());
             redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
             redirectAttributes.addFlashAttribute("designation", designation);
+            redirectAttributes.addFlashAttribute("seuilMinimum", seuilMinimum);
             redirectAttributes.addFlashAttribute("idUdm", idUdm);
             redirectAttributes.addFlashAttribute("idFamille", idFamille);
             redirectAttributes.addFlashAttribute("idCentreBudgetaire", idCentreBudgetaire);

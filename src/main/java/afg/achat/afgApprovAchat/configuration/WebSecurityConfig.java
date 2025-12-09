@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 
 import java.util.List;
 
@@ -60,29 +61,18 @@ public class WebSecurityConfig {
         return http.build();
     }
 //    @Bean
-//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-//        http
-//                .csrf(csrf -> csrf.disable())
-//                .authorizeHttpRequests(auth -> auth
-//                        .anyRequest()
-//                        .permitAll()
+//    public WebSecurityCustomizer webSecurityCustomizer() {
+//        return (web) -> web.ignoring()
+//                .requestMatchers(
+//                        "/webjars/**",
+//                        "/css/**",
+//                        "/js/**",
+//                        "/img/**",
+//                        "/assets/**",
+//                        "/jqueryFiler/**",
+//                        "/static/**"
 //                );
-//        return http.build();
 //    }
-
-    @Bean
-    public WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) -> web.ignoring()
-                .requestMatchers(
-                        "/webjars/**",
-                        "/css/**",
-                        "/js/**",
-                        "/img/**",
-                        "/assets/**",
-                        "/jqueryFiler/**",
-                        "/static/**"
-                );
-    }
     @Bean
     public AuthenticationManager authenticationManager() {
         return new ProviderManager(List.of(authProvider));
