@@ -59,7 +59,7 @@
 
             <div>
                 <!-- Bouton pour voir toutes les notifications -->
-                <a th:href="@{/notifications}" class="btn btn-gradient-orange btn-lg me-2 position-relative">
+                <a th:href="@{/admin/message/alertes-stock}" class="btn btn-gradient-orange btn-lg me-2 position-relative">
                     <i class="fas fa-bell me-2"></i> Notifications
                     <span th:if="${alertesCount != null && alertesCount > 0}"
                           class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -82,12 +82,12 @@
                     <table id="etatStockTable" class="table table-striped table-hover">
                         <thead>
                         <tr>
-                            <th><i class="fas fa-box me-2 icon-gradient-blue"></i>Article</th>
-                            <th><i class="fas fa-exclamation-triangle me-2 icon-gradient-blue"></i>Seuil minimum</th>
-                            <th><i class="fas fa-sign-in-alt me-2 icon-gradient-blue"></i>Entrée</th>
-                            <th><i class="fas fa-sign-out-alt me-2 icon-gradient-blue"></i>Sortie</th>
-                            <th><i class="fas fa-chart-pie me-2 icon-gradient-blue"></i>Stock Disponible</th>
-                            <th><i class="fas fa-bell me-2 icon-gradient-orange"></i>Notification</th>
+                            <th><i class="fas fa-box me-2 icon-gradient-light-blue"></i>Article</th>
+                            <th><i class="fas fa-exclamation-triangle me-2 icon-gradient-light-blue"></i>Seuil minimum</th>
+                            <th><i class="fas fa-sign-in-alt me-2 icon-gradient-light-blue"></i>Entrée</th>
+                            <th><i class="fas fa-sign-out-alt me-2 icon-gradient-light-blue"></i>Sortie</th>
+                            <th><i class="fas fa-chart-pie me-2 icon-gradient-light-blue"></i>Stock Disponible</th>
+                            <th><i class="fas fa-bell me-2 icon-gradient-light-blue"></i>Notification</th>
                         </tr>
                         </thead>
 

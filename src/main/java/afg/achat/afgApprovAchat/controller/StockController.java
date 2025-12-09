@@ -135,13 +135,4 @@ public class StockController {
         return "stock/stock-liste"; // Votre template existant
     }
 
-    // Ajouter une route pour les notifications (si vous voulez garder la page séparée)
-    @GetMapping("/notifications")
-    public String getNotifications(Model model, HttpServletRequest request) {
-        // Récupérer toutes les alertes
-        afg.achat.afgApprovAchat.model.stock.StockAlerte[] alertes = stockAlerteService.getAlertes();
-        model.addAttribute("currentUri", request.getRequestURI());
-        model.addAttribute("alertes", alertes);
-        return "stock/notifications"; // Votre template de notifications existant
-    }
 }
