@@ -1,57 +1,64 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      th:replace="modele/base :: layout(~{::title}, ~{::section})">
+<html xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <title>Alertes de Stock</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
 </head>
 
 <body>
-<section>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
 
-    <h1 class="mb-4">Notifications</h1>
+<div class="main-content">
+    <section>
 
-    <div class="d-flex flex-column gap-3">
+        <h1 class="mb-4">Notifications</h1>
 
-        <!-- Si aucune alerte -->
-        <div th:if="${#lists.isEmpty(alertes)}" class="p-3 rounded shadow-sm border-secondary bg-light text-center">
-            Aucune notification pour le moment.
-        </div>
+        <div class="d-flex flex-column gap-3">
 
-        <!-- Boucle sur les alertes -->
-        <div th:each="a : ${alertes}"
-             th:unless="${#lists.isEmpty(alertes)}"
-             class="p-3 rounded shadow-sm"
-             th:classappend="${a.getTypeAlerte() == 'RUPTURE'} ? 'border-danger bg-danger bg-opacity-10'
+            <!-- Si aucune alerte -->
+            <div th:if="${#lists.isEmpty(alertes)}" class="p-3 rounded shadow-sm border-secondary bg-light text-center">
+                Aucune notification pour le moment.
+            </div>
+
+            <!-- Boucle sur les alertes -->
+            <div th:each="a : ${alertes}"
+                 th:unless="${#lists.isEmpty(alertes)}"
+                 class="p-3 rounded shadow-sm"
+                 th:classappend="${a.getTypeAlerte() == 'RUPTURE'} ? 'border-danger bg-danger bg-opacity-10'
                              : 'border-warning bg-warning bg-opacity-10'">
 
-            <h5 class="fw-bold" th:text="${a.getCodeArticle() + ' - ' + a.getDesignation()}"></h5>
+                <h5 class="fw-bold" th:text="${a.getCodeArticle() + ' - ' + a.getDesignation()}"></h5>
 
-            <p class="mb-1">
-                <strong>Stock :</strong>
-                <span th:text="${a.getStockDisponible()}"></span>
-            </p>
+                <p class="mb-1">
+                    <strong>Stock :</strong>
+                    <span th:text="${a.getStockDisponible()}"></span>
+                </p>
 
-            <p class="mb-1">
-                <strong>Seuil minimum :</strong>
-                <span th:text="${a.getSeuilMin()}"></span>
-            </p>
+                <p class="mb-1">
+                    <strong>Seuil minimum :</strong>
+                    <span th:text="${a.getSeuilMin()}"></span>
+                </p>
 
-            <span th:if="${a.getTypeAlerte() == 'RUPTURE'}"
-                  class="badge bg-danger text-light">
+                <span th:if="${a.getTypeAlerte() == 'RUPTURE'}"
+                      class="badge bg-danger text-light">
                 Stock épuisé
             </span>
 
-            <span th:if="${a.getTypeAlerte() == 'SEUIL'}"
-                  class="badge bg-warning text-dark">
+                <span th:if="${a.getTypeAlerte() == 'SEUIL'}"
+                      class="badge bg-warning text-dark">
                 Seuil minimum atteint
             </span>
 
+            </div>
+
         </div>
 
-    </div>
+    </section>
+</div>
 
-</section>
 
 </body>
 </html>

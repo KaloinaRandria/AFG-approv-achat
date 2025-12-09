@@ -7,20 +7,36 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <style>
+        /* Entrée → Vert */
+        #etatStockTable tbody td.text-entree {
+            color: #16a34a !important;
+        }
+
+        /* Sortie → Rouge */
+        #etatStockTable tbody td.text-sortie {
+            color: #dc2626 !important;
+        }
+
+        /* Stock disponible → Bleu foncé */
+        #etatStockTable tbody td.text-stock {
+            color: #1d4ed8 !important;
+        }
+    </style>
 </head>
 
 <body>
-    <div th:replace="fragment/sidebar :: sidebar"></div>
+    <div th:replace="~{fragment/sidebar :: sidebar}"></div>
     <div class="main-content">
         <section>
 
             <!-- En-tête -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="fw-bold">
-                    <i class="fas fa-warehouse me-3 text-primary"></i> État de Stock
+                    <i class="fas fa-warehouse me-3 icon-gradient-blue"></i> État de Stock
                 </h1>
 
-                <a th:href="@{/admin}" class="btn btn-outline-primary btn-lg">
+                <a th:href="@{/admin}" class="btn btn-gradient-blue btn-lg">
                     <i class="fas fa-box me-3"></i> Liste des Articles
                 </a>
             </div>
@@ -32,13 +48,15 @@
                     <div class="table-responsive">
                         <table id="etatStockTable" class="table table-striped table-hover">
                             <thead>
+
                             <tr>
-                                <th>Article</th>
-                                <th>Seuil minimum</th>
-                                <th>Entrée</th>
-                                <th>Sortie</th>
-                                <th>Stock Disponible</th>
+                                <th><i class="fas fa-box me-2 icon-gradient-blue"></i>Article</th>
+                                <th><i class="fas fa-exclamation-triangle me-2 icon-gradient-blue"></i>Seuil minimum</th>
+                                <th><i class="fas fa-sign-in-alt me-2 icon-gradient-blue"></i>Entrée</th>
+                                <th><i class="fas fa-sign-out-alt me-2 icon-gradient-blue"></i>Sortie</th>
+                                <th><i class="fas fa-chart-pie me-2 icon-gradient-blue"></i>Stock Disponible</th>
                             </tr>
+
                             </thead>
 
                             <tbody>
@@ -47,12 +65,20 @@
                                     <strong th:text="${e.codeArticle}"></strong><br>
                                     <small class="text-muted" th:text="${e.designation}"></small>
                                 </td>
-                                <td th:text="${e.seuilMin}"></td>
-                                <td><span class="badge bg-success" th:text="${e.totalEntree}"></span></td>
-                                <td><span class="badge bg-danger" th:text="${e.totalSortie}"></span></td>
-                                <td>
-                                    <span th:text="${e.stockDisponible}">
-                                    </span>
+                                <td class="text-end fw-bold text-seuil"
+                                    th:text="${e.seuilMin}">
+                                </td>
+
+                                <td class="text-end fw-bold text-entree"
+                                    th:text="${e.totalEntree}">
+                                </td>
+
+                                <td class="text-end fw-bold text-sortie"
+                                    th:text="${e.totalSortie}">
+                                </td>
+
+                                <td class="text-end fw-bold text-stock"
+                                    th:text="${e.stockDisponible}">
                                 </td>
                             </tr>
                             </tbody>
