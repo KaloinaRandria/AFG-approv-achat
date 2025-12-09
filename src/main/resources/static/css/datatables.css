@@ -494,3 +494,39 @@ table.dataTable tbody tr:hover {
 .main-content {
     z-index: 1 !important;
 }
+
+/* Style pour les notifications */
+.notification-badge {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.notification-badge:hover {
+    transform: scale(1.1);
+}
+
+/* Animation pour alerte urgente */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.notification-pulse {
+    animation: pulse 2s infinite;
+}
+
+/* Entrée → Vert */
+#etatStockTable tbody td.text-entree {
+    color: #16a34a !important;
+}
+
+/* Sortie → Rouge */
+#etatStockTable tbody td.text-sortie {
+    color: #dc2626 !important;
+}
+
+/* Stock disponible → Bleu foncé */
+#etatStockTable tbody td.text-stock {
+    color: #1d4ed8 !important;
+}

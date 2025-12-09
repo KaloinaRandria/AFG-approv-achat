@@ -112,7 +112,6 @@
             <strong style="max-width: 200px; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"  class="text-white" th:text="${#authentication.principal.prenom + ' ' + #authentication.principal.nom}"></strong>
         </a>
         <ul class="dropdown-menu dropdown-menu-end text-small shadow" aria-labelledby="dropdownUser">
-            <li><a class="dropdown-item" th:href="@{/ma-fiche}">Ma fiche</a></li>
             <li><a class="dropdown-item" th:href="@{/logout}">Déconnexion</a></li>
         </ul>
     </div>
