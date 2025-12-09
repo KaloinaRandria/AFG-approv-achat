@@ -41,15 +41,18 @@ public class ArticleHistorique {
     @Column(name = "modifie_par")
     private String modifiePar; // Peut être l'email ou le nom d'utilisateur
 
+    @Column(name = "code_article")
+    private String codeArticle;
 
     public ArticleHistorique(Article article, String champModifie,
                              String ancienneValeur, String nouvelleValeur,
-                             String modifiePar) {
+                             String modifiePar,String codeArticle) {
         this.article = article;
         this.champModifie = champModifie;
         this.ancienneValeur = ancienneValeur;
         this.nouvelleValeur = nouvelleValeur;
         this.dateModification = LocalDateTime.now();
         this.modifiePar = modifiePar;
+        this.codeArticle = codeArticle;
     }
 }

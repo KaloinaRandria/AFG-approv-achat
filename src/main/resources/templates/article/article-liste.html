@@ -58,16 +58,28 @@
                             <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
                             <td>
                                 <button type="button"
-                                        class="btn btn-outline-secondary btn-sm edit-btn"
+                                        class="btn btn-sm edit-btn"
                                         data-bs-toggle="modal"
                                         data-bs-target="#modifierModal"
                                         th:data-codearticle="${a.getCodeArticle()}"
                                         th:data-designation="${a.getDesignation()}"
+                                        th:data-seuilminimum="${a.getSeuilMin()}"
                                         th:data-idudm="${a.udm != null ? a.udm.getId() : ''}"
                                         th:data-idfamille="${a.famille != null ? a.famille.getId() : ''}"
                                         th:data-idcentre="${a.centreBudgetaire != null ? a.centreBudgetaire.getId() : ''}"
                                         title="Modifier l'article">
                                     <i class="fas fa-edit"></i>
+                                </button>
+
+                                <!-- Bouton Historique (modal) -->
+                                <button type="button"
+                                        class="btn btn-outline-info btn-sm historique-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#historiqueModal"
+                                        th:data-codearticle="${a.getCodeArticle()}"
+                                        th:data-designation="${a.getDesignation()}"
+                                        title="Voir l'historique">
+                                    <i class="fas fa-history"></i>
                                 </button>
                             </td>
                             <td>
@@ -109,6 +121,12 @@
                         <input type="text" class="form-control" id="modalDesignation" name="designation" required>
                     </div>
                     <div class="mb-3">
+                        <label for="modalSeuil" class="form-label">
+                            <i class="fas fa-chart-line me-2 icon-gradient-light-blue"></i>SeuilMinimum *
+                        </label>
+                        <input type="text" class="form-control" id="modalSeuil" name="seuilMinimum" required>
+                    </div>
+                    <div class="mb-3">
                         <label for="modalUdm" class="form-label">
                             <i class="fas fa-balance-scale me-2 icon-gradient-light-blue"></i>Unité de mesure
                         </label>
@@ -141,7 +159,7 @@
                         <i class="fas fa-times me-1"></i>Annuler
                     </button>
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i>Enregistrer
+                        <i class="fas fa-save me-1"></i>Modifier
                     </button>
                 </div>
             </form>
@@ -149,6 +167,69 @@
     </div>
 </div>
 
+<!-- Modal pour l'historique des modifications -->
+<div class="modal fade" id="historiqueModal" tabindex="-1" aria-labelledby="historiqueModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="historiqueModalLabel">
+                    <i class="fas fa-history me-2 icon-gradient-blue"></i>Historique des modifications
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 id="historiqueArticleInfo" class="mb-0"></h6>
+                    <span class="badge bg-primary" id="historiqueCount">0 modification(s)</span>
+                </div>
+
+                <!-- Tableau pour l'historique -->
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm">
+                        <thead>
+                        <tr>
+                            <th><i class="fas fa-calendar me-1"></i>Date</th>
+                            <th><i class="fas fa-user me-1"></i>Utilisateur</th>
+                            <th><i class="fas fa-tag me-1"></i>Type</th>
+                            <th><i class="fas fa-info-circle me-1"></i>Description</th>
+                            <th><i class="fas fa-database me-1"></i>Ancienne valeur</th>
+                            <th><i class="fas fa-database me-1"></i>Nouvelle valeur</th>
+                        </tr>
+                        </thead>
+                        <tbody id="historiqueTableBody">
+                        <!-- Les données seront chargées dynamiquement ici -->
+                        <tr id="historiqueEmptyRow">
+                            <td colspan="6" class="text-center py-4">
+                                <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                                <p class="text-muted">Aucune modification trouvée</p>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination pour l'historique -->
+                <nav aria-label="Historique pagination" id="historiquePagination" class="d-none">
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1">Précédent</a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">Suivant</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 <script th:inline="none">
     /*<![CDATA[*/
     document.addEventListener('DOMContentLoaded', function() {
@@ -214,9 +295,149 @@
             $('#modalFamille').val(button.data('idfamille') || '');
             $('#modalCentre').val(button.data('idcentre') || '');
             $('#modifierModalLabel').text('Modifier l\'article: ' + button.data('codearticle'));
+            $('#modalSeuil').val(button.data('seuilminimum') || '');
         });
         $('#modifierModal').on('hidden.bs.modal', function(){ $('#articleForm')[0].reset(); });
     });
+
+
+
+    $('#historiqueModal').on('show.bs.modal', function(event) {
+        var button = $(event.relatedTarget);
+        var codeArticle = button.data('codearticle');
+        var designation = button.data('designation');
+
+        console.log("Ouverture modal historique pour:", codeArticle, designation);
+
+        // Mettre à jour le titre
+        $('#historiqueArticleInfo').text(designation + ' (' + codeArticle + ')');
+
+        // Afficher le loader
+        $('#historiqueTableBody').html(`
+        <tr>
+            <td colspan="6" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+                <p class="mt-2 text-muted">Chargement de l'historique...</p>
+            </td>
+        </tr>
+    `);
+
+        // URL du contrôleur - NOTEZ LE CHANGEMENT ICI !
+        // Le contrôleur utilise @GetMapping("/article/{codeArticle}")
+        // Donc l'URL doit être: /admin/api/historique/article/CODE_ARTICLE
+        const url = `/admin/api/historique/article/${encodeURIComponent(codeArticle)}?page=0&size=10`;
+        console.log("URL de requête:", url);
+
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: function(response) {
+                console.log("Réponse reçue:", response);
+
+                // Votre contrôleur retourne les données dans response.data
+                // et pas directement dans response.historiques
+                if (response.data && response.data.length > 0) {
+                    let html = '';
+                    response.data.forEach(function(historique) {
+                        console.log("Historique:", historique);
+
+                        // Déterminer le type de modification basé sur le champ
+                        const typeModification = getTypeFromChamp(historique.champ);
+                        const description = getDescriptionFromChamp(historique.champ);
+
+                        html += `
+                    <tr>
+                        <td>${historique.date || '-'}</td>
+                        <td>${historique.modifiePar || 'Système'}</td>
+                        <td>
+                            <span class="badge ${getBadgeClass(typeModification)}">
+                                ${typeModification}
+                            </span>
+                        </td>
+                        <td>${description || historique.champ || 'Modification'}</td>
+                        <td>${historique.ancienneValeur || '-'}</td>
+                        <td>${historique.nouvelleValeur || '-'}</td>
+                    </tr>`;
+                    });
+
+                    $('#historiqueTableBody').html(html);
+
+                    // Utiliser response.pagination.totalElements si disponible
+                    const totalElements = response.pagination ? response.pagination.totalElements : response.data.length;
+                    $('#historiqueCount').text(totalElements + ' modification(s)');
+
+                } else {
+                    console.log("Aucun historique trouvé");
+                    $('#historiqueTableBody').html(`
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">Aucune modification trouvée</p>
+                        </td>
+                    </tr>
+                `);
+                    $('#historiqueCount').text('0 modification(s)');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Erreur AJAX:", status, error, xhr.responseText);
+                $('#historiqueTableBody').html(`
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-danger">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <p>Erreur lors du chargement de l'historique</p>
+                        <small class="text-muted">Status: ${status}, Erreur: ${error}</small>
+                        <br><small>Réponse: ${xhr.responseText}</small>
+                    </td>
+                </tr>
+            `);
+            }
+        });
+    });
+
+    // Fonction pour déterminer le type de modification
+    function getTypeFromChamp(champ) {
+        if (!champ) return "MODIFICATION";
+
+        const champLower = champ.toLowerCase();
+        if (champLower === "article") return "CREATION";
+        if (champLower.includes("stock")) return "MOUVEMENT_STOCK";
+        if (champLower.includes("quantite")) return "STOCK";
+        return "MODIFICATION";
+    }
+
+    // Fonction pour créer une description lisible
+    function getDescriptionFromChamp(champ) {
+        if (!champ) return "Modification";
+
+        const descriptions = {
+            "designation": "Désignation",
+            "seuilmin": "Seuil minimum",
+            "famille": "Famille",
+            "udm": "Unité de mesure",
+            "centrebudgetaire": "Centre budgétaire",
+            "article": "Création d'article",
+            "stock": "Mouvement de stock",
+            "quantite": "Quantité en stock"
+        };
+
+        const champLower = champ.toLowerCase();
+        return descriptions[champLower] ||
+            champ.charAt(0).toUpperCase() + champ.slice(1).toLowerCase();
+    }
+
+    // Fonction pour déterminer la classe du badge
+    function getBadgeClass(type) {
+        if (!type) return 'bg-secondary';
+
+        const typeLower = type.toLowerCase();
+        if (typeLower.includes('creation')) return 'bg-success';
+        if (typeLower.includes('mouvement') || typeLower.includes('stock')) return 'bg-info';
+        if (typeLower.includes('suppression')) return 'bg-danger';
+        return 'bg-warning text-dark';
+    }
     /*]]>*/
 </script>
 

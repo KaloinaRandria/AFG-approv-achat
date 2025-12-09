@@ -11,6 +11,7 @@ import afg.achat.afgApprovAchat.repository.CentreBudgetaireRepo;
 import afg.achat.afgApprovAchat.repository.FamilleRepo;
 import afg.achat.afgApprovAchat.repository.util.ArticleHistoriqueRepo;
 import afg.achat.afgApprovAchat.repository.util.UdmRepo;
+import afg.achat.afgApprovAchat.service.util.ArticleHistoriqueService;
 import afg.achat.afgApprovAchat.service.util.UdmService;
 import jakarta.transaction.Transactional;
 import org.apache.tomcat.util.net.openssl.ciphers.Authentication;
@@ -33,7 +34,7 @@ public class ArticleService {
     @Autowired
     CentreBudgetaireService centreBudgetaireService;
     @Autowired
-    ArticleHistoriqueRepo articleHistoriqueRepo;
+    ArticleHistoriqueService articleHistoriqueService;
 
     public Article[] getAllArticles() {
         return articleRepo.findAll().toArray(new Article[0]);
@@ -49,7 +50,7 @@ public class ArticleService {
     }
 
     @Transactional
-    public Article modifierArticle(String codeArticle, String designation,
+    public Article modifierArticle(String codeArticle, String designation, String seuilMin,
                                    String idUdm, String idFamille, String idCentreBudgetaire) {
         // Récupérer l'article existant
         Article article = this.getArticleByCodeArticle(codeArticle);
@@ -72,9 +73,22 @@ public class ArticleService {
                     "Désignation",
                     article.getDesignation(),
                     designation,
-                    utilisateur
+                    utilisateur,
+                    article.getCodeArticle()
             ));
             article.setDesignation(designation);
+        }
+        // 2. Seuil Minimum
+        if (seuilMin != null && !seuilMin.equals(article.getSeuilMin())) {
+            historiques.add(new ArticleHistorique(
+                    article,
+                    "Seuil Minimum",
+                    String.valueOf(article.getSeuilMin()),
+                    seuilMin,
+                    utilisateur,
+                    article.getCodeArticle()
+            ));
+            article.setSeuilMin(Integer.parseInt(seuilMin));
         }
 
         // 2. Unité de mesure
@@ -90,7 +104,8 @@ public class ArticleService {
                             "Unité de mesure",
                             ancienneUdm != null ? ancienneUdm.getDescription() : "null",
                             nouvelleUdm.getDescription(),
-                            utilisateur
+                            utilisateur,
+                            article.getCodeArticle()
                     ));
                     article.setUdm(nouvelleUdm);
                 }
@@ -112,7 +127,8 @@ public class ArticleService {
                             "Famille",
                             ancienneFamille != null ? ancienneFamille.getDescription() : "null",
                             nouvelleFamille.getDescription(),
-                            utilisateur
+                            utilisateur,
+                            article.getCodeArticle()
                     ));
                     article.setFamille(nouvelleFamille);
                 }
@@ -134,7 +150,8 @@ public class ArticleService {
                             "Centre budgétaire",
                             ancienCentre != null ? ancienCentre.getCodeCentre() : "null",
                             nouveauCentre.getCodeCentre(),
-                            utilisateur
+                            utilisateur,
+                            article.getCodeArticle()
                     ));
                     article.setCentreBudgetaire(nouveauCentre);
                 }
@@ -149,11 +166,10 @@ public class ArticleService {
 
             // Sauvegarder l'historique - CORRECTION ICI
             for (ArticleHistorique historique : historiques) {
-                articleHistoriqueRepo.save(historique);
+                articleHistoriqueService.saveArticleHistorique(historique);
             }
         }
 
         return articleModifie;
     }
-
 }
