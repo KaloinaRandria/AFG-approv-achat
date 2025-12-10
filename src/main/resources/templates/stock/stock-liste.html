@@ -22,7 +22,7 @@
 
             <div>
                 <!-- Bouton pour voir les notifications dans un modal -->
-                <button type="button" class="btn btn-gradient-orange btn-lg me-2 position-relative notification-btn-main"
+                <button type="button" class="btn btn-gradient-orange me-2 position-relative notification-btn-main"
                         data-bs-toggle="modal" data-bs-target="#notificationsModal">
                     <i class="fas fa-bell me-2"></i> Notifications
                     <span th:if="${alertesCount != null && alertesCount > 0}"
@@ -32,7 +32,7 @@
     </span>
                 </button>
 
-                <a th:href="@{/admin}" class="btn btn-gradient-blue btn-lg">
+                <a th:href="@{/admin}" class="btn btn-gradient-blue">
                     <i class="fas fa-box me-3"></i> Liste des Articles
                 </a>
             </div>
