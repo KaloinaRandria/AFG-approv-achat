@@ -81,7 +81,7 @@
                  class="accordion-collapse collapse"
                  aria-labelledby="headingStock"
                  data-bs-parent="#sidebarAccordion"
-                 th:classappend="${currentUri.contains('/admin/stock') or currentUri.contains('/admin/message')} ? 'show' : ''">
+                 th:classappend="${currentUri.contains('/admin/stock')} ? 'show' : ''">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
                         <li>
@@ -108,7 +108,7 @@
     <div class="dropdown mt-auto p-3 border-top">
         <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
             <img th:if="${#authentication.principal.pdp != null && #authentication.principal.pdp.thumbnail != null}" th:src="'data:image/jpeg;base64,' + ${#authentication.principal.pdp.thumbnail}" alt="Avatar" width="40" height="40" class="rounded-circle me-2">
-            <img th:src="@{/img/avatar.png}" alt="Avatar" width="40" height="40" class="rounded-circle me-2">
+            <img th:if="${#authentication.principal.pdp == null || #authentication.principal.pdp.thumbnail == '' }" th:src="@{/img/avatar.png}" alt="Avatar" width="40" height="40" class="rounded-circle me-2">
             <strong style="max-width: 200px; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"  class="text-white" th:text="${#authentication.principal.prenom + ' ' + #authentication.principal.nom}"></strong>
         </a>
         <ul class="dropdown-menu dropdown-menu-end text-small shadow" aria-labelledby="dropdownUser">

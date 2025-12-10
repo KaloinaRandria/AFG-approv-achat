@@ -111,14 +111,19 @@ public class StockController {
         // Récupérer les alertes sous forme de map pour accès rapide
         Map<String, StockAlerte> alertesMap = stockAlerteService.getAlertesMap();
 
+        // Liste pour le modal de notifications
+        List<StockAlerte> alertesList = new ArrayList<>();
+
         // Convertir VEtatStock en DTO avec alerte
         for (VEtatStock etat : etatStocksArray) {
             EtatStockAlerteDTO dto = new EtatStockAlerteDTO(etat);
 
             // Associer l'alerte si elle existe pour cet article
-            afg.achat.afgApprovAchat.model.stock.StockAlerte alerte = alertesMap.get(etat.getCodeArticle());
+            StockAlerte alerte = alertesMap.get(etat.getCodeArticle());
             if (alerte != null) {
                 dto.setAlerte(alerte);
+                // Ajouter à la liste pour le modal
+                alertesList.add(alerte);
             }
 
             etatStocks.add(dto);
@@ -127,10 +132,22 @@ public class StockController {
         // Compter le nombre total d'alertes pour le badge
         int alertesCount = stockAlerteService.getAlertesCount();
 
+        // Compter les ruptures et les seuils
+        long ruptureCount = alertesList.stream()
+                .filter(a -> "RUPTURE".equals(a.getTypeAlerte()))
+                .count();
+
+        long seuilCount = alertesList.stream()
+                .filter(a -> "SEUIL".equals(a.getTypeAlerte()))
+                .count();
+
         // Ajouter les attributs au modèle
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("etatStocks", etatStocks);
         model.addAttribute("alertesCount", alertesCount);
+        model.addAttribute("alertes", alertesList); // Pour le modal
+        model.addAttribute("ruptureCount", ruptureCount); // Pour le modal
+        model.addAttribute("seuilCount", seuilCount); // Pour le modal
 
         return "stock/stock-liste"; // Votre template existant
     }

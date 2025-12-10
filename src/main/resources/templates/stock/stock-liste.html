@@ -21,15 +21,16 @@
             </h1>
 
             <div>
-                <!-- Bouton pour voir toutes les notifications -->
-                <a th:href="@{/admin/message/alertes-stock}" class="btn btn-gradient-orange btn-lg me-2 position-relative">
+                <!-- Bouton pour voir les notifications dans un modal -->
+                <button type="button" class="btn btn-gradient-orange btn-lg me-2 position-relative notification-btn-main"
+                        data-bs-toggle="modal" data-bs-target="#notificationsModal">
                     <i class="fas fa-bell me-2"></i> Notifications
                     <span th:if="${alertesCount != null && alertesCount > 0}"
-                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            <span th:text="${alertesCount}"></span>
-                            <span class="visually-hidden">alertes non lues</span>
-                        </span>
-                </a>
+                          class="notification-badge-main badge rounded-pill bg-danger border border-2 border-white">
+        <span th:text="${alertesCount > 99 ? '99+' : alertesCount}"></span>
+        <span class="visually-hidden">alertes non lues</span>
+    </span>
+                </button>
 
                 <a th:href="@{/admin}" class="btn btn-gradient-blue btn-lg">
                     <i class="fas fa-box me-3"></i> Liste des Articles
@@ -155,6 +156,135 @@
 <!--                <button type="button" class="btn btn-primary" onclick="goToArticle()">-->
 <!--                    <i class="fas fa-edit me-1"></i> Modifier l'article-->
 <!--                </button>-->
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal des notifications -->
+<div class="modal fade" id="notificationsModal" tabindex="-1" aria-labelledby="notificationsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-blue text-white">
+                <h5 class="modal-title" id="notificationsModalLabel">
+                    <i class="fas fa-bell me-2"></i> Alertes de Stock
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+
+                <!-- En-tête avec compteur -->
+                <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+                    <h6 class="mb-0">
+                        <span th:if="${alertesCount != null && alertesCount > 0}">
+                            <span th:text="${alertesCount}"></span> alerte<span th:if="${alertesCount > 1}">s</span> active<span th:if="${alertesCount > 1}">s</span>
+                        </span>
+                        <span th:unless="${alertesCount != null && alertesCount > 0}">
+                            Aucune alerte active
+                        </span>
+                    </h6>
+                    <div>
+                        <span class="badge bg-danger me-2">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            Rupture: <span th:text="${ruptureCount != null ? ruptureCount : 0}"></span>
+                        </span>
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Seuil: <span th:text="${seuilCount != null ? seuilCount : 0}"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Liste des alertes -->
+                <div class="notifications-container" style="max-height: 60vh; overflow-y: auto;">
+
+                    <!-- Si aucune alerte -->
+                    <div th:if="${#lists.isEmpty(alertes)}"
+                         class="text-center py-5">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3 opacity-50"></i>
+                        <h5 class="text-muted">Aucune alerte active</h5>
+                        <p class="text-muted small">Tous les stocks sont dans les normes</p>
+                    </div>
+
+                    <!-- Boucle sur les alertes -->
+                    <div th:each="a : ${alertes}"
+                         th:unless="${#lists.isEmpty(alertes)}"
+                         class="notification-item border-bottom p-3"
+                         th:classappend="${a.getTypeAlerte() == 'RUPTURE'} ? 'alert-rupture' : 'alert-seuil'"
+                         style="cursor: pointer;"
+                         th:data-code="${a.getCodeArticle()}"
+                         th:data-designation="${a.getDesignation()}"
+                         th:data-type="${a.getTypeAlerte()}"
+                         th:data-stock="${a.getStockDisponible()}"
+                         th:data-seuil="${a.getSeuilMin()}"
+                         onclick="handleNotificationClick(this)">
+
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1 fw-bold">
+                                    <i class="fas fa-box me-2 text-primary"></i>
+                                    <span th:text="${a.getCodeArticle()}"></span>
+                                </h6>
+                                <p class="text-muted small mb-2" th:text="${a.getDesignation()}"></p>
+                            </div>
+                            <div>
+                                <span th:if="${a.getTypeAlerte() == 'RUPTURE'}"
+                                      class="badge bg-danger text-light px-3 py-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i> Rupture
+                                </span>
+                                <span th:if="${a.getTypeAlerte() == 'SEUIL'}"
+                                      class="badge bg-warning text-dark px-3 py-2">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> Seuil
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1">
+                                    <i class="fas fa-chart-pie me-2 text-info"></i>
+                                    <strong>Stock disponible :</strong>
+                                    <span class="fw-bold"
+                                          th:classappend="${a.getTypeAlerte() == 'RUPTURE'} ? 'text-danger' : 'text-warning'"
+                                          th:text="${a.getStockDisponible()}"></span>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1">
+                                    <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
+                                    <strong>Seuil minimum :</strong>
+                                    <span class="fw-bold text-seuil" th:text="${a.getSeuilMin()}"></span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                <span th:if="${a.getTypeAlerte() == 'RUPTURE'}">
+                                    Stock épuisé - Réapprovisionnement urgent nécessaire
+                                </span>
+                                <span th:if="${a.getTypeAlerte() == 'SEUIL'}">
+                                    Stock inférieur au seuil - Pensez à commander
+                                </span>
+                            </small>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Fermer
+                </button>
+                <button type="button" class="btn btn-gradient-blue" onclick="exportNotifications()">
+                    <i class="fas fa-download me-1"></i> Exporter
+                </button>
+                <button type="button" class="btn btn-gradient-green" onclick="markAllAsRead()" th:if="${alertesCount != null && alertesCount > 0}">
+                    <i class="fas fa-check-double me-1"></i> Tout marquer comme lu
+                </button>
             </div>
         </div>
     </div>
@@ -305,6 +435,33 @@
 
         showAlertDetails(codeArticle, designation, type, stock, seuil);
     }
+
+    
+    /* ===== FONCTIONS POUR LE MODAL DE NOTIFICATIONS ===== */
+
+    // Fonction pour gérer le clic sur une notification
+    function handleNotificationClick(element) {
+        const codeArticle = element.getAttribute('data-code');
+        const designation = element.getAttribute('data-designation');
+        const type = element.getAttribute('data-type');
+        const stock = element.getAttribute('data-stock');
+        const seuil = element.getAttribute('data-seuil');
+
+        showAlertDetailsFromNotification(codeArticle, designation, type, stock, seuil);
+    }
+
+    // Fonction pour afficher les détails d'une alerte depuis le modal
+    function showAlertDetailsFromNotification(codeArticle, designation, type, stock, seuil) {
+        // Fermer le modal des notifications
+        const notificationModal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
+        if (notificationModal) {
+            notificationModal.hide();
+        }
+
+        // Afficher le modal de détails de l'alerte
+        showAlertDetails(codeArticle, designation, type, stock, seuil);
+    }
+
     /*]]>*/
 </script>
 </body>
