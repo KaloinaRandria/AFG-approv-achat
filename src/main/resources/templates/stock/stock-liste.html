@@ -406,11 +406,11 @@
         if (type === 'RUPTURE') {
             alertDiv.className = 'alert alert-danger';
             messageSpan.textContent = 'Le stock est épuisé. Une commande urgente est nécessaire.';
-            document.getElementById('alertModalLabel').textContent = '🚨 Rupture de Stock';
+            document.getElementById('alertModalLabel').textContent = 'Rupture de Stock';
         } else if (type === 'SEUIL') {
             alertDiv.className = 'alert alert-warning';
             messageSpan.textContent = 'Le stock est inférieur au seuil minimum. Pensez à réapprovisionner.';
-            document.getElementById('alertModalLabel').textContent = '⚠️ Seuil Minimum Atteint';
+            document.getElementById('alertModalLabel').textContent = 'Seuil Minimum Atteint';
         }
 
         // Stocker le code article pour le bouton "Modifier"
@@ -436,7 +436,7 @@
         showAlertDetails(codeArticle, designation, type, stock, seuil);
     }
 
-    
+
     /* ===== FONCTIONS POUR LE MODAL DE NOTIFICATIONS ===== */
 
     // Fonction pour gérer le clic sur une notification
