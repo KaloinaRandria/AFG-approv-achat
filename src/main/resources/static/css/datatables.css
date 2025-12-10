@@ -349,7 +349,7 @@ table.dataTable tbody tr:hover {
 
 /* Bleu principal */
 .btn-gradient-blue {
-    background: linear-gradient(45deg, #001051, #0d6efd, #3b82f6) !important;
+    background: linear-gradient(45deg, #001051, #0d6efd) !important;
     border: none !important;
     color: white !important;
 }
@@ -738,7 +738,7 @@ table.dataTable tbody tr:hover {
 
 /* Style pour le modal header */
 .modal-header.bg-gradient-blue {
-    background: linear-gradient(90deg, #001051, #0d6efd) !important;
+    background: linear-gradient(90deg, #001051, #00337f) !important;
 }
 
 /* Style pour le conteneur des notifications */
