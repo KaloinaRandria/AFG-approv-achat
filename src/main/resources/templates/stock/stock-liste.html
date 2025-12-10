@@ -21,14 +21,13 @@
             </h1>
 
             <div>
-                <!-- Bouton pour voir toutes les notifications -->
-                <a th:href="@{/admin/message/alertes-stock}" class="btn btn-gradient-orange btn-lg me-2 position-relative">
+                <a th:href="@{/admin/message/alertes-stock}" class="btn btn-gradient-orange btn-lg me-2 position-relative notification-btn">
                     <i class="fas fa-bell me-2"></i> Notifications
                     <span th:if="${alertesCount != null && alertesCount > 0}"
-                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            <span th:text="${alertesCount}"></span>
-                            <span class="visually-hidden">alertes non lues</span>
-                        </span>
+                          class="notification-badge badge rounded-pill bg-danger border border-2 border-white">
+                        <span th:text="${alertesCount > 99 ? '99+' : alertesCount}"></span>
+                        <span class="visually-hidden">alertes non lues</span>
+                    </span>
                 </a>
 
                 <a th:href="@{/admin}" class="btn btn-gradient-blue btn-lg">
