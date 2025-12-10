@@ -82,45 +82,45 @@
                                 <th:block th:if="${e.alerte != null}">
                                     <!-- Rupture de stock -->
                                     <th:block th:if="${e.alerte.typeAlerte == 'RUPTURE'}">
-            <span class="notification-badge badge bg-danger text-light p-2 notification-pulse"
-                  title="Rupture de stock - Cliquez pour voir les détails"
-                  data-bs-toggle="tooltip"
-                  data-bs-placement="top"
-                  th:data-code="${e.codeArticle}"
-                  th:data-designation="${e.designation}"
-                  th:data-stock="${e.stockDisponible}"
-                  th:data-seuil="${e.seuilMin}"
-                  th:data-type="RUPTURE"
-                  onclick="showAlertFromRow(this)">
-                <i class="fas fa-exclamation-circle me-1"></i> Rupture
-            </span>
+                                        <span class="notification-badge badge bg-danger text-light p-2 notification-pulse"
+                                              title="Rupture de stock - Cliquez pour voir les détails"
+                                              data-bs-toggle="tooltip"
+                                              data-bs-placement="top"
+                                              th:data-code="${e.codeArticle}"
+                                              th:data-designation="${e.designation}"
+                                              th:data-stock="${e.stockDisponible}"
+                                              th:data-seuil="${e.seuilMin}"
+                                              th:data-type="RUPTURE"
+                                              onclick="showAlertFromRow(this)">
+                                            <i class="fas fa-exclamation-circle me-1"></i> Rupture
+                                        </span>
                                     </th:block>
 
                                     <!-- Seuil minimum atteint -->
                                     <th:block th:if="${e.alerte.typeAlerte == 'SEUIL'}">
-            <span class="notification-badge badge bg-warning text-dark p-2"
-                  title="Seuil minimum atteint - Cliquez pour voir les détails"
-                  data-bs-toggle="tooltip"
-                  data-bs-placement="top"
-                  th:data-code="${e.codeArticle}"
-                  th:data-designation="${e.designation}"
-                  th:data-stock="${e.stockDisponible}"
-                  th:data-seuil="${e.seuilMin}"
-                  th:data-type="SEUIL"
-                  onclick="showAlertFromRow(this)">
-                <i class="fas fa-exclamation-triangle me-1"></i> Seuil
-            </span>
+                                        <span class="notification-badge badge bg-warning text-dark p-2"
+                                              title="Seuil minimum atteint - Cliquez pour voir les détails"
+                                              data-bs-toggle="tooltip"
+                                              data-bs-placement="top"
+                                              th:data-code="${e.codeArticle}"
+                                              th:data-designation="${e.designation}"
+                                              th:data-stock="${e.stockDisponible}"
+                                              th:data-seuil="${e.seuilMin}"
+                                              th:data-type="SEUIL"
+                                              onclick="showAlertFromRow(this)">
+                                            <i class="fas fa-exclamation-triangle me-1"></i> Seuil
+                                        </span>
                                     </th:block>
                                 </th:block>
 
                                 <!-- Pas d'alerte -->
                                 <th:block th:unless="${e.alerte != null}">
-        <span class="badge bg-success text-light p-2"
-              title="Stock normal"
-              data-bs-toggle="tooltip"
-              data-bs-placement="top">
-            <i class="fas fa-check-circle me-1"></i> OK
-        </span>
+                                    <span class="badge bg-success text-light p-2"
+                                          title="Stock normal"
+                                          data-bs-toggle="tooltip"
+                                          data-bs-placement="top">
+                                        <i class="fas fa-check-circle me-1"></i> OK
+                                    </span>
                                 </th:block>
                             </td>
                         </tr>
