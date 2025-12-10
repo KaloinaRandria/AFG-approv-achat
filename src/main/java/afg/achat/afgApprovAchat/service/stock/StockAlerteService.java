@@ -16,9 +16,6 @@ import java.util.Map;
 @Service
 public class StockAlerteService {
     @Autowired
-    ArticleService articleService;
-
-    @Autowired
     VEtatStockService vEtatStockService;
 
     // Méthode existante pour la page de notifications
