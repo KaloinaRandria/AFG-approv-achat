@@ -9,6 +9,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -29,4 +31,6 @@ public class VEtatStock {
     String totalSortie;
     @Column(name = "stock_disponible")
     String stockDisponible;
+    @Column(name = "date_mvt_stock")
+    LocalDateTime dateMvtStock;
 }
