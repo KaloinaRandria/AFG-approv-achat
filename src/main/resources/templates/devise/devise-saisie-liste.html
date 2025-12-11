@@ -12,22 +12,26 @@
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
 <div class="main-content">
     <div class="container-fluid py-4">
-        <div class="row">
-            <div class="col-12">
-                <h1 class="h2 mb-4">Gestion des Devises</h1>
-            </div>
-        </div>
+
         <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
         <!-- Section liste devise -->
         <section class="mb-5">
+            <!-- En-tête avec icônes en dégradé bleu -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="fw-bold text-gradient-blue">
+                    <i class="fas fa-coins me-3 icon-gradient-blue"></i> Gestion des Devises
+                </h1>
+            </div>
             <div class="card shadow">
                 <div class="card-header btn-gradient-blue text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Liste des Devises</h5>
-                    <span class="badge bg-light text-primary" th:text="${devises != null ? devises.length: 0} + ' devises'"></span>
+                    <span class="badge bg-light text-primary"
+                          th:text="${devises != null ? devises.length: 0} + ' devises'"></span>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive" th:if="${devises != null}">
                         <table class="table table-hover">
+                            <!-- Modifiez cette partie dans votre tableau -->
                             <thead class="table-light">
                             <tr>
                                 <th>
@@ -45,6 +49,9 @@
                                 <th>
                                     <i class="fas fa-chart-line me-2 icon-gradient-blue"></i>Cours (Ariary)
                                 </th>
+                                <th class="text-center">
+                                    <i class="fas fa-cog me-2 icon-gradient-blue"></i>Actions
+                                </th>
                             </tr>
                             </thead>
                             <tbody>
@@ -55,11 +62,31 @@
                                     <span class="badge bg-gradient-blue" th:text="${devise.acronyme}"></span>
                                 </td>
                                 <td th:text="${#temporals.format(devise.dateMiseAJour, 'dd/MM/yyyy HH:mm')}"></td>
-                                <td>
-                                    <span class="fw-bold" th:text="${#numbers.formatDecimal(devise.coursAriary, 1, 2, 'COMMA')}"></span>
-
+                                <td class="text-end">
+                                    <span class="fw-bold"
+                                          th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).formatDecimal(devise.coursAriary)}"></span>
                                 </td>
+                                <td class="text-center">
+                                    <!-- Bouton Modifier avec th:data-* -->
+                                    <button class="btn btn-sm edit-btn"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editCoursModal"
+                                            th:data-id="${devise.id}"
+                                            th:data-cours="${devise.coursAriary}"
+                                            title="Modifier le cours">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
 
+                                    <!-- Bouton Modifier avec th:data-* -->
+                                    <button class="btn btn-sm edit-btn"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editCoursModal"
+                                            th:data-id="${devise.id}"
+                                            th:data-cours="${devise.coursAriary}"
+                                            title="Historique des cours">
+                                        <i class="fas fa-history"></i>
+                                    </button>
+                                </td>
                             </tr>
                             </tbody>
                         </table>
@@ -67,13 +94,14 @@
                     <div th:if="${devises == null}" class="text-center py-5">
                         <i class="fas fa-coins fa-3x text-muted mb-3"></i>
                         <h5 class="text-muted">Aucune devise enregistrée</h5>
-                        <p class="text-muted">Commencez par ajouter une devise en utilisant le formulaire ci-dessous.</p>
+                        <p class="text-muted">Commencez par ajouter une devise en utilisant le formulaire
+                            ci-dessous.</p>
                     </div>
                 </div>
             </div>
         </section>
 
-<!--         Section ajout devise -->
+        <!--         Section ajout devise -->
         <section>
             <div class="row">
                 <div class="col-lg-6">
@@ -106,7 +134,8 @@
                                                required>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="coursAriary" class="form-label required-field">Cours en Ariary</label>
+                                        <label for="coursAriary" class="form-label required-field">Cours en
+                                            Ariary</label>
                                         <input type="number"
                                                class="form-control"
                                                id="coursAriary"
@@ -146,9 +175,9 @@
 
                             <h6 class="mt-4"><i class="fas fa-lightbulb text-warning me-2"></i>Exemples de cours</h6>
                             <ul class="text-muted">
-                                <li>1 USD = 4,500 Ariary</li>
-                                <li>1 EUR = 4,900 Ariary</li>
-                                <li>1 GBP = 5,700 Ariary</li>
+                                <li>1 USD = 4 500 Ariary</li>
+                                <li>1 EUR = 4 900 Ariary</li>
+                                <li>1 GBP = 5 700 Ariary</li>
                             </ul>
 
                             <div class="alert alert-warning mt-3">
@@ -163,5 +192,61 @@
         </section>
     </div>
 </div>
+<div class="modal fade" id="editCoursModal" tabindex="-1" aria-labelledby="modifierModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title">Modifier le cours Ariary</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form th:action="@{/admin/devise/update-cours}" method="post">
+                <div class="modal-body">
+
+                    <!-- ID -->
+                    <input type="hidden" id="edit-id" name="id">
+
+                    <!-- Cours -->
+                    <label for="edit-cours" class="form-label">Nouveau cours
+                        (Ariary)</label>
+                    <input type="number"
+                           class="form-control"
+                           id="edit-cours"
+                           name="coursAriary"
+                           step="0.01"
+                           required>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-gradient-blue">
+                        <i class="fas fa-save me-2"></i>Modifier
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    document.addEventListener("DOMContentLoaded", () => {
+        const modal = document.getElementById("editCoursModal");
+
+        modal.addEventListener("show.bs.modal", event => {
+            const button = event.relatedTarget;
+
+            // Récupération via data-id et data-cours automatiquement remplis par Thymeleaf
+            const id = button.getAttribute("data-id");
+            const cours = button.getAttribute("data-cours");
+
+            document.getElementById("edit-id").value = id;
+            document.getElementById("edit-cours").value = cours;
+        });
+    });
+    /*]]>*/
+</script>
 </body>
 </html>

@@ -16,7 +16,7 @@
 
         <!-- En-tête -->
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="fw-bold">
+            <h1 class="fw-bold text-gradient-blue">
                 <i class="fas fa-warehouse me-3 icon-gradient-blue"></i> État de Stock
             </h1>
 
@@ -63,19 +63,19 @@
                                 <small class="text-muted" th:text="${e.designation}"></small>
                             </td>
                             <td class="text-end fw-bold text-seuil"
-                                th:text="${e.seuilMin}">
+                                th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(e.seuilMin)}">
                             </td>
 
                             <td class="text-end fw-bold text-entree"
-                                th:text="${e.totalEntree}">
+                                th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(e.totalEntree)}">
                             </td>
 
                             <td class="text-end fw-bold text-sortie"
-                                th:text="${e.totalSortie}">
+                                th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(e.totalSortie)}">
                             </td>
 
                             <td class="text-end fw-bold text-stock"
-                                th:text="${e.stockDisponible}">
+                                th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(e.stockDisponible)}">
                             </td>
 
                             <td class="text-center">

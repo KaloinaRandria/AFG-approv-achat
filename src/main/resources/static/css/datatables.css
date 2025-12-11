@@ -779,3 +779,32 @@ table.dataTable tbody tr:hover {
     border: none !important;
     color: white !important;
 }
+
+.text-gradient-blue {
+    background: linear-gradient(45deg, #001051, #00129f);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Style pour uniformiser les boutons d'icônes */
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 6px;
+}
+
+/* Pour assurer que les icônes soient bien centrées */
+.btn-icon i {
+    font-size: 14px;
+    line-height: 1;
+}
+
+/* Pour aligner verticalement le contenu de toutes les cellules */
+.table td {
+    vertical-align: middle;
+}
