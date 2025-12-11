@@ -56,4 +56,27 @@ public class DeviseController {
         }
         return "redirect:/admin/devise/devise-pages";
     }
+
+    @PostMapping("/modifier-cours")
+    public String modifierCoursDevise(@RequestParam(name = "idDevise") String idDevise,
+                                      @RequestParam(name = "coursAriary") String coursAriary,
+                                      RedirectAttributes redirectAttributes) {
+        try {
+            if (idDevise.trim().equals("")) {
+                throw new IllegalArgumentException("L'identifiant de la devise est requis.");
+            }
+            if (coursAriary.trim().equals("")) {
+                throw new IllegalArgumentException("Le cours en Ariary est requis.");
+            }
+            Devise deviseModifier = deviseService.modifierDevise(Integer.parseInt(idDevise.trim()), coursAriary.trim());
+            redirectAttributes.addFlashAttribute("ok" , "Le cours de la devise "
+                    + deviseModifier.getDesignation() + " a été modifié avec succès. (Nouveau cours : "
+                    + deviseModifier.getCoursAriary() + " Ariary)");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("ko", "Erreur lors de la modification du cours : " + e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("ko", "Erreur lors de la modification du cours : " + e.getMessage());
+        }
+        return "redirect:/admin/devise/devise-pages";
+    }
 }
