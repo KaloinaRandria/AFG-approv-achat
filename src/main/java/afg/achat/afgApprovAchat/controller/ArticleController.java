@@ -86,6 +86,7 @@ public class ArticleController {
 
         return "article/article-saisie";
     }
+
     @PostMapping("/save")
     public String insertArticle(@ModelAttribute("article") Article article,
                                 @RequestParam(name = "udm") String udmId,
@@ -156,6 +157,7 @@ public class ArticleController {
             return "redirect:/admin/article/add";
         }
     }
+
     @PostMapping("/modifier")
     public String modifierArticle(@RequestParam(name = "codeArticle") String codeArticle,
                                   @RequestParam(name = "designation") String designation,
@@ -163,7 +165,7 @@ public class ArticleController {
                                   @RequestParam(name = "idFamille") String idFamille,
                                   @RequestParam(name = "idCentreBudgetaire") String idCentreBudgetaire,
                                   @RequestParam(name = "seuilMinimum") String seuilMinimum,
-                                  RedirectAttributes redirectAttributes){
+                                  RedirectAttributes redirectAttributes) {
         try {
             // Validation des données
             if (codeArticle == null || codeArticle.trim().isEmpty()) {

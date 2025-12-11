@@ -52,7 +52,7 @@
                                 <td th:text="${devise.id}"></td>
                                 <td th:text="${devise.designation}"></td>
                                 <td>
-                                    <span class="badge bg-info" th:text="${devise.acronyme}"></span>
+                                    <span class="badge bg-gradient-blue" th:text="${devise.acronyme}"></span>
                                 </td>
                                 <td th:text="${#temporals.format(devise.dateMiseAJour, 'dd/MM/yyyy HH:mm')}"></td>
                                 <td>
@@ -72,102 +72,94 @@
             </div>
         </section>
 
-        <!-- Section ajout devise -->
-<!--        <section>-->
-<!--            <div class="row">-->
-<!--                <div class="col-lg-6">-->
-<!--                    <div class="card shadow">-->
-<!--                        <div class="card-header bg-success text-white">-->
-<!--                            <h5 class="mb-0">Ajouter une nouvelle devise</h5>-->
-<!--                        </div>-->
-<!--                        <div class="card-body">-->
-<!--                            <form th:action="@{/admin/devise/ajouter}" th:object="${devise}" method="post" id="deviseForm">-->
-<!--                                <div class="row g-3">-->
-<!--                                    <div class="col-md-6">-->
-<!--                                        <label for="acronyme" class="form-label">Acronyme *</label>-->
-<!--                                        <input type="text"-->
-<!--                                               class="form-control"-->
-<!--                                               id="acronyme"-->
-<!--                                               th:field="*{acronyme}"-->
-<!--                                               placeholder="Ex: USD, EUR, GBP"-->
-<!--                                               required-->
-<!--                                               maxlength="3"-->
-<!--                                               oninput="this.value = this.value.toUpperCase()">-->
-<!--                                        <div class="form-text">Code à 3 lettres (ex: USD, EUR)</div>-->
-<!--                                    </div>-->
-<!--                                    <div class="col-md-6">-->
-<!--                                        <label for="designation" class="form-label">Désignation *</label>-->
-<!--                                        <input type="text"-->
-<!--                                               class="form-control"-->
-<!--                                               id="designation"-->
-<!--                                               th:field="*{designation}"-->
-<!--                                               placeholder="Ex: Dollar américain, Euro"-->
-<!--                                               required>-->
-<!--                                    </div>-->
-<!--                                    <div class="col-md-6">-->
-<!--                                        <label for="coursAriary" class="form-label">Cours en Ariary *</label>-->
-<!--                                        <input type="number"-->
-<!--                                               class="form-control"-->
-<!--                                               id="coursAriary"-->
-<!--                                               th:field="*{coursAriary}"-->
-<!--                                               step="0.01"-->
-<!--                                               min="0"-->
-<!--                                               placeholder="Ex: 4500.00"-->
-<!--                                               required>-->
-<!--                                        <div class="form-text">Valeur de 1 unité de la devise en Ariary</div>-->
-<!--                                    </div>-->
-<!--                                    <div class="col-md-6">-->
-<!--                                        <label for="dateMiseAJour" class="form-label">Date de mise à jour</label>-->
-<!--                                        <input type="datetime-local"-->
-<!--                                               class="form-control"-->
-<!--                                               id="dateMiseAJour"-->
-<!--                                               th:field="*{dateMiseAJour}"-->
-<!--                                               th:value="${devise.dateMiseAJour != null} ? ${#temporals.format(devise.dateMiseAJour, 'yyyy-MM-dd\'T\'HH:mm')} : ${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd\'T\'HH:mm')}">-->
-<!--                                    </div>-->
-<!--                                </div>-->
+<!--         Section ajout devise -->
+        <section>
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card shadow">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">Ajouter une nouvelle devise</h5>
+                        </div>
+                        <div class="card-body">
+                            <form th:action="@{/admin/devise/save-devise}" method="post" id="deviseForm">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="acronyme" class="form-label">Acronyme *</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               id="acronyme"
+                                               name="acronyme"
+                                               placeholder="Ex: USD, EUR, GBP"
+                                               required
+                                               maxlength="3"
+                                               oninput="this.value = this.value.toUpperCase()">
+                                        <div class="form-text">Code à 3 lettres (ex: USD, EUR)</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="designation" class="form-label">Désignation *</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               id="designation"
+                                               name="designation"
+                                               placeholder="Ex: Dollar américain, Euro"
+                                               required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="coursAriary" class="form-label">Cours en Ariary *</label>
+                                        <input type="number"
+                                               class="form-control"
+                                               id="coursAriary"
+                                               name="coursAriary"
+                                               step="0.01"
+                                               min="0"
+                                               placeholder="Ex: 4500.00"
+                                               required>
+                                        <div class="form-text">Valeur de 1 unité de la devise en Ariary</div>
+                                    </div>
+                                </div>
 
-<!--                                <div class="mt-4">-->
-<!--                                    <button type="submit" class="btn btn-success px-4">-->
-<!--                                        <i class="fas fa-plus-circle me-2"></i>Ajouter la devise-->
-<!--                                    </button>-->
-<!--                                    <button type="reset" class="btn btn-outline-secondary ms-2">-->
-<!--                                        <i class="fas fa-redo me-2"></i>Réinitialiser-->
-<!--                                    </button>-->
-<!--                                </div>-->
-<!--                            </form>-->
-<!--                        </div>-->
-<!--                    </div>-->
-<!--                </div>-->
+                                <div class="mt-4">
+                                    <button type="submit" class="btn btn-success px-4">
+                                        <i class="fas fa-plus-circle me-2"></i>Ajouter la devise
+                                    </button>
+                                    <button type="reset" class="btn btn-outline-secondary ms-2">
+                                        <i class="fas fa-redo me-2"></i>Réinitialiser
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
 
-<!--                <div class="col-lg-6">-->
-<!--                    <div class="card shadow">-->
-<!--                        <div class="card-header bg-info text-white">-->
-<!--                            <h5 class="mb-0">Informations sur les devises</h5>-->
-<!--                        </div>-->
-<!--                        <div class="card-body">-->
-<!--                            <h6><i class="fas fa-info-circle text-info me-2"></i>À propos des devises</h6>-->
-<!--                            <p class="text-muted">-->
-<!--                                Les devises sont utilisées pour les conversions monétaires dans le système.-->
-<!--                                Le cours est exprimé en Ariary (monnaie malgache).-->
-<!--                            </p>-->
+                <div class="col-lg-6">
+                    <div class="card shadow">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">Informations sur les devises</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-info-circle text-info me-2"></i>À propos des devises</h6>
+                            <p class="text-muted">
+                                Les devises sont utilisées pour les conversions monétaires dans le système.
+                                Le cours est exprimé en Ariary (monnaie malgache).
+                            </p>
 
-<!--                            <h6 class="mt-4"><i class="fas fa-lightbulb text-warning me-2"></i>Exemples de cours</h6>-->
-<!--                            <ul class="text-muted">-->
-<!--                                <li>1 USD = 4,500 Ariary</li>-->
-<!--                                <li>1 EUR = 4,900 Ariary</li>-->
-<!--                                <li>1 GBP = 5,700 Ariary</li>-->
-<!--                            </ul>-->
+                            <h6 class="mt-4"><i class="fas fa-lightbulb text-warning me-2"></i>Exemples de cours</h6>
+                            <ul class="text-muted">
+                                <li>1 USD = 4,500 Ariary</li>
+                                <li>1 EUR = 4,900 Ariary</li>
+                                <li>1 GBP = 5,700 Ariary</li>
+                            </ul>
 
-<!--                            <div class="alert alert-warning mt-3">-->
-<!--                                <i class="fas fa-exclamation-triangle me-2"></i>-->
-<!--                                <strong>Important :</strong>-->
-<!--                                Le cours doit être mis à jour régulièrement pour refléter les taux de change actuels.-->
-<!--                            </div>-->
-<!--                        </div>-->
-<!--                    </div>-->
-<!--                </div>-->
-<!--            </div>-->
-<!--        </section>-->
+                            <div class="alert alert-warning mt-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Important :</strong>
+                                Le cours doit être mis à jour régulièrement pour refléter les taux de change actuels.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 </div>
 
