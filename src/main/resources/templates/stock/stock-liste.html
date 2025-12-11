@@ -47,7 +47,8 @@
                         <thead>
                         <tr>
                             <th><i class="fas fa-box me-2 icon-gradient-light-blue"></i>Article</th>
-                            <th><i class="fas fa-exclamation-triangle me-2 icon-gradient-light-blue"></i>Seuil minimum</th>
+                            <th><i class="fas fa-exclamation-triangle me-2 icon-gradient-light-blue"></i>Seuil minimum
+                            </th>
                             <th><i class="fas fa-sign-in-alt me-2 icon-gradient-light-blue"></i>Entrée</th>
                             <th><i class="fas fa-sign-out-alt me-2 icon-gradient-light-blue"></i>Sortie</th>
                             <th><i class="fas fa-chart-pie me-2 icon-gradient-light-blue"></i>Stock Disponible</th>
@@ -153,9 +154,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-<!--                <button type="button" class="btn btn-primary" onclick="goToArticle()">-->
-<!--                    <i class="fas fa-edit me-1"></i> Modifier l'article-->
-<!--                </button>-->
+                <!--                <button type="button" class="btn btn-primary" onclick="goToArticle()">-->
+                <!--                    <i class="fas fa-edit me-1"></i> Modifier l'article-->
+                <!--                </button>-->
             </div>
         </div>
     </div>
@@ -163,14 +164,16 @@
 
 
 <!-- Modal des notifications -->
-<div class="modal fade" id="notificationsModal" tabindex="-1" aria-labelledby="notificationsModalLabel" aria-hidden="true">
+<div class="modal fade" id="notificationsModal" tabindex="-1" aria-labelledby="notificationsModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-gradient-blue text-white">
                 <h5 class="modal-title" id="notificationsModalLabel">
                     <i class="fas fa-bell me-2"></i> Alertes de Stock
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
             </div>
             <div class="modal-body p-0">
 
@@ -178,7 +181,8 @@
                 <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
                     <h6 class="mb-0">
                         <span th:if="${alertesCount != null && alertesCount > 0}">
-                            <span th:text="${alertesCount}"></span> alerte<span th:if="${alertesCount > 1}">s</span> active<span th:if="${alertesCount > 1}">s</span>
+                            <span th:text="${alertesCount}"></span> alerte<span th:if="${alertesCount > 1}">s</span> active<span
+                                th:if="${alertesCount > 1}">s</span>
                         </span>
                         <span th:unless="${alertesCount != null && alertesCount > 0}">
                             Aucune alerte active
@@ -282,7 +286,8 @@
                 <button type="button" class="btn btn-gradient-blue" onclick="exportNotifications()">
                     <i class="fas fa-download me-1"></i> Exporter
                 </button>
-                <button type="button" class="btn btn-gradient-green" onclick="markAllAsRead()" th:if="${alertesCount != null && alertesCount > 0}">
+                <button type="button" class="btn btn-gradient-green" onclick="markAllAsRead()"
+                        th:if="${alertesCount != null && alertesCount > 0}">
                     <i class="fas fa-check-double me-1"></i> Tout marquer comme lu
                 </button>
             </div>
@@ -292,7 +297,7 @@
 
 <script th:inline="none">
     /*<![CDATA[*/
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Initialiser les tooltips Bootstrap
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -352,7 +357,7 @@
                     '</div>' +
                     '</div>').insertBefore('#etatStockTable');
 
-                $('#mobileSearchStock').on('keyup', function() {
+                $('#mobileSearchStock').on('keyup', function () {
                     api.search(this.value).draw();
                 });
 

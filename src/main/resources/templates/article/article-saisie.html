@@ -19,9 +19,9 @@
                 <i class="fas fa-plus-circle me-3 icon-gradient-blue"></i> Ajouter un nouvel article
             </h1>
             <div>
-<!--                <a th:href="@{/admin/stock/etat-stock}" class="btn btn-outline-primary me-2">-->
-<!--                    <i class="fas fa-warehouse me-2"></i>État de stock-->
-<!--                </a>-->
+                <!--                <a th:href="@{/admin/stock/etat-stock}" class="btn btn-outline-primary me-2">-->
+                <!--                    <i class="fas fa-warehouse me-2"></i>État de stock-->
+                <!--                </a>-->
                 <a th:href="@{/admin/article/list}" class="btn btn-gradient-blue me-2">
                     <i class="fas fa-box me-2"></i>Liste des articles
                 </a>
@@ -36,11 +36,13 @@
                 <h5 class="mb-0 fw-bold text-primary">
                     <i class="fas fa-file-alt me-2 icon-gradient-blue"></i> Formulaire de création
                 </h5>
-                <p class="text-muted mb-0 mt-1">Remplissez tous les champs obligatoires pour ajouter un nouvel article</p>
+                <p class="text-muted mb-0 mt-1">Remplissez tous les champs obligatoires pour ajouter un nouvel
+                    article</p>
             </div>
 
             <div class="card-body">
-                <form th:action="@{/admin/article/save}" method="post" th:object="${article}" id="articleForm" class="needs-validation" novalidate>
+                <form th:action="@{/admin/article/save}" method="post" th:object="${article}" id="articleForm"
+                      class="needs-validation" novalidate>
 
                     <!-- Section 1: Information de base -->
                     <div class="mb-4">
@@ -69,7 +71,8 @@
                                            maxlength="200">
                                 </div>
                                 <div class="form-text text-muted mt-1">
-                                    <i class="fas fa-info-circle me-1"></i> Nom complet de l'article (3 à 200 caractères)
+                                    <i class="fas fa-info-circle me-1"></i> Nom complet de l'article (3 à 200
+                                    caractères)
                                 </div>
                                 <div th:if="${#fields.hasErrors('designation')}" class="text-danger mt-1">
                                     <small th:errors="*{designation}"></small>
@@ -289,20 +292,20 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Initialisation de Select2 pour les dropdowns
         $('.select2-searchable').select2({
             theme: 'bootstrap-5',
             width: '100%',
             allowClear: true,
-            placeholder: function() {
+            placeholder: function () {
                 return $(this).data('placeholder');
             }
         });
 
         // Validation du formulaire
         const form = document.getElementById('articleForm');
-        form.addEventListener('submit', function(event) {
+        form.addEventListener('submit', function (event) {
             if (!form.checkValidity()) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -313,7 +316,7 @@
         // Gestion des messages d'erreur
         const inputs = form.querySelectorAll('input, select');
         inputs.forEach(input => {
-            input.addEventListener('input', function() {
+            input.addEventListener('input', function () {
                 if (this.checkValidity()) {
                     this.classList.remove('is-invalid');
                     this.classList.add('is-valid');

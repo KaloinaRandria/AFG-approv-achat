@@ -132,7 +132,8 @@
                         </label>
                         <select class="form-control" id="modalUdm" name="idUdm">
                             <option value="">Sélectionner une unité</option>
-                            <option th:each="udm : ${udms}" th:value="${udm.getId()}" th:text="${udm.getDescription() + ' - ' + udm.getAcronyme()}"></option>
+                            <option th:each="udm : ${udms}" th:value="${udm.getId()}"
+                                    th:text="${udm.getDescription() + ' - ' + udm.getAcronyme()}"></option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -141,7 +142,8 @@
                         </label>
                         <select class="form-control" id="modalFamille" name="idFamille">
                             <option value="">Sélectionner une famille</option>
-                            <option th:each="famille : ${familles}" th:value="${famille.getId()}" th:text="${famille.getDescription()}"></option>
+                            <option th:each="famille : ${familles}" th:value="${famille.getId()}"
+                                    th:text="${famille.getDescription()}"></option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -150,7 +152,8 @@
                         </label>
                         <select class="form-control" id="modalCentre" name="idCentreBudgetaire">
                             <option value="">Sélectionner un centre</option>
-                            <option th:each="centre : ${centres}" th:value="${centre.getId()}" th:text="${centre.getCodeCentre()}"></option>
+                            <option th:each="centre : ${centres}" th:value="${centre.getId()}"
+                                    th:text="${centre.getCodeCentre()}"></option>
                         </select>
                     </div>
                 </div>
@@ -189,11 +192,14 @@
                         <table class="table table-hover align-middle mb-0">
                             <thead class="bg-light">
                             <tr>
-                                <th class="border-0 py-3 ps-4"><i class="far fa-clock me-2 text-muted"></i>Date & Heure</th>
+                                <th class="border-0 py-3 ps-4"><i class="far fa-clock me-2 text-muted"></i>Date & Heure
+                                </th>
                                 <th class="border-0 py-3"><i class="far fa-user me-2 text-muted"></i>Utilisateur</th>
                                 <th class="border-0 py-3"><i class="far fa-edit me-2 text-muted"></i>Modification</th>
-                                <th class="border-0 py-3"><span class="badge bg-light text-danger"><i class="fas fa-arrow-left me-1"></i> Ancien</span></th>
-                                <th class="border-0 py-3 pe-4"><span class="badge bg-light text-success"><i class="fas fa-arrow-right me-1"></i> Nouveau</span></th>
+                                <th class="border-0 py-3"><span class="badge bg-light text-danger"><i
+                                        class="fas fa-arrow-left me-1"></i> Ancien</span></th>
+                                <th class="border-0 py-3 pe-4"><span class="badge bg-light text-success"><i
+                                        class="fas fa-arrow-right me-1"></i> Nouveau</span></th>
                             </tr>
                             </thead>
                             <tbody id="historiqueTableBody">
@@ -238,7 +244,7 @@
 </div>
 <script th:inline="none">
     /*<![CDATA[*/
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const table = $('#articlesTable').DataTable({
             language: {
                 zeroRecords: "Aucun article correspondant trouvé",
@@ -250,20 +256,24 @@
                 paginate: {first: "Première", last: "Dernière", next: "Suivante", previous: "Précédente"}
             },
             pageLength: 10,
-            lengthMenu: [[10,25,50,100],[10,25,50,100]],
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
             responsive: true,
             dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
-            initComplete: function() {
+            initComplete: function () {
                 const api = this.api();
                 // Cloner header pour filtres
                 $('#articlesTable thead tr').clone(true).appendTo('#articlesTable thead');
-                $('#articlesTable thead tr:eq(1) th').each(function(i){
-                    if(i<5){ // filtres sur Code, Désignation, Famille, Seuil, UDM
+                $('#articlesTable thead tr:eq(1) th').each(function (i) {
+                    if (i < 5) { // filtres sur Code, Désignation, Famille, Seuil, UDM
                         $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
-                        $('input', this).on('keyup change', function() {
-                            if(api.column(i).search()!==this.value){ api.column(i).search(this.value).draw(); }
+                        $('input', this).on('keyup change', function () {
+                            if (api.column(i).search() !== this.value) {
+                                api.column(i).search(this.value).draw();
+                            }
                         });
-                    } else { $(this).html('<div style="height:32px;"></div>'); }
+                    } else {
+                        $(this).html('<div style="height:32px;"></div>');
+                    }
                 });
 
                 // Recherche mobile
@@ -273,14 +283,16 @@
                     '<input type="text" class="form-control" id="mobileGlobalSearch" placeholder="Rechercher...">' +
                     '</div></div>').insertBefore('#articlesTable');
 
-                $('#mobileGlobalSearch').on('keyup', function(){ api.search(this.value).draw(); });
+                $('#mobileGlobalSearch').on('keyup', function () {
+                    api.search(this.value).draw();
+                });
 
-                function toggleMobileSearch(){
-                    if($(window).width()<=768){
+                function toggleMobileSearch() {
+                    if ($(window).width() <= 768) {
                         $('.mobile-search-container').show();
                         $('#articlesTable thead tr:eq(1)').hide();
                         $('.dataTables_filter').hide();
-                    } else{
+                    } else {
                         $('.mobile-search-container').hide();
                         $('#articlesTable thead tr:eq(1)').show();
                         $('.dataTables_filter').show();
@@ -293,7 +305,7 @@
         });
 
         // Modal pour modifier
-        $('#modifierModal').on('show.bs.modal', function(event){
+        $('#modifierModal').on('show.bs.modal', function (event) {
             var button = $(event.relatedTarget);
             $('#modalCodeArticle').val(button.data('codearticle'));
             $('#modalDesignation').val(button.data('designation'));
@@ -303,12 +315,13 @@
             $('#modifierModalLabel').text('Modifier l\'article: ' + button.data('codearticle'));
             $('#modalSeuil').val(button.data('seuilminimum') || '');
         });
-        $('#modifierModal').on('hidden.bs.modal', function(){ $('#articleForm')[0].reset(); });
+        $('#modifierModal').on('hidden.bs.modal', function () {
+            $('#articleForm')[0].reset();
+        });
     });
 
 
-
-    $('#historiqueModal').on('show.bs.modal', function(event) {
+    $('#historiqueModal').on('show.bs.modal', function (event) {
         var button = $(event.relatedTarget);
         var codeArticle = button.data('codearticle');
         var designation = button.data('designation');
@@ -339,14 +352,14 @@
         $.ajax({
             url: url,
             method: 'GET',
-            success: function(response) {
+            success: function (response) {
                 console.log("Réponse reçue:", response);
 
                 // Votre contrôleur retourne les données dans response.data
                 // et pas directement dans response.historiques
                 if (response.data && response.data.length > 0) {
                     let html = '';
-                    response.data.forEach(function(historique) {
+                    response.data.forEach(function (historique) {
                         console.log("Historique:", historique);
 
                         // Déterminer le type de modification basé sur le champ
@@ -382,7 +395,7 @@
                     $('#historiqueCount').text('0 modification(s)');
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 console.error("Erreur AJAX:", status, error, xhr.responseText);
                 $('#historiqueTableBody').html(`
                 <tr>
@@ -439,6 +452,7 @@
         if (typeLower.includes('suppression')) return 'bg-danger';
         return 'bg-warning text-dark';
     }
+
     /*]]>*/
 </script>
 

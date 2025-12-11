@@ -1,10 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <title>Devise et Cours</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
 </head>
 <body>
-
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <!--    section liste devise -->
+    <section></section>
+    <!--    section ajout devise -->
+    <section></section>
+</div>
 </body>
 </html>
