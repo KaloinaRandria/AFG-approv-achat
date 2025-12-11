@@ -287,7 +287,7 @@ table.dataTable td {
 
 /* MODIFICATION ICI : Changer la couleur de l'entête */
 table.dataTable thead {
-    background: linear-gradient(90deg, #001051, #1a3c8d) !important; /* Dégradé bleu */
+    background: linear-gradient(90deg, #001051, #00129f) !important; /* Dégradé bleu */
     color: white !important;
 }
 
@@ -309,7 +309,7 @@ table.dataTable tbody tr:hover {
 
 /* Style pour les icônes en dégradé bleu */
 .icon-gradient-blue {
-    background: linear-gradient(45deg, #001051, #0d6efd);
+    background: linear-gradient(45deg, #001051, #00129f);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -340,7 +340,7 @@ table.dataTable tbody tr:hover {
 }
 
 .badge-stock {
-    background: linear-gradient(45deg, #001051, #0d6efd) !important;
+    background: linear-gradient(45deg, #001051, #00129f) !important;
     color: white !important;
     font-weight: bold;
 }
@@ -350,7 +350,7 @@ table.dataTable tbody tr:hover {
 
 /* Bleu principal */
 .btn-gradient-blue {
-    background: linear-gradient(45deg, #001051, #0d6efd) !important;
+    background: linear-gradient(45deg, #001051, #00129f) !important;
     border: none !important;
     color: white !important;
 }
@@ -470,7 +470,7 @@ table.dataTable tbody tr:hover {
     left: 0;
     width: 60px;
     height: 2px;
-    background: linear-gradient(90deg, #001051, #0d6efd);
+    background: linear-gradient(90deg, #001051, #00129f);
 }
 
 
@@ -745,7 +745,7 @@ table.dataTable tbody tr:hover {
 
 /* Style pour le modal header */
 .modal-header.bg-gradient-blue {
-    background: linear-gradient(90deg, #001051, #00337f) !important;
+    background: linear-gradient(90deg, #001051, #00129f) !important;
 }
 
 /* Style pour le conteneur des notifications */
@@ -772,4 +772,10 @@ table.dataTable tbody tr:hover {
     font-size: 0.85rem;
     font-weight: 600;
     padding: 0.4rem 0.8rem;
+}
+
+.bg-gradient-blue {
+    background: linear-gradient(45deg, #001051, #00129f) !important;
+    border: none !important;
+    color: white !important;
 }
