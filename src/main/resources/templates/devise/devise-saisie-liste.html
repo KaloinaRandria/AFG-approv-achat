@@ -17,11 +17,11 @@
                 <h1 class="h2 mb-4">Gestion des Devises</h1>
             </div>
         </div>
-
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
         <!-- Section liste devise -->
         <section class="mb-5">
             <div class="card shadow">
-                <div class="card-header bg-gradient-blue text-white d-flex justify-content-between align-items-center">
+                <div class="card-header btn-gradient-blue text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Liste des Devises</h5>
                     <span class="badge bg-light text-primary" th:text="${devises != null ? devises.length: 0} + ' devises'"></span>
                 </div>
@@ -57,6 +57,7 @@
                                 <td th:text="${#temporals.format(devise.dateMiseAJour, 'dd/MM/yyyy HH:mm')}"></td>
                                 <td>
                                     <span class="fw-bold" th:text="${#numbers.formatDecimal(devise.coursAriary, 1, 2, 'COMMA')}"></span>
+
                                 </td>
 
                             </tr>
@@ -84,7 +85,7 @@
                             <form th:action="@{/admin/devise/save-devise}" method="post" id="deviseForm">
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label for="acronyme" class="form-label">Acronyme *</label>
+                                        <label for="acronyme" class="form-label required-field">Acronyme</label>
                                         <input type="text"
                                                class="form-control"
                                                id="acronyme"
@@ -96,7 +97,7 @@
                                         <div class="form-text">Code à 3 lettres (ex: USD, EUR)</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="designation" class="form-label">Désignation *</label>
+                                        <label for="designation" class="form-label required-field">Désignation</label>
                                         <input type="text"
                                                class="form-control"
                                                id="designation"
@@ -105,7 +106,7 @@
                                                required>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="coursAriary" class="form-label">Cours en Ariary *</label>
+                                        <label for="coursAriary" class="form-label required-field">Cours en Ariary</label>
                                         <input type="number"
                                                class="form-control"
                                                id="coursAriary"
@@ -131,7 +132,7 @@
                     </div>
                 </div>
 
-                <div class="col-lg-6">
+                <div class="col-lg-6 xs-mt-3">
                     <div class="card shadow">
                         <div class="card-header bg-info text-white">
                             <h5 class="mb-0">Informations sur les devises</h5>
@@ -162,39 +163,5 @@
         </section>
     </div>
 </div>
-
-<script th:inline="javascript">
-    /*<![CDATA[*/
-
-    // Validation du formulaire
-    document.getElementById('deviseForm')?.addEventListener('submit', function(e) {
-        const acronyme = document.getElementById('acronyme').value;
-        const designation = document.getElementById('designation').value;
-        const coursAriary = document.getElementById('coursAriary').value;
-
-        if (!acronyme || acronyme.length !== 3) {
-            e.preventDefault();
-            alert('L\'acronyme doit contenir exactement 3 lettres');
-            document.getElementById('acronyme').focus();
-            return false;
-        }
-
-        if (!designation || designation.trim() === '') {
-            e.preventDefault();
-            alert('La désignation est requise');
-            document.getElementById('designation').focus();
-            return false;
-        }
-
-        if (!coursAriary || parseFloat(coursAriary) <= 0) {
-            e.preventDefault();
-            alert('Le cours en Ariary doit être un nombre positif');
-            document.getElementById('coursAriary').focus();
-            return false;
-        }
-    });
-
-    /*]]>*/
-</script>
 </body>
 </html>
