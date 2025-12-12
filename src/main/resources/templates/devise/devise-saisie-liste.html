@@ -118,7 +118,7 @@
                                                class="form-control"
                                                id="acronyme"
                                                name="acronyme"
-                                               placeholder="Ex: USD, EUR, GBP"
+                                               placeholder="Ex: USD, EUR"
                                                required
                                                maxlength="3"
                                                oninput="this.value = this.value.toUpperCase()">
@@ -177,7 +177,6 @@
                             <ul class="text-muted">
                                 <li>1 USD = 4 500 Ariary</li>
                                 <li>1 EUR = 4 900 Ariary</li>
-                                <li>1 GBP = 5 700 Ariary</li>
                             </ul>
 
                             <div class="alert alert-warning mt-3">
@@ -198,7 +197,8 @@
 
             <div class="modal-header btn-gradient-blue">
                 <h5 class="modal-title">Modifier le cours Ariary</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
             </div>
 
             <form th:action="@{/admin/devise/modifier-cours}" method="post">
@@ -222,6 +222,10 @@
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-gradient-blue">
                         <i class="fas fa-save me-2"></i>Modifier
+                    </button>
+
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Fermer
                     </button>
                 </div>
             </form>

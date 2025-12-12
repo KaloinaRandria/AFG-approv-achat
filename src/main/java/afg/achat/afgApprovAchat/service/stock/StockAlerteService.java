@@ -40,7 +40,8 @@ public class StockAlerteService {
                         etat.getDesignation(),
                         stock,
                         seuil,
-                        type
+                        type,
+                        etat.getUdm()
                 ));
             }
         }

@@ -54,7 +54,8 @@
                             <td th:text="${a.getCodeArticle()}"></td>
                             <td th:text="${a.getDesignation()}"></td>
                             <td th:text="${a.famille != null ? a.famille.getDescription() : '---'}"></td>
-                            <td class="text-end" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(a.seuilMin)}"></td>
+                            <td class="text-end"
+                                th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(a.seuilMin)}"></td>
                             <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
                             <td>
                                 <button type="button"
@@ -109,7 +110,8 @@
                 <h5 class="modal-title" id="modifierModalLabel">
                     <i class="fas fa-edit me-2 icon-gradient-blue"></i>Modifier l'article
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
             </div>
             <form th:action="@{/admin/article/modifier}" method="post" id="articleForm">
                 <div class="modal-body">
@@ -178,7 +180,8 @@
                 <h5 class="modal-title" id="historiqueModalLabel">
                     <i class="fas fa-history me-2 icon-gradient-blue"></i>Historique des modifications
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">

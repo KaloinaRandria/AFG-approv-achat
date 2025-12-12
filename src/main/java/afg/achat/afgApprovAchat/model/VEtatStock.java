@@ -31,4 +31,6 @@ public class VEtatStock {
     String totalSortie;
     @Column(name = "stock_disponible")
     String stockDisponible;
+    @Column(name = "unite_de_mesure")
+    String udm;
 }

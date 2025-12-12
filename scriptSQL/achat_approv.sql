@@ -177,13 +177,15 @@ SELECT
     a.designation,
     COALESCE(SUM(sf.entree), 0) AS total_entree,
     COALESCE(SUM(sf.sortie), 0) AS total_sortie,
-    COALESCE(SUM(sf.entree - sf.sortie), 0) AS stock_disponible
+    COALESCE(SUM(sf.entree - sf.sortie), 0) AS stock_disponible,
+    u.acronyme AS unite_de_mesure
 FROM article a
          LEFT JOIN stock_fille sf ON sf.id_article = a.id_article
          LEFT JOIN stock_mere sm ON sm.id_stock_mere = sf.id_stock_mere
          LEFT JOIN bon_livraison_mere bl ON bl.id_bl_mere = sm.id_bl_mere
          LEFT JOIN demande_mere dm ON dm.id_demande_mere = sm.id_demande_mere
-GROUP BY a.id_article
+         LEFT JOIN udm u ON u.id_udm = a.id_udm
+GROUP BY a.id_article, u.id_udm
 ORDER BY a.id_article;
 
 select * from stock_fille;
