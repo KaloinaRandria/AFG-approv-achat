@@ -16,7 +16,7 @@
 
         <!-- En-tête -->
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="fw-bold">
+            <h1 class="fw-bold text-gradient-blue">
                 <i class="fas fa-warehouse me-3 icon-gradient-blue"></i> État de Stock
             </h1>
 
@@ -47,10 +47,12 @@
                         <thead>
                         <tr>
                             <th><i class="fas fa-box me-2 icon-gradient-light-blue"></i>Article</th>
-                            <th><i class="fas fa-exclamation-triangle me-2 icon-gradient-light-blue"></i>Seuil minimum</th>
+                            <th><i class="fas fa-exclamation-triangle me-2 icon-gradient-light-blue"></i>Seuil minimum
+                            </th>
                             <th><i class="fas fa-sign-in-alt me-2 icon-gradient-light-blue"></i>Entrée</th>
                             <th><i class="fas fa-sign-out-alt me-2 icon-gradient-light-blue"></i>Sortie</th>
                             <th><i class="fas fa-chart-pie me-2 icon-gradient-light-blue"></i>Stock Disponible</th>
+                            <th><i class="fas fa-balance-scale me-2 icon-gradient-light-blue"></i>UDM</th>
                             <th><i class="fas fa-bell me-2 icon-gradient-light-blue"></i>Notification</th>
                         </tr>
                         </thead>
@@ -62,19 +64,22 @@
                                 <small class="text-muted" th:text="${e.designation}"></small>
                             </td>
                             <td class="text-end fw-bold text-seuil"
-                                th:text="${e.seuilMin}">
+                                th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(e.seuilMin)}">
                             </td>
 
                             <td class="text-end fw-bold text-entree"
-                                th:text="${e.totalEntree}">
+                                th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(e.totalEntree)}">
                             </td>
 
                             <td class="text-end fw-bold text-sortie"
-                                th:text="${e.totalSortie}">
+                                th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(e.totalSortie)}">
                             </td>
 
                             <td class="text-end fw-bold text-stock"
-                                th:text="${e.stockDisponible}">
+                                th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(e.stockDisponible)}">
+                            </td>
+                            <td class="text-end fw-bold text-stock"
+                                th:text="${e.udm}">
                             </td>
 
                             <td class="text-center">
@@ -91,6 +96,7 @@
                                               th:data-stock="${e.stockDisponible}"
                                               th:data-seuil="${e.seuilMin}"
                                               th:data-type="RUPTURE"
+                                              th:data-udm="${e.udm}"
                                               onclick="showAlertFromRow(this)">
                                             <i class="fas fa-exclamation-circle me-1"></i> Rupture
                                         </span>
@@ -107,6 +113,7 @@
                                               th:data-stock="${e.stockDisponible}"
                                               th:data-seuil="${e.seuilMin}"
                                               th:data-type="SEUIL"
+                                              th:data-udm="${e.udm}"
                                               onclick="showAlertFromRow(this)">
                                             <i class="fas fa-exclamation-triangle me-1"></i> Seuil
                                         </span>
@@ -148,14 +155,15 @@
                     <h4 id="alertModalArticle"></h4>
                     <p><strong>État du stock :</strong> <span id="alertModalStock"></span></p>
                     <p><strong>Seuil minimum :</strong> <span id="alertModalSeuil"></span></p>
+                    <p><strong>Udm :</strong> <span id="alertModalUdm"></span></p>
                     <p id="alertModalMessage"></p>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-<!--                <button type="button" class="btn btn-primary" onclick="goToArticle()">-->
-<!--                    <i class="fas fa-edit me-1"></i> Modifier l'article-->
-<!--                </button>-->
+                <!--                <button type="button" class="btn btn-primary" onclick="goToArticle()">-->
+                <!--                    <i class="fas fa-edit me-1"></i> Modifier l'article-->
+                <!--                </button>-->
             </div>
         </div>
     </div>
@@ -163,14 +171,16 @@
 
 
 <!-- Modal des notifications -->
-<div class="modal fade" id="notificationsModal" tabindex="-1" aria-labelledby="notificationsModalLabel" aria-hidden="true">
+<div class="modal fade" id="notificationsModal" tabindex="-1" aria-labelledby="notificationsModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-gradient-blue text-white">
                 <h5 class="modal-title" id="notificationsModalLabel">
                     <i class="fas fa-bell me-2"></i> Alertes de Stock
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
             </div>
             <div class="modal-body p-0">
 
@@ -178,7 +188,8 @@
                 <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
                     <h6 class="mb-0">
                         <span th:if="${alertesCount != null && alertesCount > 0}">
-                            <span th:text="${alertesCount}"></span> alerte<span th:if="${alertesCount > 1}">s</span> active<span th:if="${alertesCount > 1}">s</span>
+                            <span th:text="${alertesCount}"></span> alerte<span th:if="${alertesCount > 1}">s</span> active<span
+                                th:if="${alertesCount > 1}">s</span>
                         </span>
                         <span th:unless="${alertesCount != null && alertesCount > 0}">
                             Aucune alerte active
@@ -218,6 +229,7 @@
                          th:data-type="${a.getTypeAlerte()}"
                          th:data-stock="${a.getStockDisponible()}"
                          th:data-seuil="${a.getSeuilMin()}"
+                         th:data-udm="${a.getUdm()}"
                          onclick="handleNotificationClick(this)">
 
                         <div class="d-flex justify-content-between align-items-start mb-2">
@@ -282,7 +294,8 @@
                 <button type="button" class="btn btn-gradient-blue" onclick="exportNotifications()">
                     <i class="fas fa-download me-1"></i> Exporter
                 </button>
-                <button type="button" class="btn btn-gradient-green" onclick="markAllAsRead()" th:if="${alertesCount != null && alertesCount > 0}">
+                <button type="button" class="btn btn-gradient-green" onclick="markAllAsRead()"
+                        th:if="${alertesCount != null && alertesCount > 0}">
                     <i class="fas fa-check-double me-1"></i> Tout marquer comme lu
                 </button>
             </div>
@@ -292,7 +305,7 @@
 
 <script th:inline="none">
     /*<![CDATA[*/
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Initialiser les tooltips Bootstrap
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -319,7 +332,7 @@
             dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
             columnDefs: [
                 {
-                    targets: [5], // Colonne notification (index 5)
+                    targets: [6], // Colonne notification (index 5)
                     orderable: false, // Désactiver le tri sur cette colonne
                     searchable: false // Désactiver la recherche sur cette colonne
                 }
@@ -332,7 +345,7 @@
                 $('#etatStockTable thead tr').clone(true).appendTo('#etatStockTable thead');
 
                 $('#etatStockTable thead tr:eq(1) th').each(function (i) {
-                    if (i < 5) { // Exclure la colonne notification du filtre
+                    if (i < 6) { // Exclure la colonne notification du filtre
                         $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
                         $('input', this).on('keyup change', function () {
                             if (api.column(i).search() !== this.value) {
@@ -352,7 +365,7 @@
                     '</div>' +
                     '</div>').insertBefore('#etatStockTable');
 
-                $('#mobileSearchStock').on('keyup', function() {
+                $('#mobileSearchStock').on('keyup', function () {
                     api.search(this.value).draw();
                 });
 
@@ -381,18 +394,20 @@
         const stock = element.getAttribute('data-stock');
         const seuil = element.getAttribute('data-seuil');
         const type = element.getAttribute('data-alerte-type');
+        const udm = element.getAttribute('data-udm');
 
-        showAlertDetails(codeArticle, designation, type, stock, seuil);
+        showAlertDetails(codeArticle, designation, type, stock, seuil, udm);
     }
 
     // Fonction existante modifiée (facultatif - pour gérer aussi l'appel direct)
-    function showAlertDetails(codeArticle, designation, type, stock, seuil) {
+    function showAlertDetails(codeArticle, designation, type, stock, seuil, udm) {
         const modal = new bootstrap.Modal(document.getElementById('alertModal'));
         const alertDiv = document.getElementById('alertModalType');
         const articleSpan = document.getElementById('alertModalArticle');
         const stockSpan = document.getElementById('alertModalStock');
         const seuilSpan = document.getElementById('alertModalSeuil');
         const messageSpan = document.getElementById('alertModalMessage');
+        const udmSpan = document.getElementById('alertModalUdm');
 
         // Décoder les valeurs si nécessaire (pour les apostrophes, etc.)
         const decodedDesignation = decodeHtmlEntities(designation);
@@ -401,6 +416,7 @@
         articleSpan.textContent = codeArticle + ' - ' + decodedDesignation;
         stockSpan.textContent = stock;
         seuilSpan.textContent = seuil;
+        udmSpan.textContent = udm;
 
         // Configurer selon le type d'alerte
         if (type === 'RUPTURE') {
@@ -432,8 +448,9 @@
         const stock = element.getAttribute('data-stock');
         const seuil = element.getAttribute('data-seuil');
         const type = element.getAttribute('data-type');
+        const udm = element.getAttribute('data-udm');
 
-        showAlertDetails(codeArticle, designation, type, stock, seuil);
+        showAlertDetails(codeArticle, designation, type, stock, seuil, udm);
     }
 
 
@@ -446,12 +463,12 @@
         const type = element.getAttribute('data-type');
         const stock = element.getAttribute('data-stock');
         const seuil = element.getAttribute('data-seuil');
-
-        showAlertDetailsFromNotification(codeArticle, designation, type, stock, seuil);
+        const udm = element.getAttribute('data-udm');
+        showAlertDetailsFromNotification(codeArticle, designation, type, stock, seuil, udm);
     }
 
     // Fonction pour afficher les détails d'une alerte depuis le modal
-    function showAlertDetailsFromNotification(codeArticle, designation, type, stock, seuil) {
+    function showAlertDetailsFromNotification(codeArticle, designation, type, stock, seuil, udm) {
         // Fermer le modal des notifications
         const notificationModal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
         if (notificationModal) {
@@ -459,7 +476,7 @@
         }
 
         // Afficher le modal de détails de l'alerte
-        showAlertDetails(codeArticle, designation, type, stock, seuil);
+        showAlertDetails(codeArticle, designation, type, stock, seuil, udm);
     }
 
     /*]]>*/

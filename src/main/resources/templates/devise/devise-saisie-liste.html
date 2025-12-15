@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Devise et Cours</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <div class="container-fluid py-4">
+
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+        <!-- Section liste devise -->
+        <section class="mb-5">
+            <!-- En-tête avec icônes en dégradé bleu -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="fw-bold text-gradient-blue">
+                    <i class="fas fa-coins me-3 icon-gradient-blue"></i> Gestion des Devises
+                </h1>
+            </div>
+            <div class="card shadow">
+                <div class="card-header btn-gradient-blue text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Liste des Devises</h5>
+                    <span class="badge bg-light text-primary"
+                          th:text="${devises != null ? devises.length: 0} + ' devises'"></span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive" th:if="${devises != null}">
+                        <table class="table table-hover">
+                            <!-- Modifiez cette partie dans votre tableau -->
+                            <thead class="table-light">
+                            <tr>
+                                <th>
+                                    <i class="fas fa-hashtag me-2 icon-gradient-blue"></i>ID
+                                </th>
+                                <th>
+                                    <i class="fas fa-tag me-2 icon-gradient-blue"></i>Désignation
+                                </th>
+                                <th>
+                                    <i class="fas fa-code me-2 icon-gradient-blue"></i>Acronyme
+                                </th>
+                                <th>
+                                    <i class="fas fa-calendar-alt me-2 icon-gradient-blue"></i>Date de Mise à Jour
+                                </th>
+                                <th>
+                                    <i class="fas fa-chart-line me-2 icon-gradient-blue"></i>Cours (Ariary)
+                                </th>
+                                <th class="text-center">
+                                    <i class="fas fa-cog me-2 icon-gradient-blue"></i>Actions
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="devise : ${devises}">
+                                <td th:text="${devise.id}"></td>
+                                <td th:text="${devise.designation}"></td>
+                                <td>
+                                    <span class="badge bg-gradient-blue" th:text="${devise.acronyme}"></span>
+                                </td>
+                                <td th:text="${#temporals.format(devise.dateMiseAJour, 'dd/MM/yyyy HH:mm')}"></td>
+                                <td class="text-end">
+                                    <span class="fw-bold"
+                                          th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).formatDecimal(devise.coursAriary)}"></span>
+                                </td>
+                                <td class="text-center">
+                                    <!-- Bouton Modifier avec th:data-* -->
+                                    <button class="btn btn-sm edit-btn"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editCoursModal"
+                                            th:data-id="${devise.id}"
+                                            th:data-cours="${devise.coursAriary}"
+                                            title="Modifier le cours">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+
+
+                                    <!-- Bouton Historique avec th:data-* -->
+                                    <button type="button"
+                                            class="btn btn-sm historique-btn"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#historiqueModal"
+                                            th:data-id="${devise.id}"
+                                            th:data-designation="${devise.designation}"
+                                            th:data-acronyme="${devise.acronyme}"
+                                            title="Historique des cours">
+                                        <i class="fas fa-history"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div th:if="${devises == null}" class="text-center py-5">
+                        <i class="fas fa-coins fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucune devise enregistrée</h5>
+                        <p class="text-muted">Commencez par ajouter une devise en utilisant le formulaire
+                            ci-dessous.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!--         Section ajout devise -->
+        <section>
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card shadow">
+                        <div class="card-header btn-gradient-green text-white">
+                            <h5 class="mb-0">Ajouter une nouvelle devise</h5>
+                        </div>
+                        <div class="card-body">
+                            <form th:action="@{/admin/devise/save-devise}" method="post" id="deviseForm">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="acronyme" class="form-label required-field">Acronyme</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               id="acronyme"
+                                               name="acronyme"
+                                               placeholder="Ex: USD, EUR"
+                                               required
+                                               maxlength="3"
+                                               oninput="this.value = this.value.toUpperCase()">
+                                        <div class="form-text">Code à 3 lettres (ex: USD, EUR)</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="designation" class="form-label required-field">Désignation</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               id="designation"
+                                               name="designation"
+                                               placeholder="Ex: Dollar américain, Euro"
+                                               required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="coursAriary" class="form-label required-field">Cours en
+                                            Ariary</label>
+                                        <input type="number"
+                                               class="form-control"
+                                               id="coursAriary"
+                                               name="coursAriary"
+                                               step="0.01"
+                                               min="0"
+                                               placeholder="Ex: 4500.00"
+                                               required>
+                                        <div class="form-text">Valeur de 1 unité de la devise en Ariary</div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4">
+                                    <button type="submit" class="btn btn-gradient-green px-4">
+                                        <i class="fas fa-plus-circle me-2"></i>Ajouter la devise
+                                    </button>
+                                    <button type="reset" class="btn btn-outline-secondary ms-2">
+                                        <i class="fas fa-redo me-2"></i>Réinitialiser
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6 xs-mt-3">
+                    <div class="card shadow">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">Informations sur les devises</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-info-circle text-info me-2"></i>À propos des devises</h6>
+                            <p class="text-muted">
+                                Les devises sont utilisées pour les conversions monétaires dans le système.
+                                Le cours est exprimé en Ariary (monnaie malgache).
+                            </p>
+
+                            <h6 class="mt-4"><i class="fas fa-lightbulb text-warning me-2"></i>Exemples de cours</h6>
+                            <ul class="text-muted">
+                                <li>1 USD = 4 500 Ariary</li>
+                                <li>1 EUR = 4 900 Ariary</li>
+                            </ul>
+
+                            <div class="alert alert-warning mt-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Important :</strong>
+                                Le cours doit être mis à jour régulièrement pour refléter les taux de change actuels.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+<div class="modal fade" id="editCoursModal" tabindex="-1" aria-labelledby="modifierModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title">Modifier le cours Ariary</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+
+            <form th:action="@{/admin/devise/modifier-cours}" method="post">
+                <div class="modal-body">
+
+                    <!-- ID -->
+                    <input type="hidden" id="edit-id" name="idDevise">
+
+                    <!-- Cours -->
+                    <label for="edit-cours" class="form-label">Nouveau cours
+                        (Ariary)</label>
+                    <input type="number"
+                           class="form-control"
+                           id="edit-cours"
+                           name="coursAriary"
+                           step="0.01"
+                           required>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-gradient-blue">
+                        <i class="fas fa-save me-2"></i>Modifier
+                    </button>
+
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Fermer
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="historiqueModal" tabindex="-1" aria-labelledby="historiqueModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="historiqueModalLabel">
+                    <i class="fas fa-history me-2 icon-gradient-blue"></i>Historique des modifications
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 id="historiqueDeviseInfo" class="mb-0"></h6>
+                    <span class="badge bg-gradient-blue" id="historiqueCount">0 modification(s)</span>
+                </div>
+
+                <!-- Tableau pour l'historique - Style carte -->
+                <div class="card border-0 shadow-sm">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                            <tr>
+                                <th class="border-0 py-3 ps-4"><i class="far fa-clock me-2 text-muted"></i>Date & Heure
+                                </th>
+                                <th class="border-0 py-3">Libelle</th>
+                                <th class="border-0 py-3">Cours</th>
+                            </tr>
+                            </thead>
+                            <tbody id="historiqueTableBody">
+                            <!-- Les données seront chargées dynamiquement ici -->
+                            <tr id="historiqueEmptyRow">
+                                <td colspan="5" class="text-center py-5">
+                                    <div class="empty-state-content">
+                                        <div class="empty-state-icon bg-light rounded-circle p-4 mb-3">
+                                            <i class="fas fa-inbox fa-lg text-muted"></i>
+                                        </div>
+                                        <h5 class="text-muted">Aucun historique</h5>
+                                        <p class="text-muted mb-0">Les modifications apparaîtront dans ce journal</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Pagination pour l'historique -->
+                <nav aria-label="Historique pagination" id="historiquePagination" class="d-none">
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1">Précédent</a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">Suivant</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    document.addEventListener("DOMContentLoaded", () => {
+        const modal = document.getElementById("editCoursModal");
+
+        modal.addEventListener("show.bs.modal", event => {
+            const button = event.relatedTarget;
+
+            // Récupération via data-id et data-cours automatiquement remplis par Thymeleaf
+            const id = button.getAttribute("data-id");
+            const cours = button.getAttribute("data-cours");
+
+            document.getElementById("edit-id").value = id;
+            document.getElementById("edit-cours").value = cours;
+        });
+    });
+
+    $('#historiqueModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var deviseId = button.data('id');
+        var designation = button.data('designation');
+        var acronyme = button.data('acronyme');
+
+        console.log("Ouverture modal historique pour la devise ID:", deviseId);
+
+        $("historiqueDeviseInfo").text(designation + " (" + acronyme + ")");
+
+        $('#historiqueTableBody').html(`
+        <tr>
+            <td colspan="6" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+                <p class="mt-2 text-muted">Chargement de l'historique...</p>
+            </td>
+        </tr>`);
+
+        const url = `/admin/api/historique/devise/${encodeURIComponent(deviseId)}?page=0&size=10`;
+        console.log("URL de requête:", url);
+
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: function (response) {
+                console.log("Réponse reçue:", response);
+
+                if (response.data && response.data.length > 0) {
+                    let html = '';
+                    response.data.forEach(function (historique) {
+                        console.log(historique);
+
+                        html += `
+                        <tr>
+                            <td class="ps-4">${historique.date || '-'}</td>
+                            <td class="ps-4">${designation + ' (' + acronyme + ')' || '-'}</td>
+                            <td class="ps-4">${historique.ancienCoursAriary || '-'}</td>
+                        </tr>`;
+                    });
+                    $('#historiqueTableBody').html(html);
+                    const totalElements = response.pagination ? response.pagination.totalElements : response.data.length;
+                    $('#historiqueCount').text(totalElements + ' modification(s)');
+                } else {
+                    console.log("Aucun historique trouvé.");
+                    $('#historiqueTableBody').html(`
+                     <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">Aucune modification trouvée</p>
+                        </td>
+                    </tr>`);
+                    $('#historiqueCount').text('0 modification(s)');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error("Erreur AJAX:", status, error, xhr.responseText);
+                $('historiqueTableBody').html(`<tr>
+                    <td colspan="6" class="text-center py-4 text-danger">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <p>Erreur lors du chargement de l'historique</p>
+                        <small class="text-muted">Status: ${status}, Erreur: ${error}</small>
+                        <br><small>Réponse: ${xhr.responseText}</small>
+                    </td>
+                </tr>`)
+            }
+        });
+    });
+
+    /*]]>*/
+</script>
+</body>
+</html>

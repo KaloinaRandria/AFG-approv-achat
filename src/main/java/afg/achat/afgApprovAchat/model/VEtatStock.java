@@ -31,6 +31,6 @@ public class VEtatStock {
     String totalSortie;
     @Column(name = "stock_disponible")
     String stockDisponible;
-    @Column(name = "date_mvt_stock")
-    LocalDateTime dateMvtStock;
+    @Column(name = "unite_de_mesure")
+    String udm;
 }

@@ -23,7 +23,7 @@ public class ArticleHistorique {
     private int id;
 
     @ManyToOne
-    @JoinColumn(name = "id_article",referencedColumnName = "id_article",nullable = false)
+    @JoinColumn(name = "id_article", referencedColumnName = "id_article", nullable = false)
     private Article article;
 
     @Column(name = "champ_modifie", nullable = false)
@@ -46,7 +46,7 @@ public class ArticleHistorique {
 
     public ArticleHistorique(Article article, String champModifie,
                              String ancienneValeur, String nouvelleValeur,
-                             String modifiePar,String codeArticle) {
+                             String modifiePar, String codeArticle) {
         this.article = article;
         this.champModifie = champModifie;
         this.ancienneValeur = ancienneValeur;

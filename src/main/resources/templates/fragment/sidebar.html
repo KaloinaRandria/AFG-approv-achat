@@ -5,7 +5,8 @@
      style="width: 250px; background-color: #0A1A44; overflow-y: auto;">
 
     <!-- LOGO -->
-    <a th:href="@{/admin/maintenance}" class="d-flex align-items-center justify-content-center mb-4 text-decoration-none py-4 border-bottom">
+    <a th:href="@{/admin/maintenance}"
+       class="d-flex align-items-center justify-content-center mb-4 text-decoration-none py-4 border-bottom">
         <img th:src="@{/img/logo_afg.png}" alt="Logo" height="60">
     </a>
 
@@ -20,6 +21,15 @@
            th:href="@{/admin/maintenance}"
            th:classappend="${currentUri == '/admin/maintenance'} ? 'active' : ''">
             <i class="fas fa-chart-line me-3"></i> Tableau de bord
+        </a>
+    </div>
+
+    <!--        DEVISE -->
+    <div class="px-3 mb-2">
+        <a class="nav-link text-white d-flex align-items-center sidebar-link"
+           th:href="@{/admin/devise/devise-pages}"
+            th:classappend="${currentUri == '/admin/devise/devise-pages'} ? 'active' : ''">
+            <i class="fas fa-coins me-3"></i> Devise et Cours
         </a>
     </div>
 
@@ -64,6 +74,7 @@
             </div>
         </div>
 
+
         <!-- STOCK -->
         <div class="accordion-item bg-transparent border-0">
             <h2 class="accordion-header">
@@ -91,13 +102,13 @@
                                 État du stock
                             </a>
                         </li>
-<!--                        <li>-->
-<!--                            <a class="nav-link text-white sidebar-sub"-->
-<!--                               th:href="@{/admin/message/alertes-stock}"-->
-<!--                               th:classappend="${currentUri == '/admin/message/alertes-stock'} ? 'active' : ''">-->
-<!--                                Alertes de stock-->
-<!--                            </a>-->
-<!--                        </li>-->
+                        <!--                        <li>-->
+                        <!--                            <a class="nav-link text-white sidebar-sub"-->
+                        <!--                               th:href="@{/admin/message/alertes-stock}"-->
+                        <!--                               th:classappend="${currentUri == '/admin/message/alertes-stock'} ? 'active' : ''">-->
+                        <!--                                Alertes de stock-->
+                        <!--                            </a>-->
+                        <!--                        </li>-->
                     </ul>
                 </div>
             </div>
@@ -106,10 +117,16 @@
     </div>
 
     <div class="dropdown mt-auto p-3 border-top">
-        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
-            <img th:if="${#authentication.principal.pdp != null && #authentication.principal.pdp.thumbnail != null}" th:src="'data:image/jpeg;base64,' + ${#authentication.principal.pdp.thumbnail}" alt="Avatar" width="40" height="40" class="rounded-circle me-2">
-            <img th:if="${#authentication.principal.pdp == null || #authentication.principal.pdp.thumbnail == '' }" th:src="@{/img/avatar.png}" alt="Avatar" width="40" height="40" class="rounded-circle me-2">
-            <strong style="max-width: 200px; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"  class="text-white" th:text="${#authentication.principal.prenom + ' ' + #authentication.principal.nom}"></strong>
+        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser"
+           data-bs-toggle="dropdown" aria-expanded="false">
+            <img th:if="${#authentication.principal.pdp != null && #authentication.principal.pdp.thumbnail != null}"
+                 th:src="'data:image/jpeg;base64,' + ${#authentication.principal.pdp.thumbnail}" alt="Avatar" width="40"
+                 height="40" class="rounded-circle me-2">
+            <img th:if="${#authentication.principal.pdp == null || #authentication.principal.pdp.thumbnail == '' }"
+                 th:src="@{/img/avatar.png}" alt="Avatar" width="40" height="40" class="rounded-circle me-2">
+            <strong style="max-width: 200px; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                    class="text-white"
+                    th:text="${#authentication.principal.prenom + ' ' + #authentication.principal.nom}"></strong>
         </a>
         <ul class="dropdown-menu dropdown-menu-end text-small shadow" aria-labelledby="dropdownUser">
             <li><a class="dropdown-item" th:href="@{/logout}">Déconnexion</a></li>

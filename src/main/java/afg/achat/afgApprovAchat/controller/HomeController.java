@@ -21,7 +21,7 @@ public class HomeController {
 
     @GetMapping("/admin")
     public String home() {
-        return "redirect:/admin/article/list";
+        return "redirect:/admin/maintenance";
     }
 
     @RequestMapping(value="")
