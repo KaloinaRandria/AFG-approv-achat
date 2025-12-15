@@ -11,11 +11,11 @@ public class BonLivraisonController {
     @GetMapping("/list")
     public String getAllBonLivraisons(Model model) {
 
-        return "bonlivraison/bonlivraison-list";
+        return "bl/bl-liste";
     }
 
     @GetMapping("/form")
     public String goToBonLivraisonForm(Model model) {
-        return "bonlivraison/bonlivraison-form";
+        return "bl/bl-saisie";
     }
 }
