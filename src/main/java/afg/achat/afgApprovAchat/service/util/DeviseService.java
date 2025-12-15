@@ -51,7 +51,7 @@ public class DeviseService {
                     devise,
                     String.valueOf(devise.getCoursAriary()),
                     coursAriary,
-                    String.valueOf(LocalDateTime.now()),
+                    LocalDateTime.now(),
                     utilisateur
             );
             historiques.add(historique);

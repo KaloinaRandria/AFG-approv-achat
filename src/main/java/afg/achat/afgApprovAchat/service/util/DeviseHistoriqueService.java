@@ -14,4 +14,8 @@ public class DeviseHistoriqueService {
         deviseHistoriqueRepo.save(historique);
     }
 
+    public DeviseHistorique[] getDeviseHistoriqueByIdDevise(int idDevise) {
+        return this.deviseHistoriqueRepo.findDeviseHistoriqueByDevise(idDevise);
+    }
+
 }

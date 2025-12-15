@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -24,11 +27,11 @@ public class DeviseHistorique {
     @Column(name = "nouveau_cours_ariary")
     String nouvelleCoursAriary;
     @Column(name = "date_modification")
-    String dateModification;
+    LocalDateTime dateModification;
     @Column(name = "modifie_par")
     String modifiePar;
 
-    public DeviseHistorique(Devise devise, String ancienCoursAriary, String nouvelleCoursAriary, String dateModification, String modifiePar) {
+    public DeviseHistorique(Devise devise, String ancienCoursAriary, String nouvelleCoursAriary, LocalDateTime dateModification, String modifiePar) {
         this.devise = devise;
         this.ancienCoursAriary = ancienCoursAriary;
         this.nouvelleCoursAriary = nouvelleCoursAriary;
