@@ -117,15 +117,28 @@ public class ArticleController {
                 return "redirect:/admin/article/add";
             }
 
+            if (udmId == null || udmId.isBlank()) {
+                throw new IllegalArgumentException("Unité de mesure obligatoire");
+            }
+
+            if (familleId == null || familleId.isBlank()) {
+                throw new IllegalArgumentException("Famille obligatoire");
+            }
+
+            if (centreBudgetaireId == null || centreBudgetaireId.isBlank()) {
+                throw new IllegalArgumentException("Centre budgétaire obligatoire");
+            }
+
+
             // Récupération des objets liés
             Udm udm = udmService.getUdmById(Integer.parseInt(udmId))
-                    .orElseThrow(() -> new IllegalArgumentException("Unité de mesure invalide"));
+                    .orElseThrow(() -> new IllegalArgumentException("Unité de mesure obligatoire"));
 
             Famille famille = familleService.getFamilleById(Integer.parseInt(familleId))
-                    .orElseThrow(() -> new IllegalArgumentException("Famille invalide"));
+                    .orElseThrow(() -> new IllegalArgumentException("Famille obligatoire"));
 
             CentreBudgetaire centreBudgetaire = centreBudgetaireService.getCentreBudgetaireById(Integer.parseInt(centreBudgetaireId))
-                    .orElseThrow(() -> new IllegalArgumentException("Centre budgétaire invalide"));
+                    .orElseThrow(() -> new IllegalArgumentException("Centre budgétaire obligatoire"));
 
             // Génération du code
             article.setCodeArticle(idGenerator);
