@@ -7,6 +7,12 @@
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
 </head>
 <body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
 
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+    </section>
+</div>
 </body>
 </html>
