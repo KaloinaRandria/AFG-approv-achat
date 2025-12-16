@@ -18,6 +18,7 @@ public class Devise {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_devise")
     int id;
+    @Column(unique = true)
     String acronyme;
     String designation;
     @Column(name = "cours_ariary")
