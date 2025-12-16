@@ -5,7 +5,8 @@
      style="width: 250px; background-color: #0A1A44; overflow-y: auto;">
 
     <!-- LOGO -->
-    <a th:href="@{/admin/maintenance}" class="d-flex align-items-center justify-content-center mb-4 text-decoration-none py-4 border-bottom">
+    <a th:href="@{/admin/maintenance}"
+       class="d-flex align-items-center justify-content-center mb-4 text-decoration-none py-4 border-bottom">
         <img th:src="@{/img/logo_afg.png}" alt="Logo" height="60">
     </a>
 
@@ -19,76 +20,156 @@
         <a class="nav-link text-white d-flex align-items-center sidebar-link"
            th:href="@{/admin/maintenance}"
            th:classappend="${currentUri == '/admin/maintenance'} ? 'active' : ''">
-        <i class="fas fa-chart-line me-3"></i> Tableau de bord
+            <i class="fas fa-chart-line me-3"></i> Tableau de bord
         </a>
     </div>
 
-    <div class="accordion accordion-flush px-2" id="sidebarAchat">
+    <!--        DEVISE -->
+    <div class="px-3 mb-2">
+        <a class="nav-link text-white d-flex align-items-center sidebar-link"
+           th:href="@{/admin/devise/devise-pages}"
+            th:classappend="${currentUri == '/admin/devise/devise-pages'} ? 'active' : ''">
+            <i class="fas fa-coins me-3"></i> Devise et Cours
+        </a>
+    </div>
+
+    <div class="accordion accordion-flush px-2" id="sidebarAccordion">
 
         <!-- ARTICLES -->
         <div class="accordion-item bg-transparent border-0">
             <h2 class="accordion-header">
-                <button class="accordion-button bg-transparent text-start text-white sidebar-button"
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
                         type="button"
                         data-bs-toggle="collapse"
-                        data-bs-target="#menuArticle"
+                        data-bs-target="#collapseArticles"
+                        aria-expanded="false"
+                        aria-controls="collapseArticles"
                         th:classappend="${currentUri.contains('/admin/article')} ? '' : 'collapsed'">
-                <i class="fas fa-box me-3"></i> Articles
+                    <i class="fas fa-box me-3"></i> Articles
                 </button>
             </h2>
-            <div id="menuArticle"
+            <div id="collapseArticles"
                  class="accordion-collapse collapse"
+                 aria-labelledby="headingArticles"
+                 data-bs-parent="#sidebarAccordion"
                  th:classappend="${currentUri.contains('/admin/article')} ? 'show' : ''">
-            <ul class="nav flex-column px-3">
-                    <li><a class="nav-link text-white sidebar-sub"
-                           th:href="@{/admin/article/list}"
-                           th:classappend="${currentUri == '/admin/article/list'} ? 'active' : ''">
-                        Liste des articles
-                    </a>
-                    </li>
-                    <li><a class="nav-link text-white sidebar-sub"
-                           th:href="@{/admin/article/add}"
-                           th:classappend="${currentUri == '/admin/article/add'} ? 'active' : ''">
-                        Ajouter un article
-                    </a>
-                    </li>
-                </ul>
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/admin/article/list}"
+                               th:classappend="${currentUri == '/admin/article/list'} ? 'active' : ''">
+                                Liste des articles
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/admin/article/add}"
+                               th:classappend="${currentUri == '/admin/article/add'} ? 'active' : ''">
+                                Ajouter un article
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
+
+        <!-- Bon de Livraison -->
+        <div class="accordion-item bg-transparent border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseBL"
+                        aria-expanded="false"
+                        aria-controls="collapseBL"
+                        th:classappend="${currentUri.contains('/admin/bonlivraison')} ? '' : 'collapsed'">
+                    <i class="fas fa-clipboard-list me-3"></i> Bon de Livraison
+                </button>
+            </h2>
+            <div id="collapseBL"
+                 class="accordion-collapse collapse"
+                 aria-labelledby="headingBL"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/admin/bonlivraison')} ? 'show' : ''">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+
+                               >
+                                Liste Bon de Livraison
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+
+                               >
+                                Nouveau Bon de Livraison
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
 
         <!-- STOCK -->
         <div class="accordion-item bg-transparent border-0">
             <h2 class="accordion-header">
-                <button class="accordion-button bg-transparent text-start text-white sidebar-button"
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
                         type="button"
                         data-bs-toggle="collapse"
-                        data-bs-target="#menuStock"
-                        th:classappend="${currentUri.contains('/admin/stock')
-                         or currentUri.contains('/admin/message')} ? '' : 'collapsed'">
-                <i class="fas fa-warehouse me-3"></i> Stock
+                        data-bs-target="#collapseStock"
+                        aria-expanded="false"
+                        aria-controls="collapseStock"
+                        th:classappend="${currentUri.contains('/admin/stock') or currentUri.contains('/admin/message')} ? '' : 'collapsed'">
+                    <i class="fas fa-warehouse me-3"></i> Stock
                 </button>
             </h2>
-            <div id="menuStock"
+            <div id="collapseStock"
                  class="accordion-collapse collapse"
-                 th:classappend="${currentUri.contains('/admin/stock')
-                      or currentUri.contains('/admin/message')} ? 'show' : ''">
-            <ul class="nav flex-column px-3">
-                    <li><a class="nav-link text-white sidebar-sub"
-                           th:href="@{/admin/stock/etat-stock}"
-                           th:classappend="${currentUri == '/admin/stock/etat-stock'} ? 'active' : ''">
-                        État du stock
-                    </a>
-                    </li>
-                    <li><a class="nav-link text-white sidebar-sub"
-                           th:href="@{/admin/message/alertes-stock}"
-                           th:classappend="${currentUri == '/admin/message/alertes-stock'} ? 'active' : ''">
-                        Alertes de stock
-                    </a>
-                    </li>
-                </ul>
+                 aria-labelledby="headingStock"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/admin/stock')} ? 'show' : ''">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/admin/stock/etat-stock}"
+                               th:classappend="${currentUri == '/admin/stock/etat-stock'} ? 'active' : ''">
+                                État de stock
+                            </a>
+                        </li>
+                        <!--                        <li>-->
+                        <!--                            <a class="nav-link text-white sidebar-sub"-->
+                        <!--                               th:href="@{/admin/message/alertes-stock}"-->
+                        <!--                               th:classappend="${currentUri == '/admin/message/alertes-stock'} ? 'active' : ''">-->
+                        <!--                                Alertes de stock-->
+                        <!--                            </a>-->
+                        <!--                        </li>-->
+                    </ul>
+                </div>
             </div>
         </div>
 
+    </div>
+
+    <div class="dropdown mt-auto p-3 border-top">
+        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser"
+           data-bs-toggle="dropdown" aria-expanded="false">
+            <img th:if="${#authentication.principal.pdp != null && #authentication.principal.pdp.thumbnail != null}"
+                 th:src="'data:image/jpeg;base64,' + ${#authentication.principal.pdp.thumbnail}" alt="Avatar" width="40"
+                 height="40" class="rounded-circle me-2">
+            <img th:if="${#authentication.principal.pdp == null || #authentication.principal.pdp.thumbnail == '' }"
+                 th:src="@{/img/avatar.png}" alt="Avatar" width="40" height="40" class="rounded-circle me-2">
+            <strong style="max-width: 200px; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                    class="text-white"
+                    th:text="${#authentication.principal.prenom + ' ' + #authentication.principal.nom}"></strong>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end text-small shadow" aria-labelledby="dropdownUser">
+            <li><a class="dropdown-item" th:href="@{/logout}">Déconnexion</a></li>
+        </ul>
     </div>
 
 </div>

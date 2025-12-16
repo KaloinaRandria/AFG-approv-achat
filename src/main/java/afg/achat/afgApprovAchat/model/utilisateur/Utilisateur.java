@@ -32,6 +32,8 @@ public class Utilisateur {
     Utilisateur superieurHierarchique;
     String adresse;
     String contact;
+    @ManyToOne @JoinColumn(name = "id_pdp", referencedColumnName = "id_pdp", nullable = true)
+    Pdp pdp;
 
     public Utilisateur(String nom, String prenom, String mail, Set<Role> roles, Utilisateur superieurHierarchique, String adresse , String contact) {
         this.setNom(nom);

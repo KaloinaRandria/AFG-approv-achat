@@ -19,10 +19,12 @@ public class Fournisseur {
     String contact;
     String mail;
     String nom;
+    String acronyme;
 
-    public Fournisseur(String contact, String mail, String nom) {
+    public Fournisseur(String contact, String mail, String nom, String acronyme) {
         this.setContact(contact);
         this.setMail(mail);
         this.setNom(nom);
+        this.setAcronyme(acronyme);
     }
 }

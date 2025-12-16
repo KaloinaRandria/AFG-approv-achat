@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.naming.NamingException;
+import java.util.List;
 
 @Controller
 @RequestMapping("/")
@@ -20,7 +21,7 @@ public class HomeController {
 
     @GetMapping("/admin")
     public String home() {
-        return "redirect:/admin/article/list";
+        return "redirect:/admin/maintenance";
     }
 
     @RequestMapping(value="")
@@ -47,5 +48,12 @@ public class HomeController {
         }
         model.addAttribute("errorMessage", errorMessage);
         return "login";
+    }
+
+    @RequestMapping(value="/ma-fiche")
+    public String ma_fiche(Model model,RedirectAttributes redirAttrs) throws NamingException{
+        Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        model.addAttribute("user", user);
+        return "rh/detail_collaborateur";
     }
 }

@@ -15,4 +15,5 @@ public class StockAlerte {
     double stockDisponible;
     double seuilMin;
     String typeAlerte; // "SEUIL" ou "RUPTURE"
+    String udm;
 }

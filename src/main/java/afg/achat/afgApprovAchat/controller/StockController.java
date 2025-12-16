@@ -1,11 +1,14 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.Article;
+import afg.achat.afgApprovAchat.model.EtatStockAlerteDTO;
 import afg.achat.afgApprovAchat.model.VEtatStock;
+import afg.achat.afgApprovAchat.model.stock.StockAlerte;
 import afg.achat.afgApprovAchat.model.stock.StockFille;
 import afg.achat.afgApprovAchat.model.stock.StockMere;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.VEtatStockService;
+import afg.achat.afgApprovAchat.service.stock.StockAlerteService;
 import afg.achat.afgApprovAchat.service.stock.StockFilleService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +19,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/admin/stock")
@@ -28,6 +35,8 @@ public class StockController {
     ArticleService articleService;
     @Autowired
     VEtatStockService vEtatStockService;
+    @Autowired
+    StockAlerteService stockAlerteService;
 
     @PostMapping("/save-entree")
     public String insertEntreeStock(@RequestParam(name = "codeArticle") String codeArticle,
@@ -95,9 +104,52 @@ public class StockController {
 
     @GetMapping("/etat-stock")
     public String getEtatStock(Model model, HttpServletRequest request) {
-        VEtatStock[] etatStocks = vEtatStockService.getAllEtatStocks();
+        // Récupérer tous les états de stock
+        VEtatStock[] etatStocksArray = vEtatStockService.getAllEtatStocks();
+        List<EtatStockAlerteDTO> etatStocks = new ArrayList<>();
+
+        // Récupérer les alertes sous forme de map pour accès rapide
+        Map<String, StockAlerte> alertesMap = stockAlerteService.getAlertesMap();
+
+        // Liste pour le modal de notifications
+        List<StockAlerte> alertesList = new ArrayList<>();
+
+        // Convertir VEtatStock en DTO avec alerte
+        for (VEtatStock etat : etatStocksArray) {
+            EtatStockAlerteDTO dto = new EtatStockAlerteDTO(etat);
+
+            // Associer l'alerte si elle existe pour cet article
+            StockAlerte alerte = alertesMap.get(etat.getCodeArticle());
+            if (alerte != null) {
+                dto.setAlerte(alerte);
+                // Ajouter à la liste pour le modal
+                alertesList.add(alerte);
+            }
+
+            etatStocks.add(dto);
+        }
+
+        // Compter le nombre total d'alertes pour le badge
+        int alertesCount = stockAlerteService.getAlertesCount();
+
+        // Compter les ruptures et les seuils
+        long ruptureCount = alertesList.stream()
+                .filter(a -> "RUPTURE".equals(a.getTypeAlerte()))
+                .count();
+
+        long seuilCount = alertesList.stream()
+                .filter(a -> "SEUIL".equals(a.getTypeAlerte()))
+                .count();
+
+        // Ajouter les attributs au modèle
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("etatStocks", etatStocks);
-        return "stock/stock-liste";
+        model.addAttribute("alertesCount", alertesCount);
+        model.addAttribute("alertes", alertesList); // Pour le modal
+        model.addAttribute("ruptureCount", ruptureCount); // Pour le modal
+        model.addAttribute("seuilCount", seuilCount); // Pour le modal
+
+        return "stock/stock-liste"; // Votre template existant
     }
+
 }

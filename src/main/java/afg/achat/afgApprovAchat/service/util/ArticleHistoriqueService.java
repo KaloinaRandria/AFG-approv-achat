@@ -13,4 +13,8 @@ public class ArticleHistoriqueService {
     public void saveArticleHistorique(ArticleHistorique articleHistorique) {
         articleHistoriqueRepo.save(articleHistorique);
     }
+
+    public ArticleHistorique[] getArticleHistoriqueByCodeArticle(String codeArticle) {
+        return this.articleHistoriqueRepo.findArticleHistoriquesByCodeArticle(codeArticle);
+    }
 }

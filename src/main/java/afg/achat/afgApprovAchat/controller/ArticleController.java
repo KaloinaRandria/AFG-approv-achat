@@ -55,15 +55,17 @@ public class ArticleController {
     }
 
     @GetMapping("/entree-saisie/{codeArticle}")
-    public String entreeArticle(@PathVariable String codeArticle, Model model) {
+    public String entreeArticle(@PathVariable String codeArticle, Model model, HttpServletRequest request) {
         Article article = articleService.getArticleByCodeArticle(codeArticle);
+        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("article", article);
         return "stock/entree-saisie";
     }
 
     @GetMapping("/sortie-saisie/{codeArticle}")
-    public String sortieArticle(@PathVariable String codeArticle, Model model) {
+    public String sortieArticle(@PathVariable String codeArticle, Model model, HttpServletRequest request) {
         Article article = articleService.getArticleByCodeArticle(codeArticle);
+        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("article", article);
         return "stock/sortie-saisie";
     }
@@ -84,6 +86,7 @@ public class ArticleController {
 
         return "article/article-saisie";
     }
+
     @PostMapping("/save")
     public String insertArticle(@ModelAttribute("article") Article article,
                                 @RequestParam(name = "udm") String udmId,
@@ -114,15 +117,28 @@ public class ArticleController {
                 return "redirect:/admin/article/add";
             }
 
+            if (udmId == null || udmId.isBlank()) {
+                throw new IllegalArgumentException("Unité de mesure obligatoire");
+            }
+
+            if (familleId == null || familleId.isBlank()) {
+                throw new IllegalArgumentException("Famille obligatoire");
+            }
+
+            if (centreBudgetaireId == null || centreBudgetaireId.isBlank()) {
+                throw new IllegalArgumentException("Centre budgétaire obligatoire");
+            }
+
+
             // Récupération des objets liés
             Udm udm = udmService.getUdmById(Integer.parseInt(udmId))
-                    .orElseThrow(() -> new IllegalArgumentException("Unité de mesure invalide"));
+                    .orElseThrow(() -> new IllegalArgumentException("Unité de mesure obligatoire"));
 
             Famille famille = familleService.getFamilleById(Integer.parseInt(familleId))
-                    .orElseThrow(() -> new IllegalArgumentException("Famille invalide"));
+                    .orElseThrow(() -> new IllegalArgumentException("Famille obligatoire"));
 
             CentreBudgetaire centreBudgetaire = centreBudgetaireService.getCentreBudgetaireById(Integer.parseInt(centreBudgetaireId))
-                    .orElseThrow(() -> new IllegalArgumentException("Centre budgétaire invalide"));
+                    .orElseThrow(() -> new IllegalArgumentException("Centre budgétaire obligatoire"));
 
             // Génération du code
             article.setCodeArticle(idGenerator);
@@ -154,13 +170,15 @@ public class ArticleController {
             return "redirect:/admin/article/add";
         }
     }
+
     @PostMapping("/modifier")
     public String modifierArticle(@RequestParam(name = "codeArticle") String codeArticle,
                                   @RequestParam(name = "designation") String designation,
                                   @RequestParam(name = "idUdm") String idUdm,
                                   @RequestParam(name = "idFamille") String idFamille,
                                   @RequestParam(name = "idCentreBudgetaire") String idCentreBudgetaire,
-                                  RedirectAttributes redirectAttributes){
+                                  @RequestParam(name = "seuilMinimum") String seuilMinimum,
+                                  RedirectAttributes redirectAttributes) {
         try {
             // Validation des données
             if (codeArticle == null || codeArticle.trim().isEmpty()) {
@@ -171,10 +189,15 @@ public class ArticleController {
                 throw new IllegalArgumentException("La désignation est obligatoire");
             }
 
+            if (seuilMinimum == null || seuilMinimum.trim().isEmpty()) {
+                throw new IllegalArgumentException("Le seuil minimum est obligatoire");
+            }
+
             // Appel du service de modification
             Article articleModifie = articleService.modifierArticle(
                     codeArticle.trim(),
                     designation.trim(),
+                    seuilMinimum.trim(),
                     idUdm != null && !idUdm.isEmpty() ? idUdm : null,
                     idFamille != null && !idFamille.isEmpty() ? idFamille : null,
                     idCentreBudgetaire != null && !idCentreBudgetaire.isEmpty() ? idCentreBudgetaire : null
@@ -188,6 +211,7 @@ public class ArticleController {
                     "Erreur de validation : " + e.getMessage());
             redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
             redirectAttributes.addFlashAttribute("designation", designation);
+            redirectAttributes.addFlashAttribute("seuilMinimum", seuilMinimum);
             redirectAttributes.addFlashAttribute("idUdm", idUdm);
             redirectAttributes.addFlashAttribute("idFamille", idFamille);
             redirectAttributes.addFlashAttribute("idCentreBudgetaire", idCentreBudgetaire);
