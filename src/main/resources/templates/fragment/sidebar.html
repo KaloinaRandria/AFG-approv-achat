@@ -74,6 +74,45 @@
             </div>
         </div>
 
+        <!-- Bon de Livraison -->
+        <div class="accordion-item bg-transparent border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseBL"
+                        aria-expanded="false"
+                        aria-controls="collapseBL"
+                        th:classappend="${currentUri.contains('/admin/bonlivraison')} ? '' : 'collapsed'">
+                    <i class="fas fa-clipboard-list me-3"></i> Bon de Livraison
+                </button>
+            </h2>
+            <div id="collapseBL"
+                 class="accordion-collapse collapse"
+                 aria-labelledby="headingBL"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/admin/bonlivraison')} ? 'show' : ''">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+
+                               >
+                                Liste Bon de Livraison
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+
+                               >
+                                Nouveau Bon de Livraison
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
 
         <!-- STOCK -->
         <div class="accordion-item bg-transparent border-0">
