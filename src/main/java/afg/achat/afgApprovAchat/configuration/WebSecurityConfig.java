@@ -31,12 +31,17 @@ public class WebSecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
             	.requestMatchers(
-            			"/login", "/login-error","/webjars/**", "/img/**", "/static/**", "/select2/**", "/js/**", "/css/**",
+            			"/login",
+                        "/login-error",
+                        "/webjars/**",
+                        "/img/**",
+                        "/static/**",
+                        "/select2/**",
+                        "/js/**",
+                        "/css/**",
                         "/assets/**",
-                        "/jqueryFiler/**").permitAll()
-            	.requestMatchers("/rh/edit/**", "/rh/save_edit","/rh/upload-docs/**").permitAll()
-            	.requestMatchers("/rh/**").hasRole("RH")
-            	.requestMatchers("/manager/**").hasAnyRole("Manager","Directeur")
+                        "/jqueryFiler/**")
+                    .permitAll()
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form
@@ -51,7 +56,7 @@ public class WebSecurityConfig {
                 .logoutUrl("/logout")
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
-                .permitAll()
+                .logoutSuccessUrl("/login")
             )
             .sessionManagement(session -> session
                 .maximumSessions(1)
@@ -60,19 +65,6 @@ public class WebSecurityConfig {
         
         return http.build();
     }
-//    @Bean
-//    public WebSecurityCustomizer webSecurityCustomizer() {
-//        return (web) -> web.ignoring()
-//                .requestMatchers(
-//                        "/webjars/**",
-//                        "/css/**",
-//                        "/js/**",
-//                        "/img/**",
-//                        "/assets/**",
-//                        "/jqueryFiler/**",
-//                        "/static/**"
-//                );
-//    }
     @Bean
     public AuthenticationManager authenticationManager() {
         return new ProviderManager(List.of(authProvider));
