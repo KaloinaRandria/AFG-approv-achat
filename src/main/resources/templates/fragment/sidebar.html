@@ -2,7 +2,7 @@
 <div th:fragment="sidebar"
      id="sidebar"
      class="d-flex flex-column flex-shrink-0 vh-100 position-fixed border-end"
-     style="width: 250px; background-color: #0A1A44; overflow-y: auto;">
+     style="width: 250px; background-color: #0A1A44; overflow-y: auto;" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
     <!-- LOGO -->
     <a th:href="@{/maintenance}"
@@ -63,7 +63,7 @@
                             </a>
                         </li>
                         <li>
-                            <a class="nav-link text-white sidebar-sub"
+                            <a class="nav-link text-white sidebar-sub" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
                                th:href="@{/article/add}"
                                th:classappend="${currentUri == '/article/add'} ? 'active' : ''">
                                 Ajouter un article
