@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr"
-      xmlns:th="http://www.thymeleaf.org">
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <title>Devise et Cours</title>
@@ -71,6 +72,7 @@
                                     <th:block th:unless="${devise.acronyme == 'MGA'}">
                                         <!-- Bouton Modifier -->
                                         <button class="btn btn-sm edit-btn"
+                                                sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#editCoursModal"
                                                 th:data-id="${devise.id}"
@@ -114,13 +116,13 @@
         <!--         Section ajout devise -->
         <section>
             <div class="row">
-                <div class="col-lg-6">
+                <div class="col-lg-6" sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')">
                     <div class="card shadow">
                         <div class="card-header btn-gradient-green text-white">
                             <h5 class="mb-0">Ajouter une nouvelle devise</h5>
                         </div>
                         <div class="card-body">
-                            <form th:action="@{/admin/devise/save-devise}" method="post" id="deviseForm">
+                            <form th:action="@{/devise/save-devise}" method="post" id="deviseForm">
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label for="acronyme" class="form-label required-field">Acronyme</label>
@@ -211,7 +213,7 @@
                         aria-label="Close"></button>
             </div>
 
-            <form th:action="@{/admin/devise/modifier-cours}" method="post">
+            <form th:action="@{/devise/modifier-cours}" method="post">
                 <div class="modal-body">
 
                     <!-- ID -->
@@ -406,7 +408,7 @@
             </td>
         </tr>`);
 
-        const url = `/admin/api/historique/devise/${encodeURIComponent(deviseId)}?page=0&size=10`;
+        const url = `/api/historique/devise/${encodeURIComponent(deviseId)}?page=0&size=10`;
         console.log("URL de requête:", url);
 
         $.ajax({

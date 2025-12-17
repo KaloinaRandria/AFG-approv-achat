@@ -4,6 +4,7 @@ import afg.achat.afgApprovAchat.model.util.Devise;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +13,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.time.LocalDateTime;
 
 @Controller
-@RequestMapping("/admin/devise")
+@RequestMapping("/devise")
 public class DeviseController {
     @Autowired
     DeviseService deviseService;
@@ -28,6 +29,7 @@ public class DeviseController {
         return "devise/devise-saisie-liste";
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @PostMapping("save-devise")
     public String insertDevise(@RequestParam(name = "acronyme") String acronyme,
                                @RequestParam(name = "designation") String designation,
@@ -47,16 +49,17 @@ public class DeviseController {
             redirectAttributes.addFlashAttribute("ko",
                     "Erreur lors de l'ajout du devise: " + e.getMessage());
             redirectAttributes.addFlashAttribute("devise", devise);
-            return "redirect:/admin/devise/devise-pages";
+            return "redirect:/devise/devise-pages";
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("ko",
                     "Erreur lors de l'ajout du devise: " + e.getMessage());
             redirectAttributes.addFlashAttribute("devise", devise);
-            return "redirect:/admin/devise/devise-pages";
+            return "redirect:/devise/devise-pages";
         }
-        return "redirect:/admin/devise/devise-pages";
+        return "redirect:/devise/devise-pages";
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @PostMapping("/modifier-cours")
     public String modifierCoursDevise(@RequestParam(name = "idDevise") String idDevise,
                                       @RequestParam(name = "coursAriary") String coursAriary,
@@ -77,6 +80,6 @@ public class DeviseController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("ko", "Erreur lors de la modification du cours : " + e.getMessage());
         }
-        return "redirect:/admin/devise/devise-pages";
+        return "redirect:/devise/devise-pages";
     }
 }

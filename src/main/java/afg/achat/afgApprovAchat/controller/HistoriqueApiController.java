@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 @CrossOrigin(origins = "http://localhost:8080")
 @RestController
-@RequestMapping("/admin/api/historique")
+@RequestMapping("/api/historique")
 public class HistoriqueApiController {
 
     private final ArticleHistoriqueService articleHistoriqueService;

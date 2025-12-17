@@ -8,9 +8,7 @@ import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
 
 import java.util.List;
 
@@ -31,15 +29,25 @@ public class WebSecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
             	.requestMatchers(
-            			"/login", "/login-error","/webjars/**", "/img/**", "/static/**", "/select2/**", "/js/**", "/css/**",
+            			"/login",
+                        "/login-error",
+                        "/webjars/**",
+                        "/img/**",
+                        "/static/**",
+                        "/select2/**",
+                        "/js/**",
+                        "/css/**",
                         "/assets/**",
-                        "/jqueryFiler/**").permitAll()
-            	.requestMatchers("/rh/edit/**", "/rh/save_edit","/rh/upload-docs/**").permitAll()
-            	.requestMatchers("/rh/**").hasRole("RH")
-            	.requestMatchers("/manager/**").hasAnyRole("Manager","Directeur")
+                        "/jqueryFiler/**")
+                    .permitAll()
                 .anyRequest().authenticated()
+
             )
-            .formLogin(form -> form
+                .exceptionHandling(exception -> exception
+                        .accessDeniedPage("/error/403")
+                )
+
+                .formLogin(form -> form
                 .loginPage("/login")
                 .usernameParameter("email")
                 .passwordParameter("password")
@@ -51,28 +59,17 @@ public class WebSecurityConfig {
                 .logoutUrl("/logout")
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
-                .permitAll()
+                .logoutSuccessUrl("/login")
             )
             .sessionManagement(session -> session
                 .maximumSessions(1)
                 .expiredUrl("/login")
             );
-        
+
+
+
         return http.build();
     }
-//    @Bean
-//    public WebSecurityCustomizer webSecurityCustomizer() {
-//        return (web) -> web.ignoring()
-//                .requestMatchers(
-//                        "/webjars/**",
-//                        "/css/**",
-//                        "/js/**",
-//                        "/img/**",
-//                        "/assets/**",
-//                        "/jqueryFiler/**",
-//                        "/static/**"
-//                );
-//    }
     @Bean
     public AuthenticationManager authenticationManager() {
         return new ProviderManager(List.of(authProvider));
