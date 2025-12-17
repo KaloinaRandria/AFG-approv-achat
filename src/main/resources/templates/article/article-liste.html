@@ -2,8 +2,6 @@
 <html lang="fr"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-
-
 <head>
     <title>Liste des Articles</title>
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
@@ -353,7 +351,7 @@
         // URL du contrôleur - NOTEZ LE CHANGEMENT ICI !
         // Le contrôleur utilise @GetMapping("/article/{codeArticle}")
         // Donc l'URL doit être: /admin/api/historique/article/CODE_ARTICLE
-        const url = `/admin/api/historique/article/${encodeURIComponent(codeArticle)}?page=0&size=10`;
+        const url = `/api/historique/article/${encodeURIComponent(codeArticle)}?page=0&size=10`;
         console.log("URL de requête:", url);
 
         $.ajax({
