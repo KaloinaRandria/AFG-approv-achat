@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 @Controller
-@RequestMapping("/admin/maintenance")
+@RequestMapping("/maintenance")
 public class MaintenanceController {
     @GetMapping("")
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE) // renvoie 503

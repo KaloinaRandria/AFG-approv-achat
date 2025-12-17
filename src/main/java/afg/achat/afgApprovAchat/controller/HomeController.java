@@ -3,6 +3,7 @@ package afg.achat.afgApprovAchat.controller;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.WebAttributes;
@@ -19,20 +20,9 @@ import java.util.List;
 @RequestMapping("/")
 public class HomeController {
 
-    @GetMapping("/admin")
+    @GetMapping
     public String home() {
-        return "redirect:/admin/maintenance";
-    }
-
-    @RequestMapping(value="")
-    public String empty_cont(Model model, RedirectAttributes redirAttrs) throws NamingException {
-        Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (user.getRoles().contains("ROLE_ADMIN")) {
-            return "redirect:/admin";
-        }
-        else {
-            return "redirect:/user";
-        }
+        return "redirect:/maintenance";
     }
 
     @GetMapping("/login-error")
@@ -48,12 +38,5 @@ public class HomeController {
         }
         model.addAttribute("errorMessage", errorMessage);
         return "login";
-    }
-
-    @RequestMapping(value="/ma-fiche")
-    public String ma_fiche(Model model,RedirectAttributes redirAttrs) throws NamingException{
-        Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        model.addAttribute("user", user);
-        return "rh/detail_collaborateur";
     }
 }

@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 @Controller
-@RequestMapping("/admin/stock")
+@RequestMapping("/stock")
 public class StockController {
     @Autowired
     StockMereService stockMereService;
@@ -63,7 +63,7 @@ public class StockController {
         }
 
 
-        return "redirect:/admin/stock/etat-stock";
+        return "redirect:/stock/etat-stock";
     }
 
     @PostMapping("/save-sortie")
@@ -99,7 +99,7 @@ public class StockController {
             return "stock/sortie-saisie";
         }
 
-        return "redirect:/admin/stock/etat-stock";
+        return "redirect:/stock/etat-stock";
     }
 
     @GetMapping("/etat-stock")

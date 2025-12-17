@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html lang="fr" xmlns:th="http://www.thymeleaf.org">
-
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <title>Liste des Articles</title>
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
@@ -20,11 +21,11 @@
             </h1>
             <div>
                 <!-- Dans votre HTML -->
-                <a th:href="@{/admin/stock/etat-stock}" class="btn btn-gradient-blue me-2">
+                <a th:href="@{/stock/etat-stock}" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')" class="btn btn-gradient-blue me-2">
                     <i class="fas fa-warehouse me-3"></i>État de stock
                 </a>
 
-                <a th:href="@{/admin/article/add}" class="btn btn-gradient-green">
+                <a th:href="@{/article/add}" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')" class="btn btn-gradient-green">
                     <i class="fas fa-plus-circle me-1"></i>Nouvel article
                 </a>
             </div>
@@ -60,6 +61,7 @@
                             <td>
                                 <button type="button"
                                         class="btn btn-sm edit-btn"
+                                        sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
                                         data-bs-toggle="modal"
                                         data-bs-target="#modifierModal"
                                         th:data-codearticle="${a.getCodeArticle()}"
@@ -84,11 +86,11 @@
                                 </button>
                             </td>
                             <td>
-                                <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
+                                <a th:href="@{/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
                                    class="btn btn-success btn-sm" title="Entrée en stock">
                                     <i class="fas fa-plus-circle"></i>
                                 </a>
-                                <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
+                                <a th:href="@{/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
                                    class="btn btn-danger btn-sm" title="Sortie de stock">
                                     <i class="fas fa-minus-circle"></i>
                                 </a>
@@ -113,7 +115,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                         aria-label="Close"></button>
             </div>
-            <form th:action="@{/admin/article/modifier}" method="post" id="articleForm">
+            <form th:action="@{/article/modifier}" method="post" id="articleForm">
                 <div class="modal-body">
                     <input type="hidden" id="modalCodeArticle" name="codeArticle">
                     <div class="mb-3">
@@ -349,7 +351,7 @@
         // URL du contrôleur - NOTEZ LE CHANGEMENT ICI !
         // Le contrôleur utilise @GetMapping("/article/{codeArticle}")
         // Donc l'URL doit être: /admin/api/historique/article/CODE_ARTICLE
-        const url = `/admin/api/historique/article/${encodeURIComponent(codeArticle)}?page=0&size=10`;
+        const url = `/api/historique/article/${encodeURIComponent(codeArticle)}?page=0&size=10`;
         console.log("URL de requête:", url);
 
         $.ajax({
