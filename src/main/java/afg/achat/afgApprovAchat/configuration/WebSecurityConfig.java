@@ -8,9 +8,7 @@ import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
 
 import java.util.List;
 
@@ -43,8 +41,13 @@ public class WebSecurityConfig {
                         "/jqueryFiler/**")
                     .permitAll()
                 .anyRequest().authenticated()
+
             )
-            .formLogin(form -> form
+                .exceptionHandling(exception -> exception
+                        .accessDeniedPage("/error/403")
+                )
+
+                .formLogin(form -> form
                 .loginPage("/login")
                 .usernameParameter("email")
                 .passwordParameter("password")
@@ -62,7 +65,9 @@ public class WebSecurityConfig {
                 .maximumSessions(1)
                 .expiredUrl("/login")
             );
-        
+
+
+
         return http.build();
     }
     @Bean

@@ -5,7 +5,7 @@
      style="width: 250px; background-color: #0A1A44; overflow-y: auto;">
 
     <!-- LOGO -->
-    <a th:href="@{/admin/maintenance}"
+    <a th:href="@{/maintenance}"
        class="d-flex align-items-center justify-content-center mb-4 text-decoration-none py-4 border-bottom">
         <img th:src="@{/img/logo_afg.png}" alt="Logo" height="60">
     </a>
@@ -18,8 +18,8 @@
     <!-- MENU -->
     <div class="px-3 mb-2">
         <a class="nav-link text-white d-flex align-items-center sidebar-link"
-           th:href="@{/admin/maintenance}"
-           th:classappend="${currentUri == '/admin/maintenance'} ? 'active' : ''">
+           th:href="@{/maintenance}"
+           th:classappend="${currentUri == '/maintenance'} ? 'active' : ''">
             <i class="fas fa-chart-line me-3"></i> Tableau de bord
         </a>
     </div>
@@ -44,7 +44,7 @@
                         data-bs-target="#collapseArticles"
                         aria-expanded="false"
                         aria-controls="collapseArticles"
-                        th:classappend="${currentUri.contains('/admin/article')} ? '' : 'collapsed'">
+                        th:classappend="${currentUri.contains('/article')} ? '' : 'collapsed'">
                     <i class="fas fa-box me-3"></i> Articles
                 </button>
             </h2>
@@ -52,20 +52,20 @@
                  class="accordion-collapse collapse"
                  aria-labelledby="headingArticles"
                  data-bs-parent="#sidebarAccordion"
-                 th:classappend="${currentUri.contains('/admin/article')} ? 'show' : ''">
+                 th:classappend="${currentUri.contains('/article')} ? 'show' : ''">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
                         <li>
                             <a class="nav-link text-white sidebar-sub"
-                               th:href="@{/admin/article/list}"
-                               th:classappend="${currentUri == '/admin/article/list'} ? 'active' : ''">
+                               th:href="@{/article/list}"
+                               th:classappend="${currentUri == '/article/list'} ? 'active' : ''">
                                 Liste des articles
                             </a>
                         </li>
                         <li>
                             <a class="nav-link text-white sidebar-sub"
-                               th:href="@{/admin/article/add}"
-                               th:classappend="${currentUri == '/admin/article/add'} ? 'active' : ''">
+                               th:href="@{/article/add}"
+                               th:classappend="${currentUri == '/article/add'} ? 'active' : ''">
                                 Ajouter un article
                             </a>
                         </li>
