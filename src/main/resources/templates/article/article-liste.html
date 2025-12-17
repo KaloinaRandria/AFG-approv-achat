@@ -21,7 +21,7 @@
             </h1>
             <div>
                 <!-- Dans votre HTML -->
-                <a th:href="@{/admin/stock/etat-stock}" class="btn btn-gradient-blue me-2">
+                <a th:href="@{/stock/etat-stock}" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')" class="btn btn-gradient-blue me-2">
                     <i class="fas fa-warehouse me-3"></i>État de stock
                 </a>
 
@@ -86,11 +86,11 @@
                                 </button>
                             </td>
                             <td>
-                                <a th:href="@{/admin/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
+                                <a th:href="@{/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
                                    class="btn btn-success btn-sm" title="Entrée en stock">
                                     <i class="fas fa-plus-circle"></i>
                                 </a>
-                                <a th:href="@{/admin/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
+                                <a th:href="@{/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
                                    class="btn btn-danger btn-sm" title="Sortie de stock">
                                     <i class="fas fa-minus-circle"></i>
                                 </a>
@@ -115,7 +115,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                         aria-label="Close"></button>
             </div>
-            <form th:action="@{/admin/article/modifier}" method="post" id="articleForm">
+            <form th:action="@{/article/modifier}" method="post" id="articleForm">
                 <div class="modal-body">
                     <input type="hidden" id="modalCodeArticle" name="codeArticle">
                     <div class="mb-3">

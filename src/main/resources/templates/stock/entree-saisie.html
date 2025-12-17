@@ -14,7 +14,7 @@
     <section>
         <h1 class="mb-3">Simulation d'entrée en stock</h1>
 
-        <form th:action="@{/admin/stock/save-entree}" method="post">
+        <form th:action="@{/stock/save-entree}" method="post">
             <!-- ID de l'article caché -->
             <input type="hidden" name="codeArticle" th:value="${article.getCodeArticle()}">
 
@@ -30,7 +30,7 @@
             </div>
 
             <button type="submit" class="btn btn-primary">Valider</button>
-            <a th:href="@{/admin}" class="btn btn-secondary">Annuler</a>
+            <a th:href="@{/}" class="btn btn-secondary">Annuler</a>
         </form>
     </section>
 </div>

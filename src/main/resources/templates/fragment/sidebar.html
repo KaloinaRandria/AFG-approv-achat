@@ -83,7 +83,7 @@
                         data-bs-target="#collapseBL"
                         aria-expanded="false"
                         aria-controls="collapseBL"
-                        th:classappend="${currentUri.contains('/admin/bonlivraison')} ? '' : 'collapsed'">
+                        th:classappend="${currentUri.contains('/bonlivraison')} ? '' : 'collapsed'">
                     <i class="fas fa-clipboard-list me-3"></i> Bon de Livraison
                 </button>
             </h2>
@@ -91,7 +91,7 @@
                  class="accordion-collapse collapse"
                  aria-labelledby="headingBL"
                  data-bs-parent="#sidebarAccordion"
-                 th:classappend="${currentUri.contains('/admin/bonlivraison')} ? 'show' : ''">
+                 th:classappend="${currentUri.contains('/bonlivraison')} ? 'show' : ''">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
                         <li>
@@ -115,7 +115,7 @@
 
 
         <!-- STOCK -->
-        <div class="accordion-item bg-transparent border-0">
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
             <h2 class="accordion-header">
                 <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
                         type="button"
@@ -123,7 +123,7 @@
                         data-bs-target="#collapseStock"
                         aria-expanded="false"
                         aria-controls="collapseStock"
-                        th:classappend="${currentUri.contains('/admin/stock') or currentUri.contains('/admin/message')} ? '' : 'collapsed'">
+                        th:classappend="${currentUri.contains('/stock') or currentUri.contains('/message')} ? '' : 'collapsed'">
                     <i class="fas fa-warehouse me-3"></i> Stock
                 </button>
             </h2>
@@ -131,13 +131,13 @@
                  class="accordion-collapse collapse"
                  aria-labelledby="headingStock"
                  data-bs-parent="#sidebarAccordion"
-                 th:classappend="${currentUri.contains('/admin/stock')} ? 'show' : ''">
+                 th:classappend="${currentUri.contains('/stock')} ? 'show' : ''">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
                         <li>
                             <a class="nav-link text-white sidebar-sub"
-                               th:href="@{/admin/stock/etat-stock}"
-                               th:classappend="${currentUri == '/admin/stock/etat-stock'} ? 'active' : ''">
+                               th:href="@{/stock/etat-stock}"
+                               th:classappend="${currentUri == '/stock/etat-stock'} ? 'active' : ''">
                                 État de stock
                             </a>
                         </li>
