@@ -17,10 +17,121 @@
                 <i class="fas fa-clipboard-list me-3"></i> Ajout d'un nouveau bon de livraison
             </h1>
             <div>
-<!--                <a th:href="" class="btn btn-gradient-blue me-2">-->
-<!--                    <i class="fas fa-clipboard-list me-3"></i>> Liste des bons de livraison-->
-<!--                </a>-->
+                <a class="btn btn-gradient-blue me-2">
+                    <i class="fas fa-clipboard-list me-3"></i> Liste des bons de livraison
+                </a>
             </div>
+        </div>
+
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold text-gradient-blue">
+                    <i class="fas fa-file-alt me-2 icon-gradient-blue"></i> Formulaire de création
+                </h5>
+                <p class="text-muted mb-0 mt-1">Remplissez tous les champs obligatoires pour ajouter un bon de
+                    livraison</p>
+            </div>
+
+            <div class="card-body">
+                <form method="post" id="bonlivraisonForm" class="needs-validation" novalidate>
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations générales
+                        </h6>
+
+                        <div class="row">
+                            <!-- Fournisseur -->
+                            <div class="col-md-6 mb-3">
+                                <label for="fournisseur" class="form-label fw-bold required-field">
+                                    Fournisseur
+                                </label>
+                                <div class="input-group">
+        <span class="input-group-text bg-light">
+            <i class="fas fa-building icon-gradient-blue"></i>
+        </span>
+                                    <select class="form-select select2-searchable"
+                                            id="fournisseur"
+                                            name="fournisseur"
+                                            data-placeholder="Recherchez ou sélectionnez un fournisseur..."
+                                            required>
+                                        <option value=""></option>
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez le fournisseur pour ce bon de
+                                    livraison
+                                </div>
+                            </div>
+
+                            <!-- Devise -->
+                            <div class="col-md-6 mb-3">
+                                <label for="devise" class="form-label fw-bold required-field">
+                                    Devise
+                                </label>
+                                <div class="input-group">
+        <span class="input-group-text bg-light">
+            <i class="fas fa-coins icon-gradient-blue"></i>
+        </span>
+                                    <select class="form-select select2-searchable"
+                                            id="devise"
+                                            name="devise"
+                                            data-placeholder="Recherchez ou sélectionnez une devise..."
+                                            required>
+                                        <option value=""></option>
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la devise pour ce bon de
+                                    livraison
+                                </div>
+                            </div>
+
+                            <!-- Date de Livraison -->
+                            <div class="col-md-6 mb-3">
+                                <label for="dateLivraison" class="form-label fw-bold required-field">
+                                    Date de livraison
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-calendar-alt icon-gradient-blue"></i>
+                                    </span>
+                                    <input type="date"
+                                           class="form-control"
+                                           id="dateLivraison"
+                                           name="dateLivraison"
+                                           required>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la date prévue pour la
+                                    livraison
+                                </div>
+                            </div>
+
+                            <!-- Description -->
+                            <div class="col-md-12 mb-3">
+                                <label for="description" class="form-label fw-bold">
+                                    Description
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-align-left icon-gradient-blue"></i>
+                                    </span>
+                                    <textarea class="form-control"
+                                              id="description"
+                                              name="description"
+                                              rows="3"
+                                              placeholder="Ajoutez une description ou des informations complémentaires"></textarea>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Informations complémentaires sur ce bon de livraison
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </form>
+            </div>
+
         </div>
     </section>
 </div>

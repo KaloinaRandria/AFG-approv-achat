@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Controller
 @RequestMapping("/bonlivraison")
 public class BonLivraisonController {
+
+
     @GetMapping("/list")
     public String getAllBonLivraisons(Model model) {
 
@@ -18,6 +20,8 @@ public class BonLivraisonController {
     @GetMapping("/add")
     public String addBonLivraisonPage(Model model, HttpServletRequest request) {
         model.addAttribute("currentUri", request.getRequestURI());
+
+
         return "bl/bl-saisie";
     }
 }
