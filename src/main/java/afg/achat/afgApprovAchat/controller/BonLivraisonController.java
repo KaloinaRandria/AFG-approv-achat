@@ -1,12 +1,13 @@
 package afg.achat.afgApprovAchat.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
-@RequestMapping("/admin/bonlivraison")
+@RequestMapping("/bonlivraison")
 public class BonLivraisonController {
     @GetMapping("/list")
     public String getAllBonLivraisons(Model model) {
@@ -14,8 +15,9 @@ public class BonLivraisonController {
         return "bl/bl-liste";
     }
 
-    @GetMapping("/form")
-    public String goToBonLivraisonForm(Model model) {
+    @GetMapping("/add")
+    public String addBonLivraisonPage(Model model, HttpServletRequest request) {
+        model.addAttribute("currentUri", request.getRequestURI());
         return "bl/bl-saisie";
     }
 }
