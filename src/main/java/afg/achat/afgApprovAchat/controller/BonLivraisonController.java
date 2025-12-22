@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.controller;
 
+import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
 import afg.achat.afgApprovAchat.service.FournisseurService;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -7,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
@@ -30,5 +32,11 @@ public class BonLivraisonController {
         model.addAttribute("fournisseurs", fournisseurService.getAllFournisseurs());
         model.addAttribute("devises", deviseService.getAllDevises());
         return "bl/bl-saisie";
+    }
+
+    @GetMapping("/save")
+    public String insertBonLivraison(@ModelAttribute("bonLivraisonMere") BonLivraisonMere bonLivraisonMere, Model model) {
+
+        return "";
     }
 }
