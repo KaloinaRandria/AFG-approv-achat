@@ -42,7 +42,7 @@
                         <div class="row">
                             <!-- Fournisseur -->
                             <div class="col-md-6 mb-3">
-                                <label for="fournisseur" class="form-label fw-bold required-field">
+                                <label for="fournisseurs" class="form-label fw-bold required-field">
                                     Fournisseur
                                 </label>
                                 <div class="input-group">
@@ -50,11 +50,17 @@
             <i class="fas fa-building icon-gradient-blue"></i>
         </span>
                                     <select class="form-select select2-searchable"
-                                            id="fournisseur"
-                                            name="fournisseur"
+                                            id="fournisseurs"
+                                            name="fournisseurs"
                                             data-placeholder="Recherchez ou sélectionnez un fournisseur..."
                                             required>
                                         <option value=""></option>
+                                        <option th:each="fournisseur : ${fournisseurs}"
+                                                th:value="${fournisseur.getId()}"
+                                                th:text="${fournisseur.getNom()}">
+                                        </option>
+
+                                        </option>
                                     </select>
                                 </div>
                                 <div class="form-text text-muted mt-1">
@@ -65,7 +71,7 @@
 
                             <!-- Devise -->
                             <div class="col-md-6 mb-3">
-                                <label for="devise" class="form-label fw-bold required-field">
+                                <label for="devises" class="form-label fw-bold required-field">
                                     Devise
                                 </label>
                                 <div class="input-group">
@@ -73,11 +79,14 @@
             <i class="fas fa-coins icon-gradient-blue"></i>
         </span>
                                     <select class="form-select select2-searchable"
-                                            id="devise"
-                                            name="devise"
+                                            id="devises"
+                                            name="devises"
                                             data-placeholder="Recherchez ou sélectionnez une devise..."
                                             required>
                                         <option value=""></option>
+                                        <option th:each="devise : ${devises}"
+                                        th:value="${devise.getId()}"
+                                        th:text="${devise.getAcronyme()}"></option>
                                     </select>
                                 </div>
                                 <div class="form-text text-muted mt-1">
@@ -123,7 +132,8 @@
                                               placeholder="Ajoutez une description ou des informations complémentaires"></textarea>
                                 </div>
                                 <div class="form-text text-muted mt-1">
-                                    <i class="fas fa-info-circle me-1"></i> Informations complémentaires sur ce bon de livraison
+                                    <i class="fas fa-info-circle me-1"></i> Informations complémentaires sur ce bon de
+                                    livraison
                                 </div>
                             </div>
 
