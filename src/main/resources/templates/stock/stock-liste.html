@@ -32,7 +32,7 @@
     </span>
                 </button>
 
-                <a th:href="@{/admin/article/list}" class="btn btn-gradient-blue">
+                <a th:href="@{/article/list}" class="btn btn-gradient-blue">
                     <i class="fas fa-box me-3"></i> Liste des Articles
                 </a>
             </div>
@@ -87,6 +87,7 @@
                                 <th:block th:if="${e.alerte != null}">
                                     <!-- Rupture de stock -->
                                     <th:block th:if="${e.alerte.typeAlerte == 'RUPTURE'}">
+                                        <div class="d-inline-block">
                                         <span class="notification-badge badge bg-danger text-light p-2 notification-pulse"
                                               title="Rupture de stock - Cliquez pour voir les détails"
                                               data-bs-toggle="tooltip"
@@ -97,13 +98,16 @@
                                               th:data-seuil="${e.seuilMin}"
                                               th:data-type="RUPTURE"
                                               th:data-udm="${e.udm}"
-                                              onclick="showAlertFromRow(this)">
-                                            <i class="fas fa-exclamation-circle me-1"></i> Rupture
+                                              onclick="showAlertFromRow(this)"
+                                              style="display: inline-flex; align-items: center; justify-content: center; width: 40px;">
+                                            <i class="fas fa-exclamation-circle"></i>
                                         </span>
+                                        </div>
                                     </th:block>
 
                                     <!-- Seuil minimum atteint -->
                                     <th:block th:if="${e.alerte.typeAlerte == 'SEUIL'}">
+                                        <div class="d-inline-block">
                                         <span class="notification-badge badge bg-warning text-dark p-2"
                                               title="Seuil minimum atteint - Cliquez pour voir les détails"
                                               data-bs-toggle="tooltip"
@@ -114,20 +118,25 @@
                                               th:data-seuil="${e.seuilMin}"
                                               th:data-type="SEUIL"
                                               th:data-udm="${e.udm}"
-                                              onclick="showAlertFromRow(this)">
-                                            <i class="fas fa-exclamation-triangle me-1"></i> Seuil
+                                              onclick="showAlertFromRow(this)"
+                                              style="display: inline-flex; align-items: center; justify-content: center; width: 40px;">
+                                            <i class="fas fa-exclamation-triangle"></i>
                                         </span>
+                                        </div>
                                     </th:block>
                                 </th:block>
 
                                 <!-- Pas d'alerte -->
                                 <th:block th:unless="${e.alerte != null}">
+                                    <div class="d-inline-block">
                                     <span class="badge bg-success text-light p-2"
                                           title="Stock normal"
                                           data-bs-toggle="tooltip"
-                                          data-bs-placement="top">
-                                        <i class="fas fa-check-circle me-1"></i> OK
+                                          data-bs-placement="top"
+                                          style="display: inline-flex; align-items: center; justify-content: center; width: 40px;">
+                                        <i class="fas fa-check-circle"></i>
                                     </span>
+                                    </div>
                                 </th:block>
                             </td>
                         </tr>
@@ -287,18 +296,18 @@
 
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i> Fermer
-                </button>
-                <button type="button" class="btn btn-gradient-blue" onclick="exportNotifications()">
-                    <i class="fas fa-download me-1"></i> Exporter
-                </button>
-                <button type="button" class="btn btn-gradient-green" onclick="markAllAsRead()"
-                        th:if="${alertesCount != null && alertesCount > 0}">
-                    <i class="fas fa-check-double me-1"></i> Tout marquer comme lu
-                </button>
-            </div>
+            <!--            <div class="modal-footer">-->
+            <!--                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">-->
+            <!--                    <i class="fas fa-times me-1"></i> Fermer-->
+            <!--                </button>-->
+            <!--                <button type="button" class="btn btn-gradient-blue" onclick="exportNotifications()">-->
+            <!--                    <i class="fas fa-download me-1"></i> Exporter-->
+            <!--                </button>-->
+            <!--                <button type="button" class="btn btn-gradient-green" onclick="markAllAsRead()"-->
+            <!--                        th:if="${alertesCount != null && alertesCount > 0}">-->
+            <!--                    <i class="fas fa-check-double me-1"></i> Tout marquer comme lu-->
+            <!--                </button>-->
+            <!--            </div>-->
         </div>
     </div>
 </div>

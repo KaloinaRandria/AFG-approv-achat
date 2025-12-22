@@ -12,6 +12,7 @@ import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.util.UdmService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -21,7 +22,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.List;
 
 @Controller
-@RequestMapping("/admin/article")
+@RequestMapping("/article")
 public class ArticleController {
     @Autowired
     ArticleService articleService;
@@ -70,6 +71,7 @@ public class ArticleController {
         return "stock/sortie-saisie";
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @GetMapping("/add")
     public String addArticlePage(Model model, HttpServletRequest request) {
 
@@ -87,6 +89,7 @@ public class ArticleController {
         return "article/article-saisie";
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @PostMapping("/save")
     public String insertArticle(@ModelAttribute("article") Article article,
                                 @RequestParam(name = "udm") String udmId,
@@ -102,19 +105,19 @@ public class ArticleController {
                 redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.article", bindingResult);
                 redirectAttributes.addFlashAttribute("article", article);
                 redirectAttributes.addFlashAttribute("ko", "Veuillez corriger les erreurs dans le formulaire");
-                return "redirect:/admin/article/add";
+                return "redirect:/article/add";
             }
 
             if (article.getDesignation() == null || article.getDesignation().trim().isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "La désignation est obligatoire");
                 redirectAttributes.addFlashAttribute("article", article);
-                return "redirect:/admin/article/add";
+                return "redirect:/article/add";
             }
 
             if (article.getSeuilMin() <= 0) {
                 redirectAttributes.addFlashAttribute("ko", "Le seuil minimum doit être positif");
                 redirectAttributes.addFlashAttribute("article", article);
-                return "redirect:/admin/article/add";
+                return "redirect:/article/add";
             }
 
             if (udmId == null || udmId.isBlank()) {
@@ -154,23 +157,24 @@ public class ArticleController {
                     "Article '" + savedArticle.getDesignation() +
                             "' ajouté avec succès (Code: " + savedArticle.getCodeArticle() + ")");
 
-            return "redirect:/admin/article/list";
+            return "redirect:/article/list";
 
         } catch (IllegalArgumentException e) {
             // Pour les erreurs de validation, rediriger vers le formulaire
             redirectAttributes.addFlashAttribute("ko", "Erreur : " + e.getMessage());
             redirectAttributes.addFlashAttribute("article", article);
-            return "redirect:/admin/article/add";
+            return "redirect:/article/add";
 
         } catch (Exception e) {
             // Pour les autres erreurs
             redirectAttributes.addFlashAttribute("ko",
                     "Erreur lors de l'ajout de l'article: " + e.getMessage());
             redirectAttributes.addFlashAttribute("article", article);
-            return "redirect:/admin/article/add";
+            return "redirect:/article/add";
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @PostMapping("/modifier")
     public String modifierArticle(@RequestParam(name = "codeArticle") String codeArticle,
                                   @RequestParam(name = "designation") String designation,
@@ -219,9 +223,9 @@ public class ArticleController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("ko",
                     "Erreur lors de la modification : " + e.getMessage());
-//            redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
+            redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
         }
 
-        return "redirect:/admin/article/list";
+        return "redirect:/article/list";
     }
 }
