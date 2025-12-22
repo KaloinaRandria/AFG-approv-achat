@@ -163,15 +163,11 @@
                                 <!-- Ligne BL fille (1 par défaut) -->
                                 <tr>
                                     <td>
-                                        <select class="form-select select2-searchable"
-                                                name="articles[]"
-                                                required>
-                                            <option value="">-- Sélectionner un article --</option>
-                                            <option th:each="article : ${articles}"
-                                                    th:value="${article.getId()}"
-                                                    th:text="${article.getDesignation()}">
-                                            </option>
-                                        </select>
+                                        <input type="text"
+                                               class="form-control article-autocomplete"
+                                               name="articles[]"
+                                               placeholder="Code ou désignation de l'article"
+                                               required>
                                     </td>
 
                                     <td>
@@ -311,6 +307,41 @@
             }
         });
 
+    });
+
+    $(document).ready(function () {
+        function initArticleAutocomplete() {
+            $(".article-autocomplete").autocomplete({
+                source: function (request, response) {
+                    $.ajax({
+                        url: "/api/articles/search",
+                        dataType: "json",
+                        data: { q: request.term },
+                        success: function (data) {
+                            response(data.map(article => ({
+                                label: article.codeArticle + " - " + article.designation,
+                                value: article.codeArticle
+                            })));
+                        }
+                    });
+                },
+                minLength: 2,
+                select: function (event, ui) {
+                    $(this).val(ui.item.value); // met le code de l'article dans l'input
+                    return false;
+                }
+            });
+        }
+
+        initArticleAutocomplete();
+
+        // si tu ajoutes dynamiquement des lignes
+        $("#addBlFille").on("click", function () {
+            let newRow = $("#blFilleBody tr:first").clone();
+            newRow.find("input").val(""); // reset values
+            $("#blFilleBody").append(newRow);
+            initArticleAutocomplete(); // ré-initialiser autocomplete sur la nouvelle ligne
+        });
     });
     /*]]>*/
 </script>
