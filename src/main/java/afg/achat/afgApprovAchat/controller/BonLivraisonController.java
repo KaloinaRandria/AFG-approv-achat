@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
+import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FournisseurService;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +19,8 @@ public class BonLivraisonController {
     FournisseurService fournisseurService;
     @Autowired
     DeviseService deviseService;
+    @Autowired
+    ArticleService articleService;
 
     @GetMapping("/list")
     public String getAllBonLivraisons(Model model) {
@@ -31,6 +34,7 @@ public class BonLivraisonController {
 
         model.addAttribute("fournisseurs", fournisseurService.getAllFournisseurs());
         model.addAttribute("devises", deviseService.getAllDevises());
+        model.addAttribute("articles", articleService.getAllArticles());
         return "bl/bl-saisie";
     }
 
