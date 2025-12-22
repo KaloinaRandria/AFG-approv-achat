@@ -18,5 +18,4 @@ public class ApiController {
     public List<Article> search(@RequestParam String q) {
         return articleService.search(q);
     }
-
 }
