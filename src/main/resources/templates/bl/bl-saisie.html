@@ -162,17 +162,17 @@
                                 <tbody id="blFilleBody">
                                 <!-- Ligne BL fille (1 par défaut) -->
                                 <tr>
-                                    <td>
-                                        <select class="form-select select2-searchable"
-                                                name="articles[]"
-                                                required>
-                                            <option value="">-- Sélectionner un article --</option>
-                                            <option th:each="article : ${articles}"
-                                                    th:value="${article.getCodeArticle()}"
-                                                    th:text="${article.getCodeArticle() +' - '+ article.getDesignation()}">
-                                            </option>
-                                        </select>
+                                    <td style="position: relative;">
+                                        <input type="text"
+                                               class="form-control article-input"
+                                               name="articles[]"
+                                               placeholder="Code ou désignation"
+                                               autocomplete="off"
+                                               required>
+                                        <div class="autocomplete-list list-group position-absolute w-100"></div>
                                     </td>
+
+
 
                                     <td>
                                         <input type="number"
@@ -247,14 +247,15 @@
             const newRow = document.createElement("tr");
 
             newRow.innerHTML = `
-            <td>
-                <select class="form-select select2-searchable"
-                        name="articles[]"
-                        required>
-                    <option value="">-- Sélectionner un article --</option>
-                    ${document.querySelector('select[name="articles[]"]').innerHTML}
-                </select>
-            </td>
+            <td style="position: relative;">
+    <input type="text"
+           class="form-control article-input"
+           name="articles[]"
+           placeholder="Code ou désignation"
+           autocomplete="off"
+           required>
+    <div class="autocomplete-list list-group position-absolute w-100"></div>
+</td>
 
             <td>
                 <input type="number"
@@ -292,16 +293,9 @@
         `;
 
             blFilleBody.appendChild(newRow);
-
-            // Réinitialiser Select2 si utilisé
-            if (window.$ && $.fn.select2) {
-                $(newRow).find('.select2-searchable').select2({
-                    width: '100%'
-                });
-            }
         });
 
-        // Suppression d’une ligne (delegation)
+        // Suppression ligne
         blFilleBody.addEventListener("click", function (e) {
             if (e.target.closest(".btn-remove")) {
                 const rows = blFilleBody.querySelectorAll("tr");
@@ -312,6 +306,44 @@
         });
 
     });
+
+    document.addEventListener("input", function (e) {
+        if (!e.target.classList.contains("article-input")) return;
+
+        const input = e.target;
+        const list = input.nextElementSibling;
+        const keyword = input.value.trim();
+
+        list.innerHTML = "";
+
+        if (keyword.length < 2) return;
+
+        fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`)
+                .then(res => res.json())
+            .then(data => {
+                data.forEach(article => {
+                    const item = document.createElement("button");
+                    item.type = "button";
+                    item.className = "list-group-item list-group-item-action";
+                    item.textContent = `${article.code} - ${article.designation}`;
+
+                    item.onclick = () => {
+                        input.value = item.textContent;
+                        list.innerHTML = "";
+                    };
+
+                    list.appendChild(item);
+                });
+            });
+    });
+
+    document.addEventListener("click", function (e) {
+        if (!e.target.classList.contains("article-input")) {
+            document.querySelectorAll(".autocomplete-list")
+                .forEach(list => list.innerHTML = "");
+        }
+    });
+
     /*]]>*/
 </script>
 
