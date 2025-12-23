@@ -172,4 +172,8 @@ public class ArticleService {
 
         return articleModifie;
     }
+
+    public List<Article> search(String q) {
+        return articleRepo.findByCodeArticleContainingIgnoreCaseOrDesignationContainingIgnoreCase(q, q);
+    }
 }
