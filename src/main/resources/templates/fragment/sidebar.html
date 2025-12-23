@@ -83,6 +83,7 @@
                         data-bs-target="#collapseBL"
                         aria-expanded="false"
                         aria-controls="collapseBL"
+                        sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
                         th:classappend="${currentUri.contains('/bonlivraison') ? '' : 'collapsed'}">
                     <i class="fas fa-clipboard-list me-3"></i> Bon de Livraison
                 </button>
@@ -104,7 +105,6 @@
 
                         <li>
                             <a class="nav-link text-white sidebar-sub"
-                               sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
                                th:href="@{/bonlivraison/add}"
                                th:classappend="${currentUri == '/bonlivraison/add' ? 'active' : ''}">
                                 Ajouter un bon de livraison

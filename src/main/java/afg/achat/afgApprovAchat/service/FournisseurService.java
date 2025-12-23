@@ -6,6 +6,8 @@ import afg.achat.afgApprovAchat.service.util.DeviseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class FournisseurService {
     @Autowired
@@ -14,4 +16,9 @@ public class FournisseurService {
     public Fournisseur[] getAllFournisseurs() {
         return fournisseurRepo.findAll().toArray(new Fournisseur[0]);
     }
+
+    public Optional<Fournisseur> getFournisseurById(int id) {
+        return fournisseurRepo.findById(id);
+    }
+
 }

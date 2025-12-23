@@ -13,4 +13,8 @@ public class BonLivraisonMereService {
     public BonLivraisonMere[] getAllBonLivraisonMeres() {
         return bonLivraisonMereRepo.findAll().toArray(new BonLivraisonMere[0]);
     }
+
+    public void insertBonLivraisonMere(BonLivraisonMere bonLivraisonMere) {
+        this.bonLivraisonMereRepo.save(bonLivraisonMere);
+    }
 }

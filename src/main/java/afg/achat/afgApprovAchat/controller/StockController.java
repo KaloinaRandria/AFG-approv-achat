@@ -42,7 +42,7 @@ public class StockController {
     public String insertEntreeStock(@RequestParam(name = "codeArticle") String codeArticle,
                                     @RequestParam(name = "quantite") String quantiteEntree,
                                     Model model) {
-        Article article = articleService.getArticleByCodeArticle(codeArticle);
+        Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));
         model.addAttribute("article", article);
 
         try {
@@ -70,7 +70,7 @@ public class StockController {
     public String insertSortieStock(@RequestParam(name = "codeArticle") String codeArticle,
                                     @RequestParam(name = "quantite") String quantiteSortie,
                                     Model model) {
-        Article article = articleService.getArticleByCodeArticle(codeArticle);
+        Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));
         model.addAttribute("article", article);
 
         try {
