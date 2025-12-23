@@ -315,7 +315,7 @@
         if (!e.target.classList.contains("article-input")) return;
 
         const input = e.target;
-        const list = input.nextElementSibling;
+        const list = input.closest("td").querySelector(".autocomplete-list");
         const keyword = input.value.trim();
 
         list.innerHTML = "";
@@ -323,7 +323,7 @@
         if (keyword.length < 2) return;
 
         fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`)
-                .then(res => res.json())
+            .then(res => res.json())
             .then(data => {
                 data.forEach(article => {
                     const item = document.createElement("button");
@@ -342,6 +342,7 @@
                 });
             });
     });
+
 
     document.addEventListener("click", function (e) {
         if (!e.target.classList.contains("article-input")) {

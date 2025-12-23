@@ -119,7 +119,5 @@ public class BonLivraisonController {
             redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement du bon de livraison.");
             return "redirect:/bonlivraison/add";
         }
-
-
     }
 }
