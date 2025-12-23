@@ -169,6 +169,8 @@
                                                placeholder="Code ou désignation"
                                                autocomplete="off"
                                                required>
+                                        <input type="hidden"
+                                               name="articleCodes[]">
                                         <div class="autocomplete-list list-group position-absolute w-100"></div>
                                     </td>
 
@@ -248,14 +250,16 @@
 
             newRow.innerHTML = `
             <td style="position: relative;">
-    <input type="text"
-           class="form-control article-input"
-           name="articles[]"
-           placeholder="Code ou désignation"
-           autocomplete="off"
-           required>
-    <div class="autocomplete-list list-group position-absolute w-100"></div>
-</td>
+                <input type="text"
+                       class="form-control article-input"
+                       name="articles[]"
+                       placeholder="Code ou désignation"
+                       autocomplete="off"
+                       required>
+                       <input type="hidden"
+                              name="articleCodes[]">
+                <div class="autocomplete-list list-group position-absolute w-100"></div>
+            </td>
 
             <td>
                 <input type="number"
@@ -328,7 +332,9 @@
                     item.textContent = `${article.code} - ${article.designation}`;
 
                     item.onclick = () => {
-                        input.value = item.textContent;
+                        input.value = `${article.code} - ${article.designation}`;
+                        input.closest("td")
+                            .querySelector('input[type="hidden"]').value = article.code;
                         list.innerHTML = "";
                     };
 
