@@ -34,7 +34,7 @@
             </div>
 
             <div class="card-body">
-                <form method="post" id="bonlivraisonForm" class="needs-validation" novalidate>
+                <form method="post" id="bonlivraisonForm" th:action="@{/bonlivraison/save}" class="needs-validation" novalidate>
                     <div class="mb-4">
                         <h6 class="form-section-title">
                             <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations générales
@@ -105,7 +105,7 @@
                                     <span class="input-group-text bg-light">
                                         <i class="fas fa-calendar-alt icon-gradient-blue"></i>
                                     </span>
-                                    <input type="date"
+                                    <input type="datetime-local"
                                            class="form-control"
                                            id="dateLivraison"
                                            name="dateLivraison"
