@@ -215,25 +215,25 @@
             </div>
 
             <!-- SIGNATURES -->
-            <div class="bl-signatures">
-                <div>
-                    <strong>Livré par</strong>
-                    <div class="signature-box"></div>
-                </div>
-                <div>
-                    <strong>Reçu par</strong>
-                    <div class="signature-box"></div>
-                </div>
-            </div>
+<!--            <div class="bl-signatures">-->
+<!--                <div>-->
+<!--                    <strong>Livré par</strong>-->
+<!--                    <div class="signature-box"></div>-->
+<!--                </div>-->
+<!--                <div>-->
+<!--                    <strong>Reçu par</strong>-->
+<!--                    <div class="signature-box"></div>-->
+<!--                </div>-->
+<!--            </div>-->
 
             <!-- FOOTER -->
             <div class="modal-footer bl-footer">
                 <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
                     Fermer
                 </button>
-                <button class="btn btn-primary" onclick="window.print()">
-                    <i class="fas fa-print me-1"></i>Imprimer
-                </button>
+<!--                <button class="btn btn-primary" onclick="window.print()">-->
+<!--                    <i class="fas fa-print me-1"></i>Imprimer-->
+<!--                </button>-->
             </div>
 
         </div>
@@ -323,7 +323,17 @@
                     // Infos générales
                     $('#modalBlId').text(data.id);
                     $('#modalBlFournisseur').text(data.fournisseur);
-                    $('#modalBlDate').text(data.date);
+                    // Formatage de la date
+                    if(data.date) {
+                        const dateObj = new Date(data.date);
+                        const day = String(dateObj.getDate()).padStart(2, '0');
+                        const month = String(dateObj.getMonth() + 1).padStart(2, '0'); // Mois de 0 à 11
+                        const year = dateObj.getFullYear();
+                        const hours = String(dateObj.getHours()).padStart(2, '0');
+                        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+
+                        $('#modalBlDate').text(`${day}/${month}/${year} ${hours}:${minutes}`);
+                    }
                     $('#modalBlDevise').text(data.devise);
 
                     // Articles

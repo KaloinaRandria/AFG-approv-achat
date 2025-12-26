@@ -321,13 +321,20 @@
         const keyword = input.value.trim();
 
         list.innerHTML = "";
-
         if (keyword.length < 2) return;
+
+        // Récupérer tous les articles déjà sélectionnés
+        const selectedArticles = Array.from(document.querySelectorAll('input[name="articleCodes[]"]'))
+            .map(i => i.value)
+            .filter(v => v); // on ignore les vides
 
         fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`)
             .then(res => res.json())
             .then(data => {
-                data.forEach(article => {
+                // Filtrer les articles déjà sélectionnés
+                const filteredData = data.filter(article => !selectedArticles.includes(article.code));
+
+                filteredData.forEach(article => {
                     const item = document.createElement("button");
                     item.type = "button";
                     item.className = "list-group-item list-group-item-action";
@@ -335,8 +342,7 @@
 
                     item.onclick = () => {
                         input.value = `${article.code} - ${article.designation}`;
-                        input.closest("td")
-                            .querySelector('input[type="hidden"]').value = article.code;
+                        input.closest("td").querySelector('input[type="hidden"]').value = article.code;
                         list.innerHTML = "";
                     };
 
