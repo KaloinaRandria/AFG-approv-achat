@@ -45,6 +45,11 @@
                             <td th:text="${bl.getFournisseur().getNom() +' '+ bl.getFournisseur().getAcronyme()}"></td>
                             <td th:text="${#temporals.format(bl.getDateReception(), 'dd/MM/yyyy HH:mm')}"></td>
                             <td th:text="${bl.getDevise().getDesignation() +' ('+bl.getDevise().getAcronyme() + ')' }"></td>
+                            <td>
+                                <a  class="btn btn-sm me-1" title="Voir le bon de livraison">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
                         </tr>
                         </tbody>
                     </table>
@@ -54,5 +59,69 @@
     </section>
 
 </div>
+<script th:inline="none">
+    /*<![CDATA[*/
+    document.addEventListener('DOMContentLoaded', () => {
+        const table = $('#bonLivraisonTable').DataTable({
+            language: {
+                zeroRecords: "Aucun article correspondant trouvé",
+                search: "Rechercher:",
+                lengthMenu: "Afficher _MENU_",
+                info: "Affichage de _START_ à _END_ sur _TOTAL_ articles",
+                infoEmpty: "Aucun article à afficher",
+                infoFiltered: "(filtrés sur _MAX_ articles au total)",
+                paginate: {first: "Première", last: "Dernière", next: "Suivante", previous: "Précédente"}
+            },
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+            responsive: true,
+            dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
+            initComplete: function(){
+                const api = this.api();
+                $('#bonLivraisonTable thead tr').clone(true).appendTo('#bonLivraisonTable thead');
+                $('#bonLivraisonTable thead tr:eq(1) th').each(function (i) {
+                    if (i < 4) {
+                        $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
+                        $('input', this).on('keyup change', function () {
+                            if (api.column(i).search() !== this.value) {
+                                api.column(i).search(this.value).draw();
+                            }
+                        });
+                    } else {
+                        $(this).html('<div style="height:32px;"></div>');
+                    }
+                });
+
+                // Recherche mobile
+                $('<div class="mobile-search-container mb-3">' +
+                    '<div class="input-group">' +
+                    '<span class="input-group-text"><i class="fas fa-search icon-gradient-blue"></i></span>' +
+                    '<input type="text" class="form-control" id="mobileGlobalSearch" placeholder="Rechercher...">' +
+                    '</div></div>').insertBefore('#bonLivraisonTable');
+
+                $('#mobileGlobalSearch').on('keyup', function () {
+                    api.search(this.value).draw();
+                });
+
+                function toggleMobileSearch() {
+                    if ($(window).width() <= 768) {
+                        $('.mobile-search-container').show();
+                        $('#bonLivraisonTable thead tr:eq(1)').hide();
+                        $('.dataTables_filter').hide();
+                    } else {
+                        $('.mobile-search-container').hide();
+                        $('#bonLivraisonTable thead tr:eq(1)').show();
+                        $('.dataTables_filter').show();
+                    }
+                }
+
+                toggleMobileSearch();
+                $(window).on('resize', toggleMobileSearch);
+
+            }
+        });
+    })
+    /*]]>*/
+</script>
 </body>
 </html>
