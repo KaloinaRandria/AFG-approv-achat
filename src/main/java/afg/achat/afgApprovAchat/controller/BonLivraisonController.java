@@ -43,11 +43,6 @@ public class BonLivraisonController {
     @Autowired
     StockFilleService stockFilleService;
 
-    @GetMapping("/list")
-    public String getAllBonLivraisons(Model model) {
-
-        return "bl/bl-liste";
-    }
 
     @GetMapping("/add")
     public String addBonLivraisonPage(Model model, HttpServletRequest request) {
@@ -131,7 +126,7 @@ public class BonLivraisonController {
 
             redirectAttributes.addFlashAttribute("ok", "Bon de livraison enregistré avec succès.");
 //            redirecte mankany am page liste rehefa misy page liste
-            return "redirect:/bonlivraison/add";
+            return "redirect:/bonlivraison/list";
 
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
@@ -141,5 +136,13 @@ public class BonLivraisonController {
             redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement du bon de livraison.");
             return "redirect:/bonlivraison/add";
         }
+    }
+
+    @GetMapping("/list")
+    public String bonLivraisonMereListe(Model model, HttpServletRequest request) {
+        BonLivraisonMere[] bonLivraisonMeres = bonLivraisonMereService.getAllBonLivraisonMeres();
+        model.addAttribute("currentUri", request.getRequestURI());
+        model.addAttribute("bonLivraisonMeres", bonLivraisonMeres);
+        return "bl/bl-liste";
     }
 }

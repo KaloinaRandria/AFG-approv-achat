@@ -1,11 +1,25 @@
 @charset "UTF-8";
 
 /* ===== TABLEAU ===== */
+
+/* Appliquer la même font partout dans DataTables */
+table.dataTable,
+table.dataTable th,
+table.dataTable td,
+.dataTables_wrapper,
+.dataTables_info,
+.dataTables_paginate,
+.dataTables_filter,
+.dataTables_length,
+.dataTables_processing {
+    font-family: 'Mark Pro', sans-serif !important;
+}
+
 table.dataTable {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /*font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;*/
 }
 
 table.dataTable th,

@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <title>Nouveau bon de livraison</title>
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
@@ -18,7 +20,7 @@
                 Ajout d'un nouveau bon de livraison
             </h1>
             <div>
-                <a class="btn btn-gradient-blue me-2">
+                <a class="btn btn-gradient-blue me-2" th:href="@{/bonlivraison/list}" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
                     <i class="fas fa-clipboard-list me-3"></i> Liste des bons de livraison
                 </a>
             </div>
@@ -319,13 +321,20 @@
         const keyword = input.value.trim();
 
         list.innerHTML = "";
-
         if (keyword.length < 2) return;
+
+        // Récupérer tous les articles déjà sélectionnés
+        const selectedArticles = Array.from(document.querySelectorAll('input[name="articleCodes[]"]'))
+            .map(i => i.value)
+            .filter(v => v); // on ignore les vides
 
         fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`)
             .then(res => res.json())
             .then(data => {
-                data.forEach(article => {
+                // Filtrer les articles déjà sélectionnés
+                const filteredData = data.filter(article => !selectedArticles.includes(article.code));
+
+                filteredData.forEach(article => {
                     const item = document.createElement("button");
                     item.type = "button";
                     item.className = "list-group-item list-group-item-action";
@@ -333,8 +342,7 @@
 
                     item.onclick = () => {
                         input.value = `${article.code} - ${article.designation}`;
-                        input.closest("td")
-                            .querySelector('input[type="hidden"]').value = article.code;
+                        input.closest("td").querySelector('input[type="hidden"]').value = article.code;
                         list.innerHTML = "";
                     };
 
