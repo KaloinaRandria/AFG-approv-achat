@@ -32,7 +32,11 @@
             <i class="fas fa-coins me-3"></i> Devise et Cours
         </a>
     </div>
-
+    <div class="px-3 mb-2">
+        <a class="nav-link text-white d-flex align-items-center sidebar-link">
+            <i class="fas fa-file-alt me-3"></i> Demande de Matériel
+        </a>
+    </div>
     <div class="accordion accordion-flush px-2" id="sidebarAccordion">
 
         <!-- ARTICLES -->
@@ -59,7 +63,7 @@
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/article/list}"
                                th:classappend="${currentUri == '/article/list' ? 'active' : ''}">
-                                Liste des articles
+                                Liste
                             </a>
                         </li>
                         <li>
@@ -73,7 +77,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Bon de Livraison -->
         <div class="accordion-item bg-transparent border-0">
             <h2 class="accordion-header">
@@ -98,8 +101,10 @@
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
                         <li>
-                            <a class="nav-link text-white sidebar-sub">
-                                Liste Bon de Livraison
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/bonlivraison/list}"
+                               th:classappend="${currentUri == '/bonlivraison/list' ? 'active' : ''}">
+                                Liste
                             </a>
                         </li>
 
