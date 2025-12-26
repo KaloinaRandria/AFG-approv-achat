@@ -3,11 +3,15 @@ package afg.achat.afgApprovAchat.controller;
 import afg.achat.afgApprovAchat.model.Fournisseur;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
+import afg.achat.afgApprovAchat.model.stock.StockFille;
+import afg.achat.afgApprovAchat.model.stock.StockMere;
 import afg.achat.afgApprovAchat.model.util.Devise;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonFilleService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
+import afg.achat.afgApprovAchat.service.stock.StockFilleService;
+import afg.achat.afgApprovAchat.service.stock.StockMereService;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +38,10 @@ public class BonLivraisonController {
     BonLivraisonMereService bonLivraisonMereService;
     @Autowired
     BonLivraisonFilleService bonLivraisonFilleService;
-
+    @Autowired
+    StockMereService stockMereService;
+    @Autowired
+    StockFilleService stockFilleService;
 
     @GetMapping("/list")
     public String getAllBonLivraisons(Model model) {
@@ -102,6 +109,24 @@ public class BonLivraisonController {
 
                 bonLivraisonFilles.add(bonLivraisonFille);
                 this.bonLivraisonFilleService.insertBonLivraisonFilleList(bonLivraisonFille);
+            }
+
+//            Entree en Stock
+            StockMere stockMere = new StockMere();
+            stockMere.setBonLivraisonMere(bonLivraisonMere);
+
+            this.stockMereService.insertStockMere(stockMere);
+
+            List<StockFille> stockFilles = new ArrayList<>();
+            for (int i = 0; i < articleCodes.size(); i++) {
+                StockFille stockFille = new StockFille();
+                stockFille.setStockMere(stockMere);
+                int finalI = i;
+                stockFille.setArticle(articleService.getArticleByCodeArticle(articleCodes.get(i))
+                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable avec le code: " + articleCodes.get(finalI))));
+                stockFille.setEntree(qteRecues.get(i));
+                stockFilles.add(stockFille);
+                this.stockFilleService.insertStockFille(stockFille);
             }
 
             redirectAttributes.addFlashAttribute("ok", "Bon de livraison enregistré avec succès.");
