@@ -98,7 +98,9 @@
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
                         <li>
-                            <a class="nav-link text-white sidebar-sub">
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/bonlivraison/list}"
+                               th:classappend="${currentUri == '/bonlivraison/list' ? 'active' : ''}">
                                 Liste Bon de Livraison
                             </a>
                         </li>
