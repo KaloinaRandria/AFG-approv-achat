@@ -5,6 +5,8 @@ import afg.achat.afgApprovAchat.repository.bonLivraison.BonLivraisonMereRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class BonLivraisonMereService {
     @Autowired
@@ -16,5 +18,9 @@ public class BonLivraisonMereService {
 
     public void insertBonLivraisonMere(BonLivraisonMere bonLivraisonMere) {
         this.bonLivraisonMereRepo.save(bonLivraisonMere);
+    }
+
+    public Optional<BonLivraisonMere> getBonLivraisonMereById(int id) {
+        return this.bonLivraisonMereRepo.findById(id);
     }
 }

@@ -170,8 +170,8 @@
             <!-- EN-TÊTE DOCUMENT -->
             <div class="bl-header">
                 <div class="bl-company">
-                    <h4 class="mb-0">NOM DE L’ENTREPRISE</h4>
-                    <small>Adresse – Téléphone – Email</small>
+                    <h4 class="mb-0">AFG Bank Madagascar</h4>
+<!--                    <small>Adresse – Téléphone – Email</small>-->
                 </div>
                 <div class="bl-title">
                     <h3>BON DE LIVRAISON</h3>
@@ -302,7 +302,50 @@
 
             }
         });
-    })
+
+
+        // Fonction pour ouvrir le modal et charger les données
+        $('#bonLivraisonTable').on('click', '.btn-view-bl', function () {
+            const blId = $(this).data('id');
+
+            // Réinitialiser le contenu
+            $('#modalBlId').text(blId);
+            $('#modalBlFournisseur').text('');
+            $('#modalBlDate').text('');
+            $('#modalBlDevise').text('');
+            $('#modalBlArticles').html('<tr><td colspan="2" class="text-center text-muted">Chargement...</td></tr>');
+
+            // Appel AJAX
+            $.ajax({
+                url: '/api/bonlivraison/' + blId + '/details',
+                method: 'GET',
+                success: function (data) {
+                    // Infos générales
+                    $('#modalBlId').text(data.id);
+                    $('#modalBlFournisseur').text(data.fournisseur);
+                    $('#modalBlDate').text(data.date);
+                    $('#modalBlDevise').text(data.devise);
+
+                    // Articles
+                    if (data.articles && data.articles.length > 0) {
+                        let rows = '';
+                        data.articles.forEach(a => {
+                            rows += `<tr>
+                                    <td>${a.designation}</td>
+                                    <td class="text-end">${a.quantite}</td>
+                                </tr>`;
+                        });
+                        $('#modalBlArticles').html(rows);
+                    } else {
+                        $('#modalBlArticles').html('<tr><td colspan="2" class="text-center text-muted">Aucun article</td></tr>');
+                    }
+                },
+                error: function () {
+                    $('#modalBlArticles').html('<tr><td colspan="2" class="text-center text-danger">Erreur de chargement</td></tr>');
+                }
+            });
+        });
+    });
 
 
     /*]]>*/
