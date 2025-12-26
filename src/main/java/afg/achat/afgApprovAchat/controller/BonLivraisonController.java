@@ -126,7 +126,7 @@ public class BonLivraisonController {
 
             redirectAttributes.addFlashAttribute("ok", "Bon de livraison enregistré avec succès.");
 //            redirecte mankany am page liste rehefa misy page liste
-            return "redirect:/bonlivraison/add";
+            return "redirect:/bonlivraison/list";
 
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());

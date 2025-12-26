@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <title>Nouveau bon de livraison</title>
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
@@ -18,7 +20,7 @@
                 Ajout d'un nouveau bon de livraison
             </h1>
             <div>
-                <a class="btn btn-gradient-blue me-2">
+                <a class="btn btn-gradient-blue me-2" th:href="@{/bonlivraison/list}" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
                     <i class="fas fa-clipboard-list me-3"></i> Liste des bons de livraison
                 </a>
             </div>
