@@ -1,11 +1,25 @@
 @charset "UTF-8";
 
 /* ===== TABLEAU ===== */
+
+/* Appliquer la même font partout dans DataTables */
+table.dataTable,
+table.dataTable th,
+table.dataTable td,
+.dataTables_wrapper,
+.dataTables_info,
+.dataTables_paginate,
+.dataTables_filter,
+.dataTables_length,
+.dataTables_processing {
+    font-family: 'Mark Pro', sans-serif !important;
+}
+
 table.dataTable {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /*font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;*/
 }
 
 table.dataTable th,
@@ -368,6 +382,29 @@ table.dataTable tbody tr:hover {
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
     color: white !important;
 }
+
+/* Vert outline – style secondary */
+.btn-outline-gradient-green {
+    background-color: transparent !important;
+    border: 2px solid #10b981 !important;
+    color: #10b981 !important;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-gradient-green:hover {
+    background: linear-gradient(45deg, #10b981, #34d399, #06d6a0) !important;
+    border-color: transparent !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+}
+
+.btn-outline-gradient-green:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25);
+}
+
 
 /* Rouge */
 .btn-gradient-red {
