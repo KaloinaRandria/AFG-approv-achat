@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class DeviseService {
@@ -28,13 +29,14 @@ public class DeviseService {
         deviseRepo.save(devise);
     }
 
-    public Devise getDeviseById(int id) {
-        return deviseRepo.findById(id).orElse(null);
+    public Optional<Devise> getDeviseById(int id) {
+        return deviseRepo.findById(id);
     }
 
     @Transactional
     public Devise modifierDevise(int idDevise, String coursAriary) {
-        Devise devise = this.getDeviseById(idDevise);
+        Devise devise = this.getDeviseById(idDevise)
+                .orElseThrow(() -> new RuntimeException("Devise non trouvée avec l'id: " + idDevise));
 
         if (devise == null) {
             throw new RuntimeException("Devise non trouvée avec l'id: " + idDevise);

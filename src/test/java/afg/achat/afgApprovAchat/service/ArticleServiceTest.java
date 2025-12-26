@@ -56,10 +56,12 @@ public class ArticleServiceTest {
         Article fakeArticle = new Article();
         fakeArticle.setCodeArticle("ART123");
 
-        Mockito.when(articleRepo.findArticleByCodeArticle("ART123"))
+        Mockito.when(articleRepo.findArticleByCodeArticle("ART123")
+                        .orElseThrow(() -> new RuntimeException("Article non trouvé")))
                 .thenReturn(fakeArticle);
 
-        Article result = articleService.getArticleByCodeArticle("ART123");
+        Article result = articleService.getArticleByCodeArticle("ART123")
+                .orElseThrow(() -> new RuntimeException("Article non trouvé"));
 
         assertNotNull(result);
         assertEquals("ART123", result.getCodeArticle());
@@ -76,7 +78,8 @@ public class ArticleServiceTest {
         Mockito.when(articleRepo.findArticleByCodeArticle("UNKNOWN"))
                 .thenReturn(null);
 
-        Article result = articleService.getArticleByCodeArticle("UNKNOWN");
+        Article result = articleService.getArticleByCodeArticle("UNKNOWN")
+                .orElseThrow(() -> new RuntimeException("Article non trouvé"));
 
         assertNull(result); // article introuvable
     }

@@ -22,7 +22,7 @@ public class BonLivraisonMere {
     String description;
     @Column(name = "date_reception")
     LocalDateTime dateReception;
-    @Lob @Column(name = "piece_jointe")
+    @Lob @Column(name = "piece_jointe" , nullable = true)
     byte[] pieceJointe;
     @ManyToOne @JoinColumn(name = "id_fournisseur" , referencedColumnName = "id_fournisseur")
     Fournisseur fournisseur;

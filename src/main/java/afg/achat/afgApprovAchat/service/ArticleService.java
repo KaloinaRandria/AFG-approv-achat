@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ArticleService {
@@ -40,7 +41,7 @@ public class ArticleService {
         return articleRepo.findAll().toArray(new Article[0]);
     }
 
-    public Article getArticleByCodeArticle(String codeArticle) {
+    public Optional<Article> getArticleByCodeArticle(String codeArticle) {
         return articleRepo.findArticleByCodeArticle(codeArticle);
     }
 
@@ -53,7 +54,8 @@ public class ArticleService {
     public Article modifierArticle(String codeArticle, String designation, String seuilMin,
                                    String idUdm, String idFamille, String idCentreBudgetaire) {
         // Récupérer l'article existant
-        Article article = this.getArticleByCodeArticle(codeArticle);
+        Article article = this.getArticleByCodeArticle(codeArticle)
+                .orElseThrow(() -> new RuntimeException("Article non trouvé"));
 
         if (article == null) {
             throw new RuntimeException("Article non trouvé avec le code: " + codeArticle);
@@ -171,5 +173,9 @@ public class ArticleService {
         }
 
         return articleModifie;
+    }
+
+    public List<Article> search(String q) {
+        return articleRepo.findByCodeArticleContainingIgnoreCaseOrDesignationContainingIgnoreCase(q, q);
     }
 }

@@ -10,9 +10,349 @@
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
 <div class="main-content">
     <section>
-
         <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+        <!-- En-tête avec le même style que la liste -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-truck-loading me-3"></i>
+                Ajout d'un nouveau bon de livraison
+            </h1>
+            <div>
+                <a class="btn btn-gradient-blue me-2">
+                    <i class="fas fa-clipboard-list me-3"></i> Liste des bons de livraison
+                </a>
+            </div>
+        </div>
+
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold text-gradient-blue">
+                    <i class="fas fa-file-alt me-2 icon-gradient-blue"></i> Formulaire de création
+                </h5>
+                <p class="text-muted mb-0 mt-1">Remplissez tous les champs obligatoires pour ajouter un bon de
+                    livraison</p>
+            </div>
+
+            <div class="card-body">
+                <form method="post" id="bonlivraisonForm" th:action="@{/bonlivraison/save}" class="needs-validation" novalidate>
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations générales
+                        </h6>
+
+                        <div class="row">
+                            <!-- Fournisseur -->
+                            <div class="col-md-6 mb-3">
+                                <label for="fournisseurs" class="form-label fw-bold required-field">
+                                    Fournisseur
+                                </label>
+                                <div class="input-group">
+        <span class="input-group-text bg-light">
+            <i class="fas fa-building icon-gradient-blue"></i>
+        </span>
+                                    <select class="form-select select2-searchable"
+                                            id="fournisseurs"
+                                            name="fournisseurs"
+                                            data-placeholder="Recherchez ou sélectionnez un fournisseur..."
+                                            required>
+                                        <option value=""></option>
+                                        <option th:each="fournisseur : ${fournisseurs}"
+                                                th:value="${fournisseur.getId()}"
+                                                th:text="${fournisseur.getNom()}">
+                                        </option>
+
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez le fournisseur pour ce bon de
+                                    livraison
+                                </div>
+                            </div>
+
+                            <!-- Devise -->
+                            <div class="col-md-6 mb-3">
+                                <label for="devises" class="form-label fw-bold required-field">
+                                    Devise
+                                </label>
+                                <div class="input-group">
+        <span class="input-group-text bg-light">
+            <i class="fas fa-coins icon-gradient-blue"></i>
+        </span>
+                                    <select class="form-select select2-searchable"
+                                            id="devises"
+                                            name="devises"
+                                            data-placeholder="Recherchez ou sélectionnez une devise..."
+                                            required>
+                                        <option value=""></option>
+                                        <option th:each="devise : ${devises}"
+                                        th:value="${devise.getId()}"
+                                        th:text="${devise.getAcronyme()}"></option>
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la devise pour ce bon de
+                                    livraison
+                                </div>
+                            </div>
+
+                            <!-- Date de Livraison -->
+                            <div class="col-md-6 mb-3">
+                                <label for="dateLivraison" class="form-label fw-bold required-field">
+                                    Date de livraison
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-calendar-alt icon-gradient-blue"></i>
+                                    </span>
+                                    <input type="datetime-local"
+                                           class="form-control"
+                                           id="dateLivraison"
+                                           name="dateLivraison"
+                                           required>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la date prévue pour la
+                                    livraison
+                                </div>
+                            </div>
+
+                            <!-- Description -->
+                            <div class="col-md-12 mb-3">
+                                <label for="description" class="form-label fw-bold">
+                                    Description
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-align-left icon-gradient-blue"></i>
+                                    </span>
+                                    <textarea class="form-control"
+                                              id="description"
+                                              name="description"
+                                              rows="3"
+                                              placeholder="Ajoutez une description ou des informations complémentaires"></textarea>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Informations complémentaires sur ce bon de
+                                    livraison
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ================= BL FILLE ================= -->
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-list me-2 icon-gradient-blue"></i> Détails du bon de livraison
+                        </h6>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-light">
+                                <tr>
+                                    <th style="width: 30%">Article</th>
+                                    <th style="width: 15%">Qté demandée</th>
+                                    <th style="width: 15%">Qté reçue</th>
+                                    <th style="width: 25%">Prix unitaire</th>
+                                    <th style="width: 5%" class="text-center">Action</th>
+                                </tr>
+                                </thead>
+
+                                <tbody id="blFilleBody">
+                                <!-- Ligne BL fille (1 par défaut) -->
+                                <tr>
+                                    <td style="position: relative;">
+                                        <input type="text"
+                                               class="form-control article-input"
+                                               name="articles[]"
+                                               placeholder="Code ou désignation"
+                                               autocomplete="off"
+                                               required>
+                                        <input type="hidden"
+                                               name="articleCodes[]">
+                                        <div class="autocomplete-list list-group position-absolute w-100"></div>
+                                    </td>
+
+
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control"
+                                               name="quantiteDemande[]"
+                                               min="0"
+                                               step="0.01"
+                                               required>
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control"
+                                               name="quantiteRecu[]"
+                                               min="0"
+                                               step="0.01"
+                                               required>
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control"
+                                               name="prixUnitaire[]"
+                                               min="0"
+                                               step="0.01"
+                                               required>
+                                    </td>
+
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-outline-danger btn-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="button"
+                                id="addBlFille"
+                                class="btn btn-gradient-blue">
+                            <i class="fas fa-plus me-1"></i> Ajouter un article
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </div>
     </section>
+    <!-- Barre d’action globale -->
+    <div class="d-flex justify-content-end gap-2 mt-4 px-4">
+        <button type="submit"
+                form="bonlivraisonForm"
+                class="btn btn-gradient-green px-4">
+            <i class="fas fa-save me-2"></i> Enregistrer
+        </button>
+
+        <a href="/bon-livraison/liste"
+           class="btn btn-outline-secondary px-4">
+            <i class="fas fa-times me-2"></i> Annuler
+        </a>
+    </div>
 </div>
+<script th:inline="none">
+    /*<![CDATA[*/
+    document.addEventListener("DOMContentLoaded", function () {
+
+        const blFilleBody = document.getElementById("blFilleBody");
+        const addBtn = document.getElementById("addBlFille");
+
+        addBtn.addEventListener("click", function () {
+            const newRow = document.createElement("tr");
+
+            newRow.innerHTML = `
+            <td style="position: relative;">
+                <input type="text"
+                       class="form-control article-input"
+                       name="articles[]"
+                       placeholder="Code ou désignation"
+                       autocomplete="off"
+                       required>
+                       <input type="hidden"
+                              name="articleCodes[]">
+                <div class="autocomplete-list list-group position-absolute w-100"></div>
+            </td>
+
+            <td>
+                <input type="number"
+                       class="form-control"
+                       name="quantiteDemande[]"
+                       min="0"
+                       step="0.01"
+                       required>
+            </td>
+
+            <td>
+                <input type="number"
+                       class="form-control"
+                       name="quantiteRecu[]"
+                       min="0"
+                       step="0.01"
+                       required>
+            </td>
+
+            <td>
+                <input type="number"
+                       class="form-control"
+                       name="prixUnitaire[]"
+                       min="0"
+                       step="0.01"
+                       required>
+            </td>
+
+            <td class="text-center">
+                <button type="button"
+                        class="btn btn-outline-danger btn-sm btn-remove">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+
+            blFilleBody.appendChild(newRow);
+        });
+
+        // Suppression ligne
+        blFilleBody.addEventListener("click", function (e) {
+            if (e.target.closest(".btn-remove")) {
+                const rows = blFilleBody.querySelectorAll("tr");
+                if (rows.length > 1) {
+                    e.target.closest("tr").remove();
+                }
+            }
+        });
+
+    });
+
+    document.addEventListener("input", function (e) {
+        if (!e.target.classList.contains("article-input")) return;
+
+        const input = e.target;
+        const list = input.closest("td").querySelector(".autocomplete-list");
+        const keyword = input.value.trim();
+
+        list.innerHTML = "";
+
+        if (keyword.length < 2) return;
+
+        fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`)
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(article => {
+                    const item = document.createElement("button");
+                    item.type = "button";
+                    item.className = "list-group-item list-group-item-action";
+                    item.textContent = `${article.code} - ${article.designation}`;
+
+                    item.onclick = () => {
+                        input.value = `${article.code} - ${article.designation}`;
+                        input.closest("td")
+                            .querySelector('input[type="hidden"]').value = article.code;
+                        list.innerHTML = "";
+                    };
+
+                    list.appendChild(item);
+                });
+            });
+    });
+
+
+    document.addEventListener("click", function (e) {
+        if (!e.target.classList.contains("article-input")) {
+            document.querySelectorAll(".autocomplete-list")
+                .forEach(list => list.innerHTML = "");
+        }
+    });
+
+    /*]]>*/
+</script>
+
 </body>
 </html>

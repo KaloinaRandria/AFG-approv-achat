@@ -19,7 +19,7 @@
     <div class="px-3 mb-2">
         <a class="nav-link text-white d-flex align-items-center sidebar-link"
            th:href="@{/maintenance}"
-           th:classappend="${currentUri == '/maintenance'} ? 'active' : ''">
+           th:classappend="${currentUri == '/maintenance' ? 'active' : ''}">
             <i class="fas fa-chart-line me-3"></i> Tableau de bord
         </a>
     </div>
@@ -28,7 +28,7 @@
     <div class="px-3 mb-2">
         <a class="nav-link text-white d-flex align-items-center sidebar-link"
            th:href="@{/devise/devise-pages}"
-            th:classappend="${currentUri == '/devise/devise-pages'} ? 'active' : ''">
+            th:classappend="${currentUri == '/devise/devise-pages' ? 'active' : ''}">
             <i class="fas fa-coins me-3"></i> Devise et Cours
         </a>
     </div>
@@ -44,7 +44,7 @@
                         data-bs-target="#collapseArticles"
                         aria-expanded="false"
                         aria-controls="collapseArticles"
-                        th:classappend="${currentUri.contains('/article')} ? '' : 'collapsed'">
+                        th:classappend="${currentUri.contains('/article') ? '' : 'collapsed'}">
                     <i class="fas fa-box me-3"></i> Articles
                 </button>
             </h2>
@@ -52,20 +52,20 @@
                  class="accordion-collapse collapse"
                  aria-labelledby="headingArticles"
                  data-bs-parent="#sidebarAccordion"
-                 th:classappend="${currentUri.contains('/article')} ? 'show' : ''">
+                 th:classappend="${currentUri.contains('/article') ? 'show' : ''}">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
                         <li>
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/article/list}"
-                               th:classappend="${currentUri == '/article/list'} ? 'active' : ''">
+                               th:classappend="${currentUri == '/article/list' ? 'active' : ''}">
                                 Liste des articles
                             </a>
                         </li>
                         <li>
                             <a class="nav-link text-white sidebar-sub" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
                                th:href="@{/article/add}"
-                               th:classappend="${currentUri == '/article/add'} ? 'active' : ''">
+                               th:classappend="${currentUri == '/article/add' ? 'active' : ''}">
                                 Ajouter un article
                             </a>
                         </li>
@@ -83,29 +83,31 @@
                         data-bs-target="#collapseBL"
                         aria-expanded="false"
                         aria-controls="collapseBL"
-                        th:classappend="${currentUri.contains('/bonlivraison')} ? '' : 'collapsed'">
+                        sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
+                        th:classappend="${currentUri.contains('/bonlivraison') ? '' : 'collapsed'}">
                     <i class="fas fa-clipboard-list me-3"></i> Bon de Livraison
                 </button>
             </h2>
+
             <div id="collapseBL"
                  class="accordion-collapse collapse"
                  aria-labelledby="headingBL"
                  data-bs-parent="#sidebarAccordion"
-                 th:classappend="${currentUri.contains('/bonlivraison')} ? 'show' : ''">
+                 th:classappend="${currentUri.contains('/bonlivraison') ? 'show' : ''}">
+
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
                         <li>
-                            <a class="nav-link text-white sidebar-sub"
-
-                               >
+                            <a class="nav-link text-white sidebar-sub">
                                 Liste Bon de Livraison
                             </a>
                         </li>
+
                         <li>
                             <a class="nav-link text-white sidebar-sub"
-
-                               >
-                                Nouveau Bon de Livraison
+                               th:href="@{/bonlivraison/add}"
+                               th:classappend="${currentUri == '/bonlivraison/add' ? 'active' : ''}">
+                                Ajouter un bon de livraison
                             </a>
                         </li>
                     </ul>
@@ -123,7 +125,7 @@
                         data-bs-target="#collapseStock"
                         aria-expanded="false"
                         aria-controls="collapseStock"
-                        th:classappend="${currentUri.contains('/stock') or currentUri.contains('/message')} ? '' : 'collapsed'">
+                        th:classappend="${currentUri.contains('/stock') or currentUri.contains('/message') ? '' : 'collapsed'}">
                     <i class="fas fa-warehouse me-3"></i> Stock
                 </button>
             </h2>
@@ -131,13 +133,13 @@
                  class="accordion-collapse collapse"
                  aria-labelledby="headingStock"
                  data-bs-parent="#sidebarAccordion"
-                 th:classappend="${currentUri.contains('/stock')} ? 'show' : ''">
+                 th:classappend="${currentUri.contains('/stock') ? 'show' : ''}">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
                         <li>
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/stock/etat-stock}"
-                               th:classappend="${currentUri == '/stock/etat-stock'} ? 'active' : ''">
+                               th:classappend="${currentUri == '/stock/etat-stock' ? 'active' : ''}">
                                 État de stock
                             </a>
                         </li>
