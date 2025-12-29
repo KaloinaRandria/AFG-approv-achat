@@ -101,7 +101,8 @@
                         </li>
                         <li>
                             <a class="nav-link text-white sidebar-sub"
-                            >
+                               th:href="@{/demande/add}"
+                               th:classappend="${currentUri == '/demande/add' ? 'active' : ''}">
                                 Ajout Demande
                             </a>
                         </li>

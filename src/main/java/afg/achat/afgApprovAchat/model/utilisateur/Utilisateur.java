@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.model.utilisateur;
 
+import afg.achat.afgApprovAchat.model.util.Departement;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -34,6 +35,8 @@ public class Utilisateur {
     String contact;
     @ManyToOne @JoinColumn(name = "id_pdp", referencedColumnName = "id_pdp", nullable = true)
     Pdp pdp;
+    @ManyToOne @JoinColumn(name = "id_departement", referencedColumnName = "id_departement")
+    Departement departement;
 
     public Utilisateur(String nom, String prenom, String mail, Set<Role> roles, Utilisateur superieurHierarchique, String adresse , String contact) {
         this.setNom(nom);

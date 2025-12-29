@@ -40,8 +40,8 @@ public class DemandeMere {
 
 
     public enum NatureDemande {
-        OPEX,
-        CAPEX
+        OPEX, // Remplacement, Maintenance
+        CAPEX//Nouvel Equipement
     }
 
     public enum StatutDemande {
