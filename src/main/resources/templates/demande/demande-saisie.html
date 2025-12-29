@@ -145,11 +145,80 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-list me-2 icon-gradient-blue"></i> Détails de la demande
+                        </h6>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-light">
+                                <tr>
+                                    <th style="width: 45%">Article</th>
+                                    <th style="width: 45%">Quantité</th>
+                                    <th style="width: 10%" class="text-center">Action</th>
+                                </tr>
+                                </thead>
+                                <tbody id="demandeFilleBody">
+                                    <tr>
+                                        <td style="position: relative;">
+                                            <input type="text"
+                                                   class="form-control article-input"
+                                                   name="articles[]"
+                                                   placeholder="Code ou désignation"
+                                                   autocomplete="off"
+                                                   required>
+                                            <input type="hidden"
+                                                   name="articleCodes[]">
+                                            <div class="autocomplete-list list-group position-absolute w-100"></div>
+                                        </td>
+
+                                        <td>
+                                            <input type="number"
+                                                   class="form-control"
+                                                   name="quantite[]"
+                                                   min="0"
+                                                   step="0.01"
+                                                   required>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-outline-danger btn-sm">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="button"
+                                id="addBlFille"
+                                class="btn btn-gradient-blue">
+                            <i class="fas fa-plus me-1"></i> Ajouter un article
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
     </section>
-</div>
+    <!-- Barre d’action globale -->
+    <div class="d-flex justify-content-end gap-2 mt-4 px-4">
+        <button type="submit"
+                form="demandeForm"
+                class="btn btn-gradient-green px-4">
+            <i class="fas fa-save me-2"></i> Soumettre
+        </button>
 
+        <a href="/bon-livraison/liste"
+           class="btn btn-outline-secondary px-4">
+            <i class="fas fa-times me-2"></i> Annuler
+        </a>
+    </div>
+</div>
+<script th:inline="none">
+    /*<![CDATA[*/
+
+    /*]]>*/
+</script>
 </body>
 </html>
