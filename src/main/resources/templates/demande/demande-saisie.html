@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Nouvelle demande</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+        <!-- En-tête avec le même style que la liste -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-plus-circle me-3 icon-gradient-blue"></i> Nouvelle demande
+            </h1>
+            <div>
+                <a class="btn btn-gradient-blue me-2">
+                    <i class="fas fa-list-ul me-2"></i>Liste des demandes
+                </a>
+            </div>
+        </div>
+
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold text-gradient-blue">
+                    <i class="fas fa-file-alt me-2 icon-gradient-blue"></i> Formulaire de création
+                </h5>
+                <p class="text-muted mb-0 mt-1">Remplissez tous les champs obligatoires pour faire une demande</p>
+            </div>
+
+            <div class="card-body">
+                <form method="post" id="demandeForm" th:action="@{/demande/save}" class="needs-validation" novalidate>
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations générales
+                        </h6>
+
+                        <div class="row">
+<!--                            Nature de la demande -->
+                            <div class="col-md-6 mb-3">
+                                <label for="nature" class="form-label fw-bold required-field">
+                                    Nature de la demande
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-wallet icon-gradient-blue"></i>
+                                    </span>
+                                    <select class="form-select select2-searchable"
+                                            id="nature"
+                                            name="nature"
+                                            data-placeholder="sélectionnez..."
+                                            required>
+                                        <option value=""></option>
+                                        <option th:each="nature : ${natures}"
+                                                th:value="${nature}"
+                                                th:text="${nature}">
+                                        </option>
+
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la nature pour cette demande
+                                </div>
+                            </div>
+<!--                            Date de la demande-->
+                            <div class="col-md-6 mb-3">
+                                <label for="dateDemande" class="form-label fw-bold required-field">
+                                    Date de la demande
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-calendar-alt icon-gradient-blue"></i>
+                                    </span>
+                                    <input type="datetime-local"
+                                           class="form-control"
+                                           id="dateDemande"
+                                           name="dateDemande"
+                                           required>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la date de demande
+                                </div>
+                            </div>
+<!--                            Adresse -->
+                            <div class="col-md-6 mb-3">
+                                <label for="adresse" class="form-label fw-bold required-field">
+                                    Adresse
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-map-marker-alt icon-gradient-blue"></i>
+                                    </span>
+                                    <select class="form-select select2-searchable"
+                                            id="adresse"
+                                            name="adresse"
+                                            data-placeholder="Recherchez ou sélectionnez un adresse..."
+                                            required>
+                                        <option value=""></option>
+                                        <option th:each="adresse : ${adresses}"
+                                                th:value="${adresse.getId()}"
+                                                th:text="${adresse.getAdresse()}">
+                                        </option>
+
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez l'adresse du demandeur
+                                </div>
+                            </div>
+
+                            <!--                            Service-->
+                            <div class="col-md-6 mb-3">
+                                <label for="departement" class="form-label fw-bold required-field">
+                                    Departement / Service
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-sitemap icon-gradient-blue"></i>
+                                    </span>
+                                    <select class="form-select select2-
+                                    searchable"
+                                            id="departement"
+                                            name="departement"
+                                            data-placeholder="Recherchez ou sélectionnez un adresse..."
+                                            required>
+                                        <option value=""></option>
+                                        <option th:each="departement : ${departements}"
+                                                th:value="${departement.getId()}"
+                                                th:text="${departement.getNom()}">
+                                        </option>
+
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez l'adresse du demandeur
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+</div>
+
+</body>
+</html>

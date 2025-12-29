@@ -32,11 +32,7 @@
             <i class="fas fa-coins me-3"></i> Devise et Cours
         </a>
     </div>
-    <div class="px-3 mb-2">
-        <a class="nav-link text-white d-flex align-items-center sidebar-link">
-            <i class="fas fa-file-alt me-3"></i> Demande de Matériel
-        </a>
-    </div>
+
     <div class="accordion accordion-flush px-2" id="sidebarAccordion">
 
         <!-- ARTICLES -->
@@ -77,6 +73,44 @@
                 </div>
             </div>
         </div>
+<!--    Demande de Materiel-->
+        <div class="accordion-item bg-transparent border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseDemande"
+                        aria-expanded="false"
+                        aria-controls="collapseDemande"
+                        th:classappend="${currentUri.contains('/demande') ? '' : 'collapsed'}">
+                    <i class="fas fa-file-alt me-3"></i> Demande de Matériel
+                </button>
+            </h2>
+            <div id="collapseDemande"
+                 class="accordion-collapse collapse"
+                 aria-labelledby="headingDemande"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/demande') ? 'show' : ''}">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                            >
+                                Liste
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/demande/add}"
+                               th:classappend="${currentUri == '/demande/add' ? 'active' : ''}">
+                                Ajout Demande
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
         <!-- Bon de Livraison -->
         <div class="accordion-item bg-transparent border-0">
             <h2 class="accordion-header">
