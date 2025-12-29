@@ -192,7 +192,7 @@
                             </table>
                         </div>
                         <button type="button"
-                                id="addBlFille"
+                                id="addDemandeFille"
                                 class="btn btn-gradient-blue">
                             <i class="fas fa-plus me-1"></i> Ajouter un article
                         </button>
@@ -217,7 +217,90 @@
 </div>
 <script th:inline="none">
     /*<![CDATA[*/
+    document.addEventListener("DOMContentLoaded", function() {
+        const demandeFilleBody = document.getElementById("demandeFilleBody");
+        const addBtn = document.getElementById("addDemandeFille");
 
+        addBtn.addEventListener("click", () => {
+            const newRow = document.createElement("tr");
+            newRow.innerHTML = `
+            <td style="position: relative;">
+                                            <input type="text"
+                                                   class="form-control article-input"
+                                                   name="articles[]"
+                                                   placeholder="Code ou désignation"
+                                                   autocomplete="off"
+                                                   required>
+                                            <input type="hidden"
+                                                   name="articleCodes[]">
+                                            <div class="autocomplete-list list-group position-absolute w-100"></div>
+                                        </td>
+
+                                        <td>
+                                            <input type="number"
+                                                   class="form-control"
+                                                   name="quantite[]"
+                                                   min="0"
+                                                   step="0.01"
+                                                   required>
+                                        </td>
+                                                    <td class="text-center">
+                <button type="button"
+                        class="btn btn-outline-danger btn-sm btn-remove">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+            demandeFilleBody.appendChild(newRow);
+        });
+
+        demandeFilleBody.addEventListener("click", (e) => {
+            if (e.target.closest(".btn-remove")) {
+                const rows = demandeFilleBody.querySelectorAll("tr");
+                if (rows.length >1) {
+                    e.target.closest("tr").remove();
+                }
+            }
+        });
+    });
+
+    document.addEventListener("input", function (e) {
+        if (!e.target.classList.contains("article-input")) return;
+
+        const input = e.target;
+        const list = input.closest("td").querySelector(".autocomplete-list");
+        const keyword = input.value.trim();
+
+        list.innerHTML = "";
+        if (keyword.length < 2) return;
+
+        // Récupérer tous les articles déjà sélectionnés
+        const selectedArticles = Array.from(document.querySelectorAll('input[name="articleCodes[]"]'))
+            .map(i => i.value)
+            .filter(v => v); // on ignore les vides
+
+        fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`)
+            .then(res => res.json())
+            .then(data => {
+                // Filtrer les articles déjà sélectionnés
+                const filteredData = data.filter(article => !selectedArticles.includes(article.code));
+
+                filteredData.forEach(article => {
+                    const item = document.createElement("button");
+                    item.type = "button";
+                    item.className = "list-group-item list-group-item-action";
+                    item.textContent = `${article.code} - ${article.designation}`;
+
+                    item.onclick = () => {
+                        input.value = `${article.code} - ${article.designation}`;
+                        input.closest("td").querySelector('input[type="hidden"]').value = article.code;
+                        list.innerHTML = "";
+                    };
+
+                    list.appendChild(item);
+                });
+            });
+    });
     /*]]>*/
 </script>
 </body>
