@@ -95,7 +95,8 @@
                     <ul class="nav flex-column px-3">
                         <li>
                             <a class="nav-link text-white sidebar-sub"
-                            >
+                               th:href="@{/demande/list}"
+                               th:classappend="${currentUri == '/demande/list' ? 'active' : ''}">
                                 Liste
                             </a>
                         </li>
