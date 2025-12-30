@@ -68,7 +68,7 @@ public class DemandeController {
 
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
-        
+         
         try {
             if (nature == null || nature.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "La nature de la demande est obligatoire.");
