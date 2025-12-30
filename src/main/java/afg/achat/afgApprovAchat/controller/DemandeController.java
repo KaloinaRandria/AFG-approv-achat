@@ -65,10 +65,10 @@ public class DemandeController {
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
                                 @RequestParam(name = "quantite[]") List<String> quantite,
                                 RedirectAttributes redirectAttributes) {
+
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
-        System.out.println(user.getMail());
-
+        
         try {
             if (nature == null || nature.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "La nature de la demande est obligatoire.");
