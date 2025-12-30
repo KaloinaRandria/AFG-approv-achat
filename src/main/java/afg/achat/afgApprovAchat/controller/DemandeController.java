@@ -64,18 +64,10 @@ public class DemandeController {
                                 @RequestParam(name = "departement") String departement,
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
                                 @RequestParam(name = "quantite[]") List<String> quantite,
-                                RedirectAttributes redirectAttributes) throws AccessDeniedException {
-        Authentication authentication = SecurityContextHolder
-                .getContext()
-                .getAuthentication();
-
-        if (authentication == null || !authentication.isAuthenticated()
-                || authentication instanceof AnonymousAuthenticationToken) {
-            throw new AccessDeniedException("Utilisateur non authentifié");
-        }
-
-        String mail = authentication.getName();
-        Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(mail);
+                                RedirectAttributes redirectAttributes) {
+        Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
+        System.out.println(user.getMail());
 
         try {
             if (nature == null || nature.isEmpty()) {
