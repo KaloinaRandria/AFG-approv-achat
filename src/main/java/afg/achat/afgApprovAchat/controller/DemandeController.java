@@ -77,7 +77,6 @@ public class DemandeController {
         String mail = authentication.getName();
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(mail);
 
-
         try {
             if (nature == null || nature.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "La nature de la demande est obligatoire.");
