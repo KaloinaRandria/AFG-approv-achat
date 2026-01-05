@@ -118,6 +118,9 @@ public class DemandeController {
     @GetMapping("/list")
     public String listDemandePage(Model model, HttpServletRequest request) {
         model.addAttribute("currentUri", request.getRequestURI());
+
+        DemandeMere[] demandesMeres = demandeMereService.getAllDemandesMeres();
+        model.addAttribute("demandesMeres", demandesMeres);
         return "demande/demande-liste";
     }
 }
