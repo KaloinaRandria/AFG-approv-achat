@@ -31,7 +31,7 @@ public class DemandeMere {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "statut_demande", nullable = false)
-    StatutDemande statutDemande = StatutDemande.BROUILLON;
+    StatutDemande statutDemande = StatutDemande.CREE;
 
 
     @Enumerated(EnumType.STRING)
@@ -45,7 +45,7 @@ public class DemandeMere {
     }
 
     public enum StatutDemande {
-        BROUILLON,        // créée mais non soumise
+        CREE,        // créée mais non soumise
         SOUMISE,          // envoyée pour validation
         EN_VALIDATION,    // en cours (optionnel)
         VALIDEE,          // approuvée

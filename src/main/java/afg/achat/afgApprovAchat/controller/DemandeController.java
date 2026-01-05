@@ -12,10 +12,7 @@ import afg.achat.afgApprovAchat.service.util.AdresseService;
 import afg.achat.afgApprovAchat.service.util.DepartementService;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -25,7 +22,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,8 +54,7 @@ public class DemandeController {
     }
 
     @PostMapping("/save")
-    public String insertDemande(@RequestParam(name = "nature") String nature,
-                                @RequestParam(name = "dateDemande") String dateDemande,
+    public String insertDemande(@RequestParam(name = "dateDemande") String dateDemande,
                                 @RequestParam(name = "adresse") String adresse,
                                 @RequestParam(name = "departement") String departement,
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
@@ -70,10 +65,6 @@ public class DemandeController {
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
          
         try {
-            if (nature == null || nature.isEmpty()) {
-                redirectAttributes.addFlashAttribute("ko", "La nature de la demande est obligatoire.");
-                return "redirect:/demande/add";
-            }
             if (dateDemande == null || dateDemande.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "La date de la demande est obligatoire.");
                 return "redirect:/demande/add";
@@ -92,7 +83,6 @@ public class DemandeController {
                     .orElseThrow(() -> new IllegalArgumentException("Département introuvable"));
 
             DemandeMere demandeMere = new DemandeMere();
-            demandeMere.setNatureDemande(DemandeMere.NatureDemande.valueOf(nature));
             demandeMere.setDateDemande(dateDemande);
             demandeMere.setAdresse(adresse1);
             demandeMere.setDemandeur(utilisateur);

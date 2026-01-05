@@ -41,33 +41,7 @@
                         </h6>
 
                         <div class="row">
-<!--                            Nature de la demande -->
-                            <div class="col-md-6 mb-3">
-                                <label for="nature" class="form-label fw-bold required-field">
-                                    Nature de la demande
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light">
-                                        <i class="fas fa-wallet icon-gradient-blue"></i>
-                                    </span>
-                                    <select class="form-select select2-searchable"
-                                            id="nature"
-                                            name="nature"
-                                            data-placeholder="sélectionnez..."
-                                            required>
-                                        <option value=""></option>
-                                        <option th:each="nature : ${natures}"
-                                                th:value="${nature}"
-                                                th:text="${nature}">
-                                        </option>
 
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="form-text text-muted mt-1">
-                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la nature pour cette demande
-                                </div>
-                            </div>
 <!--                            Date de la demande-->
                             <div class="col-md-6 mb-3">
                                 <label for="dateDemande" class="form-label fw-bold required-field">
