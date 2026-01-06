@@ -123,6 +123,39 @@ public class BonLivraisonController {
                 stockFilles.add(stockFille);
                 this.stockFilleService.insertStockFille(stockFille);
             }
+            // Vérification : au moins une ligne de bon de livraison
+            if (articleCodes.isEmpty()) {
+                redirectAttributes.addFlashAttribute(
+                        "ko",
+                        "Impossible de valider le bon de livraison sans aucune ligne d’article."
+                );
+                return "redirect:/bonlivraison/add";
+            }
+
+            boolean hasValidLine = false;
+
+            for (int i = 0; i < articleCodes.size(); i++) {
+                if (qteRecues.get(i) != null && !qteRecues.get(i).isBlank()) {
+                    try {
+                        double qte = Double.parseDouble(qteRecues.get(i));
+                        if (qte > 0) {
+                            hasValidLine = true;
+                            break;
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+
+            if (!hasValidLine) {
+                redirectAttributes.addFlashAttribute(
+                        "ko",
+                        "Veuillez saisir au moins une ligne avec une quantité reçue valide."
+                );
+                return "redirect:/bonlivraison/add";
+            }
+
+
+
 
             redirectAttributes.addFlashAttribute("ok", "Bon de livraison enregistré avec succès.");
 //            redirecte mankany am page liste rehefa misy page liste
