@@ -32,16 +32,29 @@
                         <thead>
                         <tr>
                             <th><i class="fas fa-hashtag me-2 icon-gradient-light-blue"></i>N° de la demande</th>
-                            <th>Date Demande</th>
-                            <th>Consommateur</th>
-                            <th>Type de demande</th>
+                            <th><i class="far fa-clock me-2 icon-gradient-light-blue"></i>Date Demande</th>
+                            <th><i class="far fa-user me-2 icon-gradient-light-blue"></i>Consommateur</th>
+                            <th><i class="fas fa-tags me-2 icon-gradient-light-blue"></i>Type de demande</th>
+
                             <th>Statut</th>
                             <th><i class="fas fa-cogs me-2 icon-gradient-light-blue"></i> Action</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr th:each="demande : ${demandesMeres}">
-                            <td></td>
+                            <td th:text="${demande.getId()}"></td>
+                            <td th:text="${#temporals.format(demande.getDateDemande(), 'dd/MM/yyyy HH:mm')}"></td>
+                            <td th:text="${demande.getDemandeur().getPrenom()+' '+ demande.getDemandeur().getDepartement().getAcronyme()}"></td>
+                            <td th:text="${demande.natureDemande != null and !#strings.isEmpty(demande.natureDemande) ? demande.natureDemande : '-'}"></td>
+                            <td th:text="${demande.getStatutDemande()}"></td>
+                            <td>
+                                <button type="button"
+                                class="btn btn-sm btn-view-demandeDetails"
+                                data-bs-toggle="modal"
+                                data-bs-target="#demandeDetailsModal">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
                         </tr>
                         </tbody>
                     </table>
@@ -50,6 +63,23 @@
         </div>
     </section>
 </div>
+<div class="modal fade" id="demandeDetailsModal" tabindex="1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bl-document">
+            <!-- EN-TÊTE DOCUMENT -->
+            <div class="bl-header">
+                <div class="bl-company">
+                    <img th:src="@{/img/logo_afg.png}" alt="Logo" height="60">
+                    <!--                    <small>Adresse – Téléphone – Email</small>-->
+                </div>
+                <div class="bl-title">
+                    <h3>DEMANDE DE MATERIEL</h3>
+<!--                    <span>N° <strong id="modalBlId"></strong></span>-->
+                </div>
+            </div>
+        </div>
+    </div>
 
+</div>
 </body>
 </html>
