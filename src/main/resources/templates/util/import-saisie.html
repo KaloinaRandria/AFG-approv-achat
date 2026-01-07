@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Nouvelle demande</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <!-- En-tête avec le même style que la liste -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-plus-circle me-3 icon-gradient-blue"></i> Import de données
+            </h1>
+        </div>
+    </section>
+</div>
+</body>
+</html>

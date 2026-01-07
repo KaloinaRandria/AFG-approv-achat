@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.DialectOverride;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -47,5 +48,17 @@ public class Utilisateur {
         this.setAdresse(adresse);
         this.setContact(contact);
     }
+
+    @PrePersist
+    @PreUpdate
+    private void verifierSuperieur() {
+        if (superieurHierarchique != null && this.id != 0
+                && superieurHierarchique.getId() == this.id) {
+            throw new IllegalStateException(
+                    "Un utilisateur ne peut pas être son propre supérieur hiérarchique"
+            );
+        }
+    }
+
 
 }
