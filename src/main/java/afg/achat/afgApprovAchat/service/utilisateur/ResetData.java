@@ -21,7 +21,8 @@ public class ResetData {
         jdbcTemplate.execute("TRUNCATE TABLE famille");
         jdbcTemplate.execute("TRUNCATE TABLE article_historique");
         jdbcTemplate.execute("TRUNCATE TABLE udm");
-
+        jdbcTemplate.execute("TRUNCATE TABLE stock_fille");
+        jdbcTemplate.execute("TRUNCATE TABLE stock_mere");
 
         jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 1");
 
