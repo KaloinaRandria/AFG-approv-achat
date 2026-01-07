@@ -102,6 +102,35 @@ public class DemandeController {
                 this.demandeFilleService.saveDemandeFille(demandeFille);
             }
 
+            if (articleCodes.isEmpty()) {
+                redirectAttributes.addFlashAttribute(
+                        "ko",
+                        "Impossible de valider la demande sans aucune ligne d’article."
+                );
+                return "redirect:/demande/add";
+            }
+
+            boolean hasValideLine = false;
+            for (int i = 0; i < articleCodes.size(); i++) {
+                if (quantite.get(i) != null && !quantite.get(i).isEmpty()) {
+                    try {
+                        double qte = Double.parseDouble(quantite.get(i));
+                        if (qte > 0) {
+                            hasValideLine = true;
+                            break;
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+
+            if (!hasValideLine) {
+                redirectAttributes.addFlashAttribute(
+                        "ko",
+                        "Veuillez saisir au moins une ligne avec une quantité reçue valide."
+                );
+                return "redirect:/demande/add";
+            }
+
             redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
             return "redirect:/demande/list";
 
