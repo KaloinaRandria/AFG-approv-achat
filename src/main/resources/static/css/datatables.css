@@ -344,9 +344,15 @@ table.dataTable tbody tr:hover {
 
 /* Style pour les badges */
 .badge-entree {
-    background: linear-gradient(45deg, #28a745, #20c997) !important;
+    background: linear-gradient(
+            45deg,
+            #28a745 0%,
+            #28a745 80%,
+            #20c997 100%
+    ) !important;
     color: white !important;
 }
+
 
 .badge-sortie {
     background: linear-gradient(45deg, #dc3545, #e83e8c) !important;
@@ -371,13 +377,23 @@ table.dataTable tbody tr:hover {
 
 /* Vert */
 .btn-gradient-green {
-    background: linear-gradient(45deg, #10b981, #34d399, #06d6a0) !important;
+    background: linear-gradient(
+            45deg,
+            #28a745 0%,
+            #28a745 80%,
+            #20c997 100%
+    )  !important;
     border: none !important;
     color: white !important;
 }
 
 .btn-gradient-green:hover {
-    background: linear-gradient(45deg, #059669, #10b981, #34d399) !important;
+    background: linear-gradient(
+            45deg,
+            #28a745 0%,
+            #28a745 80%,
+            #20c997 100%
+    )  !important;
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
     color: white !important;
@@ -393,7 +409,12 @@ table.dataTable tbody tr:hover {
 }
 
 .btn-outline-gradient-green:hover {
-    background: linear-gradient(45deg, #10b981, #34d399, #06d6a0) !important;
+    background: linear-gradient(
+            45deg,
+            #28a745 0%,
+            #28a745 80%,
+            #20c997 100%
+    )  !important;
     border-color: transparent !important;
     color: white !important;
     transform: translateY(-2px);
