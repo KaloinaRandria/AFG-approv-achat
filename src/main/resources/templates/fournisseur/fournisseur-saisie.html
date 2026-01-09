@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Fournisseur</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+        <!-- En-tête avec le même style que la liste -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-truck-loading me-3"></i>
+                Ajout d'un nouveau fournisseur
+            </h1>
+            <div>
+                <a class="btn btn-gradient-blue me-2" th:href="@{/fournisseur/list}" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+                    <i class="fas fa-clipboard-list me-3"></i> Liste des fournisseurs
+                </a>
+            </div>
+        </div>
+
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold text-gradient-blue">
+                    <i class="fas fa-building me-2 icon-gradient-blue"></i> Formulaire de création
+                </h5>
+                <p class="text-muted mb-0 mt-1">
+                    Remplissez les informations nécessaires pour ajouter un fournisseur
+                </p>
+            </div>
+
+            <div class="card-body">
+                <form method="post"
+                      th:action="@{/fournisseur/save}"
+                      class="needs-validation"
+                      novalidate>
+
+                    <!-- ================= INFORMATIONS GÉNÉRALES ================= -->
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-info-circle me-2 icon-gradient-blue"></i>
+                            Informations générales
+                        </h6>
+
+                        <div class="row">
+                            <!-- Nom -->
+                            <div class="col-md-6 mb-3">
+                                <label for="nom" class="form-label fw-bold required-field">
+                                    Nom du fournisseur
+                                </label>
+                                <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="fas fa-building icon-gradient-blue"></i>
+                            </span>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="nom"
+                                           name="nom"
+                                           placeholder="Ex : ABC Fournitures"
+                                           required>
+                                </div>
+                            </div>
+
+                            <!-- Acronyme -->
+                            <div class="col-md-6 mb-3">
+                                <label for="acronyme" class="form-label fw-bold">
+                                    Acronyme
+                                </label>
+                                <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="fas fa-tag icon-gradient-blue"></i>
+                            </span>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="acronyme"
+                                           name="acronyme"
+                                           placeholder="Ex : ABC">
+                                </div>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="col-md-6 mb-3">
+                                <label for="mail" class="form-label fw-bold required-field">
+                                    Adresse email
+                                </label>
+                                <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="fas fa-envelope icon-gradient-blue"></i>
+                            </span>
+                                    <input type="email"
+                                           class="form-control"
+                                           id="mail"
+                                           name="mail"
+                                           placeholder="contact@fournisseur.com"
+                                           required>
+                                </div>
+                            </div>
+
+                            <!-- Téléphone -->
+                            <div class="col-md-6 mb-3">
+                                <label for="phone" class="form-label fw-bold required-field">
+                                    Téléphone
+                                </label>
+
+                                <div class="row position-relative">
+                                    <input id="phone"
+                                           type="tel"
+                                           class="form-control"
+                                           name="telephone"
+                                           style="padding-left: 4rem; padding-top: 0.25rem;"
+                                           placeholder="+261 34 00 000 00"
+                                           required>
+                                </div>
+
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Numéro de téléphone du fournisseur
+                                </div>
+                            </div>
+
+                            <!-- Description -->
+                            <div class="col-md-12 mb-3">
+                                <label for="description" class="form-label fw-bold">
+                                    Description
+                                </label>
+                                <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="fas fa-align-left icon-gradient-blue"></i>
+                            </span>
+                                    <textarea class="form-control"
+                                              id="description"
+                                              name="description"
+                                              rows="3"
+                                              placeholder="Informations complémentaires sur le fournisseur"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ================= ACTIONS ================= -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="submit" class="btn btn-gradient-green px-4">
+                            <i class="fas fa-save me-2"></i> Enregistrer
+                        </button>
+
+                        <a th:href="@{/fournisseur/list}"
+                           class="btn btn-outline-secondary px-4">
+                            <i class="fas fa-times me-2"></i> Annuler
+                        </a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </section>
+</div>
+<script th:inline="none">
+    /*<![CDATA[*/
+    const iti = window.intlTelInput(input, {
+        initialCountry: "mg",
+        separateDialCode: true,
+        utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@19.2.16/build/js/utils.js" // nécessaire pour les formats
+    });
+
+    /*input.addEventListener("countrychange", updatePlaceholderWithStars);*/
+
+    // Soumission → sauvegarde format international
+    document.getElementById("btn-preview").addEventListener("click", function () {
+        const e164           = iti.getNumber();                                    // +261341234567 → EN BASE
+        const international  = iti.getNumber(intlTelInputUtils.numberFormat.INTERNATIONAL); // +261 34 12 345 67 → affichage joli
+        const national       = iti.getNumber(intlTelInputUtils.numberFormat.NATIONAL);      // 034 12 345 67 → format local
+        const dialCode       = iti.getSelectedCountryData().dialCode;               // 261
+        const isoCode        = iti.getSelectedCountryData().iso2.toUpperCase();    // MG
+        input.value = e164;  // → ton champ contact en base = +261341234567
+    });
+    /*]]>*/
+</script>
+</body>
+</html>

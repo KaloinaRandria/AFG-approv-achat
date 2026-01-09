@@ -73,6 +73,45 @@
                 </div>
             </div>
         </div>
+
+        <!-- Fournisseurs -->
+        <div class="accordion-item bg-transparent border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseFournisseurs"
+                        aria-expanded="false"
+                        aria-controls="collapseFournisseurs"
+                        th:classappend="${currentUri.contains('/fournisseur') ? '' : 'collapsed'}">
+                    <i class="fas fa-box me-3"></i> Fournisseurs
+                </button>
+            </h2>
+            <div id="collapseFournisseurs"
+                 class="accordion-collapse collapse"
+                 aria-labelledby="headingFournisseurs"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/fournisseur') ? 'show' : ''}">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/fournisseur/list}"
+                               th:classappend="${currentUri == '/fournisseur/list' ? 'active' : ''}">
+                                Liste
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
+                               th:href="@{/fournisseur/add}"
+                               th:classappend="${currentUri == '/fournisseur/add' ? 'active' : ''}">
+                                Ajouter un article
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 <!--    Demande de Materiel-->
         <div class="accordion-item bg-transparent border-0">
             <h2 class="accordion-header">
