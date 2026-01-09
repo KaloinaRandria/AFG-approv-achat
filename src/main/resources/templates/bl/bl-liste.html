@@ -147,6 +147,10 @@
 
 <script th:inline="none">
     /*<![CDATA[*/
+    const formatQuantite = new Intl.NumberFormat('fr-FR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    });
     document.addEventListener('DOMContentLoaded', () => {
         const table = $('#bonLivraisonTable').DataTable({
             language: {
@@ -244,10 +248,16 @@
                     if (data.articles && data.articles.length > 0) {
                         let rows = '';
                         data.articles.forEach(a => {
+                            const qte = Number(
+                                String(a.quantite)
+                                    .replace(/\s/g, '')
+                                    .replace(',', '.')
+                            );
+
                             rows += `<tr>
-                                    <td>${a.designation}</td>
-                                    <td class="text-end">${a.quantite}</td>
-                                </tr>`;
+        <td>${a.designation}</td>
+        <td class="text-end">${formatQuantite.format(qte)}</td>
+    </tr>`;
                         });
                         $('#modalBlArticles').html(rows);
                     } else {
