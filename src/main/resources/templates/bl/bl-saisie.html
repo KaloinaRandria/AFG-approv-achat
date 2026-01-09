@@ -156,7 +156,7 @@
                                     <th style="width: 30%">Article</th>
                                     <th style="width: 15%">Qté demandée</th>
                                     <th style="width: 15%">Qté reçue</th>
-                                    <th style="width: 25%">Prix unitaire</th>
+                                    <th style="width: 25%">Prix unitaire (<span id="deviseLabel">---</span>)</th>
                                     <th style="width: 5%" class="text-center">Action</th>
                                 </tr>
                                 </thead>
@@ -177,32 +177,41 @@
                                     </td>
 
 
-
                                     <td>
-                                        <input type="number"
-                                               class="form-control"
-                                               name="quantiteDemande[]"
-                                               min="0"
-                                               step="0.01"
+                                        <input type="text"
+                                               class="form-control quantite-demande-input text-end"
+                                               name="quantiteDemandeAffiche[]"
+                                               inputmode="decimal"
+                                               autocomplete="off"
                                                required>
+
+                                        <input type="hidden"
+                                               name="quantiteDemande[]">
                                     </td>
 
                                     <td>
-                                        <input type="number"
-                                               class="form-control"
-                                               name="quantiteRecu[]"
-                                               min="0"
-                                               step="0.01"
+                                        <input type="text"
+                                               class="form-control quantite-recu-input text-end"
+                                               name="quantiteRecuAffiche[]"
+                                               inputmode="decimal"
+                                               autocomplete="off"
                                                required>
+
+                                        <input type="hidden"
+                                        name="quantiteRecu[]">
                                     </td>
 
                                     <td>
-                                        <input type="number"
-                                               class="form-control"
-                                               name="prixUnitaire[]"
-                                               min="0"
-                                               step="0.01"
+                                        <input type="text"
+                                               class="form-control prix-input text-end"
+                                               name="prixUnitaireAffiche[]"
+                                               inputmode="decimal"
+                                               autocomplete="off"
                                                required>
+
+                                        <input type="hidden"
+                                               name="prixUnitaire[]">
+
                                     </td>
 
                                     <td class="text-center">
@@ -243,6 +252,11 @@
 <script th:inline="none">
     /*<![CDATA[*/
     document.addEventListener("DOMContentLoaded", function () {
+        updatePrixUnitaireState();
+
+        const deviseSelect = document.getElementById("devises");
+
+        deviseSelect.addEventListener("change", updatePrixUnitaireState);
 
         const blFilleBody = document.getElementById("blFilleBody");
         const addBtn = document.getElementById("addBlFille");
@@ -264,31 +278,41 @@
             </td>
 
             <td>
-                <input type="number"
-                       class="form-control"
-                       name="quantiteDemande[]"
-                       min="0"
-                       step="0.01"
-                       required>
-            </td>
+                                        <input type="text"
+                                               class="form-control quantite-demande-input text-end"
+                                               name="quantiteDemandeAffiche[]"
+                                               inputmode="decimal"
+                                               autocomplete="off"
+                                               required>
 
-            <td>
-                <input type="number"
-                       class="form-control"
-                       name="quantiteRecu[]"
-                       min="0"
-                       step="0.01"
-                       required>
-            </td>
+                                        <input type="hidden"
+                                               name="quantiteDemande[]">
+                                    </td>
 
-            <td>
-                <input type="number"
-                       class="form-control"
-                       name="prixUnitaire[]"
-                       min="0"
-                       step="0.01"
-                       required>
-            </td>
+                                    <td>
+                                        <input type="text"
+                                               class="form-control quantite-recu-input text-end"
+                                               name="quantiteRecuAffiche[]"
+                                               inputmode="decimal"
+                                               autocomplete="off"
+                                               required>
+
+                                        <input type="hidden"
+                                        name="quantiteRecu[]">
+                                    </td>
+
+                                    <td>
+                                        <input type="text"
+                                               class="form-control prix-input text-end"
+                                               name="prixUnitaireAffiche[]"
+                                               inputmode="decimal"
+                                               autocomplete="off"
+                                               required>
+
+                                        <input type="hidden"
+                                               name="prixUnitaire[]">
+
+                                    </td>
 
             <td class="text-center">
                 <button type="button"
@@ -299,6 +323,7 @@
         `;
 
             blFilleBody.appendChild(newRow);
+            updatePrixUnitaireState();
         });
 
         // Suppression ligne
@@ -357,6 +382,84 @@
             document.querySelectorAll(".autocomplete-list")
                 .forEach(list => list.innerHTML = "");
         }
+    });
+
+    document.addEventListener("input", function (e) {
+        if (!e.target.classList.contains("prix-input")) return;
+
+        let value = e.target.value;
+
+        // Supprimer tout sauf chiffres et virgule
+        value = value.replace(/[^\d,]/g, "");
+
+        // Remplacer virgule par point pour calcul
+        const numericValue = value.replace(/\s/g, "").replace(",", ".");
+
+        if (!numericValue) {
+            e.target.value = "";
+            e.target.nextElementSibling.value = "";
+            return;
+        }
+
+        // Formatter avec séparateur de milliers (FR)
+        const parts = numericValue.split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
+        e.target.value = parts.join(",");
+
+        // Stocker la vraie valeur (sans séparateur)
+        e.target.nextElementSibling.value = numericValue;
+    });
+
+
+    function updatePrixUnitaireState() {
+        const deviseSelect = document.getElementById("devises");
+        const deviseLabel = document.getElementById("deviseLabel");
+        const selectedText = deviseSelect.options[deviseSelect.selectedIndex]?.text || "---";
+
+        deviseLabel.textContent = selectedText;
+
+        document.querySelectorAll('.prix-input').forEach(input => {
+            const hasDevise = !!deviseSelect.value;
+            input.disabled = !hasDevise;
+
+            if (!hasDevise) {
+                input.value = "";
+            }
+        });
+
+    }
+
+    function formatQuantiteInput(input) {
+        let value = input.value;
+
+        // Autoriser chiffres + virgule
+        value = value.replace(/[^\d,]/g, "");
+
+        const numericValue = value.replace(/\s/g, "").replace(",", ".");
+
+        if (!numericValue) {
+            input.value = "";
+            input.nextElementSibling.value = "";
+            return;
+        }
+
+        const parts = numericValue.split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
+        input.value = parts.join(",");
+        input.nextElementSibling.value = numericValue;
+    }
+
+    document.addEventListener("input", function (e) {
+
+        if (
+            e.target.classList.contains("quantite-demande-input") ||
+            e.target.classList.contains("quantite-recu-input")
+        ) {
+            formatQuantiteInput(e.target);
+        }
+
     });
 
     /*]]>*/

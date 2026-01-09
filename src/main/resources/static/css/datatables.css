@@ -960,3 +960,14 @@ table.dataTable tbody tr:hover {
         display: none;
     }
 }
+
+input:disabled {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+}
+
+.quantite-demande-input,
+.quantite-recu-input {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
