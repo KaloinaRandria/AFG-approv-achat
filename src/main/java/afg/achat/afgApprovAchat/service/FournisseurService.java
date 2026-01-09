@@ -21,4 +21,10 @@ public class FournisseurService {
         return fournisseurRepo.findById(id);
     }
 
+    public void saveFournisseurIfNotExists(Fournisseur fournisseur) {
+        if (!fournisseurRepo.existsFournisseurByNomIgnoreCase(fournisseur.getNom())) {
+            fournisseurRepo.save(fournisseur);
+        }
+    }
+
 }

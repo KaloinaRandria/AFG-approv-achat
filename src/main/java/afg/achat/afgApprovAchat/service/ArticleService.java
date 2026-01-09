@@ -50,6 +50,10 @@ public class ArticleService {
         return article;
     }
 
+    public Optional<Article> getArticleByDesignation(String designation) {
+        return articleRepo.findArticleByDesignation(designation);
+    }
+
     @Transactional
     public Article modifierArticle(String codeArticle, String designation, String seuilMin,
                                    String idUdm, String idFamille, String idCentreBudgetaire) {

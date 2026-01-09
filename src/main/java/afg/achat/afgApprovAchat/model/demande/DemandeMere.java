@@ -28,8 +28,11 @@ public class DemandeMere {
     LocalDateTime dateDemande;
     @Column(name = "date_sortie")
     LocalDateTime dateSortie;
-    @Column(name = "est_valider")
-    Boolean estValider;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "statut_demande", nullable = false)
+    StatutDemande statutDemande = StatutDemande.CREE;
+
 
     @Enumerated(EnumType.STRING)
     @Column(name = "nature_demande")
@@ -37,9 +40,19 @@ public class DemandeMere {
 
 
     public enum NatureDemande {
-        OPEX,
-        CAPEX
+        OPEX, // Remplacement, Maintenance
+        CAPEX//Nouvel Equipement
     }
+
+    public enum StatutDemande {
+        CREE,        // créée mais non soumise
+        SOUMISE,          // envoyée pour validation
+        EN_VALIDATION,    // en cours (optionnel)
+        VALIDEE,          // approuvée
+        REJETEE,          // refusée
+        ANNULEE           // annulée par le demandeur
+    }
+
 
 
     public void setDateDemande(String dateDemande) {
@@ -48,10 +61,9 @@ public class DemandeMere {
     public void setDateSortie(String dateSortie) {
         this.dateSortie = LocalDateTime.parse(dateSortie);
     }
-    public DemandeMere(Adresse adresse, String dateDemande, String dateSortie, Boolean estValider) {
+    public DemandeMere(Adresse adresse, String dateDemande, String dateSortie) {
         this.setAdresse(adresse);
         this.setDateDemande(dateDemande);
         this.setDateSortie(dateSortie);
-        this.setEstValider(estValider);
     }
 }

@@ -20,6 +20,7 @@ public class Fournisseur {
     String mail;
     String nom;
     String acronyme;
+    String description;
 
     public Fournisseur(String contact, String mail, String nom, String acronyme) {
         this.setContact(contact);

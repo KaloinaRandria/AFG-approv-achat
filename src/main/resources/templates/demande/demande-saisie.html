@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Nouvelle demande</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+        <!-- En-tête avec le même style que la liste -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-plus-circle me-3 icon-gradient-blue"></i> Nouvelle demande
+            </h1>
+            <div>
+                <a class="btn btn-gradient-blue me-2" th:href="@{/demande/list}">
+                    <i class="fas fa-list-ul me-2"></i> Liste des demandes
+                </a>
+            </div>
+        </div>
+
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold text-gradient-blue">
+                    <i class="fas fa-file-alt me-2 icon-gradient-blue"></i> Formulaire de création
+                </h5>
+                <p class="text-muted mb-0 mt-1">Remplissez tous les champs obligatoires pour faire une demande</p>
+            </div>
+
+            <div class="card-body">
+                <form method="post" id="demandeForm" th:action="@{/demande/save}" class="needs-validation" novalidate>
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations générales
+                        </h6>
+
+                        <div class="row">
+
+<!--                            Date de la demande-->
+                            <div class="col-md-6 mb-3">
+                                <label for="dateDemande" class="form-label fw-bold required-field">
+                                    Date de la demande
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-calendar-alt icon-gradient-blue"></i>
+                                    </span>
+                                    <input type="datetime-local"
+                                           class="form-control"
+                                           id="dateDemande"
+                                           name="dateDemande"
+                                           required>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la date de demande
+                                </div>
+                            </div>
+<!--                            Adresse -->
+                            <div class="col-md-6 mb-3">
+                                <label for="adresse" class="form-label fw-bold required-field">
+                                    Adresse
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-map-marker-alt icon-gradient-blue"></i>
+                                    </span>
+                                    <select class="form-select select2-searchable"
+                                            id="adresse"
+                                            name="adresse"
+                                            data-placeholder="Recherchez ou sélectionnez un adresse..."
+                                            required>
+                                        <option value=""></option>
+                                        <option th:each="adresse : ${adresses}"
+                                                th:value="${adresse.getId()}"
+                                                th:text="${adresse.getAdresse()}">
+                                        </option>
+
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez l'adresse du demandeur
+                                </div>
+                            </div>
+
+                            <!--                            Service-->
+                            <div class="col-md-6 mb-3">
+                                <label for="departement" class="form-label fw-bold required-field">
+                                    Departement / Service
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-sitemap icon-gradient-blue"></i>
+                                    </span>
+                                    <select class="form-select select2-
+                                    searchable"
+                                            id="departement"
+                                            name="departement"
+                                            data-placeholder="Recherchez ou sélectionnez un adresse..."
+                                            required>
+                                        <option value=""></option>
+                                        <option th:each="departement : ${departements}"
+                                                th:value="${departement.getId()}"
+                                                th:text="${departement.getNom()}">
+                                        </option>
+
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez l'adresse du demandeur
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-list me-2 icon-gradient-blue"></i> Détails de la demande
+                        </h6>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-light">
+                                <tr>
+                                    <th style="width: 45%">Article</th>
+                                    <th style="width: 45%">Quantité</th>
+                                    <th style="width: 10%" class="text-center">Action</th>
+                                </tr>
+                                </thead>
+                                <tbody id="demandeFilleBody">
+                                    <tr>
+                                        <td style="position: relative;">
+                                            <input type="text"
+                                                   class="form-control article-input"
+                                                   name="articles[]"
+                                                   placeholder="Code ou désignation"
+                                                   autocomplete="off"
+                                                   required>
+                                            <input type="hidden"
+                                                   name="articleCodes[]">
+                                            <div class="autocomplete-list list-group position-absolute w-100"></div>
+                                        </td>
+
+                                        <td>
+                                            <input type="text"
+                                                   class="form-control quantite-input text-end"
+                                                   name="quantiteAffiche[]"
+                                                   inputmode="decimal"
+                                                   autocomplete="off"
+                                                   required>
+
+                                            <input type="hidden"
+                                                   name="quantite[]">
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-outline-danger btn-sm">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="button"
+                                id="addDemandeFille"
+                                class="btn btn-gradient-blue">
+                            <i class="fas fa-plus me-1"></i> Ajouter un article
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+    <!-- Barre d’action globale -->
+    <div class="d-flex justify-content-end gap-2 mt-4 px-4">
+        <button type="submit"
+                form="demandeForm"
+                class="btn btn-gradient-green px-4">
+            <i class="fas fa-save me-2"></i> Soumettre la demande
+        </button>
+
+        <a href="/demande/liste"
+           class="btn btn-outline-secondary px-4">
+            <i class="fas fa-times me-2"></i> Annuler
+        </a>
+    </div>
+</div>
+<script th:inline="none">
+    /*<![CDATA[*/
+    document.addEventListener("DOMContentLoaded", function() {
+        const demandeFilleBody = document.getElementById("demandeFilleBody");
+        const addBtn = document.getElementById("addDemandeFille");
+
+        addBtn.addEventListener("click", () => {
+            const newRow = document.createElement("tr");
+            newRow.innerHTML = `
+            <td style="position: relative;">
+                                            <input type="text"
+                                                   class="form-control article-input"
+                                                   name="articles[]"
+                                                   placeholder="Code ou désignation"
+                                                   autocomplete="off"
+                                                   required>
+                                            <input type="hidden"
+                                                   name="articleCodes[]">
+                                            <div class="autocomplete-list list-group position-absolute w-100"></div>
+                                        </td>
+
+                                        <td>
+                                            <input type="text"
+                                                   class="form-control quantite-input text-end"
+                                                   name="quantiteAffiche[]"
+                                                   inputmode="decimal"
+                                                   autocomplete="off"
+                                                   required>
+
+                                            <input type="hidden"
+                                                   name="quantite[]">
+                                        </td>
+                                                    <td class="text-center">
+                <button type="button"
+                        class="btn btn-outline-danger btn-sm btn-remove">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+            demandeFilleBody.appendChild(newRow);
+        });
+
+        demandeFilleBody.addEventListener("click", (e) => {
+            if (e.target.closest(".btn-remove")) {
+                const rows = demandeFilleBody.querySelectorAll("tr");
+                if (rows.length >1) {
+                    e.target.closest("tr").remove();
+                }
+            }
+        });
+    });
+
+    document.addEventListener("input", function (e) {
+        if (!e.target.classList.contains("article-input")) return;
+
+        const input = e.target;
+        const list = input.closest("td").querySelector(".autocomplete-list");
+        const keyword = input.value.trim();
+
+        list.innerHTML = "";
+        if (keyword.length < 2) return;
+
+        // Récupérer tous les articles déjà sélectionnés
+        const selectedArticles = Array.from(document.querySelectorAll('input[name="articleCodes[]"]'))
+            .map(i => i.value)
+            .filter(v => v); // on ignore les vides
+
+        fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`)
+            .then(res => res.json())
+            .then(data => {
+                // Filtrer les articles déjà sélectionnés
+                const filteredData = data.filter(article => !selectedArticles.includes(article.code));
+
+                filteredData.forEach(article => {
+                    const item = document.createElement("button");
+                    item.type = "button";
+                    item.className = "list-group-item list-group-item-action";
+                    item.textContent = `${article.code} - ${article.designation}`;
+
+                    item.onclick = () => {
+                        input.value = `${article.code} - ${article.designation}`;
+                        input.closest("td").querySelector('input[type="hidden"]').value = article.code;
+                        list.innerHTML = "";
+                    };
+
+                    list.appendChild(item);
+                });
+            });
+    });
+
+    function formatQuantiteInput(input) {
+        let value = input.value;
+
+        // Autoriser chiffres + virgule
+        value = value.replace(/[^\d,]/g, "");
+
+        const numericValue = value.replace(/\s/g, "").replace(",", ".");
+
+        if (!numericValue) {
+            input.value = "";
+            input.nextElementSibling.value = "";
+            return;
+        }
+
+        const parts = numericValue.split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
+        input.value = parts.join(",");
+        input.nextElementSibling.value = numericValue;
+    }
+
+    document.addEventListener("input", function (e) {
+
+        if (
+            e.target.classList.contains("quantite-input")
+        ) {
+            formatQuantiteInput(e.target);
+        }
+
+    });
+    /*]]>*/
+</script>
+</body>
+</html>

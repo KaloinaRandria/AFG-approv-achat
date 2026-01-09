@@ -1,10 +1,12 @@
 package afg.achat.afgApprovAchat.model.utilisateur;
 
+import afg.achat.afgApprovAchat.model.util.Departement;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.DialectOverride;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -34,6 +36,8 @@ public class Utilisateur {
     String contact;
     @ManyToOne @JoinColumn(name = "id_pdp", referencedColumnName = "id_pdp", nullable = true)
     Pdp pdp;
+    @ManyToOne @JoinColumn(name = "id_departement", referencedColumnName = "id_departement")
+    Departement departement;
 
     public Utilisateur(String nom, String prenom, String mail, Set<Role> roles, Utilisateur superieurHierarchique, String adresse , String contact) {
         this.setNom(nom);
@@ -44,5 +48,17 @@ public class Utilisateur {
         this.setAdresse(adresse);
         this.setContact(contact);
     }
+
+    @PrePersist
+    @PreUpdate
+    private void verifierSuperieur() {
+        if (superieurHierarchique != null && this.id != 0
+                && superieurHierarchique.getId() == this.id) {
+            throw new IllegalStateException(
+                    "Un utilisateur ne peut pas être son propre supérieur hiérarchique"
+            );
+        }
+    }
+
 
 }
