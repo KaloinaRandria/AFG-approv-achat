@@ -7,6 +7,8 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+
+
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
@@ -114,7 +116,6 @@
                                            type="tel"
                                            class="form-control"
                                            name="telephone"
-                                           style="padding-left: 4rem; padding-top: 0.25rem;"
                                            required>
                                 </div>
 
@@ -167,14 +168,34 @@
         const input = document.getElementById("phone");
 
         const iti = window.intlTelInput(input, {
-            initialCountry: "mg",
-            separateDialCode: true,
-            nationalMode: false
+            initialCountry: "mg",           // Madagascar par défaut
+            separateDialCode: true,         // affiche le drapeau séparé
+            nationalMode: true,             // formatage du numéro national avec espaces
+            formatOnDisplay: true,          // formate le numéro pendant la saisie
+            autoPlaceholder: "polite",
+            utilsScript: "https://unpkg.com/intl-tel-input@17.0.19/build/js/utils.js"
         });
 
-        // Avant soumission du formulaire
-        input.closest("form").addEventListener("submit", function () {
-            input.value = iti.getNumber(); // +261341234567
+        // Avant soumission : formater et envoyer le numéro correctement
+        input.closest("form").addEventListener("submit", function (e) {
+            // Numéro en E.164 → pour la base
+            const e164 = iti.getNumber();
+
+            // Optionnel : formats pour affichage ou traitement
+            const international = iti.getNumber(intlTelInputUtils.numberFormat.INTERNATIONAL); // +261 34 12 345 67
+            const national      = iti.getNumber(intlTelInputUtils.numberFormat.NATIONAL);      // 034 12 345 67
+            const dialCode      = iti.getSelectedCountryData().dialCode;                        // 261
+            const isoCode       = iti.getSelectedCountryData().iso2.toUpperCase();             // MG
+
+            // Stockage en base → E.164
+            input.value = e164;
+
+            // Si tu veux, tu peux logger pour debug :
+            console.log("E.164:", e164);
+            console.log("International:", international);
+            console.log("National:", national);
+            console.log("Dial code:", dialCode);
+            console.log("ISO code:", isoCode);
         });
 
     });
