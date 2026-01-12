@@ -380,8 +380,7 @@ table.dataTable tbody tr:hover {
     background: linear-gradient(
             45deg,
             #28a745 0%,
-            #28a745 80%,
-            #20c997 100%
+            #28a745 80%
     )  !important;
     border: none !important;
     color: white !important;
@@ -391,8 +390,7 @@ table.dataTable tbody tr:hover {
     background: linear-gradient(
             45deg,
             #28a745 0%,
-            #28a745 80%,
-            #20c997 100%
+            #28a745 80%
     )  !important;
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
@@ -412,8 +410,7 @@ table.dataTable tbody tr:hover {
     background: linear-gradient(
             45deg,
             #28a745 0%,
-            #28a745 80%,
-            #20c997 100%
+            #28a745 80%
     )  !important;
     border-color: transparent !important;
     color: white !important;
