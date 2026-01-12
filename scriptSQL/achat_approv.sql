@@ -190,3 +190,21 @@ ORDER BY a.id_article;
 
 select * from stock_fille;
 select * from v_etat_stock;
+
+INSERT INTO departement (nom, acronyme) VALUES
+                                            ('Direction Générale', 'DG'),
+                                            ('Finance et Comptabilité', 'FIN'),
+                                            ('Ressources Humaines', 'RH'),
+                                            ('Achats et Approvisionnement', 'AA'),
+                                            ('Informatique', 'IT'),
+                                            ('Systèmes d’Information', 'SI'),
+                                            ('Audit Interne', 'AUDIT'),
+                                            ('Contrôle de Gestion', 'CG'),
+                                            ('Marketing', 'MKT'),
+                                            ('Commercial', 'COM'),
+                                            ('Logistique', 'LOG'),
+                                            ('Juridique', 'JUR'),
+                                            ('Communication', 'COMMU'),
+                                            ('Maintenance', 'MAIN'),
+                                            ('Production', 'PROD');
+

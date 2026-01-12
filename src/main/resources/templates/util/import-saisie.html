@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Nouvelle demande</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <!-- En-tête avec le même style que la liste -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-file-import me-3 icon-gradient-blue"></i>
+                Import de données
+            </h1>
+        </div>
+        <div class="card shadow-lg border-0">
+
+                <div class="card-body">
+                    <form th:action="@{/import/import-data}"
+                          method="post"
+                          enctype="multipart/form-data"
+                          class="card shadow-sm border-0 p-4">
+
+                        <div class="mb-3">
+                            <label for="file" class="form-label fw-semibold">
+                                <i class="fas fa-file-upload me-2"></i>
+                                Fichier à importer
+                            </label>
+
+                            <input type="file"
+                                   class="form-control"
+                                   id="file"
+                                   name="file"
+                                   accept=".csv,.xls,.xlsx"
+                                   required>
+                            <div class="form-text">
+                                Formats acceptés : CSV
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-gradient-blue">
+                                <i class="fas fa-cloud-upload-alt me-2"></i>
+                                Importer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+        </div>
+        <div class="d-flex justify-content-end gap-2 mt-4 px-4">
+            <a th:href="@{/import/reset}"
+               class="btn btn-danger"
+               onclick="return confirm('Voulez-vous vraiment réinitialiser les données ?');">
+                <i class="fas fa-trash-alt me-2"></i> Réinitialiser les données
+            </a>
+        </div>
+
+    </section>
+</div>
+</body>
+</html>

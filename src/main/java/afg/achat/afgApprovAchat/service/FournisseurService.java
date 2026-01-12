@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.service;
 
+import afg.achat.afgApprovAchat.exception.FournisseurAlreadyExistsException;
 import afg.achat.afgApprovAchat.model.Fournisseur;
 import afg.achat.afgApprovAchat.repository.FournisseurRepo;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
@@ -20,5 +21,15 @@ public class FournisseurService {
     public Optional<Fournisseur> getFournisseurById(int id) {
         return fournisseurRepo.findById(id);
     }
+
+    public void saveFournisseurIfNotExists(Fournisseur fournisseur) {
+
+        if (fournisseurRepo.existsFournisseurByNomIgnoreCase(fournisseur.getNom())) {
+            throw new FournisseurAlreadyExistsException(fournisseur.getNom());
+        }
+
+        fournisseurRepo.save(fournisseur);
+    }
+
 
 }
