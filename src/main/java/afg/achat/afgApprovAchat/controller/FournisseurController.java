@@ -64,7 +64,15 @@ public class FournisseurController {
         }
 
         // Redirection (PRG pattern)
-        return "redirect:/fournisseur/saisie";
+        return "redirect:/fournisseur/add";
+    }
+
+    @GetMapping("/list")
+    public String getListFournisseur(Model model , HttpServletRequest request) {
+        model.addAttribute("currentUri", request.getRequestURI());
+        Fournisseur[] fournisseurs = fournisseurService.getAllFournisseurs();
+        model.addAttribute("fournisseurs", fournisseurs);
+        return "fournisseur/fournisseur-liste";
     }
 
 }
