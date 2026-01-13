@@ -38,6 +38,8 @@ public class DemandeMere {
     @Column(name = "nature_demande")
     NatureDemande natureDemande;
 
+    @Column(name = "description")
+    String description;
 
     public enum NatureDemande {
         OPEX, // Remplacement, Maintenance

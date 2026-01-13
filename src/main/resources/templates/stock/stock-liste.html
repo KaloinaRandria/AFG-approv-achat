@@ -79,7 +79,7 @@
                                 th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(e.stockDisponible)}">
                             </td>
                             <td class="text-end fw-bold text-stock"
-                                th:text="${e.udm}">
+                                th:text="${e.desc_udm +' ('+ e.udm + ')'}">
                             </td>
 
                             <td class="text-center">
