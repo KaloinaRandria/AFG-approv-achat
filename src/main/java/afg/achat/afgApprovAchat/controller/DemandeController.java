@@ -57,6 +57,7 @@ public class DemandeController {
     public String insertDemande(@RequestParam(name = "dateDemande") String dateDemande,
                                 @RequestParam(name = "adresse") String adresse,
                                 @RequestParam(name = "departement") String departement,
+                                @RequestParam(name = "description") String description,
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
                                 @RequestParam(name = "quantite[]") List<String> quantite,
                                 RedirectAttributes redirectAttributes) {
@@ -86,6 +87,7 @@ public class DemandeController {
             demandeMere.setDateDemande(dateDemande);
             demandeMere.setAdresse(adresse1);
             demandeMere.setDemandeur(utilisateur);
+            demandeMere.setDescription(description);
 
             this.demandeMereService.saveDemandeMere(demandeMere);
 
