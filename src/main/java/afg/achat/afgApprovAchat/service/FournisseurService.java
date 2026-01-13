@@ -14,13 +14,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
 public class FournisseurService {
     @Autowired
     FournisseurRepo fournisseurRepo;
-
+    @Autowired
     FournisseurHistoriqueService fournisseurHistoriqueService;
 
     public Fournisseur[] getAllFournisseurs() {
@@ -40,6 +41,16 @@ public class FournisseurService {
         fournisseurRepo.save(fournisseur);
     }
 
+    private String norm(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private boolean changed(String oldVal, String newVal) {
+        // Compare en gérant null
+        return !Objects.equals(oldVal, newVal);
+    }
+
+
     @Transactional
     public Fournisseur modifierFournisseur(int id,
                                            String nom,
@@ -48,11 +59,11 @@ public class FournisseurService {
                                            String contact,
                                            String description) {
 
-        // 1) Récupérer le fournisseur existant
+        // 1) Récupération du fournisseur existant
         Fournisseur fournisseur = this.getFournisseurById(id)
                 .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé"));
 
-        // 2) Récupérer l'utilisateur courant
+        // 2) Utilisateur courant
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String utilisateur = "Admin";
         if (principal instanceof Utilisateur user) {
@@ -61,91 +72,90 @@ public class FournisseurService {
 
         List<FournisseurHistorique> historiques = new ArrayList<>();
 
-        // Helper local pour éviter NPE sur equals
-        java.util.function.BiPredicate<String, String> diff = (oldVal, newVal) -> {
-            if (newVal == null) return false; // si tu veux autoriser la mise à null, change cette logique
-            if (oldVal == null) return !newVal.isEmpty();
-            return !newVal.equals(oldVal);
-        };
+        // 3) Normalisation des nouvelles valeurs
+        String newNom         = norm(nom);
+        String newAcronyme    = norm(acronyme);
+        String newMail        = norm(mail);
+        String newContact     = norm(contact);
+        String newDescription = norm(description);
 
-        // 3) Vérifier et mettre à jour chaque champ + historique
+        // 4) Comparaison + historique + mise à jour
 
         // Nom
-        if (diff.test(fournisseur.getNom(), nom)) {
+        if (newNom != null && changed(fournisseur.getNom(), newNom)) {
             historiques.add(new FournisseurHistorique(
                     fournisseur,
                     "Nom",
                     fournisseur.getNom(),
-                    nom,
+                    newNom,
                     utilisateur,
-                    String.valueOf(fournisseur.getId()) // ou fournisseur.getCode() si tu as un code
+                    String.valueOf(fournisseur.getId())
             ));
-            fournisseur.setNom(nom);
+            fournisseur.setNom(newNom);
         }
 
         // Acronyme
-        if (diff.test(fournisseur.getAcronyme(), acronyme)) {
+        if (newAcronyme != null && changed(fournisseur.getAcronyme(), newAcronyme)) {
             historiques.add(new FournisseurHistorique(
                     fournisseur,
                     "Acronyme",
                     fournisseur.getAcronyme(),
-                    acronyme,
+                    newAcronyme,
                     utilisateur,
                     String.valueOf(fournisseur.getId())
             ));
-            fournisseur.setAcronyme(acronyme);
+            fournisseur.setAcronyme(newAcronyme);
         }
 
         // Mail
-        if (diff.test(fournisseur.getMail(), mail)) {
+        if (newMail != null && changed(fournisseur.getMail(), newMail)) {
             historiques.add(new FournisseurHistorique(
                     fournisseur,
                     "Mail",
                     fournisseur.getMail(),
-                    mail,
+                    newMail,
                     utilisateur,
                     String.valueOf(fournisseur.getId())
             ));
-            fournisseur.setMail(mail);
+            fournisseur.setMail(newMail);
         }
 
-        // Contact (téléphone)
-        if (diff.test(fournisseur.getContact(), contact)) {
+        // Contact
+        if (newContact != null && changed(fournisseur.getContact(), newContact)) {
             historiques.add(new FournisseurHistorique(
                     fournisseur,
                     "Contact",
                     fournisseur.getContact(),
-                    contact,
+                    newContact,
                     utilisateur,
                     String.valueOf(fournisseur.getId())
             ));
-            fournisseur.setContact(contact);
+            fournisseur.setContact(newContact);
         }
 
-        // Description
-        if (diff.test(fournisseur.getDescription(), description)) {
+        // Description (peut être null)
+        if (changed(fournisseur.getDescription(), newDescription)) {
             historiques.add(new FournisseurHistorique(
                     fournisseur,
                     "Description",
                     fournisseur.getDescription(),
-                    description,
+                    newDescription,
                     utilisateur,
                     String.valueOf(fournisseur.getId())
             ));
-            fournisseur.setDescription(description);
+            fournisseur.setDescription(newDescription);
         }
 
-        // 4) Sauvegarde seulement si modifications
-        Fournisseur fournisseurModifie = fournisseur;
+        // 5) Sauvegarde uniquement s'il y a des modifications
         if (!historiques.isEmpty()) {
-            fournisseurModifie = fournisseurRepo.save(fournisseur);
-
+            fournisseur = fournisseurRepo.save(fournisseur);
             for (FournisseurHistorique h : historiques) {
                 fournisseurHistoriqueService.saveFournisseurHistorique(h);
             }
         }
 
-        return fournisseurModifie;
+        return fournisseur;
     }
+
 
 }

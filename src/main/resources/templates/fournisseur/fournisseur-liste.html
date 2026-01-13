@@ -82,11 +82,108 @@
         </div>
     </section>
 </div>
+<!-- Modal pour la modification de fournisseur -->
+<div class="modal fade" id="modifierFournisseurModal" tabindex="-1"
+     aria-labelledby="modifierFournisseurModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title" id="modifierFournisseurModalLabel">
+                    <i class="fas fa-edit me-2 icon-gradient-blue"></i>Modifier le fournisseur
+                </h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
 
+            <form th:action="@{/fournisseur/modifier}" method="post" id="fournisseurForm">
+                <div class="modal-body">
+                    <!-- ID -->
+                    <input type="hidden" id="modalFournisseurId" name="id">
+
+                    <!-- Nom -->
+                    <div class="mb-3">
+                        <label for="modalNom" class="form-label">
+                            <i class="fas fa-building me-2 icon-gradient-blue"></i>Nom *
+                        </label>
+                        <input type="text" class="form-control" id="modalNom" name="nom" required>
+                    </div>
+
+                    <!-- Acronyme -->
+                    <div class="mb-3">
+                        <label for="modalAcronyme" class="form-label">
+                            <i class="fas fa-signature me-2 icon-gradient-blue"></i>Acronyme *
+                        </label>
+                        <input type="text" class="form-control" id="modalAcronyme" name="acronyme" required>
+                    </div>
+
+                    <!-- Mail -->
+                    <div class="mb-3">
+                        <label for="modalMail" class="form-label">
+                            <i class="fas fa-envelope me-2 icon-gradient-blue"></i>Mail *
+                        </label>
+                        <input type="email" class="form-control" id="modalMail" name="mail" required>
+                    </div>
+
+                    <!-- Téléphone -->
+                    <div class="mb-3">
+                        <label for="modalTelephone" class="form-label">
+                            <i class="fas fa-phone-alt me-2 icon-gradient-blue"></i>Téléphone *
+                        </label>
+                        <input type="text" class="form-control" id="modalTelephone" name="telephone" required>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="modalDescription" class="form-label">
+                            <i class="fas fa-align-left me-2 icon-gradient-blue"></i>Description
+                        </label>
+                        <textarea class="form-control" id="modalDescription" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </button>
+                    <button type="submit" class="btn btn-gradient-blue">
+                        <i class="fas fa-save me-1"></i>Modifier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <script th:inline="none">
     /*<![CDATA[*/
         document.addEventListener('DOMContentLoaded', function (){
+
+            // Quand on ouvre le modal via le bouton "modifier"
+            document.querySelectorAll('[data-bs-target="#modifierFournisseurModal"]').forEach(btn => {
+                btn.addEventListener('click', function () {
+
+                    const id          = this.getAttribute('data-id');
+                    const nom         = this.getAttribute('data-nom');
+                    const mail        = this.getAttribute('data-mail');
+                    const contact     = this.getAttribute('data-contact');
+                    const description = this.getAttribute('data-description');
+
+                    // Acronyme : ton bouton ne l'envoie pas encore => on le récupère depuis l'affichage "Nom (ACR)"
+                    // (Sinon, ajoute th:data-acronyme="${fr.getAcronyme()}" et prends-le directement)
+                    const nomAffiche = nom || "";
+                    const match = nomAffiche.match(/\(([^)]+)\)\s*$/);
+                    const acronyme = match ? match[1] : "";
+
+                    document.getElementById('modalFournisseurId').value = id || "";
+                    document.getElementById('modalNom').value = nomAffiche.replace(/\s*\([^)]+\)\s*$/, '').trim();
+                    document.getElementById('modalAcronyme').value = acronyme;
+                    document.getElementById('modalMail').value = mail || "";
+                    document.getElementById('modalTelephone').value = contact || "";
+                    document.getElementById('modalDescription').value = description || "";
+                });
+            });
+
+
             const table = $('#fournisseurTable').DataTable({
                 language: {
                     zeroRecords: "Aucun fournisseur correspondant trouvé",
