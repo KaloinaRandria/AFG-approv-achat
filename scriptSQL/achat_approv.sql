@@ -178,7 +178,8 @@ SELECT
     COALESCE(SUM(sf.entree), 0) AS total_entree,
     COALESCE(SUM(sf.sortie), 0) AS total_sortie,
     COALESCE(SUM(sf.entree - sf.sortie), 0) AS stock_disponible,
-    u.acronyme AS unite_de_mesure
+    u.acronyme AS unite_de_mesure,
+    u.description AS desc_udm
 FROM article a
          LEFT JOIN stock_fille sf ON sf.id_article = a.id_article
          LEFT JOIN stock_mere sm ON sm.id_stock_mere = sf.id_stock_mere

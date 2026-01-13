@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.beans.ConstructorProperties;
 import java.time.LocalDateTime;
 
 @Getter
@@ -33,4 +34,6 @@ public class VEtatStock {
     String stockDisponible;
     @Column(name = "unite_de_mesure")
     String udm;
+    @Column(name = "desc_udm")
+    String descUdm;
 }
