@@ -128,7 +128,7 @@
                                     </span>
                                     <textarea class="form-control"
                                               id="description"
-                                              name="descr8iption"
+                                              name="description"
                                               rows="3"
                                               placeholder="Ajoutez une description ou des informations complémentaires"></textarea>
                                 </div>
@@ -198,14 +198,110 @@
         </div>
     </section>
     <!-- Barre d’action globale -->
+<!--    <div class="d-flex justify-content-end gap-2 mt-4 px-4">-->
+<!--        <button type="submit"-->
+<!--                form="demandeForm"-->
+<!--                class="btn btn-gradient-green px-4">-->
+<!--            <i class="fas fa-save me-2"></i> Soumettre la demande-->
+<!--        </button>-->
+<!--    </div>-->
+
     <div class="d-flex justify-content-end gap-2 mt-4 px-4">
-        <button type="submit"
-                form="demandeForm"
-                class="btn btn-gradient-green px-4">
-            <i class="fas fa-save me-2"></i> Soumettre la demande
+        <button type="button" id="btnPreviewDemande" class="btn btn-gradient-green px-4">
+            <i class="fas fa-eye me-2"></i> Aperçu & confirmer
         </button>
     </div>
+
 </div>
+
+<div class="modal fade" id="previewDemandeModal" tabindex="-1"
+     aria-labelledby="previewDemandeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title" id="previewDemandeModalLabel">
+                    <i class="fas fa-eye me-2 icon-gradient-blue"></i>Aperçu avant soumission
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Infos générales -->
+                <div class="table-responsive mb-3">
+                    <table class="table table-borderless align-middle mb-0">
+                        <tbody>
+                        <tr>
+                            <th class="text-muted w-25">
+                                <i class="fas fa-calendar-alt me-2 icon-gradient-blue"></i>Date de la demande
+                            </th>
+                            <td id="pvDateDemande" class="fw-semibold"></td>
+                        </tr>
+
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-map-marker-alt me-2 icon-gradient-blue"></i>Adresse
+                            </th>
+                            <td id="pvAdresse"></td>
+                        </tr>
+
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-sitemap me-2 icon-gradient-blue"></i>Département / Service
+                            </th>
+                            <td id="pvDepartement"></td>
+                        </tr>
+
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-align-left me-2 icon-gradient-blue"></i>Description
+                            </th>
+                            <td id="pvDescription"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Détails -->
+                <h6 class="fw-bold text-gradient-blue mt-3 mb-2">
+                    <i class="fas fa-list me-2 icon-gradient-blue"></i> Détails de la demande
+                </h6>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th style="width: 70%">Article</th>
+                            <th style="width: 30%" class="text-end">Quantité</th>
+                        </tr>
+                        </thead>
+                        <tbody id="pvDemandeDetailsBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Vérifiez les informations avant l’envoi de la demande.
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-pen me-1"></i>Modifier
+                </button>
+
+                <!-- ✅ Le vrai submit du formulaire -->
+                <button type="submit" class="btn btn-gradient-green" form="demandeForm">
+                    <i class="fas fa-save me-1"></i>Confirmer et soumettre
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
 <script th:inline="none">
     /*<![CDATA[*/
     document.addEventListener("DOMContentLoaded", function() {
@@ -317,6 +413,22 @@
         input.nextElementSibling.value = numericValue;
     }
 
+    function formatDateTimeFR(dateTimeValue) {
+        if (!dateTimeValue) return "-";
+
+        const date = new Date(dateTimeValue);
+
+        const pad = (n) => n.toString().padStart(2, "0");
+
+        const day    = pad(date.getDate());
+        const month  = pad(date.getMonth() + 1);
+        const year   = date.getFullYear();
+        const hour   = pad(date.getHours());
+        const minute = pad(date.getMinutes());
+
+        return `${day}/${month}/${year} ${hour}:${minute}`;
+    }
+
     document.addEventListener("input", function (e) {
 
         if (
@@ -326,6 +438,166 @@
         }
 
     });
+
+    // 1) Rouge / Vert sur les champs du formulaire
+    (function () {
+        const form = document.getElementById("demandeForm");
+        if (!form) return;
+
+        function mark(el) {
+            if (el.checkValidity()) {
+                el.classList.remove("is-invalid");
+                el.classList.add("is-valid");
+            } else {
+                el.classList.remove("is-valid");
+                el.classList.add("is-invalid");
+            }
+        }
+
+        // inputs + textarea + select (généraux)
+        form.querySelectorAll("input, textarea, select").forEach(el => {
+            const evt = (el.tagName === "SELECT") ? "change" : "input";
+            el.addEventListener(evt, () => mark(el));
+        });
+
+        // IMPORTANT : si l'utilisateur retape dans article-input -> on vide le code caché
+        document.addEventListener("input", function (e) {
+            if (!e.target.classList.contains("article-input")) return;
+
+            const td = e.target.closest("td");
+            if (!td) return;
+
+            const hiddenCode = td.querySelector('input[name="articleCodes[]"]');
+            if (hiddenCode) hiddenCode.value = ""; // invalide le choix précédent
+        });
+
+        // 2) Validation des lignes détail (code article + quantité numérique)
+        function validateDetailsRows() {
+            const body = document.getElementById("demandeFilleBody");
+            if (!body) return false;
+
+            const rows = Array.from(body.querySelectorAll("tr"));
+            if (rows.length === 0) return false;
+
+            let ok = true;
+
+            rows.forEach(row => {
+                const articleInput = row.querySelector(".article-input");
+                const codeHidden   = row.querySelector('input[name="articleCodes[]"]');
+                const qtyInput     = row.querySelector(".quantite-input");
+                const qtyHidden    = row.querySelector('input[name="quantite[]"]');
+
+                // Validation visuelle des champs visibles
+                if (articleInput) mark(articleInput);
+                if (qtyInput) mark(qtyInput);
+
+                // Code article obligatoire (doit être rempli via autocomplete)
+                if (!codeHidden || !codeHidden.value) {
+                    ok = false;
+                    if (articleInput) {
+                        articleInput.classList.remove("is-valid");
+                        articleInput.classList.add("is-invalid");
+                    }
+                }
+
+                // Quantité numérique obligatoire (hidden "quantite[]")
+                if (!qtyHidden || !qtyHidden.value) {
+                    ok = false;
+                    if (qtyInput) {
+                        qtyInput.classList.remove("is-valid");
+                        qtyInput.classList.add("is-invalid");
+                    }
+                }
+            });
+
+            return ok;
+        }
+
+        // 3) Select2 : bordure rouge/vert sur la box Select2 (optionnel)
+        function setSelect2State(selectEl, isValid) {
+            if (!window.$) return;
+            const container = $(selectEl).next(".select2-container");
+            const selection = container.find(".select2-selection");
+            selection.removeClass("is-valid is-invalid");
+            selection.addClass(isValid ? "is-valid" : "is-invalid");
+        }
+
+        if (window.$ && $.fn.select2) {
+            $("#adresse, #departement").on("change", function () {
+                setSelect2State(this, this.checkValidity());
+            });
+        }
+
+        // 4) Bouton Aperçu & confirmer -> remplir le modal + ouvrir
+        const btnPreview = document.getElementById("btnPreviewDemande");
+        if (!btnPreview) return;
+
+        btnPreview.addEventListener("click", function (e) {
+
+            const generalOk = form.checkValidity();
+            const detailsOk = validateDetailsRows();
+
+            if (!generalOk || !detailsOk) {
+                form.classList.add("was-validated");
+                form.reportValidity();
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
+            // ---- Remplir l'aperçu (infos générales)
+            const rawDate = document.getElementById("dateDemande")?.value;
+            document.getElementById("pvDateDemande").textContent =
+                formatDateTimeFR(rawDate);
+
+
+            // select2 text (safe) sinon option:checked
+            const adresseText = (window.$ && $.fn.select2)
+                ? ($("#adresse").select2("data")[0]?.text || "---")
+                : (document.querySelector("#adresse option:checked")?.textContent || "---");
+
+            const deptText = (window.$ && $.fn.select2)
+                ? ($("#departement").select2("data")[0]?.text || "---")
+                : (document.querySelector("#departement option:checked")?.textContent || "---");
+
+            document.getElementById("pvAdresse").textContent = adresseText;
+            document.getElementById("pvDepartement").textContent = deptText;
+
+            document.getElementById("pvDescription").textContent =
+                document.getElementById("description")?.value || "-";
+
+            // ---- Remplir détails
+            const pvBody = document.getElementById("pvDemandeDetailsBody");
+            pvBody.innerHTML = "";
+
+            document.querySelectorAll("#demandeFilleBody tr").forEach(row => {
+                const articleVisible = row.querySelector(".article-input")?.value || "-";
+                const qtyVisible     = row.querySelector(".quantite-input")?.value || "-";
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${escapeHtml(articleVisible)}</td>
+                    <td class="text-end fw-semibold">${escapeHtml(qtyVisible)}</td>
+                `;
+                pvBody.appendChild(tr);
+            });
+
+            // ---- Ouvrir modal (Bootstrap 5)
+            window.bootstrap.Modal
+                .getOrCreateInstance(document.getElementById("previewDemandeModal"))
+                .show();
+        });
+
+        function escapeHtml(str) {
+            return String(str)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+    })();
     /*]]>*/
 </script>
 </body>
