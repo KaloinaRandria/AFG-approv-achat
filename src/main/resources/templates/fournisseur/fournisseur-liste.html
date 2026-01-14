@@ -67,6 +67,7 @@
                                         data-bs-target="#modifierFournisseurModal"
                                         th:data-id="${fr.getId()}"
                                         th:data-nom="${fr.getNom()}"
+                                        th:data-acronyme="${fr.getAcronyme()}"
                                         th:data-mail="${fr.getMail()}"
                                         th:data-contact="${fr.getContact()}"
                                         th:data-description="${fr.getDescription()}"
@@ -167,15 +168,16 @@
                     const mail        = this.getAttribute('data-mail');
                     const contact     = this.getAttribute('data-contact');
                     const description = this.getAttribute('data-description');
+                    const acronyme    = this.getAttribute('data-acronyme');
 
                     // Acronyme : ton bouton ne l'envoie pas encore => on le récupère depuis l'affichage "Nom (ACR)"
                     // (Sinon, ajoute th:data-acronyme="${fr.getAcronyme()}" et prends-le directement)
-                    const nomAffiche = nom || "";
-                    const match = nomAffiche.match(/\(([^)]+)\)\s*$/);
-                    const acronyme = match ? match[1] : "";
+                    // const nomAffiche = nom || "";
+                    // const match = nomAffiche.match(/\(([^)]+)\)\s*$/);
+                    // const acronyme = match ? match[1] : "";
 
                     document.getElementById('modalFournisseurId').value = id || "";
-                    document.getElementById('modalNom').value = nomAffiche.replace(/\s*\([^)]+\)\s*$/, '').trim();
+                    document.getElementById('modalNom').value = nom.replace(/\s*\([^)]+\)\s*$/, '').trim();
                     document.getElementById('modalAcronyme').value = acronyme;
                     document.getElementById('modalMail').value = mail || "";
                     document.getElementById('modalTelephone').value = contact || "";
