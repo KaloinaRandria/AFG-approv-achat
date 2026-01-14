@@ -57,7 +57,7 @@
                         <tbody>
                         <tr th:each="fr : ${fournisseurs}">
                             <td th:text="${fr.getId()}"></td>
-                            <td th:text="${fr.getNom() + ' (' + fr.getAcronyme() + ')'}"></td>
+                            <td th:text="${fr.getNom() + ' (' + (fr.getAcronyme() != null ? fr.getAcronyme() : '---') + ')'}"></td>
                             <td th:text="${fr.getMail()}"></td>
                             <td th:text="${fr.getContact()}"></td>
                             <td>
