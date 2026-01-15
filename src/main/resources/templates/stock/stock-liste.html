@@ -54,6 +54,7 @@
                             <th><i class="fas fa-chart-pie me-2 icon-gradient-light-blue"></i>Stock Disponible</th>
                             <th><i class="fas fa-balance-scale me-2 icon-gradient-light-blue"></i>UDM</th>
                             <th><i class="fas fa-bell me-2 icon-gradient-light-blue"></i>Notification</th>
+                            <th><i class="fas fa-history me-2 icon-gradient-light-blue"></i>Historique</th>
                         </tr>
                         </thead>
 
@@ -81,7 +82,6 @@
                             <td class="text-end fw-bold text-stock"
                                 th:text="${e.desc_udm +' ('+ e.udm + ')'}">
                             </td>
-
                             <td class="text-center">
                                 <!-- Vérifier si l'article a une alerte -->
                                 <th:block th:if="${e.alerte != null}">
@@ -139,6 +139,17 @@
                                     </div>
                                 </th:block>
                             </td>
+
+                            <td class="text-center">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        th:data-code="${e.codeArticle}"
+                                        th:data-designation="${e.designation}"
+                                        onclick="openHistoriqueModalByCode(this)">
+                                    <i class="fas fa-history me-1"></i>
+                                </button>
+                            </td>
+
                         </tr>
                         </tbody>
                     </table>
@@ -312,10 +323,48 @@
     </div>
 </div>
 
+<!-- Modal Historique mouvements -->
+<div class="modal fade" id="historiqueModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-blue text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-history me-2"></i>
+                    Historique : <span id="histArticleTitle"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table id="historiqueTable" class="table table-striped table-hover w-100">
+                        <thead>
+                        <tr>
+                            <th><i class="far fa-calendar-alt me-2"></i>Date</th>
+                            <th><i class="fas fa-exchange-alt me-2"></i>Type</th>
+                            <th class="text-end"><i class="fas fa-sort-amount-up me-2"></i>Quantité</th>
+                            <th><i class="fas fa-user me-2"></i>Qui</th>
+                            <th><i class="fas fa-link me-2"></i>Référence</th>
+                            <th><i class="fas fa-balance-scale me-2"></i>UDM</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script th:inline="none">
     /*<![CDATA[*/
     document.addEventListener('DOMContentLoaded', function () {
-        // Initialiser les tooltips Bootstrap
+
+        // Tooltips
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
@@ -341,20 +390,19 @@
             dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
             columnDefs: [
                 {
-                    targets: [6], // Colonne notification (index 5)
-                    orderable: false, // Désactiver le tri sur cette colonne
-                    searchable: false // Désactiver la recherche sur cette colonne
+                    targets: [6, 7], // 6=Notification, 7=Historique (si tu as ajouté la colonne)
+                    orderable: false,
+                    searchable: false
                 }
             ],
 
             initComplete: function () {
                 const api = this.api();
 
-                // Clonage de la ligne d'entête pour les filtres
                 $('#etatStockTable thead tr').clone(true).appendTo('#etatStockTable thead');
 
                 $('#etatStockTable thead tr:eq(1) th').each(function (i) {
-                    if (i < 6) { // Exclure la colonne notification du filtre
+                    if (i < 6) { // on filtre seulement colonnes 0..5
                         $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
                         $('input', this).on('keyup change', function () {
                             if (api.column(i).search() !== this.value) {
@@ -366,7 +414,6 @@
                     }
                 });
 
-                // ✅ Recherche mobile
                 $('<div class="mobile-search-container mb-3">' +
                     '<div class="input-group">' +
                     '<span class="input-group-text"><i class="fas fa-search"></i></span>' +
@@ -396,21 +443,23 @@
         });
     });
 
-    // Fonction pour afficher les détails de l'alerte à partir de l'élément
-    function showAlertDetailsFromElement(element) {
-        const codeArticle = element.getAttribute('data-code-article');
-        const designation = element.getAttribute('data-designation');
-        const stock = element.getAttribute('data-stock');
-        const seuil = element.getAttribute('data-seuil');
-        const type = element.getAttribute('data-alerte-type');
-        const udm = element.getAttribute('data-udm');
 
-        showAlertDetails(codeArticle, designation, type, stock, seuil, udm);
+    // ===========================
+    // ✅ Fonctions ALERTES (modal alertModal)
+    // ===========================
+
+    // Utilitaire : décoder les entités HTML (apostrophes, etc.)
+    function decodeHtmlEntities(text) {
+        const textArea = document.createElement('textarea');
+        textArea.innerHTML = text;
+        return textArea.value;
     }
 
-    // Fonction existante modifiée (facultatif - pour gérer aussi l'appel direct)
+    // Ouvrir le modal alerte (appelé depuis une ligne ou notification)
     function showAlertDetails(codeArticle, designation, type, stock, seuil, udm) {
-        const modal = new bootstrap.Modal(document.getElementById('alertModal'));
+        const modalEl = document.getElementById('alertModal');
+        const modal = new bootstrap.Modal(modalEl);
+
         const alertDiv = document.getElementById('alertModalType');
         const articleSpan = document.getElementById('alertModalArticle');
         const stockSpan = document.getElementById('alertModalStock');
@@ -418,16 +467,15 @@
         const messageSpan = document.getElementById('alertModalMessage');
         const udmSpan = document.getElementById('alertModalUdm');
 
-        // Décoder les valeurs si nécessaire (pour les apostrophes, etc.)
         const decodedDesignation = decodeHtmlEntities(designation);
 
-        // Mettre à jour le contenu
+        // Remplir les infos
         articleSpan.textContent = codeArticle + ' - ' + decodedDesignation;
-        stockSpan.textContent = stock;
-        seuilSpan.textContent = seuil;
-        udmSpan.textContent = udm;
+        stockSpan.textContent = stock ?? '-';
+        seuilSpan.textContent = seuil ?? '-';
+        udmSpan.textContent = udm ?? '-';
 
-        // Configurer selon le type d'alerte
+        // Configurer le style selon type
         if (type === 'RUPTURE') {
             alertDiv.className = 'alert alert-danger';
             messageSpan.textContent = 'Le stock est épuisé. Une commande urgente est nécessaire.';
@@ -436,21 +484,19 @@
             alertDiv.className = 'alert alert-warning';
             messageSpan.textContent = 'Le stock est inférieur au seuil minimum. Pensez à réapprovisionner.';
             document.getElementById('alertModalLabel').textContent = 'Seuil Minimum Atteint';
+        } else {
+            alertDiv.className = 'alert alert-secondary';
+            messageSpan.textContent = 'Aucune information supplémentaire.';
+            document.getElementById('alertModalLabel').textContent = 'Détails';
         }
 
-        // Stocker le code article pour le bouton "Modifier"
+        // (optionnel) stocker le code article si besoin plus tard
         alertDiv.dataset.articleCode = codeArticle;
 
         modal.show();
     }
 
-    // Fonction utilitaire pour décoder les entités HTML
-    function decodeHtmlEntities(text) {
-        const textArea = document.createElement('textarea');
-        textArea.innerHTML = text;
-        return textArea.value;
-    }
-
+    // Clique sur une alerte dans le tableau (badge dans la colonne notification)
     function showAlertFromRow(element) {
         const codeArticle = element.getAttribute('data-code');
         const designation = element.getAttribute('data-designation');
@@ -463,9 +509,11 @@
     }
 
 
-    /* ===== FONCTIONS POUR LE MODAL DE NOTIFICATIONS ===== */
+    // ===========================
+    // ✅ Fonctions NOTIFICATIONS (modal notificationsModal)
+    // ===========================
 
-    // Fonction pour gérer le clic sur une notification
+    // Clique sur un item dans le modal notifications → ouvre alertModal
     function handleNotificationClick(element) {
         const codeArticle = element.getAttribute('data-code');
         const designation = element.getAttribute('data-designation');
@@ -473,13 +521,14 @@
         const stock = element.getAttribute('data-stock');
         const seuil = element.getAttribute('data-seuil');
         const udm = element.getAttribute('data-udm');
+
         showAlertDetailsFromNotification(codeArticle, designation, type, stock, seuil, udm);
     }
 
-    // Fonction pour afficher les détails d'une alerte depuis le modal
     function showAlertDetailsFromNotification(codeArticle, designation, type, stock, seuil, udm) {
         // Fermer le modal des notifications
-        const notificationModal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
+        const notifEl = document.getElementById('notificationsModal');
+        const notificationModal = bootstrap.Modal.getInstance(notifEl);
         if (notificationModal) {
             notificationModal.hide();
         }
@@ -488,7 +537,94 @@
         showAlertDetails(codeArticle, designation, type, stock, seuil, udm);
     }
 
+
+    // ===========================
+    // ✅ ICI : AJOUTE openHistoriqueModal (avant /*]]>*/)
+    // ===========================
+
+    let histTable = null;
+
+    function openHistoriqueModal(btn) {
+        const idArticle   = btn.dataset.idarticle;
+        const codeArticle = btn.dataset.code;
+        const designation = btn.dataset.designation;
+
+        document.getElementById("histArticleTitle").textContent =
+            codeArticle + " - " + designation;
+
+        const modal = new bootstrap.Modal(document.getElementById('historiqueModal'));
+        modal.show();
+
+        if (histTable) {
+            histTable.destroy();
+            document.querySelector("#historiqueTable tbody").innerHTML = "";
+        }
+
+        histTable = $('#historiqueTable').DataTable({
+            ajax: {
+                url: `/stock/historique?idArticle=${idArticle}`,
+                dataSrc: ''
+            },
+            columns: [
+                {
+                    data: 'date_mouvement',
+                    render: d => d ? new Date(d).toLocaleString('fr-FR') : '-'
+                },
+                {
+                    data: 'type_mouvement',
+                    render: t => {
+                        if (t === 'ENTREE')
+                            return '<span class="badge bg-success"><i class="fas fa-sign-in-alt me-1"></i>Entrée</span>';
+                        if (t === 'SORTIE')
+                            return '<span class="badge bg-danger"><i class="fas fa-sign-out-alt me-1"></i>Sortie</span>';
+                        return '-';
+                    }
+                },
+                { data: 'quantite', className: 'text-end fw-bold' },
+                { data: 'auteur', defaultContent: '-' },
+                {
+                    data: null,
+                    render: row => {
+                        if (row.type_mouvement === 'ENTREE') return `BL #${row.reference}`;
+                        if (row.type_mouvement === 'SORTIE') return `DEM #${row.reference}`;
+                        return '-';
+                    }
+                }
+            ],
+            order: [[0, 'desc']],
+            pageLength: 10,
+            responsive: true,
+            language: {
+                zeroRecords: "Aucun mouvement trouvé",
+                search: "Rechercher:",
+                lengthMenu: "Afficher _MENU_",
+                info: "Affichage de _START_ à _END_ sur _TOTAL_ lignes",
+                infoEmpty: "Aucune donnée disponible",
+                paginate: {
+                    first: "Première",
+                    last: "Dernière",
+                    next: "Suivante",
+                    previous: "Précédente"
+                }
+            }
+        });
+    }
+
+    function openHistoriqueModalByCode(btn){
+        const codeArticle = btn.dataset.code;
+        const designation = btn.dataset.designation;
+
+        document.getElementById("histArticleTitle").textContent =
+            codeArticle + " - " + designation;
+
+        const modal = new bootstrap.Modal(document.getElementById('historiqueModal'));
+        modal.show();
+
+        // appel endpoint /stock/historique?codeArticle=...
+    }
+
     /*]]>*/
 </script>
+
 </body>
 </html>
