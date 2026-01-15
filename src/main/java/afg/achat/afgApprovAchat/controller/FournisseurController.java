@@ -66,7 +66,7 @@ public class FournisseurController {
         }
 
         // Redirection (PRG pattern)
-        return "redirect:/fournisseur/add";
+        return "redirect:/fournisseur/list";
     }
 
     @GetMapping("/list")
