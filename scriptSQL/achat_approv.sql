@@ -145,8 +145,8 @@ VALUES
     ('Magasin Central - RDC');
 
 
-INSERT INTO demande_mere (date_demande, est_valider, nature_demande, id_demandeur, id_adresse)
-VALUES (NOW(), TRUE, 'OPEX', 1, 1);
+-- INSERT INTO demande_mere (date_demande, est_valider, nature_demande, id_demandeur, id_adresse)
+-- VALUES (NOW(), TRUE, 'OPEX', 1, 1);
 
 
 INSERT INTO stock_mere (id_demande_mere)
@@ -189,6 +189,68 @@ FROM article a
 GROUP BY a.id_article, u.id_udm
 ORDER BY a.id_article;
 
+CREATE OR REPLACE VIEW v_historique_mouvement_stock AS
+SELECT
+    sf.id_stock_fille,
+    sf.id_article,
+    a.code_article,
+    a.designation,
+
+    -- Type
+    CASE
+        WHEN COALESCE(sf.entree, 0) > 0 THEN 'ENTREE'
+        WHEN COALESCE(sf.sortie, 0) > 0 THEN 'SORTIE'
+        ELSE 'INCONNU'
+        END AS type_mouvement,
+
+    -- Quantité
+    CASE
+        WHEN COALESCE(sf.entree, 0) > 0 THEN sf.entree
+        ELSE sf.sortie
+        END AS quantite,
+
+    -- Date mouvement (entrée = date réception BL, sortie = date sortie demande)
+    CASE
+        WHEN COALESCE(sf.entree, 0) > 0 THEN bl.date_reception
+        WHEN COALESCE(sf.sortie, 0) > 0 THEN COALESCE(dm.date_sortie, dm.date_demande)
+        ELSE NULL
+        END AS date_mouvement,
+
+    -- Références
+    bl.id_bl_mere       AS ref_bl_mere,
+    dm.id_demande_mere  AS ref_demande_mere,
+
+    -- Qui a fait (entrée = fournisseur, sortie = demandeur)
+    CASE
+        WHEN COALESCE(sf.entree, 0) > 0 THEN f.nom  -- adapte le champ exact (ex: f.nom / f.raison_sociale)
+        WHEN COALESCE(sf.sortie, 0) > 0 THEN CONCAT(u.prenom, ' ', u.nom)
+        ELSE '-'
+        END AS auteur,
+
+    -- extra utile
+    CASE
+        WHEN COALESCE(sf.entree, 0) > 0 THEN bl.id_bl_mere
+        WHEN COALESCE(sf.sortie, 0) > 0 THEN dm.id_demande_mere
+        ELSE NULL
+        END AS reference,
+
+    udm.acronyme AS udm,
+    udm.description AS desc_udm
+
+FROM stock_fille sf
+         JOIN stock_mere sm            ON sm.id_stock_mere = sf.id_stock_mere
+         JOIN article a                ON a.id_article = sf.id_article
+         LEFT JOIN bon_livraison_mere bl ON bl.id_bl_mere = sm.id_bl_mere
+         LEFT JOIN fournisseur f       ON f.id_fournisseur = bl.id_fournisseur
+         LEFT JOIN demande_mere dm     ON dm.id_demande_mere = sm.id_demande_mere
+         LEFT JOIN utilisateur u       ON u.id_utilisateur = dm.id_demandeur
+         LEFT JOIN udm                 ON udm.id_udm = a.id_udm
+
+WHERE COALESCE(sf.entree, 0) > 0 OR COALESCE(sf.sortie, 0) > 0
+
+ORDER BY date_mouvement DESC;
+
+
 select * from stock_fille;
 select * from v_etat_stock;
 
@@ -209,3 +271,9 @@ INSERT INTO departement (nom, acronyme) VALUES
                                             ('Maintenance', 'MAIN'),
                                             ('Production', 'PROD');
 
+
+
+CREATE INDEX IF NOT EXISTS idx_stock_fille_article ON stock_fille(id_article);
+CREATE INDEX IF NOT EXISTS idx_stock_fille_mere   ON stock_fille(id_stock_mere);
+CREATE INDEX IF NOT EXISTS idx_stock_mere_bl      ON stock_mere(id_bl_mere);
+CREATE INDEX IF NOT EXISTS idx_stock_mere_dem     ON stock_mere(id_demande_mere);
