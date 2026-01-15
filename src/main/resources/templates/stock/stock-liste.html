@@ -142,13 +142,16 @@
 
                             <td class="text-center">
                                 <button type="button"
-                                        class="btn btn-sm btn-outline-primary"
-                                        th:data-code="${e.codeArticle}"
+                                        class="btn btn-sm historique-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#historiqueMvtModal"
+                                        th:data-codearticle="${e.codeArticle}"
                                         th:data-designation="${e.designation}"
-                                        onclick="openHistoriqueModalByCode(this)">
-                                    <i class="fas fa-history me-1"></i>
+                                        title="Voir l'historique">
+                                    <i class="fas fa-history"></i>
                                 </button>
                             </td>
+
 
                         </tr>
                         </tbody>
@@ -323,42 +326,78 @@
     </div>
 </div>
 
-<!-- Modal Historique mouvements -->
-<div class="modal fade" id="historiqueModal" tabindex="-1" aria-hidden="true">
+<!-- Modal Historique des mouvements de stock -->
+<div class="modal fade" id="historiqueMvtModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-gradient-blue text-white">
+
+            <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-history me-2"></i>
-                    Historique : <span id="histArticleTitle"></span>
+                    <i class="fas fa-history me-2 icon-gradient-blue"></i>
+                    Historique des mouvements
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body">
-                <div class="table-responsive">
-                    <table id="historiqueTable" class="table table-striped table-hover w-100">
-                        <thead>
-                        <tr>
-                            <th><i class="far fa-calendar-alt me-2"></i>Date</th>
-                            <th><i class="fas fa-exchange-alt me-2"></i>Type</th>
-                            <th class="text-end"><i class="fas fa-sort-amount-up me-2"></i>Quantité</th>
-                            <th><i class="fas fa-user me-2"></i>Qui</th>
-                            <th><i class="fas fa-link me-2"></i>Référence</th>
-                            <th><i class="fas fa-balance-scale me-2"></i>UDM</th>
-                        </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 id="historiqueMvtInfo" class="mb-0"></h6>
+                    <span class="badge bg-gradient-blue" id="historiqueMvtCount">0 mouvement(s)</span>
                 </div>
+
+                <div class="card border-0 shadow-sm">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                            <tr>
+                                <th class="border-0 py-3 ps-4">
+                                    <i class="far fa-clock me-2 text-muted"></i>Date & Heure
+                                </th>
+                                <th class="border-0 py-3">
+                                    <i class="fas fa-exchange-alt me-2 text-muted"></i>Type
+                                </th>
+                                <th class="border-0 py-3 text-end">
+                                    <i class="fas fa-sort-amount-up me-2 text-muted"></i>Quantité
+                                </th>
+                                <th class="border-0 py-3">
+                                    <i class="far fa-user me-2 text-muted"></i>Auteur
+                                </th>
+                                <th class="border-0 py-3 pe-4">
+                                    <i class="fas fa-link me-2 text-muted"></i>Référence
+                                </th>
+                            </tr>
+                            </thead>
+
+                            <tbody id="historiqueMvtTableBody">
+                            <tr id="historiqueMvtEmptyRow">
+                                <td colspan="5" class="text-center py-5">
+                                    <div class="empty-state-content">
+                                        <div class="empty-state-icon bg-light rounded-circle p-4 mb-3">
+                                            <i class="fas fa-inbox fa-lg text-muted"></i>
+                                        </div>
+                                        <h5 class="text-muted">Aucun mouvement</h5>
+                                        <p class="text-muted mb-0">Les entrées/sorties apparaîtront ici</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+
+                        </table>
+                    </div>
+                </div>
+
             </div>
 
             <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Fermer
+                </button>
             </div>
+
         </div>
     </div>
 </div>
+
 
 <script th:inline="none">
     /*<![CDATA[*/
@@ -366,23 +405,17 @@
 
         // Tooltips
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
+        tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
 
-        const table = $('#etatStockTable').DataTable({
+        // DataTable Etat Stock
+        $('#etatStockTable').DataTable({
             language: {
                 zeroRecords: "Aucun résultat trouvé",
                 search: "Rechercher:",
                 lengthMenu: "Afficher _MENU_",
                 info: "Affichage de _START_ à _END_ sur _TOTAL_ lignes",
                 infoEmpty: "Aucune donnée disponible",
-                paginate: {
-                    first: "Première",
-                    last: "Dernière",
-                    next: "Suivante",
-                    previous: "Précédente"
-                }
+                paginate: { first:"Première", last:"Dernière", next:"Suivante", previous:"Précédente" }
             },
             pageLength: 10,
             lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
@@ -390,19 +423,18 @@
             dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
             columnDefs: [
                 {
-                    targets: [6, 7], // 6=Notification, 7=Historique (si tu as ajouté la colonne)
+                    targets: [6, 7], // 6=Notification, 7=Historique
                     orderable: false,
                     searchable: false
                 }
             ],
-
             initComplete: function () {
                 const api = this.api();
 
                 $('#etatStockTable thead tr').clone(true).appendTo('#etatStockTable thead');
 
                 $('#etatStockTable thead tr:eq(1) th').each(function (i) {
-                    if (i < 6) { // on filtre seulement colonnes 0..5
+                    if (i < 6) {
                         $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
                         $('input', this).on('keyup change', function () {
                             if (api.column(i).search() !== this.value) {
@@ -445,20 +477,118 @@
 
 
     // ===========================
-    // ✅ Fonctions ALERTES (modal alertModal)
+    // ✅ Historique des mouvements (comme ton historique Article)
     // ===========================
+    $('#historiqueMvtModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
 
-    // Utilitaire : décoder les entités HTML (apostrophes, etc.)
+        var idArticle = button.data('idarticle');
+        var codeArticle = button.data('codearticle');
+        var designation = button.data('designation');
+
+        $('#historiqueMvtInfo').text(designation + ' (' + codeArticle + ')');
+
+        $('#historiqueMvtTableBody').html(`
+        <tr>
+            <td colspan="5" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+                <p class="mt-2 text-muted">Chargement de l'historique...</p>
+            </td>
+        </tr>
+    `);
+
+        const url = `/stock/historique?idArticle=${encodeURIComponent(idArticle)}`;
+
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: function (data) {
+                if (data && data.length > 0) {
+                    let html = '';
+
+                    data.forEach(function (mvt) {
+                        const type = mvt.type_mouvement || 'INCONNU';
+                        const date = formatDateTime(mvt.date_mouvement);
+                        const quantite = formatNumber(mvt.quantite);
+                        const auteur = mvt.auteur || '-';
+                        const ref = formatReference(type, mvt.reference);
+
+                        html += `
+                        <tr>
+                            <td class="ps-4">${date}</td>
+                            <td>${renderTypeBadge(type)}</td>
+                            <td class="text-end fw-bold">${quantite}</td>
+                            <td>${auteur}</td>
+                            <td class="pe-4">${ref}</td>
+                        </tr>
+                    `;
+                    });
+
+                    $('#historiqueMvtTableBody').html(html);
+                    $('#historiqueMvtCount').text(data.length + ' mouvement(s)');
+                } else {
+                    $('#historiqueMvtTableBody').html(`
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">Aucun mouvement trouvé</p>
+                        </td>
+                    </tr>
+                `);
+                    $('#historiqueMvtCount').text('0 mouvement(s)');
+                }
+            },
+            error: function () {
+                $('#historiqueMvtTableBody').html(`
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-danger">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <p>Erreur lors du chargement de l'historique</p>
+                    </td>
+                </tr>
+            `);
+                $('#historiqueMvtCount').text('0 mouvement(s)');
+            }
+        });
+    });
+
+    function renderTypeBadge(type) {
+        if (type === 'ENTREE') return `<span class="badge bg-success"><i class="fas fa-sign-in-alt me-1"></i>Entrée</span>`;
+        if (type === 'SORTIE') return `<span class="badge bg-danger"><i class="fas fa-sign-out-alt me-1"></i>Sortie</span>`;
+        return `<span class="badge bg-secondary">Inconnu</span>`;
+    }
+
+    function formatReference(type, reference) {
+        if (!reference) return '-';
+        if (type === 'ENTREE') return `BL #${reference}`;
+        if (type === 'SORTIE') return `DEM #${reference}`;
+        return reference;
+    }
+
+    function formatDateTime(d) {
+        if (!d) return '-';
+        try { return new Date(d).toLocaleString('fr-FR'); } catch (e) { return d; }
+    }
+
+    function formatNumber(n) {
+        if (n === null || n === undefined) return '-';
+        try { return new Intl.NumberFormat('fr-FR').format(n); } catch (e) { return n; }
+    }
+
+
+    // ===========================
+    // ✅ ALERTES + NOTIFICATIONS (tes fonctions)
+    // ===========================
     function decodeHtmlEntities(text) {
         const textArea = document.createElement('textarea');
         textArea.innerHTML = text;
         return textArea.value;
     }
 
-    // Ouvrir le modal alerte (appelé depuis une ligne ou notification)
     function showAlertDetails(codeArticle, designation, type, stock, seuil, udm) {
-        const modalEl = document.getElementById('alertModal');
-        const modal = new bootstrap.Modal(modalEl);
+        const modal = new bootstrap.Modal(document.getElementById('alertModal'));
 
         const alertDiv = document.getElementById('alertModalType');
         const articleSpan = document.getElementById('alertModalArticle');
@@ -469,13 +599,11 @@
 
         const decodedDesignation = decodeHtmlEntities(designation);
 
-        // Remplir les infos
         articleSpan.textContent = codeArticle + ' - ' + decodedDesignation;
         stockSpan.textContent = stock ?? '-';
         seuilSpan.textContent = seuil ?? '-';
         udmSpan.textContent = udm ?? '-';
 
-        // Configurer le style selon type
         if (type === 'RUPTURE') {
             alertDiv.className = 'alert alert-danger';
             messageSpan.textContent = 'Le stock est épuisé. Une commande urgente est nécessaire.';
@@ -490,141 +618,40 @@
             document.getElementById('alertModalLabel').textContent = 'Détails';
         }
 
-        // (optionnel) stocker le code article si besoin plus tard
-        alertDiv.dataset.articleCode = codeArticle;
-
         modal.show();
     }
 
-    // Clique sur une alerte dans le tableau (badge dans la colonne notification)
     function showAlertFromRow(element) {
-        const codeArticle = element.getAttribute('data-code');
-        const designation = element.getAttribute('data-designation');
-        const stock = element.getAttribute('data-stock');
-        const seuil = element.getAttribute('data-seuil');
-        const type = element.getAttribute('data-type');
-        const udm = element.getAttribute('data-udm');
-
-        showAlertDetails(codeArticle, designation, type, stock, seuil, udm);
+        showAlertDetails(
+            element.getAttribute('data-code'),
+            element.getAttribute('data-designation'),
+            element.getAttribute('data-type'),
+            element.getAttribute('data-stock'),
+            element.getAttribute('data-seuil'),
+            element.getAttribute('data-udm')
+        );
     }
 
-
-    // ===========================
-    // ✅ Fonctions NOTIFICATIONS (modal notificationsModal)
-    // ===========================
-
-    // Clique sur un item dans le modal notifications → ouvre alertModal
     function handleNotificationClick(element) {
-        const codeArticle = element.getAttribute('data-code');
-        const designation = element.getAttribute('data-designation');
-        const type = element.getAttribute('data-type');
-        const stock = element.getAttribute('data-stock');
-        const seuil = element.getAttribute('data-seuil');
-        const udm = element.getAttribute('data-udm');
-
-        showAlertDetailsFromNotification(codeArticle, designation, type, stock, seuil, udm);
+        showAlertDetailsFromNotification(
+            element.getAttribute('data-code'),
+            element.getAttribute('data-designation'),
+            element.getAttribute('data-type'),
+            element.getAttribute('data-stock'),
+            element.getAttribute('data-seuil'),
+            element.getAttribute('data-udm')
+        );
     }
 
     function showAlertDetailsFromNotification(codeArticle, designation, type, stock, seuil, udm) {
-        // Fermer le modal des notifications
         const notifEl = document.getElementById('notificationsModal');
         const notificationModal = bootstrap.Modal.getInstance(notifEl);
-        if (notificationModal) {
-            notificationModal.hide();
-        }
-
-        // Afficher le modal de détails de l'alerte
+        if (notificationModal) notificationModal.hide();
         showAlertDetails(codeArticle, designation, type, stock, seuil, udm);
     }
-
-
-    // ===========================
-    // ✅ ICI : AJOUTE openHistoriqueModal (avant /*]]>*/)
-    // ===========================
-
-    let histTable = null;
-
-    function openHistoriqueModal(btn) {
-        const idArticle   = btn.dataset.idarticle;
-        const codeArticle = btn.dataset.code;
-        const designation = btn.dataset.designation;
-
-        document.getElementById("histArticleTitle").textContent =
-            codeArticle + " - " + designation;
-
-        const modal = new bootstrap.Modal(document.getElementById('historiqueModal'));
-        modal.show();
-
-        if (histTable) {
-            histTable.destroy();
-            document.querySelector("#historiqueTable tbody").innerHTML = "";
-        }
-
-        histTable = $('#historiqueTable').DataTable({
-            ajax: {
-                url: `/stock/historique?idArticle=${idArticle}`,
-                dataSrc: ''
-            },
-            columns: [
-                {
-                    data: 'date_mouvement',
-                    render: d => d ? new Date(d).toLocaleString('fr-FR') : '-'
-                },
-                {
-                    data: 'type_mouvement',
-                    render: t => {
-                        if (t === 'ENTREE')
-                            return '<span class="badge bg-success"><i class="fas fa-sign-in-alt me-1"></i>Entrée</span>';
-                        if (t === 'SORTIE')
-                            return '<span class="badge bg-danger"><i class="fas fa-sign-out-alt me-1"></i>Sortie</span>';
-                        return '-';
-                    }
-                },
-                { data: 'quantite', className: 'text-end fw-bold' },
-                { data: 'auteur', defaultContent: '-' },
-                {
-                    data: null,
-                    render: row => {
-                        if (row.type_mouvement === 'ENTREE') return `BL #${row.reference}`;
-                        if (row.type_mouvement === 'SORTIE') return `DEM #${row.reference}`;
-                        return '-';
-                    }
-                }
-            ],
-            order: [[0, 'desc']],
-            pageLength: 10,
-            responsive: true,
-            language: {
-                zeroRecords: "Aucun mouvement trouvé",
-                search: "Rechercher:",
-                lengthMenu: "Afficher _MENU_",
-                info: "Affichage de _START_ à _END_ sur _TOTAL_ lignes",
-                infoEmpty: "Aucune donnée disponible",
-                paginate: {
-                    first: "Première",
-                    last: "Dernière",
-                    next: "Suivante",
-                    previous: "Précédente"
-                }
-            }
-        });
-    }
-
-    function openHistoriqueModalByCode(btn){
-        const codeArticle = btn.dataset.code;
-        const designation = btn.dataset.designation;
-
-        document.getElementById("histArticleTitle").textContent =
-            codeArticle + " - " + designation;
-
-        const modal = new bootstrap.Modal(document.getElementById('historiqueModal'));
-        modal.show();
-
-        // appel endpoint /stock/historique?codeArticle=...
-    }
-
     /*]]>*/
 </script>
+
 
 </body>
 </html>
