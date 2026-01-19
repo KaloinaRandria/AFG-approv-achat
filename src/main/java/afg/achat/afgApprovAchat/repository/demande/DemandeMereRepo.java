@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface DemandeMereRepo extends JpaRepository<DemandeMere,Integer> {
+public interface DemandeMereRepo extends JpaRepository<DemandeMere,String> {
 
 }

@@ -2,6 +2,7 @@ package afg.achat.afgApprovAchat.model.demande;
 
 import afg.achat.afgApprovAchat.model.util.Adresse;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
+import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -18,8 +19,8 @@ import java.time.LocalDateTime;
 @Table(name = "demande_mere")
 public class DemandeMere {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_demande_mere")
-    int id;
+    @Column(name = "id_demande_mere")
+    String id;
     @ManyToOne @JoinColumn(name = "id_demandeur", referencedColumnName = "id_utilisateur")
     Utilisateur demandeur;
     @ManyToOne @JoinColumn(name = "id_adresse", referencedColumnName = "id_adresse")
@@ -55,7 +56,9 @@ public class DemandeMere {
         ANNULEE           // annulée par le demandeur
     }
 
-
+    public void setId(IdGenerator idGenerator) {
+        this.id = idGenerator.generateId("DM","demande_mere_id_demande_mere_seq");
+    }
 
     public void setDateDemande(String dateDemande) {
         this.dateDemande = LocalDateTime.parse(dateDemande);

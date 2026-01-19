@@ -13,6 +13,7 @@ import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
 import afg.achat.afgApprovAchat.service.stock.StockFilleService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
+import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,6 +43,8 @@ public class BonLivraisonController {
     StockMereService stockMereService;
     @Autowired
     StockFilleService stockFilleService;
+    @Autowired
+    IdGenerator idGenerator;
 
 
     @GetMapping("/add")
@@ -82,6 +85,7 @@ public class BonLivraisonController {
 
 //            Enregistrement du bon de livraison mère
             BonLivraisonMere bonLivraisonMere = new BonLivraisonMere();
+            bonLivraisonMere.setId(idGenerator);
             bonLivraisonMere.setFournisseur(fournisseur);
             bonLivraisonMere.setDevise(devise);
             bonLivraisonMere.setDateReception(dateLivraison);

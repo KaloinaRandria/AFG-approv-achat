@@ -11,5 +11,5 @@ import java.util.List;
 public interface BonLivraisonFilleRepo extends JpaRepository<BonLivraisonFille,Integer> {
 
     @Query("select blf from BonLivraisonFille blf where blf.bonLivraisonMere.id = :idMere")
-    List<BonLivraisonFille> findBonLivraisonFilleByBonLivraisonMere(int idMere);
+    List<BonLivraisonFille> findBonLivraisonFilleByBonLivraisonMere(String idMere);
 }

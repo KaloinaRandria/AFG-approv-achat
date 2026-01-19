@@ -2,6 +2,7 @@ package afg.achat.afgApprovAchat.model.bonLivraison;
 
 import afg.achat.afgApprovAchat.model.Fournisseur;
 import afg.achat.afgApprovAchat.model.util.Devise;
+import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,8 +18,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "bon_livraison_mere")
 public class BonLivraisonMere {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_bl_mere")
-    int id;
+    @Id @Column(name = "id_bl_mere")
+    String id;
     String description;
     @Column(name = "date_reception")
     LocalDateTime dateReception;
@@ -29,6 +30,9 @@ public class BonLivraisonMere {
     @ManyToOne @JoinColumn(name = "id_devise" ,  referencedColumnName = "id_devise")
     Devise devise;
 
+    public void setId(IdGenerator idGenerator) {
+        this.id = idGenerator.generateId("BL","bon_livraison_mere_id_bl_mere_seq");
+    }
     public void setDateReception(String dateReception) {
         this.dateReception = LocalDateTime.parse(dateReception);
     }
