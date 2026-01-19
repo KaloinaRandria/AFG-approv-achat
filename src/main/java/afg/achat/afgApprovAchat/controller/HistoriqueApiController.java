@@ -126,7 +126,10 @@ public class HistoriqueApiController {
             HistoriqueMouvementStockView[] historiques = historiqueMouvementStockService.getHistoriqueByArticle(codeArticle);
 
             List<HistoriqueMouvementStockView> sortedList = Arrays.stream(historiques)
-                    .sorted((h1, h2) -> h2.getDateMouvement().compareTo(h1.getDateMouvement()))
+                    .sorted(Comparator.comparing(
+                            HistoriqueMouvementStockView::getDateMouvement,
+                            Comparator.nullsLast(Comparator.naturalOrder())
+                    ).reversed())
                     .collect(Collectors.toList());
 
             int total = sortedList.size();
@@ -189,7 +192,11 @@ public class HistoriqueApiController {
         formatted.put("designation", historique.getDesignation());
         formatted.put("typeMouvement", historique.getTypeMouvement());
         formatted.put("quantite", historique.getQuantite());
-        formatted.put("dateMouvement", historique.getDateMouvement().format(dateFormatter));
+        String date = (historique.getDateMouvement() != null)
+                ? historique.getDateMouvement().format(dateFormatter)
+                : "-";
+
+        formatted.put("dateMouvement", date);
         formatted.put("refBlMere", historique.getRefBlMere());
         formatted.put("refDemandeMere", historique.getRefDemandeMere());
         formatted.put("auteur", historique.getAuteur());

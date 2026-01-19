@@ -53,7 +53,8 @@
                             <th><i class="fas fa-sign-out-alt me-2 icon-gradient-light-blue"></i>Sortie</th>
                             <th><i class="fas fa-chart-pie me-2 icon-gradient-light-blue"></i>Stock Disponible</th>
                             <th><i class="fas fa-balance-scale me-2 icon-gradient-light-blue"></i>UDM</th>
-                            <th><i class="fas fa-bell me-2 icon-gradient-light-blue"></i>Notification</th>
+                            <th><i class="fas fa-bell me-2 icon-gradient-light-blue"></i>Etat</th>
+                            <th><i class="fas fa-history me-2 icon-gradient-light-blue"></i>Historiques</th>
                         </tr>
                         </thead>
 
@@ -139,6 +140,16 @@
                                     </div>
                                 </th:block>
                             </td>
+                            <td>
+                                <button class="btn btn-sm historique-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#historiqueModal"
+                                        th:data-codearticle = "${e.codeArticle}"
+                                        title="Voir l'historique des mouvements">
+                                    <i class="fas fa-history"></i>
+                                </button>
+                            </td>
+
                         </tr>
                         </tbody>
                     </table>
@@ -312,6 +323,109 @@
     </div>
 </div>
 
+<!-- Modal pour l'historique des mouvements (ENTREE/SORTIE) -->
+<div class="modal fade" id="historiqueModal" tabindex="-1" aria-labelledby="historiqueModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="historiqueModalLabel">
+                    <i class="fas fa-history me-2 icon-gradient-blue"></i>Historique des mouvements
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <!-- Exemple: "Article: CONS0001 - Encre HP..." -->
+                    <h6 id="historiqueInfo" class="mb-0"></h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-gradient-blue" id="historiqueCount">0 mouvement(s)</span>
+
+                        <!-- Optionnel: taille page -->
+                        <select class="form-select form-select-sm" style="width: 130px" id="historiqueSize">
+                            <option value="5">5 / page</option>
+                            <option value="10" selected>10 / page</option>
+                            <option value="20">20 / page</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Tableau pour l'historique - Style carte -->
+                <div class="card border-0 shadow-sm">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                            <tr>
+                                <th class="border-0 py-3 ps-4">
+                                    <i class="far fa-clock me-2 text-muted"></i>Date & Heure
+                                </th>
+
+                                <th class="border-0 py-3">
+                                    <i class="fas fa-exchange-alt me-2 text-muted"></i>Type
+                                </th>
+
+                                <th class="border-0 py-3">
+                                    <i class="fas fa-box-open me-2 text-muted"></i>Article
+                                </th>
+
+                                <th class="border-0 py-3">
+                                    <i class="fas fa-balance-scale me-2 text-muted"></i>Quantité
+                                </th>
+
+                                <th class="border-0 py-3">
+                                    <i class="fas fa-ruler-combined me-2 text-muted"></i>UDM
+                                </th>
+
+                                <th class="border-0 py-3">
+                                    <i class="fas fa-file-alt me-2 text-muted"></i>Référence
+                                </th>
+
+                                <th class="border-0 py-3 pe-4">
+                                    <i class="far fa-user me-2 text-muted"></i>Auteur
+                                </th>
+                            </tr>
+                            </thead>
+
+                            <tbody id="historiqueTableBody">
+                            <!-- Les données seront chargées dynamiquement ici -->
+                            <tr id="historiqueEmptyRow">
+                                <td colspan="7" class="text-center py-5">
+                                    <div class="empty-state-content">
+                                        <div class="empty-state-icon bg-light rounded-circle p-4 mb-3">
+                                            <i class="fas fa-inbox fa-lg text-muted"></i>
+                                        </div>
+                                        <h5 class="text-muted">Aucun mouvement</h5>
+                                        <p class="text-muted mb-0">Les entrées/sorties apparaîtront dans ce journal</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <nav aria-label="Historique pagination" id="historiquePagination" class="mt-3 d-none">
+                    <ul class="pagination justify-content-center mb-0" id="historiquePaginationUl">
+                        <!-- Générée dynamiquement -->
+                    </ul>
+                </nav>
+
+            </div>
+
+            <div class="modal-footer">
+                <div class="me-auto text-muted small" id="historiquePageInfo"></div>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Fermer
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
 <script th:inline="none">
     /*<![CDATA[*/
     document.addEventListener('DOMContentLoaded', function () {
@@ -392,6 +506,76 @@
 
                 toggleMobileSearch();
                 $(window).on('resize', toggleMobileSearch);
+            }
+        });
+    });
+
+    $('#historiqueModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var codeArticle = button.data('codearticle');
+
+        console.log("Ouverture du modal pour l'article: " + codeArticle);
+
+        $('#historiqueTableBody').html(`
+        <tr>
+            <td colspan="6" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+                <p class="mt-2 text-muted">Chargement de l'historique...</p>
+            </td>
+        </tr>
+    `);
+        const url = `/api/historique/stock/${encodeURIComponent(codeArticle)}?page=0&size=10`;
+        console.log(url);
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: function (response) {
+                console.log("Réponse reçue:", response);
+                if (response.data && response.data.length > 0) {
+                    let html = '';
+                    response.data.forEach(function (historique){
+                        console.log("Historique:", historique);
+                        html += `
+                        <tr>
+                            <td>${historique.dateMouvement || '-'}</td>
+                            <td>${historique.typeMouvement || '-'}</td>
+                            <td>${historique.codeArticle + '-' +historique.designation || '-'}</td>
+                            <td>${historique.quantite || '-'}</td>
+                            <td>${historique.descUdm +' ('+ historique.udm + ')' || '-'}</td>
+                            <td>${historique.reference || '-'}</td>
+                            <td>${historique.auteur || '-'}</td>
+                        </tr>`;
+                    });
+                    $('#historiqueTableBody').html(html);
+                    const totalElements = response.pagination ? response.pagination.totalElements : response.data.lenght;
+                    $('#historiqueCount').text(totalElements + ' modification(s)');
+                } else {
+                    console.log("Aucun historique trouvé.");
+                    $('#historiqueTableBody').html(`
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">Aucune modification trouvée</p>
+                        </td>
+                    </tr>
+                `);
+                    $('#historiqueCount').text('0 modification(s)');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error("Erreur AJAX:", status, error, xhr.responseText);
+                $('#historiqueTableBody').html(`
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-danger">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <p>Erreur lors du chargement de l'historique</p>
+                        <small class="text-muted">Status: ${status}, Erreur: ${error}</small>
+                        <br><small>Réponse: ${xhr.responseText}</small>
+                    </td>
+                </tr>
+            `);
             }
         });
     });
