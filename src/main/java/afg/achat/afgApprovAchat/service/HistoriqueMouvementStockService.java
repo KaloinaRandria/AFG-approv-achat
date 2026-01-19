@@ -18,8 +18,8 @@ public class HistoriqueMouvementStockService {
         return repo.findAllOrderByDateDesc();
     }
 
-    public List<HistoriqueMouvementStockView> getHistoriqueByArticle(String idArticle) {
-        return repo.findByIdArticleOrderByDateMouvementDesc(idArticle);
+    public List<HistoriqueMouvementStockView> getHistoriqueByArticle(String codeArticle) {
+        return repo.findByCodeArticleOrderByDateMouvementDesc(codeArticle);
     }
 }
 

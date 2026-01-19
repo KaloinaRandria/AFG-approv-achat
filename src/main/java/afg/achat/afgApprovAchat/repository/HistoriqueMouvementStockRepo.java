@@ -13,6 +13,6 @@ public interface HistoriqueMouvementStockRepo extends JpaRepository<HistoriqueMo
     List<HistoriqueMouvementStockView> findAllOrderByDateDesc();
 
     // historique par article
-    List<HistoriqueMouvementStockView> findByIdArticleOrderByDateMouvementDesc(String idArticle);
+    List<HistoriqueMouvementStockView> findByCodeArticleOrderByDateMouvementDesc(String codeArticle);
 }
 
