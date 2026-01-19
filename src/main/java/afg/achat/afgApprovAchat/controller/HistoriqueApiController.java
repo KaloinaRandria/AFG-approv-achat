@@ -3,6 +3,7 @@ package afg.achat.afgApprovAchat.controller;
 import afg.achat.afgApprovAchat.model.HistoriqueMouvementStockView;
 import afg.achat.afgApprovAchat.model.util.ArticleHistorique;
 import afg.achat.afgApprovAchat.model.util.DeviseHistorique;
+import afg.achat.afgApprovAchat.service.HistoriqueMouvementStockService;
 import afg.achat.afgApprovAchat.service.util.ArticleHistoriqueService;
 import afg.achat.afgApprovAchat.service.util.DeviseHistoriqueService;
 import org.springframework.http.HttpStatus;
@@ -22,10 +23,12 @@ public class HistoriqueApiController {
 
     private final DeviseHistoriqueService deviseHistoriqueService;
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+    private final HistoriqueMouvementStockService historiqueMouvementStockService;
 
-    public HistoriqueApiController(ArticleHistoriqueService articleHistoriqueService, DeviseHistoriqueService deviseHistoriqueService) {
+    public HistoriqueApiController(ArticleHistoriqueService articleHistoriqueService, DeviseHistoriqueService deviseHistoriqueService, HistoriqueMouvementStockService historiqueMouvementStockService) {
         this.articleHistoriqueService = articleHistoriqueService;
         this.deviseHistoriqueService = deviseHistoriqueService;
+        this.historiqueMouvementStockService = historiqueMouvementStockService;
     }
 
     @GetMapping("/article/{codeArticle}")
@@ -104,6 +107,46 @@ public class HistoriqueApiController {
                     "pageSize", size
             ));
             response.put("deviseId", deviseId);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Erreur lors de la récupération de l'historique");
+            error.put("details", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+
+    }
+
+    @GetMapping("/stock/{codeArticle}")
+    public ResponseEntity<?> getHistoriqueStock(@PathVariable String codeArticle,
+                                                @RequestParam(defaultValue = "0") int page,
+                                                @RequestParam(defaultValue = "10") int size) {
+        try {
+            HistoriqueMouvementStockView[] historiques = historiqueMouvementStockService.getHistoriqueByArticle(codeArticle);
+
+            List<HistoriqueMouvementStockView> sortedList = Arrays.stream(historiques)
+                    .sorted((h1, h2) -> h2.getDateMouvement().compareTo(h1.getDateMouvement()))
+                    .collect(Collectors.toList());
+
+            int total = sortedList.size();
+            int start = Math.min(page * size, total);
+            int end = Math.min(start + size, total);
+
+            List<HistoriqueMouvementStockView> pageContent = sortedList.subList(start, end);
+
+            Map<String, Object> response = new HashMap<>();
+
+            response.put("data", pageContent.stream()
+                    .map(this::formatHistoriqueStock)
+                    .collect(Collectors.toList()));
+            response.put("pagination", Map.of(
+                    "currentPage", page,
+                    "totalPages", (int) Math.ceil((double) total / size),
+                    "totalElements", total,
+                    "pageSize", size
+            ));
+            response.put("article", codeArticle);
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {

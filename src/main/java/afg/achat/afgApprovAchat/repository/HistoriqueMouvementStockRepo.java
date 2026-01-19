@@ -14,6 +14,6 @@ public interface HistoriqueMouvementStockRepo extends JpaRepository<HistoriqueMo
 
     // historique par article
     @Query("select h from HistoriqueMouvementStockView h where h.codeArticle = :codeArticle order by h.dateMouvement desc")
-    List<HistoriqueMouvementStockView> findByCodeArticleOrderByDateMouvementDesc(String codeArticle);
+    HistoriqueMouvementStockView[] findByCodeArticleOrderByDateMouvementDesc(String codeArticle);
 }
 
