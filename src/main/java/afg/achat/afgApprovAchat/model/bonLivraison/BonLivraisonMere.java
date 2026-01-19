@@ -17,6 +17,11 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Entity
 @Table(name = "bon_livraison_mere")
+@SequenceGenerator(
+        name = "bon_livraison_mere_id_bl_mere_seq",
+        sequenceName = "bon_livraison_mere_id_bl_mere_seq",
+        allocationSize = 1
+)
 public class BonLivraisonMere {
     @Id @Column(name = "id_bl_mere")
     String id;

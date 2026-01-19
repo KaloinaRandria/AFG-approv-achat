@@ -22,12 +22,7 @@ select gsf.id_gisement_stock_fille,
 from gisement_stock_fille as gsf
 join public.article a on a.id_article = gsf.id_article;
 
-create sequence s_code_article
-    start with 1
-    increment by 1
-    no minvalue
-    no maxvalue
-    cache 1;
+
 
 
 
@@ -99,9 +94,6 @@ VALUES
 
 INSERT INTO devise (acronyme, designation)
 VALUES
-    ('MGA', 'Ariary Malagasy'),
-    ('EUR', 'Euro'),
-    ('USD', 'Dollar Américain'),
     ('GBP', 'Livre Sterling'),
     ('ZAR', 'Rand Sud-Africain'),
     ('CHF', 'Franc Suisse'),

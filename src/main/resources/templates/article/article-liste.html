@@ -69,7 +69,6 @@
                                         th:data-seuilminimum="${a.getSeuilMin()}"
                                         th:data-idudm="${a.udm != null ? a.udm.getId() : ''}"
                                         th:data-idfamille="${a.famille != null ? a.famille.getId() : ''}"
-                                        th:data-idcentre="${a.centreBudgetaire != null ? a.centreBudgetaire.getId() : ''}"
                                         title="Modifier l'article">
                                     <i class="fas fa-edit"></i>
                                 </button>
@@ -148,16 +147,6 @@
                             <option value="">Sélectionner une famille</option>
                             <option th:each="famille : ${familles}" th:value="${famille.getId()}"
                                     th:text="${famille.getDescription()}"></option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="modalCentre" class="form-label">
-                            <i class="fas fa-building me-2 icon-gradient-blue"></i>Centre Budgetaire
-                        </label>
-                        <select class="form-control" id="modalCentre" name="idCentreBudgetaire">
-                            <option value="">Sélectionner un centre</option>
-                            <option th:each="centre : ${centres}" th:value="${centre.getId()}"
-                                    th:text="${centre.getCodeCentre()}"></option>
                         </select>
                     </div>
                 </div>
@@ -436,7 +425,6 @@
             "seuilmin": "Seuil minimum",
             "famille": "Famille",
             "udm": "Unité de mesure",
-            "centrebudgetaire": "Centre budgétaire",
             "article": "Création d'article",
             "stock": "Mouvement de stock",
             "quantite": "Quantité en stock"
