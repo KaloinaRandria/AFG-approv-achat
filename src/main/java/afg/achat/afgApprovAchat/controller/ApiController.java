@@ -45,7 +45,7 @@ public class ApiController {
     }
 
     @GetMapping("/bonlivraison/{id}/details")
-    public BonLivraisonDetailDTO getBonLivraisonDetails(@PathVariable int id) {
+    public BonLivraisonDetailDTO getBonLivraisonDetails(@PathVariable String id) {
         BonLivraisonMere bonLivraisonMere = this.bonLivraisonMereService.getBonLivraisonMereById(id)
                 .orElseThrow(() -> new RuntimeException("Bon de livraison non trouvé avec l'ID: " + id));
 

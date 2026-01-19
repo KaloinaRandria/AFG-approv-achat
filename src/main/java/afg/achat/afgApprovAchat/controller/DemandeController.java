@@ -10,6 +10,7 @@ import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.util.AdresseService;
 import afg.achat.afgApprovAchat.service.util.DepartementService;
+import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,8 @@ public class DemandeController {
     ArticleService articleService;
     @Autowired
     UtilisateurService utilisateurService;
+    @Autowired
+    IdGenerator idGenerator;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -84,6 +87,7 @@ public class DemandeController {
                     .orElseThrow(() -> new IllegalArgumentException("Département introuvable"));
 
             DemandeMere demandeMere = new DemandeMere();
+            demandeMere.setId(idGenerator);
             demandeMere.setDateDemande(dateDemande);
             demandeMere.setAdresse(adresse1);
             demandeMere.setDemandeur(utilisateur);

@@ -20,7 +20,7 @@ public class BonLivraisonMereService {
         this.bonLivraisonMereRepo.save(bonLivraisonMere);
     }
 
-    public Optional<BonLivraisonMere> getBonLivraisonMereById(int id) {
+    public Optional<BonLivraisonMere> getBonLivraisonMereById(String id) {
         return this.bonLivraisonMereRepo.findById(id);
     }
 }

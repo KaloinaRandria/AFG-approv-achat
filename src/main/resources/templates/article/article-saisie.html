@@ -175,38 +175,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Centre budgétaire -->
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="centreBudgetaire" class="form-label fw-bold required-field">
-                                    Centre budgétaire
-                                </label>
-                                <div class="input-group">
-                                        <span class="input-group-text bg-light">
-                                            <i class="fas fa-building icon-gradient-blue"></i>
-                                        </span>
-                                    <select class="form-select select2-searchable"
-                                            id="centreBudgetaire"
-                                            name="centreBudgetaire"
-                                            th:field="*{centreBudgetaire}"
-                                            data-placeholder="Recherchez ou sélectionnez un centre..."
-                                            required>
-                                        <option value=""></option>
-                                        <option th:each="centre : ${centres}"
-                                                th:value="${centre.getId()}"
-                                                th:text="${centre.getCodeCentre()}">
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="form-text text-muted mt-1">
-                                    <i class="fas fa-info-circle me-1"></i> Centre responsable du budget de l'article
-                                </div>
-                                <div th:if="${#fields.hasErrors('centreBudgetaire')}" class="text-danger mt-1">
-                                    <small th:errors="*{centreBudgetaire}"></small>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Boutons d'action -->
@@ -334,13 +302,6 @@
                             </th>
                             <td id="pvFamille"></td>
                         </tr>
-
-                        <tr>
-                            <th class="text-muted">
-                                <i class="fas fa-building me-2 icon-gradient-blue"></i>Centre budgétaire
-                            </th>
-                            <td id="pvCentreBudgetaire"></td>
-                        </tr>
                         </tbody>
                     </table>
                 </div>
@@ -416,7 +377,6 @@
 
             document.getElementById('pvUdm').textContent = getSelectedText('udm');
             document.getElementById('pvFamille').textContent = getSelectedText('famille');
-            document.getElementById('pvCentreBudgetaire').textContent = getSelectedText('centreBudgetaire');
 
             // Ouvrir modal
             window.bootstrap.Modal.getOrCreateInstance(document.getElementById('previewModal')).show();
