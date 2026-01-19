@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.controller;
 
+import afg.achat.afgApprovAchat.model.HistoriqueMouvementStockView;
 import afg.achat.afgApprovAchat.model.util.ArticleHistorique;
 import afg.achat.afgApprovAchat.model.util.DeviseHistorique;
 import afg.achat.afgApprovAchat.service.util.ArticleHistoriqueService;
@@ -134,6 +135,24 @@ public class HistoriqueApiController {
         formatted.put("ancienCoursAriary", historique.getAncienCoursAriary());
         formatted.put("nouvelleCoursAriary", historique.getNouvelleCoursAriary());
         formatted.put("deviseId", historique.getDevise().getId());
+        return formatted;
+    }
+
+    private Map<String, Object> formatHistoriqueStock(HistoriqueMouvementStockView historique) {
+        Map<String, Object> formatted = new HashMap<>();
+        formatted.put("idStockFille", historique.getIdStockFille());
+        formatted.put("idArticle", historique.getIdArticle());
+        formatted.put("codeArticle", historique.getCodeArticle());
+        formatted.put("designation", historique.getDesignation());
+        formatted.put("typeMouvement", historique.getTypeMouvement());
+        formatted.put("quantite", historique.getQuantite());
+        formatted.put("dateMouvement", historique.getDateMouvement().format(dateFormatter));
+        formatted.put("refBlMere", historique.getRefBlMere());
+        formatted.put("refDemandeMere", historique.getRefDemandeMere());
+        formatted.put("auteur", historique.getAuteur());
+        formatted.put("reference", historique.getReference());
+        formatted.put("udm", historique.getUdm());
+        formatted.put("descUdm", historique.getDescUdm());
         return formatted;
     }
 }

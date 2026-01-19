@@ -277,3 +277,7 @@ CREATE INDEX IF NOT EXISTS idx_stock_fille_article ON stock_fille(id_article);
 CREATE INDEX IF NOT EXISTS idx_stock_fille_mere   ON stock_fille(id_stock_mere);
 CREATE INDEX IF NOT EXISTS idx_stock_mere_bl      ON stock_mere(id_bl_mere);
 CREATE INDEX IF NOT EXISTS idx_stock_mere_dem     ON stock_mere(id_demande_mere);
+
+select * from v_historique_mouvement_stock
+where code_article = 'ART-001' order by
+                                date_mouvement desc ;
