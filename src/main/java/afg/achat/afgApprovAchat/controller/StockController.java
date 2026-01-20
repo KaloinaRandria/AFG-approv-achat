@@ -146,7 +146,7 @@ public class StockController {
         int alertesCount = stockAlerteService.getAlertesCount();
 
         // ✅ modal alertes pageable
-        Pageable alertPageable = PageRequest.of(apage, asize, Sort.by(Sort.Direction.DESC, "codeArticle"));
+        Pageable alertPageable = PageRequest.of(apage, asize); // ✅ pas de sort
         Page<StockAlerte> alertesPage = stockAlerteService.getAlertesPage(alertPageable);
 
         // ✅ counts (sur la page du modal — si tu veux le total global, il faut une requête count par type)

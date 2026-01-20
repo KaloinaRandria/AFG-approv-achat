@@ -26,7 +26,7 @@ public interface VEtatStockRepo extends JpaRepository<VEtatStock, Integer> {
             FROM v_etat_stock
             WHERE CAST(stock_disponible AS numeric) <= 0
                OR CAST(stock_disponible AS numeric) <= CAST(seuil_min AS numeric)
-            ORDER BY code_article DESC
+            ORDER BY v_etat_stock.code_article DESC
         """,
             countQuery = """
             SELECT COUNT(*)
@@ -55,7 +55,7 @@ public interface VEtatStockRepo extends JpaRepository<VEtatStock, Integer> {
             value = """
       SELECT *
       FROM v_etat_stock
-      WHERE code_article IN (:codes)
+      WHERE v_etat_stock.code_article IN (:codes)
         AND (
             CAST(stock_disponible AS DECIMAL(18,2)) <= 0
             OR CAST(stock_disponible AS DECIMAL(18,2)) <= CAST(seuil_min AS DECIMAL(18,2))
