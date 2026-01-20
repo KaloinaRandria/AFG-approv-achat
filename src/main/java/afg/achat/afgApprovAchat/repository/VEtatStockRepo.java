@@ -22,20 +22,22 @@ public interface VEtatStockRepo extends JpaRepository<VEtatStock, Integer> {
 
     @Query(
             value = """
-      SELECT *
-      FROM v_etat_stock
-      WHERE CAST(stock_disponible AS DECIMAL(18,2)) <= 0
-         OR CAST(stock_disponible AS DECIMAL(18,2)) <= CAST(seuil_min AS DECIMAL(18,2))
-  """,
+            SELECT *
+            FROM v_etat_stock
+            WHERE CAST(stock_disponible AS numeric) <= 0
+               OR CAST(stock_disponible AS numeric) <= CAST(seuil_min AS numeric)
+            ORDER BY code_article DESC
+        """,
             countQuery = """
-      SELECT COUNT(*)
-      FROM v_etat_stock
-      WHERE CAST(stock_disponible AS DECIMAL(18,2)) <= 0
-         OR CAST(stock_disponible AS DECIMAL(18,2)) <= CAST(seuil_min AS DECIMAL(18,2))
-  """,
+            SELECT COUNT(*)
+            FROM v_etat_stock
+            WHERE CAST(stock_disponible AS numeric) <= 0
+               OR CAST(stock_disponible AS numeric) <= CAST(seuil_min AS numeric)
+        """,
             nativeQuery = true
     )
     Page<VEtatStock> findAlertesPage(Pageable pageable);
+
 
 
     @Query(
