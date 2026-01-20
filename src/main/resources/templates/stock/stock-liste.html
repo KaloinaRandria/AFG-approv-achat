@@ -295,7 +295,7 @@
                 <div class="notifications-container" style="max-height: 60vh; overflow-y: auto;">
 
                     <!-- Si aucune alerte -->
-                    <div th:if="${alertesPage == null or #lists.isEmpty(alertesPage.content)}"
+                    <div th:if="${alertes == null or #lists.isEmpty(alertes)}"
                          class="text-center py-5">
                         <i class="fas fa-check-circle fa-3x text-success mb-3 opacity-50"></i>
                         <h5 class="text-muted">Aucune alerte active</h5>
@@ -303,8 +303,8 @@
                     </div>
 
                     <!-- Boucle sur les alertes -->
-                    <div th:each="a : ${alertesPage.content}"
-                         th:unless="${alertesPage == null or #lists.isEmpty(alertesPage.content)}"
+                    <div th:each="a : ${alertes}"
+                         th:unless="${alertes == null or #lists.isEmpty(alertes)}"
                          class="notification-item border-bottom p-3"
                          th:classappend="${a.getTypeAlerte() == 'RUPTURE'} ? 'alert-rupture' : 'alert-seuil'"
                          style="cursor: pointer;"
@@ -573,7 +573,7 @@
 
                     $('#historiqueTableBody').html(html);
                     const totalElements = response.pagination ? response.pagination.totalElements : response.data.lenght;
-                    $('#historiqueCount').text(totalElements + ' modification(s)');
+                    $('#historiqueCount').text(totalElements + ' mouvement(s)');
                 } else {
                     console.log("Aucun historique trouvé.");
                     $('#historiqueTableBody').html(`
@@ -584,7 +584,7 @@
                         </td>
                     </tr>
                 `);
-                    $('#historiqueCount').text('0 modification(s)');
+                    $('#historiqueCount').text('0 mouvement(s)');
                 }
             },
             error: function (xhr, status, error) {

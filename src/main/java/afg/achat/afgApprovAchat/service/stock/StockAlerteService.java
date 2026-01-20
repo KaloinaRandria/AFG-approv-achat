@@ -78,4 +78,34 @@ public class StockAlerteService {
             return 0;
         }
     }
+
+    public List<StockAlerte> getAlertesAll() {
+        List<VEtatStock> etats = vEtatStockRepo.findAlertesAll();
+        List<StockAlerte> alertes = new ArrayList<>();
+
+        for (VEtatStock e : etats) {
+            double stock = Double.parseDouble(e.getStockDisponible());
+            double seuil = Double.parseDouble(e.getSeuilMin());
+
+            String type = null;
+            if (stock <= 0) type = "RUPTURE";
+            else if (stock <= seuil) type = "SEUIL";
+
+            if (type != null) {
+                alertes.add(new StockAlerte(
+                        e.getCodeArticle(),
+                        e.getDesignation(),
+                        stock,
+                        seuil,
+                        type,
+                        e.getUdm()
+                ));
+            }
+        }
+        return alertes;
+    }
+
+    public long countAlertes() {
+        return vEtatStockRepo.countAlertes();
+    }
 }
