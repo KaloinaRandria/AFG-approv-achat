@@ -280,15 +280,33 @@
                         </span>
                     </h6>
                     <div>
-                        <span class="badge bg-danger me-2">
-                            <i class="fas fa-exclamation-circle me-1"></i>
-                            Rupture: <span th:text="${ruptureCount != null ? ruptureCount : 0}"></span>
-                        </span>
-                        <span class="badge bg-warning text-dark">
-                            <i class="fas fa-exclamation-triangle me-1"></i>
-                            Seuil: <span th:text="${seuilCount != null ? seuilCount : 0}"></span>
-                        </span>
+    <span id="btnFilterRupture"
+          class="badge bg-danger me-2"
+          role="button"
+          style="cursor:pointer;"
+          onclick="filterAlertes('RUPTURE')">
+        <i class="fas fa-exclamation-circle me-1"></i>
+        Rupture: <span th:text="${ruptureCount != null ? ruptureCount : 0}"></span>
+    </span>
+
+                        <span id="btnFilterSeuil"
+                              class="badge bg-warning text-dark"
+                              role="button"
+                              style="cursor:pointer;"
+                              onclick="filterAlertes('SEUIL')">
+        <i class="fas fa-exclamation-triangle me-1"></i>
+        Seuil: <span th:text="${seuilCount != null ? seuilCount : 0}"></span>
+    </span>
+
+                        <span id="btnFilterAll"
+                              class="badge bg-secondary ms-2"
+                              role="button"
+                              style="cursor:pointer;"
+                              onclick="filterAlertes(null)">
+        Tout
+    </span>
                     </div>
+
                 </div>
 
                 <!-- Liste des alertes -->
@@ -694,6 +712,68 @@
         // Afficher le modal de détails de l'alerte
         showAlertDetails(codeArticle, designation, type, stock, seuil, udm);
     }
+
+    let currentAlerteFilter = null;
+
+    function filterAlertes(type) {
+        // toggle : si on clique le même filtre -> annuler (tout afficher)
+        if (currentAlerteFilter === type) {
+            currentAlerteFilter = null;
+        } else {
+            currentAlerteFilter = type; // "RUPTURE" / "SEUIL" / null
+        }
+
+        const items = document.querySelectorAll('#notificationsModal .notification-item');
+        let shown = 0;
+
+        items.forEach(item => {
+            const t = item.getAttribute('data-type'); // RUPTURE / SEUIL
+            const visible = (currentAlerteFilter === null) || (t === currentAlerteFilter);
+            item.style.display = visible ? '' : 'none';
+            if (visible) shown++;
+        });
+
+        // (optionnel) afficher combien on voit après filtre
+        const title = document.getElementById('notificationsModalLabel');
+        if (title) {
+            const base = "Alertes de Stock";
+            if (currentAlerteFilter === "RUPTURE") title.innerHTML = `<i class="fas fa-bell me-2"></i> ${base} (Rupture: ${shown})`;
+            else if (currentAlerteFilter === "SEUIL") title.innerHTML = `<i class="fas fa-bell me-2"></i> ${base} (Seuil: ${shown})`;
+            else title.innerHTML = `<i class="fas fa-bell me-2"></i> ${base}`;
+        }
+
+        // (optionnel) style actif sur les badges
+        setActiveFilterBadge(currentAlerteFilter);
+    }
+
+    function setActiveFilterBadge(type) {
+        const bR = document.getElementById('btnFilterRupture');
+        const bS = document.getElementById('btnFilterSeuil');
+        const bA = document.getElementById('btnFilterAll');
+
+        if (!bR || !bS || !bA) return;
+
+        // reset
+        bR.classList.remove('border', 'border-3', 'border-light');
+        bS.classList.remove('border', 'border-3', 'border-dark');
+        bA.classList.remove('border', 'border-3', 'border-light');
+
+        if (type === "RUPTURE") bR.classList.add('border', 'border-3', 'border-light');
+        else if (type === "SEUIL") bS.classList.add('border', 'border-3', 'border-dark');
+        else bA.classList.add('border', 'border-3', 'border-light');
+    }
+
+    // Bonus : quand on ouvre le modal, on remet "Tout"
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalEl = document.getElementById('notificationsModal');
+        if (modalEl) {
+            modalEl.addEventListener('shown.bs.modal', function () {
+                currentAlerteFilter = null;
+                filterAlertes(null);
+            });
+        }
+    });
+
 
     /*]]>*/
 </script>
