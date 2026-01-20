@@ -31,7 +31,7 @@ public class ImportController {
                     "Veuillez sélectionner un fichier");
             return "redirect:/import/import-saisie-page";
         }
-        importService.importCSVFournisseur(file);
+        importService.importCSVArticle(file);
         redirectAttributes.addFlashAttribute("ok",
                 "Import effectué avec succès");
         return "redirect:/import/import-saisie-page";
