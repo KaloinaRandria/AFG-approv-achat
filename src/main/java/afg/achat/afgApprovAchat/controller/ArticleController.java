@@ -2,11 +2,9 @@ package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.ArticleModificationDto;
-import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.Famille;
 import afg.achat.afgApprovAchat.model.util.Udm;
 import afg.achat.afgApprovAchat.service.ArticleService;
-import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.FamilleService;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.util.UdmService;
@@ -31,8 +29,6 @@ public class ArticleController {
     @Autowired
     FamilleService familleService;
     @Autowired
-    private CentreBudgetaireService centreBudgetaireService;
-    @Autowired
     IdGenerator idGenerator;
 
 
@@ -41,13 +37,11 @@ public class ArticleController {
         Article[] articles = articleService.getAllArticles();
         Udm[] udms = udmService.getAllUdms();
         Famille[] familles = familleService.getAllFamilles();
-        CentreBudgetaire[] centres = centreBudgetaireService.getAllCentreBudgetaires();
 
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("articles", articles);
         model.addAttribute("udms", udms);
         model.addAttribute("familles", familles);
-        model.addAttribute("centres", centres);
 
         // Ajouter un DTO vide pour le formulaire
         model.addAttribute("articleDto", new ArticleModificationDto());
@@ -84,7 +78,6 @@ public class ArticleController {
         // Toujours ajouter les listes de données
         model.addAttribute("unites", udmService.getAllUdms());
         model.addAttribute("familles", familleService.getAllFamilles());
-        model.addAttribute("centres", centreBudgetaireService.getAllCentreBudgetaires());
 
         return "article/article-saisie";
     }
@@ -94,10 +87,8 @@ public class ArticleController {
     public String insertArticle(@ModelAttribute("article") Article article,
                                 @RequestParam(name = "udm") String udmId,
                                 @RequestParam(name = "famille") String familleId,
-                                @RequestParam(name = "centreBudgetaire") String centreBudgetaireId,
                                 BindingResult bindingResult,
-                                RedirectAttributes redirectAttributes,
-                                Model model) {
+                                RedirectAttributes redirectAttributes) {
 
         try {
             // Validation de base
@@ -128,10 +119,6 @@ public class ArticleController {
                 throw new IllegalArgumentException("Famille obligatoire");
             }
 
-            if (centreBudgetaireId == null || centreBudgetaireId.isBlank()) {
-                throw new IllegalArgumentException("Centre budgétaire obligatoire");
-            }
-
 
             // Récupération des objets liés
             Udm udm = udmService.getUdmById(Integer.parseInt(udmId))
@@ -140,14 +127,10 @@ public class ArticleController {
             Famille famille = familleService.getFamilleById(Integer.parseInt(familleId))
                     .orElseThrow(() -> new IllegalArgumentException("Famille obligatoire"));
 
-            CentreBudgetaire centreBudgetaire = centreBudgetaireService.getCentreBudgetaireById(Integer.parseInt(centreBudgetaireId))
-                    .orElseThrow(() -> new IllegalArgumentException("Centre budgétaire obligatoire"));
-
             // Génération du code
             article.setCodeArticle(idGenerator);
             article.setUdm(udm);
             article.setFamille(famille);
-            article.setCentreBudgetaire(centreBudgetaire);
 
             // Sauvegarde
             Article savedArticle = articleService.saveArticle(article);
@@ -180,7 +163,6 @@ public class ArticleController {
                                   @RequestParam(name = "designation") String designation,
                                   @RequestParam(name = "idUdm") String idUdm,
                                   @RequestParam(name = "idFamille") String idFamille,
-                                  @RequestParam(name = "idCentreBudgetaire") String idCentreBudgetaire,
                                   @RequestParam(name = "seuilMinimum") String seuilMinimum,
                                   RedirectAttributes redirectAttributes) {
         try {
@@ -203,8 +185,7 @@ public class ArticleController {
                     designation.trim(),
                     seuilMinimum.trim(),
                     idUdm != null && !idUdm.isEmpty() ? idUdm : null,
-                    idFamille != null && !idFamille.isEmpty() ? idFamille : null,
-                    idCentreBudgetaire != null && !idCentreBudgetaire.isEmpty() ? idCentreBudgetaire : null
+                    idFamille != null && !idFamille.isEmpty() ? idFamille : null
             );
 
             // Message de succès
@@ -218,7 +199,6 @@ public class ArticleController {
             redirectAttributes.addFlashAttribute("seuilMinimum", seuilMinimum);
             redirectAttributes.addFlashAttribute("idUdm", idUdm);
             redirectAttributes.addFlashAttribute("idFamille", idFamille);
-            redirectAttributes.addFlashAttribute("idCentreBudgetaire", idCentreBudgetaire);
 
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("ko",

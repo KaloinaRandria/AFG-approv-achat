@@ -1,20 +1,14 @@
 package afg.achat.afgApprovAchat.service;
 
 import afg.achat.afgApprovAchat.model.Article;
-import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.Famille;
 import afg.achat.afgApprovAchat.model.util.ArticleHistorique;
 import afg.achat.afgApprovAchat.model.util.Udm;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.ArticleRepo;
-import afg.achat.afgApprovAchat.repository.CentreBudgetaireRepo;
-import afg.achat.afgApprovAchat.repository.FamilleRepo;
-import afg.achat.afgApprovAchat.repository.util.ArticleHistoriqueRepo;
-import afg.achat.afgApprovAchat.repository.util.UdmRepo;
 import afg.achat.afgApprovAchat.service.util.ArticleHistoriqueService;
 import afg.achat.afgApprovAchat.service.util.UdmService;
 import jakarta.transaction.Transactional;
-import org.apache.tomcat.util.net.openssl.ciphers.Authentication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -33,8 +27,6 @@ public class ArticleService {
     @Autowired
     FamilleService familleService;
     @Autowired
-    CentreBudgetaireService centreBudgetaireService;
-    @Autowired
     ArticleHistoriqueService articleHistoriqueService;
 
     public Article[] getAllArticles() {
@@ -50,9 +42,13 @@ public class ArticleService {
         return article;
     }
 
+    public Optional<Article> getArticleByDesignation(String designation) {
+        return articleRepo.findArticleByDesignation(designation);
+    }
+
     @Transactional
     public Article modifierArticle(String codeArticle, String designation, String seuilMin,
-                                   String idUdm, String idFamille, String idCentreBudgetaire) {
+                                   String idUdm, String idFamille) {
         // Récupérer l'article existant
         Article article = this.getArticleByCodeArticle(codeArticle)
                 .orElseThrow(() -> new RuntimeException("Article non trouvé"));
@@ -139,28 +135,6 @@ public class ArticleService {
             }
         }
 
-        // 4. Centre budgétaire
-        if (idCentreBudgetaire != null && !idCentreBudgetaire.isEmpty() && !"null".equals(idCentreBudgetaire)) {
-            try {
-                CentreBudgetaire nouveauCentre = centreBudgetaireService.getCentreBudgetaireById(Integer.parseInt(idCentreBudgetaire))
-                        .orElseThrow(() -> new IllegalArgumentException("Centre budgétaire invalide"));
-                CentreBudgetaire ancienCentre = article.getCentreBudgetaire();
-
-                if (nouveauCentre != null && !nouveauCentre.equals(ancienCentre)) {
-                    historiques.add(new ArticleHistorique(
-                            article,
-                            "Centre budgétaire",
-                            ancienCentre != null ? ancienCentre.getCodeCentre() : "null",
-                            nouveauCentre.getCodeCentre(),
-                            utilisateur,
-                            article.getCodeArticle()
-                    ));
-                    article.setCentreBudgetaire(nouveauCentre);
-                }
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("ID Centre budgétaire invalide: " + idCentreBudgetaire);
-            }
-        }
 
         Article articleModifie = article;
         if (!historiques.isEmpty()) {

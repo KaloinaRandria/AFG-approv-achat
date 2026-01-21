@@ -1,6 +1,5 @@
 package afg.achat.afgApprovAchat.model;
 
-import afg.achat.afgApprovAchat.model.VEtatStock;
 import afg.achat.afgApprovAchat.model.stock.StockAlerte;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,6 +15,7 @@ public class EtatStockAlerteDTO {
     private String stockDisponible;
     private StockAlerte alerte;
     private String udm;
+    private String desc_udm;
 
     // Constructeur à partir de VEtatStock
     public EtatStockAlerteDTO(VEtatStock etatStock) {
@@ -26,5 +26,6 @@ public class EtatStockAlerteDTO {
         this.totalSortie = etatStock.getTotalSortie();
         this.stockDisponible = etatStock.getStockDisponible();
         this.udm = etatStock.getUdm();
+        this.desc_udm = etatStock.getDescUdm();
     }
 }

@@ -14,4 +14,7 @@ public interface ArticleRepo extends JpaRepository<Article,Integer> {
     Optional<Article> findArticleByCodeArticle(String codeArticle);
 
     List<Article> findByCodeArticleContainingIgnoreCaseOrDesignationContainingIgnoreCase(String code, String designation);
+
+    @Query("SELECT a FROM Article a WHERE a.designation = :designation")
+    Optional<Article> findArticleByDesignation(String designation);
 }

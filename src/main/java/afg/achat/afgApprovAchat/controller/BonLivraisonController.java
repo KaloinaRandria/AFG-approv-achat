@@ -13,8 +13,11 @@ import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
 import afg.achat.afgApprovAchat.service.stock.StockFilleService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
+import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,8 +25,11 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
 @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
 @Controller
 @RequestMapping("/bonlivraison")
@@ -42,6 +48,8 @@ public class BonLivraisonController {
     StockMereService stockMereService;
     @Autowired
     StockFilleService stockFilleService;
+    @Autowired
+    IdGenerator idGenerator;
 
 
     @GetMapping("/add")
@@ -82,6 +90,7 @@ public class BonLivraisonController {
 
 //            Enregistrement du bon de livraison mère
             BonLivraisonMere bonLivraisonMere = new BonLivraisonMere();
+            bonLivraisonMere.setId(idGenerator);
             bonLivraisonMere.setFournisseur(fournisseur);
             bonLivraisonMere.setDevise(devise);
             bonLivraisonMere.setDateReception(dateLivraison);
@@ -123,6 +132,39 @@ public class BonLivraisonController {
                 stockFilles.add(stockFille);
                 this.stockFilleService.insertStockFille(stockFille);
             }
+            // Vérification : au moins une ligne de bon de livraison
+            if (articleCodes.isEmpty()) {
+                redirectAttributes.addFlashAttribute(
+                        "ko",
+                        "Impossible de valider le bon de livraison sans aucune ligne d’article."
+                );
+                return "redirect:/bonlivraison/add";
+            }
+
+            boolean hasValidLine = false;
+
+            for (int i = 0; i < articleCodes.size(); i++) {
+                if (qteRecues.get(i) != null && !qteRecues.get(i).isBlank()) {
+                    try {
+                        double qte = Double.parseDouble(qteRecues.get(i));
+                        if (qte > 0) {
+                            hasValidLine = true;
+                            break;
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+
+            if (!hasValidLine) {
+                redirectAttributes.addFlashAttribute(
+                        "ko",
+                        "Veuillez saisir au moins une ligne avec une quantité reçue valide."
+                );
+                return "redirect:/bonlivraison/add";
+            }
+
+
+
 
             redirectAttributes.addFlashAttribute("ok", "Bon de livraison enregistré avec succès.");
 //            redirecte mankany am page liste rehefa misy page liste
@@ -139,10 +181,36 @@ public class BonLivraisonController {
     }
 
     @GetMapping("/list")
-    public String bonLivraisonMereListe(Model model, HttpServletRequest request) {
-        BonLivraisonMere[] bonLivraisonMeres = bonLivraisonMereService.getAllBonLivraisonMeres();
+    public String bonLivraisonMereListe(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "dateReception") String sort,
+            @RequestParam(defaultValue = "desc") String dir,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            Model model,
+            HttpServletRequest request
+    ) {
+        // sécurité sort (évite PropertyReferenceException)
+        if (!Set.of("id", "dateReception").contains(sort)) sort = "dateReception";
+
+        Page<BonLivraisonMere> result = bonLivraisonMereService.searchBonLivraisonMeres(q, dateFrom, dateTo, page, size, sort, dir);
+
         model.addAttribute("currentUri", request.getRequestURI());
-        model.addAttribute("bonLivraisonMeres", bonLivraisonMeres);
+        model.addAttribute("bonLivraisonMeres", result);
+
+        model.addAttribute("page", page);
+        model.addAttribute("size", size);
+        model.addAttribute("sort", sort);
+        model.addAttribute("dir", dir);
+        model.addAttribute("q", q);
+
+        // ✅ pour afficher la valeur dans les inputs
+        model.addAttribute("dateFrom", dateFrom);
+        model.addAttribute("dateTo", dateTo);
+
         return "bl/bl-liste";
     }
+
 }

@@ -13,7 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class BonLivraisonDetailDTO {
-    private int id;
+    private String id;
     private String fournisseur;
     private String date;
     private String devise;

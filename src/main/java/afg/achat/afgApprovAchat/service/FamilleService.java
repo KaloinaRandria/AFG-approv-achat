@@ -19,4 +19,22 @@ public class FamilleService {
     public Optional<Famille> getFamilleById(int id) {
         return familleRepo.findById(id);
     }
+
+    public Famille getFamilleByDesc(String desc) {
+        return familleRepo.findFamilleByDescription(desc);
+    }
+
+    public void saveFamille(Famille famille) {
+        familleRepo.save(famille);
+    }
+
+
+        public void saveFamilleIfNotExists(String description) {
+            if (!familleRepo.existsFamilleByDescriptionIgnoreCase(description)) {
+                Famille famille = new Famille();
+                famille.setDescription(description.trim());
+                familleRepo.save(famille);
+            }
+        }
+
 }
