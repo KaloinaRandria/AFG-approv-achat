@@ -77,65 +77,47 @@
                     <table id="etatStockTable" class="table table-striped table-hover table-bordered">
                         <thead>
                         <tr>
-                            <th>
-                                <a class="text-decoration-none text-dark"
-                                   th:href="@{/stock/etat-stock(page=0,size=${size},q=${q},sort='codeArticle',dir=${dir=='asc'?'desc':'asc'})}">
+                            <th class="text-start">
+                                <a class="text-decoration-none text-dark">
                                     <i class="fas fa-box me-2 icon-gradient-light-blue"></i>Article
-                                    <i class="fas"
-                                       th:classappend="${sort=='codeArticle' ? (dir=='asc'?' fa-sort-up':' fa-sort-down') : ' fa-sort'}"></i>
                                 </a>
                             </th>
 
-                            <th class="text-end">
-                                <a class="text-decoration-none text-dark"
-                                   th:href="@{/stock/etat-stock(page=0,size=${size},q=${q},sort='seuilMin',dir=${dir=='asc'?'desc':'asc'})}">
+                            <th class="text-start">
+                                <a class="text-decoration-none text-dark">
                                     <i class="fas fa-chart-line me-2 icon-gradient-light-blue"></i>Seuil Minimum
-                                    <i class="fas"
-                                       th:classappend="${sort=='seuilMin' ? (dir=='asc'?' fa-sort-up':' fa-sort-down') : ' fa-sort'}"></i>
                                 </a>
                             </th>
 
-                            <th class="text-end">
-                                <a class="text-decoration-none text-dark"
-                                   th:href="@{/stock/etat-stock(page=0,size=${size},q=${q},sort='totalEntree',dir=${dir=='asc'?'desc':'asc'})}">
+                            <th class="text-start">
+                                <a class="text-decoration-none text-dark">
                                     <i class="fas fa-sign-in-alt me-2 icon-gradient-light-blue"></i>Entrée
-                                    <i class="fas"
-                                       th:classappend="${sort=='totalEntree' ? (dir=='asc'?' fa-sort-up':' fa-sort-down') : ' fa-sort'}"></i>
                                 </a>
                             </th>
 
-                            <th class="text-end">
-                                <a class="text-decoration-none text-dark"
-                                   th:href="@{/stock/etat-stock(page=0,size=${size},q=${q},sort='totalSortie',dir=${dir=='asc'?'desc':'asc'})}">
+                            <th class="text-start">
+                                <a class="text-decoration-none text-dark">
                                     <i class="fas fa-sign-out-alt me-2 icon-gradient-light-blue"></i>Sortie
-                                    <i class="fas"
-                                       th:classappend="${sort=='totalSortie' ? (dir=='asc'?' fa-sort-up':' fa-sort-down') : ' fa-sort'}"></i>
                                 </a>
                             </th>
 
-                            <th class="text-end">
-                                <a class="text-decoration-none text-dark"
-                                   th:href="@{/stock/etat-stock(page=0,size=${size},q=${q},sort='stockDisponible',dir=${dir=='asc'?'desc':'asc'})}">
+                            <th class="text-start">
+                                <a class="text-decoration-none text-dark">
                                     <i class="fas fa-chart-pie me-2 icon-gradient-light-blue"></i>Stock Disponible
-                                    <i class="fas"
-                                       th:classappend="${sort=='stockDisponible' ? (dir=='asc'?' fa-sort-up':' fa-sort-down') : ' fa-sort'}"></i>
                                 </a>
                             </th>
 
-                            <th>
-                                <a class="text-decoration-none text-dark"
-                                   th:href="@{/stock/etat-stock(page=0,size=${size},q=${q},sort='udm',dir=${dir=='asc'?'desc':'asc'})}">
+                            <th class="text-start">
+                                <a class="text-decoration-none text-dark">
                                     <i class="fas fa-balance-scale me-2 icon-gradient-light-blue"></i>UDM
-                                    <i class="fas"
-                                       th:classappend="${sort=='udm' ? (dir=='asc'?' fa-sort-up':' fa-sort-down') : ' fa-sort'}"></i>
                                 </a>
                             </th>
 
-                            <th class="text-center">
+                            <th class="text-start">
                                 <i class="fas fa-bell me-2 icon-gradient-light-blue"></i>État
                             </th>
 
-                            <th class="text-center">
+                            <th class="text-start">
                                 <i class="fas fa-history me-2 icon-gradient-light-blue"></i>Historiques
                             </th>
                         </tr>
@@ -162,7 +144,7 @@
                             <td class="text-end fw-bold text-stock"
                                 th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(e.stockDisponible)}">
                             </td>
-                            <td class="text-end fw-bold text-stock"
+                            <td class="text-start fw-bold"
                                 th:text="${e.desc_udm +' ('+ e.udm + ')'}">
                             </td>
 
