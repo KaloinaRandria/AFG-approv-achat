@@ -1,14 +1,18 @@
 @charset "UTF-8";
 
-/* ===== PAGINATION ETAT STOCK : style DataTables ===== */
-.stock-pagination .pagination {
+/* ================================ */
+/* ===== PAGINATION style DT ====== */
+/* ================================ */
+
+/* Mets cette classe sur le <nav> : class="dt-pagination" */
+.dt-pagination .pagination {
     display: flex;
-    gap: 0px;
+    gap: 0;
     margin: 0;
 }
 
-/* liens simples (sans boutons) */
-.stock-pagination .page-item .page-link {
+/* Liens simples (sans boutons) */
+.dt-pagination .page-item .page-link {
     background: none !important;
     border: none !important;
     box-shadow: none !important;
@@ -21,47 +25,50 @@
     transition: color 0.2s ease;
 }
 
-/* aucun hover/active de Bootstrap */
-.stock-pagination .page-item:hover,
-.stock-pagination .page-item:focus,
-.stock-pagination .page-item:active,
-.stock-pagination .page-item .page-link:hover,
-.stock-pagination .page-item .page-link:focus,
-.stock-pagination .page-item .page-link:active {
+/* Bloquer hover/active Bootstrap */
+.dt-pagination .page-item:hover,
+.dt-pagination .page-item:focus,
+.dt-pagination .page-item:active,
+.dt-pagination .page-item .page-link:hover,
+.dt-pagination .page-item .page-link:focus,
+.dt-pagination .page-item .page-link:active {
     background: none !important;
     border: none !important;
     box-shadow: none !important;
     outline: none !important;
 }
 
-/* hover texte uniquement */
-.stock-pagination .page-item .page-link:hover {
+/* Hover texte uniquement */
+.dt-pagination .page-item .page-link:hover {
     color: #0d6efd !important;
 }
 
-/* page active : vert gras */
-.stock-pagination .page-item.active .page-link {
+/* Page active : vert gras */
+.dt-pagination .page-item.active .page-link {
     color: #00AD00 !important;
     font-weight: 600;
     pointer-events: none;
 }
 
-/* disabled : gris */
-.stock-pagination .page-item.disabled .page-link {
+/* Disabled : gris */
+.dt-pagination .page-item.disabled .page-link {
     color: #adb5bd !important;
     pointer-events: none;
     cursor: default;
 }
 
-/* ===== ENTETE BLEU SUR TOUTE LA LIGNE (ETAT STOCK) ===== */
 
-/* 1) Le dégradé UNE SEULE FOIS sur toute la rangée */
-#etatStockTable thead tr {
+/* ========================================= */
+/* ===== ENTÊTE gradient sur toute la ligne */
+/* ========================================= */
+
+/* Mets cette classe sur le table : class="dt-head-gradient" */
+table.dt-head-gradient thead tr {
     background: linear-gradient(90deg, #001051, #00129f) !important;
 }
 
-/* 2) Les cellules d'entête deviennent transparentes pour laisser voir le gradient */
-#etatStockTable thead th {
+/* Laisser voir le gradient derrière les th */
+table.dt-head-gradient thead th {
     background: transparent !important;
     color: #fff !important;
     font-weight: 600;
@@ -70,8 +77,8 @@
     border-color: rgba(255,255,255,.15) !important;
 }
 
-/* 3) Liens et icônes en blanc */
-#etatStockTable thead th a {
+/* Liens dans l'entête en blanc */
+table.dt-head-gradient thead th a {
     color: #fff !important;
     text-decoration: none !important;
 }

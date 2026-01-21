@@ -16,6 +16,8 @@ import afg.achat.afgApprovAchat.service.util.DeviseService;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,8 +25,11 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
 @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
 @Controller
 @RequestMapping("/bonlivraison")
@@ -176,10 +181,36 @@ public class BonLivraisonController {
     }
 
     @GetMapping("/list")
-    public String bonLivraisonMereListe(Model model, HttpServletRequest request) {
-        BonLivraisonMere[] bonLivraisonMeres = bonLivraisonMereService.getAllBonLivraisonMeres();
+    public String bonLivraisonMereListe(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "dateReception") String sort,
+            @RequestParam(defaultValue = "desc") String dir,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            Model model,
+            HttpServletRequest request
+    ) {
+        // sécurité sort (évite PropertyReferenceException)
+        if (!Set.of("id", "dateReception").contains(sort)) sort = "dateReception";
+
+        Page<BonLivraisonMere> result = bonLivraisonMereService.searchBonLivraisonMeres(q, dateFrom, dateTo, page, size, sort, dir);
+
         model.addAttribute("currentUri", request.getRequestURI());
-        model.addAttribute("bonLivraisonMeres", bonLivraisonMeres);
+        model.addAttribute("bonLivraisonMeres", result);
+
+        model.addAttribute("page", page);
+        model.addAttribute("size", size);
+        model.addAttribute("sort", sort);
+        model.addAttribute("dir", dir);
+        model.addAttribute("q", q);
+
+        // ✅ pour afficher la valeur dans les inputs
+        model.addAttribute("dateFrom", dateFrom);
+        model.addAttribute("dateTo", dateTo);
+
         return "bl/bl-liste";
     }
+
 }
