@@ -237,40 +237,75 @@
                         </tbody>
                     </table>
                 </div>
-                <nav th:if="${etatStocks.totalPages > 1}" aria-label="Pagination stock" class="mt-3">
-                    <ul class="pagination justify-content-center">
+                <nav th:if="${etatStocks.totalPages > 1}"
+                     aria-label="Pagination stock"
+                     class="mt-3 stock-pagination">
 
-                        <li class="page-item"
-                            th:classappend="${etatStocks.first} ? ' disabled' : ''">
+                    <ul class="pagination justify-content-center mb-0">
+
+                        <!-- Précédente -->
+                        <li class="page-item" th:classappend="${etatStocks.first} ? 'disabled'">
                             <a class="page-link"
                                th:href="@{/stock/etat-stock(page=${etatStocks.number - 1}, size=${size}, q=${q}, sort=${sort}, dir=${dir})}">
-                                &laquo;
+                                Précédente
                             </a>
                         </li>
 
-                        <li class="page-item"
-                            th:each="p : ${#numbers.sequence(0, etatStocks.totalPages - 1)}"
-                            th:if="${p >= etatStocks.number - 2 and p <= etatStocks.number + 2}"
-                            th:classappend="${p == etatStocks.number} ? ' active' : ''">
+                        <!-- Page 1 -->
+                        <li class="page-item" th:classappend="${etatStocks.number == 0} ? 'active'">
                             <a class="page-link"
-                               th:href="@{/stock/etat-stock(page=${p}, size=${size}, q=${q}, sort=${sort}, dir=${dir})}"
-                               th:text="${p + 1}"></a>
+                               th:href="@{/stock/etat-stock(page=0, size=${size}, q=${q}, sort=${sort}, dir=${dir})}">
+                                1
+                            </a>
                         </li>
 
+                        <!-- Ellipsis gauche -->
+                        <li class="page-item disabled"
+                            th:if="${etatStocks.number - 2 > 1}">
+                            <span class="page-link">…</span>
+                        </li>
+
+                        <!-- Pages autour (sans 1 et sans dernière) -->
+                        <th:block th:each="p : ${#numbers.sequence(etatStocks.number - 2, etatStocks.number + 2)}"
+                                  th:if="${p > 0 and p < etatStocks.totalPages - 1}">
+                            <li class="page-item" th:classappend="${p == etatStocks.number} ? 'active'">
+                                <a class="page-link"
+                                   th:href="@{/stock/etat-stock(page=${p}, size=${size}, q=${q}, sort=${sort}, dir=${dir})}"
+                                   th:text="${p + 1}">
+                                </a>
+                            </li>
+                        </th:block>
+
+                        <!-- Ellipsis droite -->
+                        <li class="page-item disabled"
+                            th:if="${etatStocks.number + 2 < etatStocks.totalPages - 2}">
+                            <span class="page-link">…</span>
+                        </li>
+
+                        <!-- Dernière page (si totalPages > 1) -->
                         <li class="page-item"
-                            th:classappend="${etatStocks.last} ? ' disabled' : ''">
+                            th:if="${etatStocks.totalPages > 1}"
+                            th:classappend="${etatStocks.number == etatStocks.totalPages - 1} ? 'active'">
+                            <a class="page-link"
+                               th:href="@{/stock/etat-stock(page=${etatStocks.totalPages - 1}, size=${size}, q=${q}, sort=${sort}, dir=${dir})}"
+                               th:text="${etatStocks.totalPages}">
+                            </a>
+                        </li>
+
+                        <!-- Suivante -->
+                        <li class="page-item" th:classappend="${etatStocks.last} ? 'disabled'">
                             <a class="page-link"
                                th:href="@{/stock/etat-stock(page=${etatStocks.number + 1}, size=${size}, q=${q}, sort=${sort}, dir=${dir})}">
-                                &raquo;
+                                Suivante
                             </a>
                         </li>
+
                     </ul>
 
-                    <div class="text-center text-muted small">
+                    <div class="text-center text-muted small mt-2">
                         Page <span th:text="${etatStocks.number + 1}"></span> / <span th:text="${etatStocks.totalPages}"></span>
                     </div>
                 </nav>
-
 
             </div>
         </div>
