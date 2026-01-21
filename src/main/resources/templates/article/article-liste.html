@@ -43,7 +43,7 @@
                             <th><i class="fas fa-hashtag me-2 icon-gradient-light-blue"></i>Code</th>
                             <th><i class="fas fa-tag me-2 icon-gradient-light-blue"></i>Désignation</th>
                             <th><i class="fas fa-layer-group me-2 icon-gradient-light-blue"></i>Famille</th>
-                            <th><i class="fas fa-chart-line me-2 icon-gradient-light-blue"></i>Seuil Minimum</th>
+                            <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"><i class="fas fa-chart-line me-2 icon-gradient-light-blue"></i>Seuil Minimum</th>
                             <th><i class="fas fa-balance-scale me-2 icon-gradient-light-blue"></i>UDM</th>
                             <th><i class="fas fa-cogs me-2 icon-gradient-light-blue"></i>Actions</th>
                             <th><i class="fas fa-exchange-alt me-2 icon-gradient-light-blue"></i>Simulation Stock</th>
@@ -55,7 +55,7 @@
                             <td th:text="${a.getCodeArticle()}"></td>
                             <td th:text="${a.getDesignation()}"></td>
                             <td th:text="${a.famille != null ? a.famille.getDescription() : '---'}"></td>
-                            <td class="text-end"
+                            <td class="text-end" sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
                                 th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(a.seuilMin)}"></td>
                             <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
                             <td>

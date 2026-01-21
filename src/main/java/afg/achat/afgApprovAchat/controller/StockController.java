@@ -112,11 +112,7 @@ public class StockController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
             @RequestParam(value = "sort", defaultValue = "codeArticle") String sort,
-            @RequestParam(value = "dir", defaultValue = "asc") String dir,
-
-            // pagination du modal notifications
-            @RequestParam(value = "apage", defaultValue = "0") int apage,
-            @RequestParam(value = "asize", defaultValue = "10") int asize
+            @RequestParam(value = "dir", defaultValue = "asc") String dir
     ) {
         Sort.Direction direction = "desc".equalsIgnoreCase(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sort));
@@ -129,7 +125,7 @@ public class StockController {
                 .map(VEtatStock::getCodeArticle)
                 .toList();
 
-        // ✅ 3) alertes uniquement pour ces codes
+        // ✅ 3) alertes uniquement pour ces codes (pour la colonne Etat)
         Map<String, StockAlerte> alertesMapPage = stockAlerteService.getAlertesMapForCodes(codes);
 
         // ✅ 4) conversion DTO pour la page
@@ -142,16 +138,14 @@ public class StockController {
 
         Page<EtatStockAlerteDTO> etatStocks = new PageImpl<>(dtoContent, pageable, etatPage.getTotalElements());
 
-        // ✅ badge count total
+        // ✅ badge count total (si ton service le calcule déjà)
         int alertesCount = stockAlerteService.getAlertesCount();
 
-        // ✅ modal alertes pageable
-        Pageable alertPageable = PageRequest.of(apage, asize); // ✅ pas de sort
-        Page<StockAlerte> alertesPage = stockAlerteService.getAlertesPage(alertPageable);
+        // ✅ Modal : TOUTES les alertes en scroll (pas de pagination)
+        List<StockAlerte> alertes = stockAlerteService.getAlertesAll();
 
-        // ✅ counts (sur la page du modal — si tu veux le total global, il faut une requête count par type)
-        long ruptureCount = alertesPage.getContent().stream().filter(a -> "RUPTURE".equals(a.getTypeAlerte())).count();
-        long seuilCount = alertesPage.getContent().stream().filter(a -> "SEUIL".equals(a.getTypeAlerte())).count();
+        long ruptureCount = alertes.stream().filter(a -> "RUPTURE".equals(a.getTypeAlerte())).count();
+        long seuilCount   = alertes.stream().filter(a -> "SEUIL".equals(a.getTypeAlerte())).count();
 
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("etatStocks", etatStocks);
@@ -163,15 +157,14 @@ public class StockController {
 
         model.addAttribute("alertesCount", alertesCount);
 
-        // modal
-        model.addAttribute("alertesPage", alertesPage);
-        model.addAttribute("apage", apage);
-        model.addAttribute("asize", asize);
+        // ✅ modal
+        model.addAttribute("alertes", alertes);
         model.addAttribute("ruptureCount", ruptureCount);
         model.addAttribute("seuilCount", seuilCount);
 
         return "stock/stock-liste";
     }
+
 
 
 }

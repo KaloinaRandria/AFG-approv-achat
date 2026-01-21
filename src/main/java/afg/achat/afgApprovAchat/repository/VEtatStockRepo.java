@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface VEtatStockRepo extends JpaRepository<VEtatStock, Integer> {
 
@@ -63,6 +65,18 @@ public interface VEtatStockRepo extends JpaRepository<VEtatStock, Integer> {
   """,
             nativeQuery = true
     )
-    java.util.List<VEtatStock> findAlertesForCodes(@Param("codes") java.util.List<String> codes);
+    List<VEtatStock> findAlertesForCodes(@Param("codes") java.util.List<String> codes);
+
+    @Query(
+            value = """
+          SELECT *
+          FROM v_etat_stock
+          WHERE CAST(stock_disponible AS numeric) <= 0
+             OR CAST(stock_disponible AS numeric) <= CAST(seuil_min AS numeric)
+          ORDER BY code_article DESC
+        """,
+            nativeQuery = true
+    )
+    List<VEtatStock> findAlertesAll();
 
 }

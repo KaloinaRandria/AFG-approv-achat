@@ -1,4 +1,81 @@
 @charset "UTF-8";
+
+/* ===== PAGINATION ETAT STOCK : style DataTables ===== */
+.stock-pagination .pagination {
+    display: flex;
+    gap: 0px;
+    margin: 0;
+}
+
+/* liens simples (sans boutons) */
+.stock-pagination .page-item .page-link {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    color: #001051 !important;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+/* aucun hover/active de Bootstrap */
+.stock-pagination .page-item:hover,
+.stock-pagination .page-item:focus,
+.stock-pagination .page-item:active,
+.stock-pagination .page-item .page-link:hover,
+.stock-pagination .page-item .page-link:focus,
+.stock-pagination .page-item .page-link:active {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* hover texte uniquement */
+.stock-pagination .page-item .page-link:hover {
+    color: #0d6efd !important;
+}
+
+/* page active : vert gras */
+.stock-pagination .page-item.active .page-link {
+    color: #00AD00 !important;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+/* disabled : gris */
+.stock-pagination .page-item.disabled .page-link {
+    color: #adb5bd !important;
+    pointer-events: none;
+    cursor: default;
+}
+
+/* ===== ENTETE BLEU SUR TOUTE LA LIGNE (ETAT STOCK) ===== */
+
+/* 1) Le dégradé UNE SEULE FOIS sur toute la rangée */
+#etatStockTable thead tr {
+    background: linear-gradient(90deg, #001051, #00129f) !important;
+}
+
+/* 2) Les cellules d'entête deviennent transparentes pour laisser voir le gradient */
+#etatStockTable thead th {
+    background: transparent !important;
+    color: #fff !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    border-color: rgba(255,255,255,.15) !important;
+}
+
+/* 3) Liens et icônes en blanc */
+#etatStockTable thead th a {
+    color: #fff !important;
+    text-decoration: none !important;
+}
+
 /* ===== Historique mouvements ===== */
 .mv-row {
     transition: background .15s ease;
