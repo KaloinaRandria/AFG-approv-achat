@@ -1,4 +1,27 @@
 @charset "UTF-8";
+/* ===== ENTETE BLEU SUR TOUTE LA LIGNE (ETAT STOCK) ===== */
+
+/* 1) Le dégradé UNE SEULE FOIS sur toute la rangée */
+#etatStockTable thead tr {
+    background: linear-gradient(90deg, #001051, #00129f) !important;
+}
+
+/* 2) Les cellules d'entête deviennent transparentes pour laisser voir le gradient */
+#etatStockTable thead th {
+    background: transparent !important;
+    color: #fff !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    border-color: rgba(255,255,255,.15) !important;
+}
+
+/* 3) Liens et icônes en blanc */
+#etatStockTable thead th a {
+    color: #fff !important;
+    text-decoration: none !important;
+}
+
 /* ===== Historique mouvements ===== */
 .mv-row {
     transition: background .15s ease;
