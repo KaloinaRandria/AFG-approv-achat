@@ -12,10 +12,6 @@ import java.time.LocalDateTime;
 
 @Repository
 public interface BonLivraisonMereRepo extends JpaRepository<BonLivraisonMere,String> {
-    // Optionnel : recherche (adapte les champs à ton entité)
-    Page<BonLivraisonMere> findByIdContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
-            String id, String description, Pageable pageable
-    );
 
     @Query("""
         select bl from BonLivraisonMere bl

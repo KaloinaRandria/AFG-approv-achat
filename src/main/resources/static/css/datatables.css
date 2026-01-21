@@ -83,13 +83,6 @@ table.dt-head-gradient thead th a {
     text-decoration: none !important;
 }
 
-/* (optionnel) Icônes dans l'entête en blanc */
-table.dt-head-gradient thead th i {
-    color: #fff !important;
-    -webkit-text-fill-color: #fff !important;
-    background: none !important;
-}
-
 /* ===== Historique mouvements ===== */
 .mv-row {
     transition: background .15s ease;
