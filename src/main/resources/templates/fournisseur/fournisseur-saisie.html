@@ -7,6 +7,8 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+
+
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
@@ -16,12 +18,12 @@
         <!-- En-tête avec le même style que la liste -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="fw-bold text-gradient-blue">
-                <i class="fas fa-truck-loading me-3"></i>
+                <i class="fas fa-plus-circle me-3"></i>
                 Ajout d'un nouveau fournisseur
             </h1>
             <div>
                 <a class="btn btn-gradient-blue me-2" th:href="@{/fournisseur/list}" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
-                    <i class="fas fa-clipboard-list me-3"></i> Liste des fournisseurs
+                    <i class="fas fa-building me-3"></i> Liste des fournisseurs
                 </a>
             </div>
         </div>
@@ -29,7 +31,7 @@
         <div class="card shadow-lg border-0">
             <div class="card-header bg-white border-0 py-3">
                 <h5 class="mb-0 fw-bold text-gradient-blue">
-                    <i class="fas fa-building me-2 icon-gradient-blue"></i> Formulaire de création
+                    <i class="fas fa-file-alt me-2 icon-gradient-blue"></i> Formulaire de création
                 </h5>
                 <p class="text-muted mb-0 mt-1">
                     Remplissez les informations nécessaires pour ajouter un fournisseur
@@ -40,9 +42,11 @@
                 <form method="post"
                       th:action="@{/fournisseur/save}"
                       class="needs-validation"
-                      novalidate>
+                      novalidate
+                      id="fournisseurForm">
 
-                    <!-- ================= INFORMATIONS GÉNÉRALES ================= -->
+
+                <!-- ================= INFORMATIONS GÉNÉRALES ================= -->
                     <div class="mb-4">
                         <h6 class="form-section-title">
                             <i class="fas fa-info-circle me-2 icon-gradient-blue"></i>
@@ -109,13 +113,11 @@
                                     Téléphone
                                 </label>
 
-                                <div class="row position-relative">
+                                <div class="row">
                                     <input id="phone"
                                            type="tel"
                                            class="form-control"
                                            name="telephone"
-                                           style="padding-left: 4rem; padding-top: 0.25rem;"
-                                           placeholder="+261 34 00 000 00"
                                            required>
                                 </div>
 
@@ -146,14 +148,15 @@
 
                     <!-- ================= ACTIONS ================= -->
                     <div class="d-flex justify-content-end gap-2">
-                        <button type="submit" class="btn btn-gradient-green px-4">
-                            <i class="fas fa-save me-2"></i> Enregistrer
+<!--                        <button type="submit" class="btn btn-gradient-green px-4">-->
+<!--                            <i class="fas fa-save me-2"></i> Enregistrer-->
+<!--                        </button>-->
+
+                        <!-- Bouton Aperçu -->
+                        <button type="button" class="btn btn-gradient-green px-4" id="btnPreviewFournisseur">
+                            <i class="fas fa-eye me-2"></i> Aperçu & confirmer
                         </button>
 
-                        <a th:href="@{/fournisseur/list}"
-                           class="btn btn-outline-secondary px-4">
-                            <i class="fas fa-times me-2"></i> Annuler
-                        </a>
                     </div>
 
                 </form>
@@ -161,24 +164,193 @@
         </div>
     </section>
 </div>
+
+<div class="modal fade" id="previewFournisseurModal" tabindex="-1"
+     aria-labelledby="previewFournisseurModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title" id="previewFournisseurModalLabel">
+                    <i class="fas fa-eye me-2 icon-gradient-blue"></i>Aperçu avant enregistrement
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-borderless align-middle mb-0">
+                        <tbody>
+                        <tr>
+                            <th class="text-muted w-25">
+                                <i class="fas fa-building me-2 icon-gradient-blue"></i>Nom
+                            </th>
+                            <td id="pvNom" class="fw-semibold"></td>
+                        </tr>
+
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-tag me-2 icon-gradient-blue"></i>Acronyme
+                            </th>
+                            <td id="pvAcronyme"></td>
+                        </tr>
+
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-envelope me-2 icon-gradient-blue"></i>Email
+                            </th>
+                            <td id="pvMail"></td>
+                        </tr>
+
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-phone me-2 icon-gradient-blue"></i>Téléphone
+                            </th>
+                            <td id="pvTelephone"></td>
+                        </tr>
+
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-align-left me-2 icon-gradient-blue"></i>Description
+                            </th>
+                            <td id="pvDescription"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Vérifiez les informations avant l’enregistrement.
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-pen me-1"></i>Modifier
+                </button>
+
+                <button type="submit" class="btn btn-gradient-green" form="fournisseurForm">
+                    <i class="fas fa-save me-1"></i>Confirmer et enregistrer
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
 <script th:inline="none">
     /*<![CDATA[*/
-    const iti = window.intlTelInput(input, {
-        initialCountry: "mg",
-        separateDialCode: true,
-        utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@19.2.16/build/js/utils.js" // nécessaire pour les formats
-    });
+    document.addEventListener("DOMContentLoaded", function () {
 
-    /*input.addEventListener("countrychange", updatePlaceholderWithStars);*/
+        const form = document.getElementById("fournisseurForm");
 
-    // Soumission → sauvegarde format international
-    document.getElementById("btn-preview").addEventListener("click", function () {
-        const e164           = iti.getNumber();                                    // +261341234567 → EN BASE
-        const international  = iti.getNumber(intlTelInputUtils.numberFormat.INTERNATIONAL); // +261 34 12 345 67 → affichage joli
-        const national       = iti.getNumber(intlTelInputUtils.numberFormat.NATIONAL);      // 034 12 345 67 → format local
-        const dialCode       = iti.getSelectedCountryData().dialCode;               // 261
-        const isoCode        = iti.getSelectedCountryData().iso2.toUpperCase();    // MG
-        input.value = e164;  // → ton champ contact en base = +261341234567
+        // ---------- intl-tel-input ----------
+        const inputPhone = document.getElementById("phone");
+
+        const iti = window.intlTelInput(inputPhone, {
+            initialCountry: "mg",
+            separateDialCode: true,
+            nationalMode: true,
+            formatOnDisplay: true,
+            autoPlaceholder: "polite",
+            utilsScript: "https://unpkg.com/intl-tel-input@17.0.19/build/js/utils.js"
+        });
+
+        // ---------- Validation rouge/vert (inputs + textarea + téléphone) ----------
+        const fields = form.querySelectorAll("input, textarea");
+        fields.forEach(el => {
+            const evt = (el.type === "tel" || el.tagName === "SELECT") ? "change" : "input";
+            el.addEventListener(evt, function () {
+                if (this.checkValidity()) {
+                    this.classList.remove("is-invalid");
+                    this.classList.add("is-valid");
+                } else {
+                    this.classList.remove("is-valid");
+                    this.classList.add("is-invalid");
+                }
+            });
+        });
+
+        // Validation spécifique téléphone (intlTelInput)
+        function updatePhoneValidity() {
+            // iti.isValidNumber() gère les pays/format
+            const ok = inputPhone.value.trim().length > 0 && iti.isValidNumber();
+            if (ok) {
+                inputPhone.classList.remove("is-invalid");
+                inputPhone.classList.add("is-valid");
+            } else {
+                inputPhone.classList.remove("is-valid");
+                inputPhone.classList.add("is-invalid");
+            }
+            return ok;
+        }
+        inputPhone.addEventListener("blur", updatePhoneValidity);
+        inputPhone.addEventListener("keyup", updatePhoneValidity);
+        inputPhone.addEventListener("change", updatePhoneValidity);
+
+        // ---------- Aperçu & confirmer ----------
+        const btnPreview = document.getElementById("btnPreviewFournisseur");
+
+        btnPreview.addEventListener("click", function (e) {
+            console.log("Click Aperçu OK ✅");
+            // 1) Validation HTML + téléphone
+            const phoneOk = updatePhoneValidity();
+            if (!form.checkValidity() || !phoneOk) {
+                form.classList.add("was-validated");
+                form.reportValidity();
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
+            // 2) Remplir l'aperçu (td -> textContent)
+            document.getElementById("pvNom").textContent =
+                document.getElementById("nom").value || "-";
+
+            document.getElementById("pvAcronyme").textContent =
+                document.getElementById("acronyme").value || "-";
+
+            document.getElementById("pvMail").textContent =
+                document.getElementById("mail").value || "-";
+
+            // Téléphone : afficher en INTERNATIONAL lisible (fallback si utils pas prêt)
+            let telInternational = "";
+            if (window.intlTelInputUtils && window.intlTelInputUtils.numberFormat) {
+                telInternational = iti.getNumber(window.intlTelInputUtils.numberFormat.INTERNATIONAL);
+            } else {
+                // fallback : au pire on affiche ce que l’utilisateur a tapé
+                telInternational = iti.getNumber() || inputPhone.value;
+            }
+
+            document.getElementById("pvTelephone").textContent =
+                (telInternational && telInternational.trim()) ? telInternational : "-";
+
+
+            document.getElementById("pvDescription").textContent =
+                document.getElementById("description").value || "-";
+
+            // 3) Ouvrir modal
+            window.bootstrap.Modal
+                .getOrCreateInstance(document.getElementById("previewFournisseurModal"))
+                .show();
+        });
+
+        // ---------- Avant soumission : envoyer téléphone en E.164 ----------
+        form.addEventListener("submit", function (e) {
+            // sécurité : forcer validation tel
+            if (!updatePhoneValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                form.classList.add("was-validated");
+                return;
+            }
+
+            // Stockage en base → E.164
+            inputPhone.value = iti.getNumber();
+        });
+
     });
     /*]]>*/
 </script>

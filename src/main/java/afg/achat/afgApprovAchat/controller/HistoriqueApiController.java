@@ -1,7 +1,9 @@
 package afg.achat.afgApprovAchat.controller;
 
+import afg.achat.afgApprovAchat.model.HistoriqueMouvementStockView;
 import afg.achat.afgApprovAchat.model.util.ArticleHistorique;
 import afg.achat.afgApprovAchat.model.util.DeviseHistorique;
+import afg.achat.afgApprovAchat.service.HistoriqueMouvementStockService;
 import afg.achat.afgApprovAchat.service.util.ArticleHistoriqueService;
 import afg.achat.afgApprovAchat.service.util.DeviseHistoriqueService;
 import org.springframework.http.HttpStatus;
@@ -21,10 +23,12 @@ public class HistoriqueApiController {
 
     private final DeviseHistoriqueService deviseHistoriqueService;
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+    private final HistoriqueMouvementStockService historiqueMouvementStockService;
 
-    public HistoriqueApiController(ArticleHistoriqueService articleHistoriqueService, DeviseHistoriqueService deviseHistoriqueService) {
+    public HistoriqueApiController(ArticleHistoriqueService articleHistoriqueService, DeviseHistoriqueService deviseHistoriqueService, HistoriqueMouvementStockService historiqueMouvementStockService) {
         this.articleHistoriqueService = articleHistoriqueService;
         this.deviseHistoriqueService = deviseHistoriqueService;
+        this.historiqueMouvementStockService = historiqueMouvementStockService;
     }
 
     @GetMapping("/article/{codeArticle}")
@@ -114,6 +118,49 @@ public class HistoriqueApiController {
 
     }
 
+    @GetMapping("/stock/{codeArticle}")
+    public ResponseEntity<?> getHistoriqueStock(@PathVariable String codeArticle,
+                                                @RequestParam(defaultValue = "0") int page,
+                                                @RequestParam(defaultValue = "10") int size) {
+        try {
+            HistoriqueMouvementStockView[] historiques = historiqueMouvementStockService.getHistoriqueByArticle(codeArticle);
+
+            List<HistoriqueMouvementStockView> sortedList = Arrays.stream(historiques)
+                    .sorted(Comparator.comparing(
+                            HistoriqueMouvementStockView::getDateMouvement,
+                            Comparator.nullsLast(Comparator.naturalOrder())
+                    ).reversed())
+                    .collect(Collectors.toList());
+
+            int total = sortedList.size();
+            int start = Math.min(page * size, total);
+            int end = Math.min(start + size, total);
+
+            List<HistoriqueMouvementStockView> pageContent = sortedList.subList(start, end);
+
+            Map<String, Object> response = new HashMap<>();
+
+            response.put("data", pageContent.stream()
+                    .map(this::formatHistoriqueStock)
+                    .collect(Collectors.toList()));
+            response.put("pagination", Map.of(
+                    "currentPage", page,
+                    "totalPages", (int) Math.ceil((double) total / size),
+                    "totalElements", total,
+                    "pageSize", size
+            ));
+            response.put("article", codeArticle);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Erreur lors de la récupération de l'historique");
+            error.put("details", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+
+    }
+
     private Map<String, Object> formatHistoriqueArticle(ArticleHistorique historique) {
         Map<String, Object> formatted = new HashMap<>();
         formatted.put("id", historique.getId());
@@ -134,6 +181,28 @@ public class HistoriqueApiController {
         formatted.put("ancienCoursAriary", historique.getAncienCoursAriary());
         formatted.put("nouvelleCoursAriary", historique.getNouvelleCoursAriary());
         formatted.put("deviseId", historique.getDevise().getId());
+        return formatted;
+    }
+
+    private Map<String, Object> formatHistoriqueStock(HistoriqueMouvementStockView historique) {
+        Map<String, Object> formatted = new HashMap<>();
+        formatted.put("idStockFille", historique.getIdStockFille());
+        formatted.put("idArticle", historique.getIdArticle());
+        formatted.put("codeArticle", historique.getCodeArticle());
+        formatted.put("designation", historique.getDesignation());
+        formatted.put("typeMouvement", historique.getTypeMouvement());
+        formatted.put("quantite", historique.getQuantite());
+        String date = (historique.getDateMouvement() != null)
+                ? historique.getDateMouvement().format(dateFormatter)
+                : "-";
+
+        formatted.put("dateMouvement", date);
+        formatted.put("refBlMere", historique.getRefBlMere());
+        formatted.put("refDemandeMere", historique.getRefDemandeMere());
+        formatted.put("auteur", historique.getAuteur());
+        formatted.put("reference", historique.getReference());
+        formatted.put("udm", historique.getUdm());
+        formatted.put("descUdm", historique.getDescUdm());
         return formatted;
     }
 }

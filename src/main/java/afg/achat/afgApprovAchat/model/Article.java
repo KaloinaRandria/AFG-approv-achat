@@ -27,19 +27,16 @@ public class Article {
     Udm udm;
     @ManyToOne @JoinColumn(name = "id_famille" , referencedColumnName = "id_famille")
     Famille famille;
-    @ManyToOne @JoinColumn(name = "id_centre_budgetaire" , referencedColumnName = "id_centre_budgetaire")
-    CentreBudgetaire centreBudgetaire;
 
     public Article(String designation, int seuilMin, Udm udm, Famille famille, CentreBudgetaire centreBudgetaire) {
         this.setDesignation(designation);
         this.setSeuilMin(seuilMin);
         this.setUdm(udm);
         this.setFamille(famille);
-        this.setCentreBudgetaire(centreBudgetaire);
     }
 
     public void setCodeArticle(IdGenerator idGenerator) {
-        this.codeArticle = idGenerator.generateId("ART-", "s_code_article");
+        this.codeArticle = idGenerator.generateId("ART", "s_code_article");
     }
 
     public void setCodeArticle(String codeArticle) {

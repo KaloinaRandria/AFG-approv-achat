@@ -1,73 +1,111 @@
 package afg.achat.afgApprovAchat.service.stock;
 
-import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.VEtatStock;
 import afg.achat.afgApprovAchat.model.stock.StockAlerte;
-import afg.achat.afgApprovAchat.service.ArticleService;
-import afg.achat.afgApprovAchat.service.VEtatStockService;
+import afg.achat.afgApprovAchat.repository.VEtatStockRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class StockAlerteService {
-    @Autowired
-    VEtatStockService vEtatStockService;
 
-    // Méthode existante pour la page de notifications
-    public StockAlerte[] getAlertes() {
-        VEtatStock[] etats = vEtatStockService.getAllEtatStocks();
+    @Autowired
+    private VEtatStockRepo vEtatStockRepo;
+
+    // ✅ Badge
+    public int getAlertesCount() {
+        long count = vEtatStockRepo.countAlertes();
+        return (count > Integer.MAX_VALUE) ? Integer.MAX_VALUE : (int) count;
+    }
+
+    // ✅ Modal notifications paginé
+    public Page<StockAlerte> getAlertesPage(Pageable pageable) {
+        Page<VEtatStock> page = vEtatStockRepo.findAlertesPage(pageable);
+
+        List<StockAlerte> content = page.getContent().stream()
+                .map(this::toAlerte)
+                .filter(Objects::nonNull)
+                .toList();
+
+        return new PageImpl<>(content, pageable, page.getTotalElements());
+    }
+
+    // ✅ Alertes uniquement pour les articles affichés (page courante)
+    public Map<String, StockAlerte> getAlertesMapForCodes(List<String> codes) {
+        if (codes == null || codes.isEmpty()) return Collections.emptyMap();
+
+        List<VEtatStock> etats = vEtatStockRepo.findAlertesForCodes(codes);
+        Map<String, StockAlerte> map = new HashMap<>();
+
+        for (VEtatStock v : etats) {
+            StockAlerte a = toAlerte(v);
+            if (a != null) map.put(a.getCodeArticle(), a);
+        }
+        return map;
+    }
+
+    private StockAlerte toAlerte(VEtatStock etat) {
+        double stock = parseDoubleSafe(etat.getStockDisponible());
+        double seuil = parseDoubleSafe(etat.getSeuilMin());
+
+        String type = null;
+        if (stock <= 0) type = "RUPTURE";
+        else if (stock <= seuil) type = "SEUIL";
+        else return null;
+
+        return new StockAlerte(
+                etat.getCodeArticle(),
+                etat.getDesignation(),
+                stock,
+                seuil,
+                type,
+                etat.getUdm()
+        );
+    }
+
+    private double parseDoubleSafe(String s) {
+        try {
+            if (s == null) return 0;
+            String v = s.replace(",", ".").trim();
+            if (v.isEmpty()) return 0;
+            return Double.parseDouble(v);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    public List<StockAlerte> getAlertesAll() {
+        List<VEtatStock> etats = vEtatStockRepo.findAlertesAll();
         List<StockAlerte> alertes = new ArrayList<>();
 
-        for (VEtatStock etat : etats) {
-            double stock = Double.parseDouble(etat.getStockDisponible());
-            double seuil = Double.parseDouble(etat.getSeuilMin());
-            String type = null;
+        for (VEtatStock e : etats) {
+            double stock = Double.parseDouble(e.getStockDisponible());
+            double seuil = Double.parseDouble(e.getSeuilMin());
 
-            if (stock <= 0) {
-                type = "RUPTURE";
-            } else if (stock <= seuil) {
-                type = "SEUIL";
-            }
+            String type = null;
+            if (stock <= 0) type = "RUPTURE";
+            else if (stock <= seuil) type = "SEUIL";
 
             if (type != null) {
                 alertes.add(new StockAlerte(
-                        etat.getCodeArticle(),
-                        etat.getDesignation(),
+                        e.getCodeArticle(),
+                        e.getDesignation(),
                         stock,
                         seuil,
                         type,
-                        etat.getUdm()
+                        e.getUdm()
                 ));
             }
         }
-        return alertes.toArray(new StockAlerte[0]);
+        return alertes;
     }
 
-    // Nouvelle méthode pour obtenir les alertes par code article
-    public Map<String, StockAlerte> getAlertesMap() {
-        StockAlerte[] alertes = getAlertes();
-        Map<String, StockAlerte> alertesMap = new HashMap<>();
-
-        for (StockAlerte alerte : alertes) {
-            alertesMap.put(alerte.getCodeArticle(), alerte);
-        }
-
-        return alertesMap;
-    }
-
-    // Méthode pour obtenir le nombre total d'alertes
-    public int getAlertesCount() {
-        return getAlertes().length;
-    }
-
-    // Méthode pour vérifier si un article spécifique a une alerte
-    public StockAlerte getAlerteForArticle(String codeArticle) {
-        Map<String, StockAlerte> alertesMap = getAlertesMap();
-        return alertesMap.get(codeArticle);
+    public long countAlertes() {
+        return vEtatStockRepo.countAlertes();
     }
 }

@@ -1,10 +1,251 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Liste des fournisseurs</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
 </head>
 <body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+        <!-- En-tête avec icônes en dégradé bleu -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-building icon-gradient-blue"></i> Liste des fournisseurs
+            </h1>
+            <div>
+                <a th:href="@{/fournisseur/add}" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')" class="btn btn-gradient-green">
+                    <i class="fas fa-plus-circle me-1"></i> Nouveau fournisseur
+                </a>
+            </div>
+        </div>
 
+        <!-- Carte contenant le tableau -->
+        <div class="card shadow-lg border-0">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="fournisseurTable" class="table table-striped table-hover">
+                        <thead>
+                        <tr>
+                            <th>
+                                <i class="fas fa-hashtag me-2 icon-gradient-light-blue"></i>
+                                N° Fournisseur
+                            </th>
+                            <th>
+                                <i class="fas fa-building me-2 icon-gradient-light-blue"></i>
+                                Nom Fournisseur
+                            </th>
+                            <th>
+                                <i class="fas fa-envelope me-2 icon-gradient-light-blue"></i>
+                                Mail
+                            </th>
+                            <th>
+                                <i class="fas fa-phone-alt me-2 icon-gradient-light-blue"></i>
+                                Téléphone
+                            </th>
+                            <th>
+                                <i class="fas fa-tools me-2 icon-gradient-light-blue"></i>
+                                Action
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="fr : ${fournisseurs}">
+                            <td th:text="${fr.getId()}"></td>
+                            <td th:text="${fr.getNom() + ' (' + (fr.getAcronyme() != null ? fr.getAcronyme() : '---') + ')'}"></td>
+                            <td th:text="${fr.getMail()}"></td>
+                            <td th:text="${fr.getContact()}"></td>
+                            <td>
+                                <button type="button"
+                                        class="btn btn-sm btn-view-bl"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modifierFournisseurModal"
+                                        th:data-id="${fr.getId()}"
+                                        th:data-nom="${fr.getNom()}"
+                                        th:data-acronyme="${fr.getAcronyme()}"
+                                        th:data-mail="${fr.getMail()}"
+                                        th:data-contact="${fr.getContact()}"
+                                        th:data-description="${fr.getDescription()}"
+                                        title="Modifier le fournisseur">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+<!-- Modal pour la modification de fournisseur -->
+<div class="modal fade" id="modifierFournisseurModal" tabindex="-1"
+     aria-labelledby="modifierFournisseurModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title" id="modifierFournisseurModalLabel">
+                    <i class="fas fa-edit me-2 icon-gradient-blue"></i>Modifier le fournisseur
+                </h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form th:action="@{/fournisseur/modifier}" method="post" id="fournisseurForm">
+                <div class="modal-body">
+                    <!-- ID -->
+                    <input type="hidden" id="modalFournisseurId" name="id">
+
+                    <!-- Nom -->
+                    <div class="mb-3">
+                        <label for="modalNom" class="form-label">
+                            <i class="fas fa-building me-2 icon-gradient-blue"></i>Nom *
+                        </label>
+                        <input type="text" class="form-control" id="modalNom" name="nom" required>
+                    </div>
+
+                    <!-- Acronyme -->
+                    <div class="mb-3">
+                        <label for="modalAcronyme" class="form-label">
+                            <i class="fas fa-signature me-2 icon-gradient-blue"></i>Acronyme *
+                        </label>
+                        <input type="text" class="form-control" id="modalAcronyme" name="acronyme" required>
+                    </div>
+
+                    <!-- Mail -->
+                    <div class="mb-3">
+                        <label for="modalMail" class="form-label">
+                            <i class="fas fa-envelope me-2 icon-gradient-blue"></i>Mail *
+                        </label>
+                        <input type="email" class="form-control" id="modalMail" name="mail" required>
+                    </div>
+
+                    <!-- Téléphone -->
+                    <div class="mb-3">
+                        <label for="modalTelephone" class="form-label">
+                            <i class="fas fa-phone-alt me-2 icon-gradient-blue"></i>Téléphone *
+                        </label>
+                        <input type="text" class="form-control" id="modalTelephone" name="telephone" required>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="modalDescription" class="form-label">
+                            <i class="fas fa-align-left me-2 icon-gradient-blue"></i>Description
+                        </label>
+                        <textarea class="form-control" id="modalDescription" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </button>
+                    <button type="submit" class="btn btn-gradient-blue">
+                        <i class="fas fa-save me-1"></i>Modifier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script th:inline="none">
+    /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', function (){
+
+            // Quand on ouvre le modal via le bouton "modifier"
+            document.querySelectorAll('[data-bs-target="#modifierFournisseurModal"]').forEach(btn => {
+                btn.addEventListener('click', function () {
+
+                    const id          = this.getAttribute('data-id');
+                    const nom         = this.getAttribute('data-nom');
+                    const mail        = this.getAttribute('data-mail');
+                    const contact     = this.getAttribute('data-contact');
+                    const description = this.getAttribute('data-description');
+                    const acronyme    = this.getAttribute('data-acronyme');
+
+                    // Acronyme : ton bouton ne l'envoie pas encore => on le récupère depuis l'affichage "Nom (ACR)"
+                    // (Sinon, ajoute th:data-acronyme="${fr.getAcronyme()}" et prends-le directement)
+                    // const nomAffiche = nom || "";
+                    // const match = nomAffiche.match(/\(([^)]+)\)\s*$/);
+                    // const acronyme = match ? match[1] : "";
+
+                    document.getElementById('modalFournisseurId').value = id || "";
+                    document.getElementById('modalNom').value = nom.replace(/\s*\([^)]+\)\s*$/, '').trim();
+                    document.getElementById('modalAcronyme').value = acronyme;
+                    document.getElementById('modalMail').value = mail || "";
+                    document.getElementById('modalTelephone').value = contact || "";
+                    document.getElementById('modalDescription').value = description || "";
+                });
+            });
+
+
+            const table = $('#fournisseurTable').DataTable({
+                language: {
+                    zeroRecords: "Aucun fournisseur correspondant trouvé",
+                    search: "Rechercher:",
+                    lengthMenu: "Afficher _MENU_",
+                    info: "Affichage de _START_ à _END_ sur _TOTAL_ articles",
+                    infoEmpty: "Aucun fournisseur à afficher",
+                    infoFiltered: "(filtrés sur _MAX_ articles au total)",
+                    paginate: {first: "Première", last: "Dernière", next: "Suivante", previous: "Précédente"}
+                },
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                responsive: true,
+                dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
+                initComplete: function () {
+                    const api = this.api();
+                    // Cloner header pour filtres
+                    $('#fournisseurTable thead tr').clone(true).appendTo('#fournisseurTable thead');
+                    $('#fournisseurTable thead tr:eq(1) th').each(function (i) {
+                        if (i < 4) {
+                            $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
+                            $('input', this).on('keyup change', function () {
+                                if (api.column(i).search() !== this.value) {
+                                    api.column(i).search(this.value).draw();
+                                }
+                            });
+                        } else {
+                            $(this).html('<div style="height:32px;"></div>');
+                        }
+                    });
+
+                    // Recherche mobile
+                    $('<div class="mobile-search-container mb-3">' +
+                        '<div class="input-group">' +
+                        '<span class="input-group-text"><i class="fas fa-search icon-gradient-blue"></i></span>' +
+                        '<input type="text" class="form-control" id="mobileGlobalSearch" placeholder="Rechercher...">' +
+                        '</div></div>').insertBefore('#articlesTable');
+
+                    $('#mobileGlobalSearch').on('keyup', function () {
+                        api.search(this.value).draw();
+                    });
+
+                    function toggleMobileSearch() {
+                        if ($(window).width() <= 768) {
+                            $('.mobile-search-container').show();
+                            $('#fournisseurTable thead tr:eq(1)').hide();
+                            $('.dataTables_filter').hide();
+                        } else {
+                            $('.mobile-search-container').hide();
+                            $('#fournisseurTable thead tr:eq(1)').show();
+                            $('.dataTables_filter').show();
+                        }
+                    }
+
+                    toggleMobileSearch();
+                    $(window).on('resize', toggleMobileSearch);
+                }
+            });
+        });
+    /*]]>*/
+</script>
 </body>
 </html>

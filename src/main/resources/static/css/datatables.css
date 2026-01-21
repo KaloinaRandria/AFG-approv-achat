@@ -1,5 +1,156 @@
 @charset "UTF-8";
 
+/* ================================ */
+/* ===== PAGINATION style DT ====== */
+/* ================================ */
+
+/* Mets cette classe sur le <nav> : class="dt-pagination" */
+.dt-pagination .pagination {
+    display: flex;
+    gap: 0;
+    margin: 0;
+}
+
+/* Liens simples (sans boutons) */
+.dt-pagination .page-item .page-link {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    color: #001051 !important;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+/* Bloquer hover/active Bootstrap */
+.dt-pagination .page-item:hover,
+.dt-pagination .page-item:focus,
+.dt-pagination .page-item:active,
+.dt-pagination .page-item .page-link:hover,
+.dt-pagination .page-item .page-link:focus,
+.dt-pagination .page-item .page-link:active {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* Hover texte uniquement */
+.dt-pagination .page-item .page-link:hover {
+    color: #0d6efd !important;
+}
+
+/* Page active : vert gras */
+.dt-pagination .page-item.active .page-link {
+    color: #00AD00 !important;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+/* Disabled : gris */
+.dt-pagination .page-item.disabled .page-link {
+    color: #adb5bd !important;
+    pointer-events: none;
+    cursor: default;
+}
+
+
+/* ========================================= */
+/* ===== ENTÊTE gradient sur toute la ligne */
+/* ========================================= */
+
+/* Mets cette classe sur le table : class="dt-head-gradient" */
+table.dt-head-gradient thead tr {
+    background: linear-gradient(90deg, #001051, #00129f) !important;
+}
+
+/* Laisser voir le gradient derrière les th */
+table.dt-head-gradient thead th {
+    background: transparent !important;
+    color: #fff !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    border-color: rgba(255,255,255,.15) !important;
+}
+
+/* Liens dans l'entête en blanc */
+table.dt-head-gradient thead th a {
+    color: #fff !important;
+    text-decoration: none !important;
+}
+
+/* ===== Historique mouvements ===== */
+.mv-row {
+    transition: background .15s ease;
+    border-left: 4px solid transparent;
+}
+.mv-row:hover{
+    filter: brightness(0.98);
+}
+
+/* ENTREE */
+.mv-entree {
+    background: rgba(25, 135, 84, .06); /* vert léger */
+    border-left-color: #198754;
+}
+/* SORTIE */
+.mv-sortie {
+    background: rgba(220, 53, 69, .06); /* rouge léger */
+    border-left-color: #dc3545;
+}
+
+.mv-pill {
+    font-weight: 700;
+    letter-spacing: .3px;
+    padding: .35rem .6rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .82rem;
+    white-space: nowrap;
+}
+.mv-pill-entree {
+    background: rgba(25, 135, 84, .12);
+    color: #198754;
+    border: 1px solid rgba(25, 135, 84, .25);
+}
+.mv-pill-sortie {
+    background: rgba(220, 53, 69, .12);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, .25);
+}
+.mv-pill-unk {
+    background: rgba(108, 117, 125, .12);
+    color: #6c757d;
+    border: 1px solid rgba(108, 117, 125, .25);
+}
+
+.mv-qty {
+    font-weight: 800;
+    text-align: right;
+    white-space: nowrap;
+}
+.mv-qty-entree { color: #198754; }
+.mv-qty-sortie { color: #dc3545; }
+
+.mv-muted {
+    font-size: .82rem;
+    color: #6c757d;
+}
+
+/* petit détail UX */
+.historique-btn {
+    border: 1px solid rgba(0,0,0,.08);
+    background: #fff;
+}
+.historique-btn:hover {
+    background: rgba(13, 110, 253, .08);
+}
 /* ===== TABLEAU ===== */
 
 /* Appliquer la même font partout dans DataTables */
@@ -380,8 +531,7 @@ table.dataTable tbody tr:hover {
     background: linear-gradient(
             45deg,
             #28a745 0%,
-            #28a745 80%,
-            #20c997 100%
+            #28a745 80%
     )  !important;
     border: none !important;
     color: white !important;
@@ -391,8 +541,7 @@ table.dataTable tbody tr:hover {
     background: linear-gradient(
             45deg,
             #28a745 0%,
-            #28a745 80%,
-            #20c997 100%
+            #28a745 80%
     )  !important;
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
@@ -412,8 +561,7 @@ table.dataTable tbody tr:hover {
     background: linear-gradient(
             45deg,
             #28a745 0%,
-            #28a745 80%,
-            #20c997 100%
+            #28a745 80%
     )  !important;
     border-color: transparent !important;
     color: white !important;

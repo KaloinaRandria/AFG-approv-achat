@@ -13,5 +13,4 @@ public class ArticleModificationDto {
     private String designation;
     private Integer idUdm;
     private Integer idFamille;
-    private Integer idCentreBudgetaire;
 }

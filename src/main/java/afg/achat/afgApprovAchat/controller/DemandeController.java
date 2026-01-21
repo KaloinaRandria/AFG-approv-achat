@@ -10,9 +10,11 @@ import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.util.AdresseService;
 import afg.achat.afgApprovAchat.service.util.DepartementService;
+import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,6 +43,8 @@ public class DemandeController {
     ArticleService articleService;
     @Autowired
     UtilisateurService utilisateurService;
+    @Autowired
+    IdGenerator idGenerator;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -57,6 +62,7 @@ public class DemandeController {
     public String insertDemande(@RequestParam(name = "dateDemande") String dateDemande,
                                 @RequestParam(name = "adresse") String adresse,
                                 @RequestParam(name = "departement") String departement,
+                                @RequestParam(name = "description") String description,
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
                                 @RequestParam(name = "quantite[]") List<String> quantite,
                                 RedirectAttributes redirectAttributes) {
@@ -83,9 +89,11 @@ public class DemandeController {
                     .orElseThrow(() -> new IllegalArgumentException("Département introuvable"));
 
             DemandeMere demandeMere = new DemandeMere();
+            demandeMere.setId(idGenerator);
             demandeMere.setDateDemande(dateDemande);
             demandeMere.setAdresse(adresse1);
             demandeMere.setDemandeur(utilisateur);
+            demandeMere.setDescription(description);
 
             this.demandeMereService.saveDemandeMere(demandeMere);
 
@@ -145,11 +153,33 @@ public class DemandeController {
     }
 
     @GetMapping("/list")
-    public String listDemandePage(Model model, HttpServletRequest request) {
-        model.addAttribute("currentUri", request.getRequestURI());
+    public String listDemandePage(Model model,
+                                  HttpServletRequest request,
+                                  @RequestParam(defaultValue = "0") int page,
+                                  @RequestParam(defaultValue = "10") int size,
+                                  @RequestParam(defaultValue = "dateDemande") String sort,
+                                  @RequestParam(defaultValue = "desc") String dir,
+                                  @RequestParam(required = false) String q,
+                                  @RequestParam(required = false)
+                                  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+                                  @RequestParam(required = false)
+                                  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
 
-        DemandeMere[] demandesMeres = demandeMereService.getAllDemandesMeres();
+        // ✅ Page + filtre
+        var demandesMeres = demandeMereService.searchDemandes(q, dateFrom, dateTo, page, size, sort, dir);
+
+        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demandesMeres", demandesMeres);
+
+        // ✅ garder l’état des filtres dans l’UI
+        model.addAttribute("page", page);
+        model.addAttribute("size", size);
+        model.addAttribute("sort", sort);
+        model.addAttribute("dir", dir);
+        model.addAttribute("q", q == null ? "" : q);
+        model.addAttribute("dateFrom", dateFrom);
+        model.addAttribute("dateTo", dateTo);
+
         return "demande/demande-liste";
     }
 }
