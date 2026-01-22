@@ -165,13 +165,24 @@ public class DemandeController {
                                   @RequestParam(required = false)
                                   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
 
-        // ✅ Page + filtre
-        var demandesMeres = demandeMereService.searchDemandes(q, dateFrom, dateTo, page, size, sort, dir);
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+
+        // utilisateur (ta classe) depuis DB
+        Utilisateur user = (Utilisateur) auth.getPrincipal();
+        Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
+
+        boolean isPrivileged = auth.getAuthorities().stream().anyMatch(a ->
+                a.getAuthority().equals("ROLE_ADMIN") ||
+                        a.getAuthority().equals("ROLE_MOYENS_GENERAUX")
+        );
+
+        var demandesMeres = isPrivileged
+                ? demandeMereService.searchDemandes(q, dateFrom, dateTo, page, size, sort, dir)
+                : demandeMereService.searchDemandesByDemandeur(q, dateFrom, dateTo, String.valueOf(utilisateur.getId()), page, size, sort, dir);
 
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demandesMeres", demandesMeres);
 
-        // ✅ garder l’état des filtres dans l’UI
         model.addAttribute("page", page);
         model.addAttribute("size", size);
         model.addAttribute("sort", sort);
@@ -182,4 +193,5 @@ public class DemandeController {
 
         return "demande/demande-liste";
     }
+
 }

@@ -55,4 +55,31 @@ public class DemandeMereService {
     public Optional<DemandeMere> getDemandeMereById(String id) {
         return demandeMereRepo.findById(id);
     }
+
+    public Page<DemandeMere> searchDemandesByDemandeur(String q,
+                                                       LocalDate dateFrom,
+                                                       LocalDate dateTo,
+                                                       String demandeurId,
+                                                       int page,
+                                                       int size,
+                                                       String sort,
+                                                       String dir) {
+
+        String sortBy = (sort == null || sort.isBlank()) ? "dateDemande" : sort;
+        Sort.Direction direction = "desc".equalsIgnoreCase(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        LocalDateTime from = (dateFrom == null)
+                ? LocalDate.of(1900, 1, 1).atStartOfDay()
+                : dateFrom.atStartOfDay();
+
+        LocalDateTime to = (dateTo == null)
+                ? LocalDate.of(2999, 12, 31).atTime(23, 59, 59)
+                : dateTo.atTime(23, 59, 59);
+
+        String keyword = (q == null) ? "" : q.trim();
+
+        return demandeMereRepo.searchByDemandeur(keyword, from, to, demandeurId, pageable);
+    }
+
 }

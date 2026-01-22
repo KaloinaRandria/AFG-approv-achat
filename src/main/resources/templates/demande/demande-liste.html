@@ -127,7 +127,9 @@
                                 </a>
                             </th>
 
-                            <th><i class="far fa-user me-2 icon-gradient-light-blue"></i>Demandeur</th>
+                            <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')">
+                                <i class="far fa-user me-2 icon-gradient-light-blue"></i>Demandeur
+                            </th>
                             <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"><i class="fas fa-tags me-2 icon-gradient-light-blue"></i>Type de demande</th>
                             <th>Statut</th>
                             <th class="text-center"><i class="fas fa-cogs me-2 icon-gradient-light-blue"></i>Action</th>
@@ -139,7 +141,9 @@
                         <tr th:each="demande : ${demandesMeres.content}">
                             <td th:text="${demande.id}"></td>
                             <td th:text="${#temporals.format(demande.dateDemande, 'dd/MM/yyyy HH:mm')}"></td>
-                            <td th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom + ' (' + demande.demandeur.departement.acronyme+ ')'}"></td>
+                            <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
+                                th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom + ' (' + demande.demandeur.departement.acronyme+ ')'}">
+                            </td>
                             <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')" th:text="${demande.natureDemande != null and !#strings.isEmpty(demande.natureDemande) ? demande.natureDemande : '-'}"></td>
                             <td th:text="${demande.statutDemande}"></td>
                             <td class="text-center">
