@@ -175,56 +175,24 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Centre budgétaire -->
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="centreBudgetaire" class="form-label fw-bold required-field">
-                                    Centre budgétaire
-                                </label>
-                                <div class="input-group">
-                                        <span class="input-group-text bg-light">
-                                            <i class="fas fa-building icon-gradient-blue"></i>
-                                        </span>
-                                    <select class="form-select select2-searchable"
-                                            id="centreBudgetaire"
-                                            name="centreBudgetaire"
-                                            th:field="*{centreBudgetaire}"
-                                            data-placeholder="Recherchez ou sélectionnez un centre..."
-                                            required>
-                                        <option value=""></option>
-                                        <option th:each="centre : ${centres}"
-                                                th:value="${centre.getId()}"
-                                                th:text="${centre.getCodeCentre()}">
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="form-text text-muted mt-1">
-                                    <i class="fas fa-info-circle me-1"></i> Centre responsable du budget de l'article
-                                </div>
-                                <div th:if="${#fields.hasErrors('centreBudgetaire')}" class="text-danger mt-1">
-                                    <small th:errors="*{centreBudgetaire}"></small>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Boutons d'action -->
-                    <div class="d-flex justify-content-between align-items-center mt-4 pt-4 border-top">
-                        <div>
-                            <a th:href="@{/article/list}" class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>Retour à la liste
-                            </a>
-                            <button type="reset" class="btn btn-outline-danger ms-2">
-                                <i class="fas fa-redo me-2"></i>Réinitialiser
+
+                        <div class="d-flex justify-content-end gap-2">
+<!--                            <button type="submit" class="btn btn-gradient-green px-4 py-2">-->
+<!--                                <i class="fas fa-save me-2"></i>Enregistrer-->
+<!--                            </button>-->
+
+                            <button type="button"
+                                    class="btn btn-gradient-green px-4 py-2"
+                                    id="btnPreview">
+                                <i class="fas fa-eye me-2"></i>Aperçu & confirmer
                             </button>
+
+
                         </div>
-                        <div>
-                            <button type="submit" class="btn btn-gradient-green px-4 py-2">
-                                <i class="fas fa-save me-2"></i>Enregistrer l'article
-                            </button>
-                        </div>
-                    </div>
+
                 </form>
             </div>
         </div>
@@ -289,42 +257,129 @@
         </div>
     </section>
 </div>
+<!-- Modal Aperçu avant enregistrement -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title" id="previewModalLabel">
+                    <i class="fas fa-eye me-2 icon-gradient-blue"></i>Aperçu avant enregistrement
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="table-responsive">
+                    <table class="table table-borderless align-middle mb-0">
+                        <tbody>
+                        <tr>
+                            <th class="text-muted w-25">
+                                <i class="fas fa-tag me-2 icon-gradient-blue"></i>Désignation
+                            </th>
+                            <td id="pvDesignation" class="fw-semibold"></td>
+                        </tr>
+
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-chart-line me-2 icon-gradient-blue"></i>Seuil minimum
+                            </th>
+                            <td id="pvSeuilMinimum"></td>
+                        </tr>
+
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-balance-scale me-2 icon-gradient-blue"></i>Unité de mesure
+                            </th>
+                            <td id="pvUdm"></td>
+                        </tr>
+
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-layer-group me-2 icon-gradient-blue"></i>Famille
+                            </th>
+                            <td id="pvFamille"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Ceci est un aperçu des informations qui seront enregistrées.
+                </div>
+
+            </div>
+
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-pen me-1"></i>Modifier
+                </button>
+
+                <!-- Submit du VRAI formulaire -->
+                <button type="submit" class="btn btn-gradient-green" form="articleForm">
+                    <i class="fas fa-save me-1"></i>Confirmer et enregistrer
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
 
 <script th:inline="none">
     /*<![CDATA[*/
     document.addEventListener('DOMContentLoaded', function () {
-        // Initialisation de Select2 pour les dropdowns
-        $('.select2-searchable').select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            allowClear: true,
-            placeholder: function () {
-                return $(this).data('placeholder');
-            }
-        });
+        console.log("JS chargé ✅");
+        console.log("Select2 présent ?", typeof $.fn.select2);
 
-        // Validation du formulaire
-        const form = document.getElementById('articleForm');
-        form.addEventListener('submit', function (event) {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            form.classList.add('was-validated');
-        }, false);
-
-        // Gestion des messages d'erreur
-        const inputs = form.querySelectorAll('input, select');
-        inputs.forEach(input => {
-            input.addEventListener('input', function () {
-                if (this.checkValidity()) {
-                    this.classList.remove('is-invalid');
-                    this.classList.add('is-valid');
-                } else {
-                    this.classList.remove('is-valid');
-                    this.classList.add('is-invalid');
+        // Init Select2 si dispo
+        if ($.fn.select2) {
+            $('.select2-searchable').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                allowClear: true,
+                placeholder: function () {
+                    return $(this).data('placeholder');
                 }
             });
+        } else {
+            console.warn("Select2 non chargé -> affichage normal des <select>");
+        }
+
+        const form = document.getElementById('articleForm');
+
+        function getSelectedText(selectId) {
+            const el = document.getElementById(selectId);
+            if (!el) return '---';
+            const text = el.options[el.selectedIndex]?.text;
+            return (text && text.trim()) ? text.trim() : '---';
+        }
+
+        document.getElementById('btnPreview').addEventListener('click', function (e) {
+
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                form.reportValidity();
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
+            document.getElementById('pvDesignation').textContent =
+                document.getElementById('designation').value || '-';
+
+            document.getElementById('pvSeuilMinimum').textContent =
+                document.getElementById('seuilMinimum').value || '-';
+
+            document.getElementById('pvUdm').textContent = getSelectedText('udm');
+            document.getElementById('pvFamille').textContent = getSelectedText('famille');
+
+            // Ouvrir modal
+            window.bootstrap.Modal.getOrCreateInstance(document.getElementById('previewModal')).show();
         });
     });
     /*]]>*/

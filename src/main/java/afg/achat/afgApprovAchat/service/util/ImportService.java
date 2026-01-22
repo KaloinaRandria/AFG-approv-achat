@@ -26,6 +26,8 @@ public class ImportService {
     UdmService udmService;
     @Autowired
     FournisseurService fournisseurService;
+    @Autowired
+    IdGenerator idGenerator;
 
     public void importCSVFamille(MultipartFile familleFile) {
         try (InputStreamReader reader = new InputStreamReader(familleFile.getInputStream());
@@ -92,7 +94,7 @@ public class ImportService {
             while ((column = csvReader.readNext()) != null) {
 
                 Article article = new Article();
-                article.setCodeArticle(column[0].trim());
+                article.setCodeArticle(idGenerator);
                 article.setDesignation(column[1].trim());
                 article.setFamille(familleService.getFamilleByDesc(column[2].trim()));
                 // 🔹 Gestion du seuil minimum

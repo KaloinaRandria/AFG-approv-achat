@@ -25,7 +25,7 @@ public class BonLivraisonFilleService {
         return bonLivraisonFilleRepo.findById(id);
     }
 
-    public List<BonLivraisonFille> getBonLivraisonFillesByMereId(int idMere) {
+    public List<BonLivraisonFille> getBonLivraisonFillesByMereId(String idMere) {
         return bonLivraisonFilleRepo.findBonLivraisonFilleByBonLivraisonMere(idMere);
     }
 }
