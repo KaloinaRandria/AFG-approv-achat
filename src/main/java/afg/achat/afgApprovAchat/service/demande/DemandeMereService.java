@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 public class DemandeMereService {
@@ -50,5 +51,8 @@ public class DemandeMereService {
         String keyword = (q == null) ? "" : q.trim();
 
         return demandeMereRepo.search(keyword, from, to, pageable);
+    }
+    public Optional<DemandeMere> getDemandeMereById(String id) {
+        return demandeMereRepo.findById(id);
     }
 }

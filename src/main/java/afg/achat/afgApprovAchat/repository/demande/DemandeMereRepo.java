@@ -24,6 +24,8 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
                 or lower(coalesce(cast(dm.statutDemande as string), '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dmd.prenom, '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dep.acronyme, '')) like lower(concat('%', :q, '%'))
+                or lower(coalesce(dmd.nom, '')) like lower(concat('%', :q, '%'))
+                or lower(coalesce(dep.nom, '')) like lower(concat('%', :q, '%'))
           )
     """)
     Page<DemandeMere> search(
