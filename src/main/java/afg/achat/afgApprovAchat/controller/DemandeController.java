@@ -165,13 +165,32 @@ public class DemandeController {
                                   @RequestParam(required = false)
                                   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
 
-        // ✅ Page + filtre
-        var demandesMeres = demandeMereService.searchDemandes(q, dateFrom, dateTo, page, size, sort, dir);
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        boolean isAdminOrMG = auth.getAuthorities().stream().anyMatch(a ->
+                a.getAuthority().equals("ROLE_ADMIN") ||
+                        a.getAuthority().equals("ROLE_MOYENS_GENERAUX")
+        );
+
+        List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(utilisateur.getId());
+
+// ✅ admin/mg voient demandeur, et n+1 aussi (visibleIds > 1)
+        boolean showDemandeurColumn = isAdminOrMG || (visibleIds.size() > 1);
+        model.addAttribute("showDemandeurColumn", showDemandeurColumn);
+
+// ensuite tu choisis la recherche:
+// - admin/mg => tout
+// - sinon => visibleIds (moi + enfants)
+        var demandesMeres = isAdminOrMG
+                ? demandeMereService.searchDemandes(q, dateFrom, dateTo, page, size, sort, dir)
+                : demandeMereService.searchDemandesVisibleParUtilisateur(q, dateFrom, dateTo, visibleIds, page, size, sort, dir);
 
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demandesMeres", demandesMeres);
 
-        // ✅ garder l’état des filtres dans l’UI
         model.addAttribute("page", page);
         model.addAttribute("size", size);
         model.addAttribute("sort", sort);
@@ -182,4 +201,5 @@ public class DemandeController {
 
         return "demande/demande-liste";
     }
+
 }

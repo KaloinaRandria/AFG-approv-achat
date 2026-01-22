@@ -1,14 +1,15 @@
 package afg.achat.afgApprovAchat.controller;
 
-import afg.achat.afgApprovAchat.model.Article;
-import afg.achat.afgApprovAchat.model.ArticleLivraisonDTO;
-import afg.achat.afgApprovAchat.model.BonLivraisonDetailDTO;
+import afg.achat.afgApprovAchat.model.*;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
+import afg.achat.afgApprovAchat.model.demande.DemandeFille;
+import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.repository.ArticleRepo;
-import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonFilleService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
+import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
+import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,13 +22,15 @@ import java.util.Map;
 @RequestMapping("/api")
 public class ApiController {
     @Autowired
-    ArticleService articleService;
-    @Autowired
     ArticleRepo articleRepo;
     @Autowired
     BonLivraisonMereService bonLivraisonMereService;
     @Autowired
     BonLivraisonFilleService bonLivraisonFilleService;
+    @Autowired
+    DemandeMereService demandeMereService;
+    @Autowired
+    DemandeFilleService demandeFilleService;
 
     @GetMapping("/articles/search")
     @ResponseBody
@@ -68,6 +71,54 @@ public class ApiController {
 
         return dto;
     }
+
+    @GetMapping("/demande/{id}/details")
+    public DemandeDetailDTO getDemandeDetails(@PathVariable String id) {
+
+        DemandeMere demandeMere = this.demandeMereService.getDemandeMereById(id)
+                .orElseThrow(() -> new RuntimeException("Demande non trouvée avec l'ID: " + id));
+
+        DemandeDetailDTO dto = new DemandeDetailDTO();
+
+        dto.setId(demandeMere.getId());
+
+        // Demandeur (avec sécurité + département si tu veux)
+        String nom = demandeMere.getDemandeur() != null ? demandeMere.getDemandeur().getNom() : "";
+        String prenom = demandeMere.getDemandeur() != null ? demandeMere.getDemandeur().getPrenom() : "";
+        String dep = (demandeMere.getDemandeur() != null
+                && demandeMere.getDemandeur().getDepartement() != null)
+                ? demandeMere.getDemandeur().getDepartement().getAcronyme()
+                : "";
+
+        dto.setDemandeur((nom + " " + prenom).trim() + (dep.isBlank() ? "" : " (" + dep + ")"));
+
+        // Date
+        dto.setDateDemande(demandeMere.getDateDemande());
+
+        // Type
+        dto.setTypeDemande(
+                demandeMere.getNatureDemande() != null ? demandeMere.getNatureDemande().toString() : "-"
+        );
+
+        dto.setStatutDemande(
+                demandeMere.getStatutDemande() != null ? demandeMere.getStatutDemande().toString() : "-"
+        );
+
+        // Articles
+        List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demandeMere);
+
+        List<ArticleDemandeDTO> articles = lignes.stream().map(ligne -> {
+            ArticleDemandeDTO a = new ArticleDemandeDTO();
+            a.setDesignation(ligne.getArticle() != null ? ligne.getArticle().getDesignation() : "-");
+            a.setQuantite(ligne.getQuantite() != 0.0 ? ligne.getQuantite() : 0);
+            return a;
+        }).toList();
+
+        dto.setArticles(articles);
+
+        return dto;
+    }
+
 
 
 }
