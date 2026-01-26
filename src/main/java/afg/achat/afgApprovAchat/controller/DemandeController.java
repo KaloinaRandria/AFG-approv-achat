@@ -164,13 +164,11 @@ public class DemandeController {
                                   @RequestParam(defaultValue = "dateDemande") String sort,
                                   @RequestParam(defaultValue = "desc") String dir,
                                   @RequestParam(required = false) String q,
-                                  @RequestParam(required = false)
-                                  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-                                  @RequestParam(required = false)
-                                  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+                                  @RequestParam(required = false, defaultValue = "ALL") String scope) {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
-
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(principal.getMail());
 
@@ -180,17 +178,36 @@ public class DemandeController {
         );
 
         List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(utilisateur.getId());
+        boolean hasChildren = visibleIds.size() > 1;
 
-// ✅ admin/mg voient demandeur, et n+1 aussi (visibleIds > 1)
-        boolean showDemandeurColumn = isAdminOrMG || (visibleIds.size() > 1);
+        boolean showDemandeurColumn = isAdminOrMG || hasChildren;
         model.addAttribute("showDemandeurColumn", showDemandeurColumn);
 
-// ensuite tu choisis la recherche:
-// - admin/mg => tout
-// - sinon => visibleIds (moi + enfants)
+        // afficher le filtre "Portée" seulement si n+1 (ou admin/mg si tu veux)
+        boolean showScopeFilter = hasChildren && !isAdminOrMG;
+        // (si tu veux aussi pour admin/mg -> mets: (hasChildren || isAdminOrMG))
+        model.addAttribute("showDemandeurScopeFilter", showScopeFilter);
+
+        // calcule ids selon scope
+        List<Integer> idsToUse = visibleIds; // ALL par défaut (moi + enfants)
+        if (!isAdminOrMG) {
+            if ("ME".equalsIgnoreCase(scope)) {
+                idsToUse = List.of(utilisateur.getId());
+            } else if ("CHILDREN".equalsIgnoreCase(scope)) {
+                idsToUse = visibleIds.stream()
+                        .filter(id -> !id.equals(utilisateur.getId()))
+                        .toList();
+            } else {
+                idsToUse = visibleIds; // ALL
+            }
+        }
+
         var demandesMeres = isAdminOrMG
                 ? demandeMereService.searchDemandes(q, dateFrom, dateTo, page, size, sort, dir)
-                : demandeMereService.searchDemandesVisibleParUtilisateur(q, dateFrom, dateTo, visibleIds, page, size, sort, dir);
+                : (idsToUse.isEmpty()
+                ? demandeMereService.searchDemandesVisibleParUtilisateur(q, dateFrom, dateTo, List.of(-1), page, size, sort, dir) // retourne vide
+                : demandeMereService.searchDemandesVisibleParUtilisateur(q, dateFrom, dateTo, idsToUse, page, size, sort, dir)
+        );
 
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demandesMeres", demandesMeres);
@@ -203,6 +220,7 @@ public class DemandeController {
         model.addAttribute("dateFrom", dateFrom);
         model.addAttribute("dateTo", dateTo);
 
+        model.addAttribute("scope", scope);
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
 
         return "demande/demande-liste";
