@@ -27,16 +27,16 @@
             </div>
         </div>
 
-        <div class="card shadow-lg border-0">
+        <div class="card shadow-lg border-0 mb-3">
             <div class="card-body">
 
-                <!-- ✅ Barre filtre -->
-                <form method="get" th:action="@{/demande/list}" class="row g-2 align-items-end mb-3">
+                <form method="get" th:action="@{/demande/list}" class="row g-2 align-items-end">
                     <input type="hidden" name="sort" th:value="${sort}">
                     <input type="hidden" name="dir" th:value="${dir}">
 
                     <!-- Recherche -->
                     <div class="col-md-4">
+                        <label class="form-label mb-1">Recherche</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
                             <input class="form-control" type="text" name="q"
@@ -47,9 +47,7 @@
 
                     <!-- Date début -->
                     <div class="col-md-2">
-                        <label class="form-label mb-1">
-                           Date début
-                        </label>
+                        <label class="form-label mb-1">Date début</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="far fa-calendar"></i></span>
                             <input class="form-control" type="date" name="dateFrom" th:value="${dateFrom}">
@@ -58,14 +56,13 @@
 
                     <!-- Date fin -->
                     <div class="col-md-2">
-                        <label class="form-label mb-1">
-                            Date fin
-                        </label>
+                        <label class="form-label mb-1">Date fin</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="far fa-calendar-check"></i></span>
                             <input class="form-control" type="date" name="dateTo" th:value="${dateTo}">
                         </div>
                     </div>
+
                     <!-- Portée -->
                     <div class="col-md-2" th:if="${showDemandeurScopeFilter}">
                         <label class="form-label mb-1">
@@ -78,12 +75,12 @@
                         </select>
                     </div>
 
-                    <!-- Taille -->
+                    <!-- Taille (⚠️ pas d'auto-submit si tu veux appliquer avec Filtrer) -->
                     <div class="col-md-2">
                         <label class="form-label mb-1">
                             <i class="fas fa-list-ol me-1"></i> Taille
                         </label>
-                        <select class="form-select" name="size" onchange="this.form.submit()">
+                        <select class="form-select" name="size">
                             <option th:value="10" th:selected="${size == 10}">10</option>
                             <option th:value="25" th:selected="${size == 25}">25</option>
                             <option th:value="50" th:selected="${size == 50}">50</option>
@@ -91,7 +88,7 @@
                         </select>
                     </div>
 
-                    <!-- Bouton filtrer -->
+                    <!-- Boutons -->
                     <div class="col-md-1">
                         <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>
                         <button class="btn btn-gradient-blue w-100" type="submit" title="Filtrer">
@@ -99,19 +96,25 @@
                         </button>
                     </div>
 
-                    <!-- Reset -->
                     <div class="col-md-1">
                         <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>
                         <a class="btn btn-outline-secondary w-100" th:href="@{/demande/list}" title="Réinitialiser">
                             Réinitialiser
                         </a>
                     </div>
-
-                    <!-- total -->
-                    <div class="col-12 text-end text-muted small">
-                        <span th:text="${demandesMeres.totalElements}"></span> ligne(s)
-                    </div>
                 </form>
+
+            </div>
+        </div>
+
+        <!-- ✅ CARD TABLEAU -->
+        <div class="card shadow-lg border-0">
+            <div class="card-body">
+
+                <!-- total -->
+                <div class="text-end text-muted small mb-2">
+                    <span th:text="${demandesMeres.totalElements}"></span> ligne(s)
+                </div>
 
                 <!-- Tableau -->
                 <div class="table-responsive">
@@ -217,10 +220,9 @@
                         <span th:text="${demandesMeres.totalPages}"></span>
                     </div>
                 </nav>
-
+                
             </div>
         </div>
-
     </section>
 </div>
 
