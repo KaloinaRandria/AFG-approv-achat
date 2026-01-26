@@ -34,16 +34,49 @@
                     <input type="hidden" name="sort" th:value="${sort}">
                     <input type="hidden" name="dir" th:value="${dir}">
 
-                    <!-- Recherche -->
-                    <div class="col-md-4">
-                        <label class="form-label mb-1">Recherche</label>
+                    <!-- N° demande -->
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">N° demande</label>
                         <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input class="form-control" type="text" name="q"
-                                   th:value="${q}"
-                                   placeholder="N° demande, demandeur, type, statut..." />
+                            <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                            <input class="form-control" type="text" name="num"
+                                   th:value="${num}" placeholder="DM..." />
                         </div>
                     </div>
+
+                    <!-- Demandeur -->
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Demandeur</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="far fa-user"></i></span>
+                            <input class="form-control" type="text" name="demandeur"
+                                   th:value="${demandeur}" placeholder="Nom / Prénom / Dept..." />
+                        </div>
+                    </div>
+
+                    <!-- Type -->
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Type</label>
+                        <select class="form-select" name="type">
+                            <option value="" th:selected="${type == null || type == ''}">Tous</option>
+                            <option value="OPEX" th:selected="${type == 'OPEX'}">OPEX</option>
+                            <option value="CAPEX" th:selected="${type == 'CAPEX'}">CAPEX</option>
+                        </select>
+                    </div>
+
+                    <!-- Statut -->
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Statut</label>
+                        <select class="form-select" name="statut">
+                            <option value="" th:selected="${statut == null || statut == ''}">Tous</option>
+                            <option th:each="s : ${statuts}"
+                                    th:value="${s.name()}"
+                                    th:text="${s.name()}"
+                                    th:selected="${statut == s.name()}">
+                            </option>
+                        </select>
+                    </div>
+
 
                     <!-- Date début -->
                     <div class="col-md-2">
@@ -124,8 +157,11 @@
                             <!-- ✅ Tri ID -->
                             <th>
                                 <a class="text-decoration-none text-dark"
-                                   th:href="@{/demande/list(page=0,size=${size},q=${q},dateFrom=${dateFrom},dateTo=${dateTo},
-                                             sort='id',dir=${dir=='asc'?'desc':'asc'})}">
+                                   th:href="@{/demande/list(page=0,size=${size},
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort='id',dir=${dir=='asc'?'desc':'asc'})}"
+                                >
                                     <i class="fas fa-hashtag me-2 icon-gradient-light-blue"></i>
                                     N° de la demande
                                 </a>
@@ -134,8 +170,11 @@
                             <!-- ✅ Tri dateDemande -->
                             <th>
                                 <a class="text-decoration-none text-dark"
-                                   th:href="@{/demande/list(page=0,size=${size},q=${q},dateFrom=${dateFrom},dateTo=${dateTo},
-                                             sort='dateDemande',dir=${dir=='asc'?'desc':'asc'})}">
+                                   th:href="@{/demande/list(page=0,size=${size},
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort='dateDemande',dir=${dir=='asc'?'desc':'asc'})}"
+                                >
                                     <i class="far fa-clock me-2 icon-gradient-light-blue"></i>
                                     Date Demande
                                 </a>
@@ -220,7 +259,7 @@
                         <span th:text="${demandesMeres.totalPages}"></span>
                     </div>
                 </nav>
-                
+
             </div>
         </div>
     </section>

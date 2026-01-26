@@ -163,7 +163,10 @@ public class DemandeController {
                                   @RequestParam(defaultValue = "10") int size,
                                   @RequestParam(defaultValue = "dateDemande") String sort,
                                   @RequestParam(defaultValue = "desc") String dir,
-                                  @RequestParam(required = false) String q,
+                                  @RequestParam(required = false) String num,
+                                  @RequestParam(required = false) String demandeur,
+                                  @RequestParam(required = false) String type,
+                                  @RequestParam(required = false) String statut,
                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
                                   @RequestParam(required = false, defaultValue = "ALL") String scope) {
@@ -203,10 +206,10 @@ public class DemandeController {
         }
 
         var demandesMeres = isAdminOrMG
-                ? demandeMereService.searchDemandes(q, dateFrom, dateTo, page, size, sort, dir)
+                ? demandeMereService.searchDemandes(num, demandeur, type, statut, dateFrom, dateTo, page, size, sort, dir)
                 : (idsToUse.isEmpty()
-                ? demandeMereService.searchDemandesVisibleParUtilisateur(q, dateFrom, dateTo, List.of(-1), page, size, sort, dir) // retourne vide
-                : demandeMereService.searchDemandesVisibleParUtilisateur(q, dateFrom, dateTo, idsToUse, page, size, sort, dir)
+                ? demandeMereService.searchDemandesVisibleParUtilisateur(num, demandeur, type, statut, dateFrom, dateTo, List.of(-1), page, size, sort, dir)
+                : demandeMereService.searchDemandesVisibleParUtilisateur(num, demandeur, type, statut, dateFrom, dateTo, idsToUse, page, size, sort, dir)
         );
 
         model.addAttribute("currentUri", request.getRequestURI());
@@ -216,12 +219,17 @@ public class DemandeController {
         model.addAttribute("size", size);
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
-        model.addAttribute("q", q == null ? "" : q);
+        model.addAttribute("num", num == null ? "" : num);
+        model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
+        model.addAttribute("type", type == null ? "" : type);
+        model.addAttribute("statut", statut == null ? "" : statut);
+        model.addAttribute("statuts", DemandeMere.StatutDemande.values());
         model.addAttribute("dateFrom", dateFrom);
         model.addAttribute("dateTo", dateTo);
 
         model.addAttribute("scope", scope);
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
+        model.addAttribute("statuts", DemandeMere.StatutDemande.values());
 
         return "demande/demande-liste";
     }
