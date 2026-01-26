@@ -144,7 +144,10 @@
                             <td th:if="${showDemandeurColumn}"
                                 th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom + ' (' + demande.demandeur.departement.acronyme+ ')'}">
                             </td>
-                            <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')" th:text="${demande.natureDemande != null and !#strings.isEmpty(demande.natureDemande) ? demande.natureDemande : '-'}"></td>
+                            <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
+                                class="td-nature-demande"
+                                th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">
+                            </td>
                             <td th:text="${demande.statutDemande}"></td>
                             <td class="text-center">
                                 <button type="button"
@@ -241,8 +244,30 @@
                 </div>
                 <div>
                     <strong>Type de Demande :</strong>
-                    <div id="modalDemandeNature"></div>
+
+                    <!-- Lecture seule (tout le monde) -->
+                    <div id="modalDemandeNatureText"></div>
+
+                    <!-- Edition (MG/Admin uniquement) -->
+                    <div sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')" class="mt-2">
+                        <select id="modalDemandeNatureSelect" class="form-select form-select-sm">
+                            <option value="">-- Choisir --</option>
+                            <option th:each="n : ${natures}"
+                                    th:value="${n.name()}"
+                                    th:text="${n.name()}">
+                            </option>
+                        </select>
+
+
+                        <button id="btnSaveNature" type="button" class="btn btn-sm btn-gradient-blue mt-3">
+                            Enregistrer
+                        </button>
+
+
+                        <div id="natureSaveMsg" class="small mt-1"></div>
+                    </div>
                 </div>
+
             </div>
 
             <!-- TABLE ARTICLES -->
@@ -281,17 +306,25 @@
         maximumFractionDigits: 2
     });
 
+    let currentDemandeId = null;
+    let $currentRow = null;
+
     document.addEventListener('DOMContentLoaded', () => {
 
+        // Ouvrir le modal + charger détails
         $('#demandeTable').on('click', '.btn-view-demandeDetails', function () {
             const demandeId = $(this).data('id');
+            currentDemandeId = demandeId;
+            $currentRow = $(this).closest('tr');
 
             // reset modal
             $('#modalDemandeId').text(demandeId);
             $('#modalDemandeDemandeur').text('');
             $('#modalDemandeDate').text('');
             $('#modalDemandeStatut').text('');
-            $('#modalDemandeNature').text('');
+            $('#modalDemandeNatureText').text('');
+            $('#modalDemandeNatureSelect').val('');
+            $('#natureSaveMsg').text('').removeClass('text-danger text-success');
             $('#modalDemandeArticles').html('<tr><td colspan="2" class="text-center text-muted">Chargement...</td></tr>');
 
             $.ajax({
@@ -302,7 +335,11 @@
                     $('#modalDemandeId').text(data.id ?? '-');
                     $('#modalDemandeDemandeur').text(data.demandeur ?? '-');
                     $('#modalDemandeStatut').text(data.statutDemande ?? '-');
-                    $('#modalDemandeNature').text(data.typeDemande ?? '-');
+
+                    // ✅ Type demande: texte + préselection select
+                    const type = (data.typeDemande ?? '').toString().trim(); // "OPEX" / "CAPEX" / ""
+                    $('#modalDemandeNatureText').text(type !== '' ? type : '-');
+                    $('#modalDemandeNatureSelect').val(type); // si "" => revient sur option value=""
 
                     // date format
                     if (data.dateDemande) {
@@ -323,9 +360,9 @@
                         data.articles.forEach(a => {
                             const qte = Number(String(a.quantite).replace(/\s/g, '').replace(',', '.'));
                             rows += `<tr>
-                            <td>${a.designation ?? '-'}</td>
-                            <td class="text-end">${formatQte.format(isNaN(qte) ? 0 : qte)}</td>
-                        </tr>`;
+              <td>${a.designation ?? '-'}</td>
+              <td class="text-end">${formatQte.format(isNaN(qte) ? 0 : qte)}</td>
+            </tr>`;
                         });
                         $('#modalDemandeArticles').html(rows);
                     } else {
@@ -334,6 +371,34 @@
                 },
                 error: function () {
                     $('#modalDemandeArticles').html('<tr><td colspan="2" class="text-center text-danger">Erreur de chargement</td></tr>');
+                }
+            });
+        });
+
+        // Enregistrer type demande (PUT)
+        $('#btnSaveNature').on('click', function () {
+            const val = $('#modalDemandeNatureSelect').val(); // "OPEX" / "CAPEX" / ""
+
+            $.ajax({
+                url: `/api/demande/${currentDemandeId}/type-demande`,
+                method: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({ typeDemande: val }),
+                success: function () {
+                    $('#natureSaveMsg').text('Type de demande enregistré')
+                        .removeClass('text-danger').addClass('text-success');
+
+                    // Mise à jour dans le modal
+                    $('#modalDemandeNatureText').text(val ? val : '-');
+
+                    // Mise à jour dans la table
+                    if ($currentRow) {
+                        $currentRow.find('.td-nature-demande').text(val ? val : '-');
+                    }
+                },
+                error: function (xhr) {
+                    const msg = xhr.responseText ? xhr.responseText : 'Erreur';
+                    $('#natureSaveMsg').text(msg).removeClass('text-success').addClass('text-danger');
                 }
             });
         });

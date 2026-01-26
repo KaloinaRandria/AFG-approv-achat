@@ -10,7 +10,14 @@ import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonFilleService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
+import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -119,6 +126,37 @@ public class ApiController {
         return dto;
     }
 
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class TypeDemandeUpdateRequest {
+        public String typeDemande; // "OPEX" ou "CAPEX" ou ""/null
+    }
 
+    @PutMapping("/demande/{id}/type-demande")
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
+    @Transactional
+    public ResponseEntity<?> updateTypeDemande(@PathVariable String id,
+                                               @RequestBody TypeDemandeUpdateRequest req) {
+
+        DemandeMere demande = demandeMereService.getDemandeMereById(id)
+                .orElseThrow(() -> new RuntimeException("Demande non trouvée: " + id));
+
+        String val = req.getTypeDemande();
+
+        if (val == null || val.trim().isEmpty()) {
+            demande.setNatureDemande(null);
+        } else {
+            if (demande.getStatutDemande() != DemandeMere.StatutDemande.CREE) {
+                return ResponseEntity.badRequest().body("Impossible de modifier le type : demande déjà soumise.");
+            }
+            demande.setNatureDemande(DemandeMere.NatureDemande.valueOf(val.trim().toUpperCase()));
+        }
+
+        demandeMereService.saveDemandeMere(demande); // ou demandeMereRepo.save(demande)
+
+        return ResponseEntity.ok().build();
+    }
 
 }
