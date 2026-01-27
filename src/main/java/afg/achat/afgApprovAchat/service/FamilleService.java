@@ -21,7 +21,8 @@ public class FamilleService {
     }
 
     public Famille getFamilleByDesc(String desc) {
-        return familleRepo.findFamilleByDescription(desc);
+        if (desc == null) return null;
+        return familleRepo.findByDescriptionIgnoreCaseTrim(desc);
     }
 
     public void saveFamille(Famille famille) {

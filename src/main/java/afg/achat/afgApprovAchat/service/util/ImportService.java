@@ -40,9 +40,9 @@ public class ImportService {
 
             while ((column = csvReader.readNext()) != null) {
                 Famille famille = new Famille();
-                famille.setDescription(column[2].trim());
+                famille.setDescription(column[0].trim());
 
-                familleService.saveFamilleIfNotExists(column[2]);
+                familleService.saveFamilleIfNotExists(column[0].trim());
             }
 
         } catch (Exception e) {
