@@ -35,4 +35,32 @@ public interface BonLivraisonMereRepo extends JpaRepository<BonLivraisonMere,Str
             Pageable pageable
     );
 
+    @Query("""
+    select bl from BonLivraisonMere bl
+    left join bl.fournisseur f
+    left join bl.devise d
+    where bl.dateReception between :dateFrom and :dateTo
+
+      and (:num = '' or lower(bl.id) like lower(concat('%', :num, '%')))
+
+      and (
+            :fournisseur = ''
+            or lower(coalesce(f.nom, '')) like lower(concat('%', :fournisseur, '%'))
+      )
+
+      and (
+            :devise = ''
+            or lower(coalesce(d.designation, '')) like lower(concat('%', :devise, '%'))
+            or lower(coalesce(d.acronyme, '')) like lower(concat('%', :devise, '%'))
+      )
+""")
+    Page<BonLivraisonMere> searchMulti(
+            @Param("num") String num,
+            @Param("fournisseur") String fournisseur,
+            @Param("devise") String devise,
+            @Param("dateFrom") LocalDateTime dateFrom,
+            @Param("dateTo") LocalDateTime dateTo,
+            Pageable pageable
+    );
+
 }

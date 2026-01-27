@@ -27,29 +27,71 @@
             </div>
         </div>
 
-        <div class="card shadow-lg border-0">
+        <div class="card shadow-lg border-0 mb-3">
             <div class="card-body">
 
-                <!-- ✅ Barre filtre -->
-                <form method="get" th:action="@{/demande/list}" class="row g-2 align-items-end mb-3">
+                <form method="get" th:action="@{/demande/list}" class="row g-2 align-items-end">
                     <input type="hidden" name="sort" th:value="${sort}">
                     <input type="hidden" name="dir" th:value="${dir}">
 
-                    <!-- Recherche -->
-                    <div class="col-md-4">
+                    <!-- N° demande -->
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">N° demande</label>
                         <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input class="form-control" type="text" name="q"
-                                   th:value="${q}"
-                                   placeholder="N° demande, demandeur, type, statut..." />
+                            <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                            <input class="form-control" type="text" name="num"
+                                   th:value="${num}" placeholder="DM..." />
                         </div>
+                    </div>
+
+                    <!-- Demandeur -->
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Demandeur</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="far fa-user"></i></span>
+                            <input class="form-control" type="text" name="demandeur"
+                                   th:value="${demandeur}" placeholder="Nom / Prénom / Dept..." />
+                        </div>
+                    </div>
+
+                    <!-- Type -->
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Type</label>
+                        <select class="form-select" name="type">
+                            <option value="" th:selected="${type == null || type == ''}">Tous</option>
+                            <option value="OPEX" th:selected="${type == 'OPEX'}">OPEX</option>
+                            <option value="CAPEX" th:selected="${type == 'CAPEX'}">CAPEX</option>
+                        </select>
+                    </div>
+
+                    <!-- Statut -->
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Statut</label>
+                        <select class="form-select" name="statut">
+                            <option value="" th:selected="${statut == null || statut == ''}">Tous</option>
+                            <option th:each="s : ${statuts}"
+                                    th:value="${s.name()}"
+                                    th:text="${s.name()}"
+                                    th:selected="${statut == s.name()}">
+                            </option>
+                        </select>
+                    </div>
+                    <!-- Taille (⚠️ pas d'auto-submit si tu veux appliquer avec Filtrer) -->
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">
+                            <i class="fas fa-list-ol me-1"></i> Taille
+                        </label>
+                        <select class="form-select" name="size">
+                            <option th:value="10" th:selected="${size == 10}">10</option>
+                            <option th:value="25" th:selected="${size == 25}">25</option>
+                            <option th:value="50" th:selected="${size == 50}">50</option>
+                            <option th:value="100" th:selected="${size == 100}">100</option>
+                        </select>
                     </div>
 
                     <!-- Date début -->
                     <div class="col-md-2">
-                        <label class="form-label mb-1">
-                           Date début
-                        </label>
+                        <label class="form-label mb-1">Date début</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="far fa-calendar"></i></span>
                             <input class="form-control" type="date" name="dateFrom" th:value="${dateFrom}">
@@ -58,29 +100,28 @@
 
                     <!-- Date fin -->
                     <div class="col-md-2">
-                        <label class="form-label mb-1">
-                            Date fin
-                        </label>
+                        <label class="form-label mb-1">Date fin</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="far fa-calendar-check"></i></span>
                             <input class="form-control" type="date" name="dateTo" th:value="${dateTo}">
                         </div>
                     </div>
 
-                    <!-- Taille -->
-                    <div class="col-md-2">
+                    <!-- Portée -->
+                    <div class="col-md-2" th:if="${showDemandeurScopeFilter}">
                         <label class="form-label mb-1">
-                            <i class="fas fa-list-ol me-1"></i> Taille
+                            <i class="fas fa-users me-1"></i> Portée
                         </label>
-                        <select class="form-select" name="size" onchange="this.form.submit()">
-                            <option th:value="10" th:selected="${size == 10}">10</option>
-                            <option th:value="25" th:selected="${size == 25}">25</option>
-                            <option th:value="50" th:selected="${size == 50}">50</option>
-                            <option th:value="100" th:selected="${size == 100}">100</option>
+                        <select class="form-select" name="scope">
+                            <option value="ALL" th:selected="${scope == 'ALL'}">Tous</option>
+                            <option value="ME" th:selected="${scope == 'ME'}">Mes demandes</option>
+                            <option value="CHILDREN" th:selected="${scope == 'CHILDREN'}">Mes enfants</option>
                         </select>
                     </div>
 
-                    <!-- Bouton filtrer -->
+
+
+                    <!-- Boutons -->
                     <div class="col-md-1">
                         <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>
                         <button class="btn btn-gradient-blue w-100" type="submit" title="Filtrer">
@@ -88,19 +129,25 @@
                         </button>
                     </div>
 
-                    <!-- Reset -->
                     <div class="col-md-1">
                         <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>
                         <a class="btn btn-outline-secondary w-100" th:href="@{/demande/list}" title="Réinitialiser">
                             Réinitialiser
                         </a>
                     </div>
-
-                    <!-- total -->
-                    <div class="col-12 text-end text-muted small">
-                        <span th:text="${demandesMeres.totalElements}"></span> ligne(s)
-                    </div>
                 </form>
+
+            </div>
+        </div>
+
+        <!-- ✅ CARD TABLEAU -->
+        <div class="card shadow-lg border-0">
+            <div class="card-body">
+
+                <!-- total -->
+                <div class="text-end text-muted small mb-2">
+                    <span th:text="${demandesMeres.totalElements}"></span> ligne(s)
+                </div>
 
                 <!-- Tableau -->
                 <div class="table-responsive">
@@ -110,8 +157,11 @@
                             <!-- ✅ Tri ID -->
                             <th>
                                 <a class="text-decoration-none text-dark"
-                                   th:href="@{/demande/list(page=0,size=${size},q=${q},dateFrom=${dateFrom},dateTo=${dateTo},
-                                             sort='id',dir=${dir=='asc'?'desc':'asc'})}">
+                                   th:href="@{/demande/list(page=0,size=${size},
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort='id',dir=${dir=='asc'?'desc':'asc'})}"
+                                >
                                     <i class="fas fa-hashtag me-2 icon-gradient-light-blue"></i>
                                     N° de la demande
                                 </a>
@@ -120,8 +170,11 @@
                             <!-- ✅ Tri dateDemande -->
                             <th>
                                 <a class="text-decoration-none text-dark"
-                                   th:href="@{/demande/list(page=0,size=${size},q=${q},dateFrom=${dateFrom},dateTo=${dateTo},
-                                             sort='dateDemande',dir=${dir=='asc'?'desc':'asc'})}">
+                                   th:href="@{/demande/list(page=0,size=${size},
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort='dateDemande',dir=${dir=='asc'?'desc':'asc'})}"
+                                >
                                     <i class="far fa-clock me-2 icon-gradient-light-blue"></i>
                                     Date Demande
                                 </a>
@@ -144,7 +197,10 @@
                             <td th:if="${showDemandeurColumn}"
                                 th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom + ' (' + demande.demandeur.departement.acronyme+ ')'}">
                             </td>
-                            <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')" th:text="${demande.natureDemande != null and !#strings.isEmpty(demande.natureDemande) ? demande.natureDemande : '-'}"></td>
+                            <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
+                                class="td-nature-demande"
+                                th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">
+                            </td>
                             <td th:text="${demande.statutDemande}"></td>
                             <td class="text-center">
                                 <button type="button"
@@ -206,7 +262,6 @@
 
             </div>
         </div>
-
     </section>
 </div>
 
@@ -241,8 +296,30 @@
                 </div>
                 <div>
                     <strong>Type de Demande :</strong>
-                    <div id="modalDemandeNature"></div>
+
+                    <!-- Lecture seule (tout le monde) -->
+                    <div id="modalDemandeNatureText"></div>
+
+                    <!-- Edition (MG/Admin uniquement) -->
+                    <div sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')" class="mt-2">
+                        <select id="modalDemandeNatureSelect" class="form-select form-select-sm">
+                            <option value="">-- Choisir --</option>
+                            <option th:each="n : ${natures}"
+                                    th:value="${n.name()}"
+                                    th:text="${n.name()}">
+                            </option>
+                        </select>
+
+
+                        <button id="btnSaveNature" type="button" class="btn btn-sm btn-gradient-blue mt-3">
+                            Enregistrer
+                        </button>
+
+
+                        <div id="natureSaveMsg" class="small mt-1"></div>
+                    </div>
                 </div>
+
             </div>
 
             <!-- TABLE ARTICLES -->
@@ -281,17 +358,25 @@
         maximumFractionDigits: 2
     });
 
+    let currentDemandeId = null;
+    let $currentRow = null;
+
     document.addEventListener('DOMContentLoaded', () => {
 
+        // Ouvrir le modal + charger détails
         $('#demandeTable').on('click', '.btn-view-demandeDetails', function () {
             const demandeId = $(this).data('id');
+            currentDemandeId = demandeId;
+            $currentRow = $(this).closest('tr');
 
             // reset modal
             $('#modalDemandeId').text(demandeId);
             $('#modalDemandeDemandeur').text('');
             $('#modalDemandeDate').text('');
             $('#modalDemandeStatut').text('');
-            $('#modalDemandeNature').text('');
+            $('#modalDemandeNatureText').text('');
+            $('#modalDemandeNatureSelect').val('');
+            $('#natureSaveMsg').text('').removeClass('text-danger text-success');
             $('#modalDemandeArticles').html('<tr><td colspan="2" class="text-center text-muted">Chargement...</td></tr>');
 
             $.ajax({
@@ -302,7 +387,11 @@
                     $('#modalDemandeId').text(data.id ?? '-');
                     $('#modalDemandeDemandeur').text(data.demandeur ?? '-');
                     $('#modalDemandeStatut').text(data.statutDemande ?? '-');
-                    $('#modalDemandeNature').text(data.typeDemande ?? '-');
+
+                    // ✅ Type demande: texte + préselection select
+                    const type = (data.typeDemande ?? '').toString().trim(); // "OPEX" / "CAPEX" / ""
+                    $('#modalDemandeNatureText').text(type !== '' ? type : '-');
+                    $('#modalDemandeNatureSelect').val(type); // si "" => revient sur option value=""
 
                     // date format
                     if (data.dateDemande) {
@@ -323,9 +412,9 @@
                         data.articles.forEach(a => {
                             const qte = Number(String(a.quantite).replace(/\s/g, '').replace(',', '.'));
                             rows += `<tr>
-                            <td>${a.designation ?? '-'}</td>
-                            <td class="text-end">${formatQte.format(isNaN(qte) ? 0 : qte)}</td>
-                        </tr>`;
+              <td>${a.designation ?? '-'}</td>
+              <td class="text-end">${formatQte.format(isNaN(qte) ? 0 : qte)}</td>
+            </tr>`;
                         });
                         $('#modalDemandeArticles').html(rows);
                     } else {
@@ -334,6 +423,34 @@
                 },
                 error: function () {
                     $('#modalDemandeArticles').html('<tr><td colspan="2" class="text-center text-danger">Erreur de chargement</td></tr>');
+                }
+            });
+        });
+
+        // Enregistrer type demande (PUT)
+        $('#btnSaveNature').on('click', function () {
+            const val = $('#modalDemandeNatureSelect').val(); // "OPEX" / "CAPEX" / ""
+
+            $.ajax({
+                url: `/api/demande/${currentDemandeId}/type-demande`,
+                method: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({ typeDemande: val }),
+                success: function () {
+                    $('#natureSaveMsg').text('Type de demande enregistré')
+                        .removeClass('text-danger').addClass('text-success');
+
+                    // Mise à jour dans le modal
+                    $('#modalDemandeNatureText').text(val ? val : '-');
+
+                    // Mise à jour dans la table
+                    if ($currentRow) {
+                        $currentRow.find('.td-nature-demande').text(val ? val : '-');
+                    }
+                },
+                error: function (xhr) {
+                    const msg = xhr.responseText ? xhr.responseText : 'Erreur';
+                    $('#natureSaveMsg').text(msg).removeClass('text-success').addClass('text-danger');
                 }
             });
         });

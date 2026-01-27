@@ -186,16 +186,23 @@ public class BonLivraisonController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "dateReception") String sort,
             @RequestParam(defaultValue = "desc") String dir,
-            @RequestParam(required = false) String q,
+
+            @RequestParam(required = false) String num,
+            @RequestParam(required = false) String fournisseur,
+            @RequestParam(required = false) String devise,
+
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+
             Model model,
             HttpServletRequest request
     ) {
         // sécurité sort (évite PropertyReferenceException)
         if (!Set.of("id", "dateReception").contains(sort)) sort = "dateReception";
 
-        Page<BonLivraisonMere> result = bonLivraisonMereService.searchBonLivraisonMeres(q, dateFrom, dateTo, page, size, sort, dir);
+        Page<BonLivraisonMere> result = bonLivraisonMereService.searchBonLivraisonMeres(
+                num, fournisseur, devise, dateFrom, dateTo, page, size, sort, dir
+        );
 
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("bonLivraisonMeres", result);
@@ -204,13 +211,17 @@ public class BonLivraisonController {
         model.addAttribute("size", size);
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
-        model.addAttribute("q", q);
 
         // ✅ pour afficher la valeur dans les inputs
+        model.addAttribute("num", num == null ? "" : num);
+        model.addAttribute("fournisseur", fournisseur == null ? "" : fournisseur);
+        model.addAttribute("devise", devise == null ? "" : devise);
+
         model.addAttribute("dateFrom", dateFrom);
         model.addAttribute("dateTo", dateTo);
 
         return "bl/bl-liste";
     }
+
 
 }

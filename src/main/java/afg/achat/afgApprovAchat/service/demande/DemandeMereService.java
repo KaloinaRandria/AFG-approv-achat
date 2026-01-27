@@ -27,7 +27,10 @@ public class DemandeMereService {
         demandeMereRepo.save(demandeMere);
     }
 
-    public Page<DemandeMere> searchDemandes(String q,
+    public Page<DemandeMere> searchDemandes(String num,
+                                            String demandeur,
+                                            String type,
+                                            String statut,
                                             LocalDate dateFrom,
                                             LocalDate dateTo,
                                             int page,
@@ -35,24 +38,21 @@ public class DemandeMereService {
                                             String sort,
                                             String dir) {
 
-        // Tri
         String sortBy = (sort == null || sort.isBlank()) ? "dateDemande" : sort;
         Sort.Direction direction = "desc".equalsIgnoreCase(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
 
-        // Bornes de date NON NULL (évite bug postgres)
-        LocalDateTime from = (dateFrom == null)
-                ? LocalDate.of(1900, 1, 1).atStartOfDay()
-                : dateFrom.atStartOfDay();
+        LocalDateTime from = (dateFrom == null) ? LocalDate.of(1900, 1, 1).atStartOfDay() : dateFrom.atStartOfDay();
+        LocalDateTime to = (dateTo == null) ? LocalDate.of(2999, 12, 31).atTime(23, 59, 59) : dateTo.atTime(23, 59, 59);
 
-        LocalDateTime to = (dateTo == null)
-                ? LocalDate.of(2999, 12, 31).atTime(23, 59, 59)
-                : dateTo.atTime(23, 59, 59);
+        String n = (num == null) ? "" : num.trim();
+        String d = (demandeur == null) ? "" : demandeur.trim();
+        String t = (type == null) ? "" : type.trim();
+        String s = (statut == null) ? "" : statut.trim();
 
-        String keyword = (q == null) ? "" : q.trim();
-
-        return demandeMereRepo.search(keyword, from, to, pageable);
+        return demandeMereRepo.searchMulti(n, d, t, s, from, to, pageable);
     }
+
     public Optional<DemandeMere> getDemandeMereById(String id) {
         return demandeMereRepo.findById(id);
     }
@@ -83,7 +83,10 @@ public class DemandeMereService {
         return demandeMereRepo.searchByDemandeur(keyword, from, to, demandeurId, pageable);
     }
 
-    public Page<DemandeMere> searchDemandesVisibleParUtilisateur(String q,
+    public Page<DemandeMere> searchDemandesVisibleParUtilisateur(String num,
+                                                                 String demandeur,
+                                                                 String type,
+                                                                 String statut,
                                                                  LocalDate dateFrom,
                                                                  LocalDate dateTo,
                                                                  List<Integer> demandeurIds,
@@ -96,18 +99,17 @@ public class DemandeMereService {
         Sort.Direction direction = "desc".equalsIgnoreCase(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
 
-        LocalDateTime from = (dateFrom == null)
-                ? LocalDate.of(1900, 1, 1).atStartOfDay()
-                : dateFrom.atStartOfDay();
+        LocalDateTime from = (dateFrom == null) ? LocalDate.of(1900, 1, 1).atStartOfDay() : dateFrom.atStartOfDay();
+        LocalDateTime to = (dateTo == null) ? LocalDate.of(2999, 12, 31).atTime(23, 59, 59) : dateTo.atTime(23, 59, 59);
 
-        LocalDateTime to = (dateTo == null)
-                ? LocalDate.of(2999, 12, 31).atTime(23, 59, 59)
-                : dateTo.atTime(23, 59, 59);
+        String n = (num == null) ? "" : num.trim();
+        String d = (demandeur == null) ? "" : demandeur.trim();
+        String t = (type == null) ? "" : type.trim();
+        String s = (statut == null) ? "" : statut.trim();
 
-        String keyword = (q == null) ? "" : q.trim();
-
-        return demandeMereRepo.searchByDemandeurIds(keyword, from, to, demandeurIds, pageable);
+        return demandeMereRepo.searchMultiByDemandeurIds(n, d, t, s, from, to, demandeurIds, pageable);
     }
+
 
 
 }
