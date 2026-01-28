@@ -44,24 +44,50 @@
                     <input type="hidden" name="sort" th:value="${sort}">
                     <input type="hidden" name="dir" th:value="${dir}">
 
-                    <!-- Recherche -->
-                    <div class="col-md-6">
-                        <label class="form-label mb-1">Recherche</label>
+                    <!-- Code Article -->
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Code article</label>
                         <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input class="form-control"
-                                   type="text"
-                                   name="q"
-                                   th:value="${q}"
-                                   placeholder="Rechercher (code, désignation)...">
+                            <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                            <input class="form-control" type="text" name="code"
+                                   th:value="${code}" placeholder="CONS0001..." />
                         </div>
                     </div>
 
-                    <!-- Taille (pas d'auto-submit comme BL) -->
+                    <!-- Désignation -->
+                    <div class="col-md-4">
+                        <label class="form-label mb-1">Désignation</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-box"></i></span>
+                            <input class="form-control" type="text" name="designation"
+                                   th:value="${designation}" placeholder="Papier, Encre..." />
+                        </div>
+                    </div>
+
+                    <!-- UDM -->
                     <div class="col-md-2">
-                        <label class="form-label mb-1">
-                            <i class="fas fa-list-ol me-1"></i> Taille
-                        </label>
+                        <label class="form-label mb-1">UDM</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-balance-scale"></i></span>
+                            <input class="form-control" type="text" name="udm"
+                                   th:value="${udm}" placeholder="PCS, KG..." />
+                        </div>
+                    </div>
+
+                    <!-- Etat -->
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">État</label>
+                        <select class="form-select" name="etat">
+                            <option value="" th:selected="${etat == ''}">Tous</option>
+                            <option value="RUPTURE" th:selected="${etat == 'RUPTURE'}">Rupture</option>
+                            <option value="SEUIL" th:selected="${etat == 'SEUIL'}">Seuil</option>
+                            <option value="NORMAL" th:selected="${etat == 'NORMAL'}">Normal</option>
+                        </select>
+                    </div>
+
+                    <!-- Taille (pas d'auto-submit) -->
+                    <div class="col-md-1">
+                        <label class="form-label mb-1"><i class="fas fa-list-ol me-1"></i> Taille</label>
                         <select class="form-select" name="size">
                             <option th:value="10" th:selected="${size == 10}">10</option>
                             <option th:value="25" th:selected="${size == 25}">25</option>
@@ -70,20 +96,17 @@
                         </select>
                     </div>
 
-                    <!-- Bouton Filtrer -->
-                    <div class="col-md-2">
+                    <!-- Boutons -->
+                    <div class="col-md-1">
                         <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>
                         <button class="btn btn-gradient-blue w-100" type="submit" title="Filtrer">
                             <i class="fas fa-filter"></i>
                         </button>
                     </div>
 
-                    <!-- Bouton Reset -->
-                    <div class="col-md-2">
+                    <div class="col-md-1">
                         <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>
-                        <a class="btn btn-outline-secondary w-100"
-                           th:href="@{/stock/etat-stock}"
-                           title="Réinitialiser">
+                        <a class="btn btn-outline-secondary w-100" th:href="@{/stock/etat-stock}" title="Réinitialiser">
                             Réinitialiser
                         </a>
                     </div>
@@ -252,17 +275,23 @@
                         <!-- Précédente -->
                         <li class="page-item" th:classappend="${etatStocks.first} ? 'disabled'">
                             <a class="page-link"
-                               th:href="@{/stock/etat-stock(page=${etatStocks.number - 1}, size=${size}, q=${q}, sort=${sort}, dir=${dir})}">
+                               th:href="@{/stock/etat-stock(page=${etatStocks.number - 1}, size=${size},
+        code=${code},designation=${designation},udm=${udm},etat=${etat},
+        sort=${sort}, dir=${dir})}">
                                 Précédente
                             </a>
+
                         </li>
 
                         <!-- Page 1 -->
                         <li class="page-item" th:classappend="${etatStocks.number == 0} ? 'active'">
                             <a class="page-link"
-                               th:href="@{/stock/etat-stock(page=0, size=${size}, q=${q}, sort=${sort}, dir=${dir})}">
+                               th:href="@{/stock/etat-stock(page=0, size=${size},
+        code=${code},designation=${designation},udm=${udm},etat=${etat},
+        sort=${sort}, dir=${dir})}">
                                 1
                             </a>
+
                         </li>
 
                         <!-- Ellipsis gauche -->
@@ -272,14 +301,32 @@
                         </li>
 
                         <!-- Pages autour (sans 1 et sans dernière) -->
-                        <th:block th:each="p : ${#numbers.sequence(etatStocks.number - 2, etatStocks.number + 2)}"
-                                  th:if="${p > 0 and p < etatStocks.totalPages - 1}">
-                            <li class="page-item" th:classappend="${p == etatStocks.number} ? 'active'">
+                        <!-- Pages autour -->
+                        <th:block
+                                th:with="
+    start=${T(java.lang.Math).max(1, etatStocks.number - 2)},
+    end=${T(java.lang.Math).min(etatStocks.totalPages - 2, etatStocks.number + 2)}
+  ">
+
+                            <li class="page-item disabled" th:if="${start > 1}">
+                                <span class="page-link">…</span>
+                            </li>
+
+                            <li class="page-item"
+                                th:each="p : ${#numbers.sequence(start, end)}"
+                                th:classappend="${p == etatStocks.number} ? 'active'">
                                 <a class="page-link"
-                                   th:href="@{/stock/etat-stock(page=${p}, size=${size}, q=${q}, sort=${sort}, dir=${dir})}"
+                                   th:href="@{/stock/etat-stock(page=${p}, size=${size},
+          code=${code},designation=${designation},udm=${udm},etat=${etat},
+          sort=${sort}, dir=${dir})}"
                                    th:text="${p + 1}">
                                 </a>
                             </li>
+
+                            <li class="page-item disabled" th:if="${end < etatStocks.totalPages - 2}">
+                                <span class="page-link">…</span>
+                            </li>
+
                         </th:block>
 
                         <!-- Ellipsis droite -->
@@ -293,17 +340,23 @@
                             th:if="${etatStocks.totalPages > 1}"
                             th:classappend="${etatStocks.number == etatStocks.totalPages - 1} ? 'active'">
                             <a class="page-link"
-                               th:href="@{/stock/etat-stock(page=${etatStocks.totalPages - 1}, size=${size}, q=${q}, sort=${sort}, dir=${dir})}"
+                               th:href="@{/stock/etat-stock(page=${etatStocks.totalPages - 1}, size=${size},
+        code=${code},designation=${designation},udm=${udm},etat=${etat},
+        sort=${sort}, dir=${dir})}"
                                th:text="${etatStocks.totalPages}">
                             </a>
+
                         </li>
 
                         <!-- Suivante -->
                         <li class="page-item" th:classappend="${etatStocks.last} ? 'disabled'">
                             <a class="page-link"
-                               th:href="@{/stock/etat-stock(page=${etatStocks.number + 1}, size=${size}, q=${q}, sort=${sort}, dir=${dir})}">
+                               th:href="@{/stock/etat-stock(page=${etatStocks.number + 1}, size=${size},
+        code=${code},designation=${designation},udm=${udm},etat=${etat},
+        sort=${sort}, dir=${dir})}">
                                 Suivante
                             </a>
+
                         </li>
 
                     </ul>
