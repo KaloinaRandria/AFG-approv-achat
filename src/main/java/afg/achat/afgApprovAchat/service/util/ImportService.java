@@ -3,6 +3,7 @@ package afg.achat.afgApprovAchat.service.util;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.Famille;
 import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.stock.StockFille;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FamilleService;
 import afg.achat.afgApprovAchat.service.FournisseurService;
@@ -111,5 +112,21 @@ public class ImportService {
         } catch (Exception e) {
             throw new RuntimeException("Erreur lors de l'importation du fichier CSV", e);
         }
+    }
+
+    public void importCSVAchat(MultipartFile achatFile) {
+        try(InputStreamReader reader = new InputStreamReader(achatFile.getInputStream());
+            CSVReader csvReader = new CSVReaderBuilder(reader)
+                    .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
+                    .build()) {
+            String[] column;
+            csvReader.readNext(); // Ignorer l'en-tête
+            while ((column = csvReader.readNext()) != null) {
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de l'importation du fichier CSV", e);
+        }
+
     }
 }

@@ -42,5 +42,5 @@ public interface ArticleRepo extends JpaRepository<Article,Integer> {
     );
 
     @Query("SELECT a FROM Article a WHERE a.codeProvisoire = :codeProvisoire")
-    Optional<Article> findArticlesByCodeProvisoire(String codeProvisoire);
+    Article findArticlesByCodeProvisoire(String codeProvisoire);
 }

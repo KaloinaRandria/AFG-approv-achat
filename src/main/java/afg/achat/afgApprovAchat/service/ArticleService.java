@@ -183,7 +183,7 @@ public class ArticleService {
         articleRepo.save(a);
     }
 
-    Optional<Article> getArticleByCodeProvisoire(String codeProvisoire) {
+    public Article getArticleByCodeProvisoire(String codeProvisoire) {
         return articleRepo.findArticlesByCodeProvisoire(codeProvisoire);
     }
 
