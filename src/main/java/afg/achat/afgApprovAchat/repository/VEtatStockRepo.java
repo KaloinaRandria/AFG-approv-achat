@@ -79,4 +79,60 @@ public interface VEtatStockRepo extends JpaRepository<VEtatStock, Integer> {
     )
     List<VEtatStock> findAlertesAll();
 
+    @Query(value = """
+SELECT *
+FROM v_etat_stock v
+WHERE 1=1
+  AND (:code = '' OR lower(coalesce(v.code_article,'')) LIKE lower(concat('%', :code, '%')))
+  AND (:designation = '' OR lower(coalesce(v.designation,'')) LIKE lower(concat('%', :designation, '%')))
+  AND (:udm = '' OR lower(coalesce(v.unite_de_mesure,'')) LIKE lower(concat('%', :udm, '%'))
+               OR lower(coalesce(v.desc_udm,'')) LIKE lower(concat('%', :udm, '%')))
+
+  AND (
+        :etat = '' OR
+        (:etat = 'RUPTURE' AND CAST(v.stock_disponible AS numeric) <= 0)
+        OR
+        (:etat = 'SEUIL'
+            AND CAST(v.stock_disponible AS numeric) > 0
+            AND CAST(v.stock_disponible AS numeric) <= CAST(v.seuil_min AS numeric)
+        )
+        OR
+        (:etat = 'NORMAL'
+            AND CAST(v.stock_disponible AS numeric) > CAST(v.seuil_min AS numeric)
+        )
+  )
+ORDER BY v.code_article ASC
+""",
+            countQuery = """
+SELECT COUNT(*)
+FROM v_etat_stock v
+WHERE 1=1
+  AND (:code = '' OR lower(coalesce(v.code_article,'')) LIKE lower(concat('%', :code, '%')))
+  AND (:designation = '' OR lower(coalesce(v.designation,'')) LIKE lower(concat('%', :designation, '%')))
+  AND (:udm = '' OR lower(coalesce(v.unite_de_mesure,'')) LIKE lower(concat('%', :udm, '%'))
+               OR lower(coalesce(v.desc_udm,'')) LIKE lower(concat('%', :udm, '%')))
+
+  AND (
+        :etat = '' OR
+        (:etat = 'RUPTURE' AND CAST(v.stock_disponible AS numeric) <= 0)
+        OR
+        (:etat = 'SEUIL'
+            AND CAST(v.stock_disponible AS numeric) > 0
+            AND CAST(v.stock_disponible AS numeric) <= CAST(v.seuil_min AS numeric)
+        )
+        OR
+        (:etat = 'NORMAL'
+            AND CAST(v.stock_disponible AS numeric) > CAST(v.seuil_min AS numeric)
+        )
+  )
+""",
+            nativeQuery = true)
+    Page<VEtatStock> searchMulti(
+            @Param("code") String code,
+            @Param("designation") String designation,
+            @Param("udm") String udm,
+            @Param("etat") String etat,
+            Pageable pageable
+    );
+
 }

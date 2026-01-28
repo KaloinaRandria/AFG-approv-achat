@@ -33,71 +33,202 @@
 
         <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
 
-        <!-- Carte contenant le tableau -->
+        <div class="card shadow-lg border-0 mb-3">
+            <div class="card-body">
+                <form method="get" th:action="@{/article/list}" class="row g-2 align-items-end">
+                    <input type="hidden" name="sort" th:value="${sort}">
+                    <input type="hidden" name="dir" th:value="${dir}">
+
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Code</label>
+                        <input class="form-control" type="text" name="code"
+                               th:value="${code}" placeholder="CONS0001..." />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label mb-1">Désignation</label>
+                        <input class="form-control" type="text" name="designation"
+                               th:value="${designation}" placeholder="Papier, Encre..." />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Famille</label>
+                        <input class="form-control" type="text" name="famille"
+                               th:value="${famille}" placeholder="Informatique..." />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">UDM</label>
+                        <input class="form-control" type="text" name="udm"
+                               th:value="${udm}" placeholder="PCS, KG..." />
+                    </div>
+
+                    <div class="col-md-1">
+                        <label class="form-label mb-1">Taille</label>
+                        <select class="form-select" name="size">
+                            <option th:value="10" th:selected="${size == 10}">10</option>
+                            <option th:value="25" th:selected="${size == 25}">25</option>
+                            <option th:value="50" th:selected="${size == 50}">50</option>
+                            <option th:value="100" th:selected="${size == 100}">100</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-12 d-flex gap-2 mt-2">
+                        <button class="btn btn-gradient-blue" type="submit">
+                            <i class="fas fa-filter me-1"></i>Filtrer
+                        </button>
+                        <a class="btn btn-outline-secondary" th:href="@{/article/list}">
+                            Réinitialiser
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div class="card shadow-lg border-0">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table id="articlesTable" class="table table-striped table-hover table-bordered dt-head-gradient">
+                    <table class="table table-striped table-hover table-bordered dt-head-gradient">
                         <thead>
                         <tr>
-                            <th><i class="fas fa-hashtag me-2 icon-gradient-light-blue"></i>Code</th>
-                            <th><i class="fas fa-tag me-2 icon-gradient-light-blue"></i>Désignation</th>
-                            <th><i class="fas fa-layer-group me-2 icon-gradient-light-blue"></i>Famille</th>
-                            <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"><i class="fas fa-chart-line me-2 icon-gradient-light-blue"></i>Seuil Minimum</th>
-                            <th><i class="fas fa-balance-scale me-2 icon-gradient-light-blue"></i>UDM</th>
-                            <th><i class="fas fa-cogs me-2 icon-gradient-light-blue"></i>Actions</th>
-                            <th><i class="fas fa-exchange-alt me-2 icon-gradient-light-blue"></i>Simulation Stock</th>
+                            <th>
+                                <i class="fas fa-hashtag me-2 icon-gradient-light-blue"></i>Code
+                            </th>
+
+                            <th>
+                                <i class="fas fa-tag me-2 icon-gradient-light-blue"></i>Désignation
+                            </th>
+
+                            <th>
+                                <i class="fas fa-layer-group me-2 icon-gradient-light-blue"></i>Famille
+                            </th>
+
+                            <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')">
+                                <i class="fas fa-chart-line me-2 icon-gradient-light-blue"></i>Seuil Minimum
+                            </th>
+
+                            <th>
+                                <i class="fas fa-balance-scale me-2 icon-gradient-light-blue"></i>UDM
+                            </th>
+
+                            <th>
+                                <i class="fas fa-cogs me-2 icon-gradient-light-blue"></i>Actions
+                            </th>
+
+                            <th>
+                                <i class="fas fa-exchange-alt me-2 icon-gradient-light-blue"></i>Simulation Stock
+                            </th>
+
                         </tr>
                         </thead>
 
                         <tbody>
-                        <tr th:each="a : ${articles}">
-                            <td th:text="${a.getCodeArticle()}"></td>
-                            <td th:text="${a.getDesignation()}"></td>
-                            <td th:text="${a.famille != null ? a.famille.getDescription() : '---'}"></td>
-                            <td class="text-end" sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
-                                th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(a.seuilMin)}"></td>
-                            <td th:text="${a.udm != null ? a.udm.getDescription() : '---'}"></td>
+                        <!-- ✅ CHANGEMENT IMPORTANT: articlesPage.content -->
+                        <tr th:each="a : ${articlesPage.content}">
+                            <td th:text="${a.codeArticle}"></td>
+                            <td th:text="${a.designation}"></td>
+                            <td th:text="${a.famille != null ? a.famille.description : '---'}"></td>
+
+                            <td class="text-end"
+                                sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
+                                th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).format(a.seuilMin)}">
+                            </td>
+
+                            <td th:text="${a.udm != null ? a.udm.description : '---'}"></td>
+
                             <td>
                                 <button type="button"
                                         class="btn btn-sm edit-btn"
                                         sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
                                         data-bs-toggle="modal"
                                         data-bs-target="#modifierModal"
-                                        th:data-codearticle="${a.getCodeArticle()}"
-                                        th:data-designation="${a.getDesignation()}"
-                                        th:data-seuilminimum="${a.getSeuilMin()}"
-                                        th:data-idudm="${a.udm != null ? a.udm.getId() : ''}"
-                                        th:data-idfamille="${a.famille != null ? a.famille.getId() : ''}"
+                                        th:data-codearticle="${a.codeArticle}"
+                                        th:data-designation="${a.designation}"
+                                        th:data-seuilminimum="${a.seuilMin}"
+                                        th:data-idudm="${a.udm != null ? a.udm.id : ''}"
+                                        th:data-idfamille="${a.famille != null ? a.famille.id : ''}"
                                         title="Modifier l'article">
                                     <i class="fas fa-edit"></i>
                                 </button>
 
-                                <!-- Bouton Historique (modal) -->
                                 <button type="button"
                                         class="btn btn-sm historique-btn"
                                         data-bs-toggle="modal"
                                         data-bs-target="#historiqueModal"
-                                        th:data-codearticle="${a.getCodeArticle()}"
-                                        th:data-designation="${a.getDesignation()}"
+                                        th:data-codearticle="${a.codeArticle}"
+                                        th:data-designation="${a.designation}"
                                         title="Voir l'historique">
                                     <i class="fas fa-history"></i>
                                 </button>
                             </td>
+
                             <td>
-<!--                                <a th:href="@{/article/entree-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"-->
-<!--                                   class="btn btn-success btn-sm" title="Entrée en stock">-->
-<!--                                    <i class="fas fa-plus-circle"></i>-->
-<!--                                </a>-->
-                                <a th:href="@{/article/sortie-saisie/{codeArticle}(codeArticle=${a.getCodeArticle()})}"
+                                <a th:href="@{/article/sortie-saisie/{codeArticle}(codeArticle=${a.codeArticle})}"
                                    class="btn btn-danger btn-sm" title="Sortie de stock">
                                     <i class="fas fa-minus-circle"></i>
                                 </a>
                             </td>
                         </tr>
+
+                        <tr th:if="${articlesPage.totalElements == 0}">
+                            <td colspan="7" class="text-center text-muted py-4">
+                                Aucun article trouvé.
+                            </td>
+                        </tr>
+
                         </tbody>
                     </table>
                 </div>
+
+                <!-- ✅ PAGINATION -->
+                <nav th:if="${articlesPage.totalPages > 1}" class="mt-3" aria-label="Pagination articles">
+                    <ul class="pagination justify-content-center mb-0">
+
+                        <!-- Précédente -->
+                        <li class="page-item" th:classappend="${articlesPage.first} ? 'disabled'">
+                            <a class="page-link"
+                               th:href="@{/article/list(page=${articlesPage.number - 1}, size=${size},
+                               code=${code},designation=${designation},famille=${famille},udm=${udm},
+                               sort=${sort},dir=${dir})}">
+                                Précédente
+                            </a>
+                        </li>
+
+                        <!-- Pages autour -->
+                        <th:block th:with="
+                            start=${T(java.lang.Math).max(0, articlesPage.number - 2)},
+                            end=${T(java.lang.Math).min(articlesPage.totalPages - 1, articlesPage.number + 2)}
+                        ">
+                            <li class="page-item"
+                                th:each="p : ${#numbers.sequence(start, end)}"
+                                th:classappend="${p == articlesPage.number} ? 'active'">
+                                <a class="page-link"
+                                   th:href="@{/article/list(page=${p}, size=${size},
+                                   code=${code},designation=${designation},famille=${famille},udm=${udm},
+                                   sort=${sort},dir=${dir})}"
+                                   th:text="${p + 1}">
+                                </a>
+                            </li>
+                        </th:block>
+
+                        <!-- Suivante -->
+                        <li class="page-item" th:classappend="${articlesPage.last} ? 'disabled'">
+                            <a class="page-link"
+                               th:href="@{/article/list(page=${articlesPage.number + 1}, size=${size},
+                               code=${code},designation=${designation},famille=${famille},udm=${udm},
+                               sort=${sort},dir=${dir})}">
+                                Suivante
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="text-center text-muted small mt-2">
+                        Page <span th:text="${articlesPage.number + 1}"></span> /
+                        <span th:text="${articlesPage.totalPages}"></span>
+                        — Total: <span th:text="${articlesPage.totalElements}"></span>
+                    </div>
+                </nav>
+
             </div>
         </div>
     </section>
@@ -239,65 +370,6 @@
 <script th:inline="none">
     /*<![CDATA[*/
     document.addEventListener('DOMContentLoaded', function () {
-        const table = $('#articlesTable').DataTable({
-            language: {
-                zeroRecords: "Aucun article correspondant trouvé",
-                search: "Rechercher:",
-                lengthMenu: "Afficher _MENU_",
-                info: "Affichage de _START_ à _END_ sur _TOTAL_ articles",
-                infoEmpty: "Aucun article à afficher",
-                infoFiltered: "(filtrés sur _MAX_ articles au total)",
-                paginate: {first: "Première", last: "Dernière", next: "Suivante", previous: "Précédente"}
-            },
-            pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-            responsive: true,
-            dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
-            initComplete: function () {
-                const api = this.api();
-                // Cloner header pour filtres
-                $('#articlesTable thead tr').clone(true).appendTo('#articlesTable thead');
-                $('#articlesTable thead tr:eq(1) th').each(function (i) {
-                    if (i < 5) { // filtres sur Code, Désignation, Famille, Seuil, UDM
-                        $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
-                        $('input', this).on('keyup change', function () {
-                            if (api.column(i).search() !== this.value) {
-                                api.column(i).search(this.value).draw();
-                            }
-                        });
-                    } else {
-                        $(this).html('<div style="height:32px;"></div>');
-                    }
-                });
-
-                // Recherche mobile
-                $('<div class="mobile-search-container mb-3">' +
-                    '<div class="input-group">' +
-                    '<span class="input-group-text"><i class="fas fa-search icon-gradient-blue"></i></span>' +
-                    '<input type="text" class="form-control" id="mobileGlobalSearch" placeholder="Rechercher...">' +
-                    '</div></div>').insertBefore('#articlesTable');
-
-                $('#mobileGlobalSearch').on('keyup', function () {
-                    api.search(this.value).draw();
-                });
-
-                function toggleMobileSearch() {
-                    if ($(window).width() <= 768) {
-                        $('.mobile-search-container').show();
-                        $('#articlesTable thead tr:eq(1)').hide();
-                        $('.dataTables_filter').hide();
-                    } else {
-                        $('.mobile-search-container').hide();
-                        $('#articlesTable thead tr:eq(1)').show();
-                        $('.dataTables_filter').show();
-                    }
-                }
-
-                toggleMobileSearch();
-                $(window).on('resize', toggleMobileSearch);
-            }
-        });
-
         // Modal pour modifier
         $('#modifierModal').on('show.bs.modal', function (event) {
             var button = $(event.relatedTarget);
