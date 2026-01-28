@@ -33,7 +33,7 @@ public class DemandeMere {
     Adresse adresse;
     @Column(name = "date_demande")
     LocalDateTime dateDemande;
-    @Column(name = "date_sortie")
+    @Column(name = "date_sortie") //date prevue livraison
     LocalDateTime dateSortie;
 
     @Enumerated(EnumType.STRING)

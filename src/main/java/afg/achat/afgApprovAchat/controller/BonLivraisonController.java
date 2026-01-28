@@ -72,7 +72,6 @@ public class BonLivraisonController {
                                      @RequestParam("quantiteDemande[]") List<String> qteDemandes,
                                      @RequestParam("quantiteRecu[]") List<String> qteRecues,
                                      @RequestParam("prixUnitaire[]") List<String> prixUnitaires,
-                                     Model model,
                                      RedirectAttributes redirectAttributes) {
         try {
             if (fournisseurId == null || fournisseurId.isEmpty()) {
@@ -114,7 +113,7 @@ public class BonLivraisonController {
                 bonLivraisonFille.setQuantiteDemande(qteDemandes.get(i));
                 bonLivraisonFille.setQuantiteRecu(qteRecues.get(i));
                 bonLivraisonFille.setPrixUnitaire(prixUnitaires.get(i));
-                
+
                 articleService.updatePrixUnitaire(articleCodes.get(i), prixUnitaires.get(i));
                 bonLivraisonFilles.add(bonLivraisonFille);
                 this.bonLivraisonFilleService.insertBonLivraisonFilleList(bonLivraisonFille);

@@ -1,7 +1,6 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="fr"
-      xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+      xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Nouvelle demande</title>
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
@@ -34,7 +33,12 @@
             </div>
 
             <div class="card-body">
-                <form method="post" id="demandeForm" th:action="@{/demande/save}" class="needs-validation" novalidate>
+                <form method="post"
+                      id="demandeForm"
+                      th:action="@{/demande/save}"
+                      class="needs-validation"
+                      novalidate
+                      enctype="multipart/form-data">
                     <div class="mb-4">
                         <h6 class="form-section-title">
                             <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations générales
@@ -42,10 +46,10 @@
 
                         <div class="row">
 
-<!--                            Date de la demande-->
+<!--                            Date prevue livraison-->
                             <div class="col-md-6 mb-3">
-                                <label for="dateDemande" class="form-label fw-bold required-field">
-                                    Date de la demande
+                                <label for="dateSortie" class="form-label fw-bold required-field">
+                                    Date prévue pour la livraison
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">
@@ -53,70 +57,53 @@
                                     </span>
                                     <input type="datetime-local"
                                            class="form-control"
-                                           id="dateDemande"
-                                           name="dateDemande"
+                                           id="dateSortie"
+                                           name="dateSortie"
                                            required>
                                 </div>
                                 <div class="form-text text-muted mt-1">
-                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la date de demande
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la date prévue pour la livraison
                                 </div>
                             </div>
-<!--                            Adresse -->
                             <div class="col-md-6 mb-3">
-                                <label for="adresse" class="form-label fw-bold required-field">
-                                    Adresse
-                                </label>
+                                <label for="priorite" class="form-label fw-bold required-field">Priorité</label>
+
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">
-                                        <i class="fas fa-map-marker-alt icon-gradient-blue"></i>
+                                        <i class="fas fa-bolt icon-gradient-blue"></i>
                                     </span>
-                                    <select class="form-select select2-searchable"
-                                            id="adresse"
-                                            name="adresse"
-                                            data-placeholder="Recherchez ou sélectionnez un adresse..."
-                                            required>
-                                        <option value=""></option>
-                                        <option th:each="adresse : ${adresses}"
-                                                th:value="${adresse.getId()}"
-                                                th:text="${adresse.getAdresse()}">
-                                        </option>
-
+                                    <select id="priorite" name="priorite" class="form-select" required>
+                                        <option value="">-- Choisir --</option>
+                                        <option th:each="p : ${priorites}"
+                                                th:value="${p.name()}"
+                                                th:text="${p.name()}">
                                         </option>
                                     </select>
                                 </div>
+
                                 <div class="form-text text-muted mt-1">
-                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez l'adresse du demandeur
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la priorité de la demande
                                 </div>
                             </div>
 
-                            <!--                            Service-->
+<!--                            Motif evoque -->
                             <div class="col-md-6 mb-3">
-                                <label for="departement" class="form-label fw-bold required-field">
-                                    Departement / Service
+                                <label for="motif" class="form-label fw-bold required-field">
+                                    Motif evoqué
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">
-                                        <i class="fas fa-sitemap icon-gradient-blue"></i>
+                                        <i class="fas fa-tag icon-gradient-blue"></i>
                                     </span>
-                                    <select class="form-select select2-
-                                    searchable"
-                                            id="departement"
-                                            name="departement"
-                                            data-placeholder="Recherchez ou sélectionnez un adresse..."
-                                            required>
-                                        <option value=""></option>
-                                        <option th:each="departement : ${departements}"
-                                                th:value="${departement.getId()}"
-                                                th:text="${departement.getNom()}">
-                                        </option>
-
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="form-text text-muted mt-1">
-                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez l'adresse du demandeur
+                                    <input type="text"
+                                           class="form-control"
+                                           id="motif"
+                                           name="motif"
+                                           required
+                                    >
                                 </div>
                             </div>
+
                             <!-- Description -->
                             <div class="col-md-12 mb-3">
                                 <label for="description" class="form-label fw-bold">
@@ -136,6 +123,68 @@
                                     <i class="fas fa-info-circle me-1"></i> Informations complémentaires sur la demande de materiel
                                 </div>
                             </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="lignebudgetaire" class="form-label fw-bold required-field">Ligne budgétaire</label>
+
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-coins icon-gradient-blue"></i>
+                                    </span>
+                                    <select id="lignebudgetaire" name="ligneBudgetaires" class="form-select" required>
+                                        <option value="">-- Choisir --</option>
+                                        <option th:each="lb : ${ligneBudgetaires}"
+                                                th:value="${lb.id}"
+                                                th:text="${lb.codeCentre +' '+ lb.description}">
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la ligne budgétaire
+                                </div>
+                            </div>
+
+                            <!-- Pièces jointes -->
+                            <div class="col-md-12 mb-4">
+                                <label for="piecesJointes" class="form-label fw-bold">
+                                    Pièces jointes
+                                </label>
+
+                                <div class="file-upload-card border rounded-4 p-4 text-center position-relative">
+                                    <input type="file"
+                                           class="file-upload-input"
+                                           id="piecesJointes"
+                                           name="piecesJointes"
+                                           multiple
+                                           accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+
+                                    <div class="file-upload-content">
+                                        <div class="mb-2">
+                                            <i class="fas fa-paperclip fa-2x text-gradient-blue"></i>
+                                        </div>
+                                        <p class="mb-1 fw-semibold">
+                                            Glissez-déposez vos fichiers ici
+                                        </p>
+                                        <p class="text-muted mb-2">
+                                            ou cliquez pour sélectionner
+                                        </p>
+                                        <span class="badge bg-light text-dark border">
+                PDF · Word · Excel · Images
+            </span>
+                                    </div>
+                                </div>
+
+                                <div class="form-text text-muted mt-2">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Plusieurs fichiers peuvent être joints (taille raisonnable recommandée).
+                                </div>
+
+                                <!-- Liste des fichiers sélectionnés -->
+                                <ul id="fileList" class="list-group list-group-flush mt-3"></ul>
+                            </div>
+
+
                         </div>
                     </div>
 
@@ -598,6 +647,83 @@
         }
 
     })();
+
+    (function () {
+        const input = document.getElementById("piecesJointes");
+        const list  = document.getElementById("fileList");
+        const btnClear = document.getElementById("btnClearFiles");
+
+        if (!input || !list) return;
+
+        // On garde une copie modifiable des fichiers sélectionnés
+        let selectedFiles = [];
+
+        function render() {
+            list.innerHTML = "";
+
+            if (selectedFiles.length === 0) {
+                const empty = document.createElement("li");
+                empty.className = "list-group-item text-muted";
+                empty.innerHTML = `<i class="fas fa-circle-info me-2"></i>Aucun fichier sélectionné`;
+                list.appendChild(empty);
+                return;
+            }
+
+            selectedFiles.forEach((file, idx) => {
+                const li = document.createElement("li");
+                li.className = "list-group-item d-flex align-items-center gap-2";
+
+                li.innerHTML = `
+                <i class="fas fa-file-alt text-gradient-blue"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">${file.name}</div>
+                    <small class="text-muted">${(file.size / 1024).toFixed(1)} KB</small>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-remove-index="${idx}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+                list.appendChild(li);
+            });
+        }
+
+        function syncInputFiles() {
+            const dt = new DataTransfer();
+            selectedFiles.forEach(f => dt.items.add(f));
+            input.files = dt.files;
+        }
+
+        // Quand on sélectionne des fichiers
+        input.addEventListener("change", function () {
+            // Remplace la sélection (comportement standard)
+            selectedFiles = Array.from(input.files);
+            render();
+        });
+
+        // Supprimer un fichier précis
+        list.addEventListener("click", function (e) {
+            const btn = e.target.closest("[data-remove-index]");
+            if (!btn) return;
+
+            const index = parseInt(btn.getAttribute("data-remove-index"), 10);
+            if (Number.isNaN(index)) return;
+
+            selectedFiles.splice(index, 1);
+            syncInputFiles();
+            render();
+        });
+
+        // Tout effacer
+        btnClear?.addEventListener("click", function () {
+            selectedFiles = [];
+            input.value = "";      // vide la sélection
+            render();
+        });
+
+        // Affichage initial
+        render();
+    })();
+
     /*]]>*/
 </script>
 </body>

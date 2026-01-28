@@ -6,6 +6,7 @@ import afg.achat.afgApprovAchat.model.util.Adresse;
 import afg.achat.afgApprovAchat.model.util.Departement;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.ArticleService;
+import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.util.AdresseService;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,22 +44,21 @@ public class DemandeController {
     UtilisateurService utilisateurService;
     @Autowired
     IdGenerator idGenerator;
+    @Autowired
+    CentreBudgetaireService centreBudgetaireService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
         model.addAttribute("currentUri", request.getRequestURI());
-        model.addAttribute("natures", DemandeMere.NatureDemande.values());
-        Adresse[] adresses = adresseService.getAllAdresses();
-        model.addAttribute("adresses", adresses);
-        Departement[] departements = departementService.getAllDepartements();
-        model.addAttribute("departements", departements);
+        model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
+        model.addAttribute("ligneBudgetaires",centreBudgetaireService.getAllCentreBudgetaires() );
 
         return "demande/demande-saisie";
     }
 
     @PostMapping("/save")
-    public String insertDemande(@RequestParam(name = "dateDemande") String dateDemande,
-                                @RequestParam(name = "adresse") String adresse,
+    public String insertDemande(@RequestParam(name = "dateSortie") String dateSortie,
+                                @RequestParam(name = "motif") String motif,
                                 @RequestParam(name = "departement") String departement,
                                 @RequestParam(name = "description") String description,
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
@@ -68,27 +69,26 @@ public class DemandeController {
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
          
         try {
-            if (dateDemande == null || dateDemande.isEmpty()) {
-                redirectAttributes.addFlashAttribute("ko", "La date de la demande est obligatoire.");
+            if (dateSortie == null || dateSortie.isEmpty()) {
+                redirectAttributes.addFlashAttribute("ko", "La date prévue pour la livraison est obligatoire.");
                 return "redirect:/demande/add";
             }
-            if (adresse == null || adresse.isEmpty()) {
-                redirectAttributes.addFlashAttribute("ko", "L'adresse est obligatoire.");
+            if (motif == null || motif.isEmpty()) {
+                redirectAttributes.addFlashAttribute("ko", "Le motif evoqué est obligatoire.");
                 return "redirect:/demande/add";
             }
             if (departement == null || departement.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "Le département est obligatoire.");
                 return "redirect:/demande/add";
             }
-            Adresse adresse1 = adresseService.getAdresseById(Integer.parseInt(adresse))
-                    .orElseThrow(() -> new IllegalArgumentException("Adresse introuvable"));
             Departement departement1 = departementService.getDepartementById(Integer.parseInt(departement))
                     .orElseThrow(() -> new IllegalArgumentException("Département introuvable"));
 
             DemandeMere demandeMere = new DemandeMere();
             demandeMere.setId(idGenerator);
-            demandeMere.setDateDemande(dateDemande);
-            demandeMere.setAdresse(adresse1);
+            demandeMere.setDateDemande(String.valueOf(LocalDateTime.now()));
+            demandeMere.setDateSortie(dateSortie);
+            demandeMere.setMotifEvoque(motif);
             demandeMere.setDemandeur(utilisateur);
             demandeMere.setDescription(description);
 
