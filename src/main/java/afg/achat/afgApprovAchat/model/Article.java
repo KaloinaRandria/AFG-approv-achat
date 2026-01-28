@@ -27,6 +27,8 @@ public class Article {
     Udm udm;
     @ManyToOne @JoinColumn(name = "id_famille" , referencedColumnName = "id_famille")
     Famille famille;
+    @Column(name = "prix_unitaire")
+    double prixUnitaire;
 
     public Article(String designation, int seuilMin, Udm udm, Famille famille, CentreBudgetaire centreBudgetaire) {
         this.setDesignation(designation);
@@ -41,5 +43,9 @@ public class Article {
 
     public void setCodeArticle(String codeArticle) {
         this.codeArticle = codeArticle;
+    }
+
+    public void setPrixUnitaire(String prixUnitaire) {
+        this.prixUnitaire = Double.parseDouble(prixUnitaire);
     }
 }
