@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.model.demande;
 
+import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.util.Adresse;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
@@ -44,12 +45,30 @@ public class DemandeMere {
     @Column(name = "nature_demande")
     NatureDemande natureDemande;
 
-    @Column(name = "description")
+    @Column(name = "description", columnDefinition = "TEXT")
     String description;
 
+    @Column(name = "motif_evoque", columnDefinition = "TEXT")
+    String motifEvoque;
+
+    @Enumerated(EnumType.STRING)
+    PrioriteDemande priorite;
+
+    @ManyToOne
+    @JoinColumn(name = "id_centre_budgetaire", referencedColumnName = "id_centre_budgetaire")
+    CentreBudgetaire centreBudgetaire;
+
+    @Column(name = "total_prix")
+    double totalPrix;
+
+    public enum PrioriteDemande {
+        BASSE,
+        NORMALE,
+        ELEVEE
+    }
     public enum NatureDemande {
-        OPEX, // Remplacement, Maintenance
-        CAPEX//Nouvel Equipement
+        OPEX,
+        CAPEX
     }
 
     public enum StatutDemande {
