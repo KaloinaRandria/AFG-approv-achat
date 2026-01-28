@@ -28,9 +28,9 @@ public class Article {
     @ManyToOne @JoinColumn(name = "id_famille" , referencedColumnName = "id_famille")
     Famille famille;
     @Column(name = "prix_unitaire")
-    double prixUnitaire;
+    Double prixUnitaire;
 
-    public Article(String designation, int seuilMin, Udm udm, Famille famille, CentreBudgetaire centreBudgetaire) {
+    public Article(String designation, int seuilMin, Udm udm, Famille famille) {
         this.setDesignation(designation);
         this.setSeuilMin(seuilMin);
         this.setUdm(udm);
