@@ -10,6 +10,8 @@ import afg.achat.afgApprovAchat.service.util.ArticleHistoriqueService;
 import afg.achat.afgApprovAchat.service.util.UdmService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -151,5 +153,20 @@ public class ArticleService {
 
     public List<Article> search(String q) {
         return articleRepo.findByCodeArticleContainingIgnoreCaseOrDesignationContainingIgnoreCase(q, q);
+    }
+
+    public Page<Article> searchArticlesMulti(
+            String code,
+            String designation,
+            String famille,
+            String udm,
+            Pageable pageable
+    ) {
+        String c = (code == null) ? "" : code.trim();
+        String d = (designation == null) ? "" : designation.trim();
+        String f = (famille == null) ? "" : famille.trim();
+        String u = (udm == null) ? "" : udm.trim();
+
+        return articleRepo.searchMulti(c, d, f, u, pageable);
     }
 }
