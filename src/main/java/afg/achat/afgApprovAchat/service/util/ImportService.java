@@ -95,6 +95,7 @@ public class ImportService {
 
                 Article article = new Article();
                 article.setCodeArticle(idGenerator);
+                article.setCodeProvisoire(column[0].trim());
                 article.setDesignation(column[1].trim());
                 article.setFamille(familleService.getFamilleByDesc(column[2].trim()));
                 // 🔹 Gestion du seuil minimum

@@ -40,4 +40,7 @@ public interface ArticleRepo extends JpaRepository<Article,Integer> {
             @Param("udm") String udm,
             Pageable pageable
     );
+
+    @Query("SELECT a FROM Article a WHERE a.codeProvisoire = :codeProvisoire")
+    Optional<Article> findArticlesByCodeProvisoire(String codeProvisoire);
 }

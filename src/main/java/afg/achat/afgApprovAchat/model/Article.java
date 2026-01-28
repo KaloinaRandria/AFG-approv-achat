@@ -29,6 +29,8 @@ public class Article {
     Famille famille;
     @Column(name = "prix_unitaire")
     Double prixUnitaire;
+    @Column(name = "code_provisoire")
+    String codeProvisoire;
 
     public Article(String designation, int seuilMin, Udm udm, Famille famille) {
         this.setDesignation(designation);
