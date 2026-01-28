@@ -122,19 +122,20 @@
 
 
                     <!-- Boutons -->
-                    <div class="col-md-1">
-                        <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>
-                        <button class="btn btn-gradient-blue w-100" type="submit" title="Filtrer">
-                            <i class="fas fa-filter"></i>
+                    <div class="col-md-12 d-flex gap-2 mt-2">
+<!--                        <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>-->
+                        <button class="btn btn-gradient-blue" type="submit" title="Filtrer">
+                            <i class="fas fa-filter me-1"></i>Filtrer
                         </button>
-                    </div>
-
-                    <div class="col-md-1">
-                        <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>
-                        <a class="btn btn-outline-secondary w-100" th:href="@{/demande/list}" title="Réinitialiser">
+                        <a class="btn btn-outline-secondary" th:href="@{/demande/list}" title="Réinitialiser">
                             Réinitialiser
                         </a>
                     </div>
+
+<!--                    <div class="col-md-1">-->
+<!--                        <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>-->
+<!--                        -->
+<!--                    </div>-->
                 </form>
 
             </div>
