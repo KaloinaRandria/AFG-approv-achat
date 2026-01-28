@@ -34,6 +34,8 @@ public class BonLivraisonMere {
     Fournisseur fournisseur;
     @ManyToOne @JoinColumn(name = "id_devise" ,  referencedColumnName = "id_devise")
     Devise devise;
+    @Column(name = "total_prix")
+    Double totalPrix;
 
     public void setId(IdGenerator idGenerator) {
         this.id = idGenerator.generateId("BL","bon_livraison_mere_id_bl_mere_seq");

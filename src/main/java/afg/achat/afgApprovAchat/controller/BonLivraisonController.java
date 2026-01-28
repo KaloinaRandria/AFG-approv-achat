@@ -6,6 +6,7 @@ import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
 import afg.achat.afgApprovAchat.model.stock.StockFille;
 import afg.achat.afgApprovAchat.model.stock.StockMere;
 import afg.achat.afgApprovAchat.model.util.Devise;
+import afg.achat.afgApprovAchat.model.util.MontantCalculator;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonFilleService;
@@ -88,6 +89,8 @@ public class BonLivraisonController {
             Devise devise = deviseService.getDeviseById(Integer.parseInt(deviseId))
                     .orElseThrow(() -> new IllegalArgumentException("Devise introuvable"));
 
+            double totalGeneral = MontantCalculator.calculerTotal(qteRecues, prixUnitaires);
+
 //            Enregistrement du bon de livraison mère
             BonLivraisonMere bonLivraisonMere = new BonLivraisonMere();
             bonLivraisonMere.setId(idGenerator);
@@ -95,6 +98,7 @@ public class BonLivraisonController {
             bonLivraisonMere.setDevise(devise);
             bonLivraisonMere.setDateReception(dateLivraison);
             bonLivraisonMere.setDescription(description != null ? description : "");
+            bonLivraisonMere.setTotalPrix(totalGeneral);
 
             this.bonLivraisonMereService.insertBonLivraisonMere(bonLivraisonMere);
 
@@ -110,7 +114,8 @@ public class BonLivraisonController {
                 bonLivraisonFille.setQuantiteDemande(qteDemandes.get(i));
                 bonLivraisonFille.setQuantiteRecu(qteRecues.get(i));
                 bonLivraisonFille.setPrixUnitaire(prixUnitaires.get(i));
-
+                
+                articleService.updatePrixUnitaire(articleCodes.get(i), prixUnitaires.get(i));
                 bonLivraisonFilles.add(bonLivraisonFille);
                 this.bonLivraisonFilleService.insertBonLivraisonFilleList(bonLivraisonFille);
             }
