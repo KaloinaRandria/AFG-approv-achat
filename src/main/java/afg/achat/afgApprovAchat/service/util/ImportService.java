@@ -3,10 +3,12 @@ package afg.achat.afgApprovAchat.service.util;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.Famille;
 import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
 import afg.achat.afgApprovAchat.model.stock.StockFille;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FamilleService;
 import afg.achat.afgApprovAchat.service.FournisseurService;
+import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
@@ -24,11 +26,13 @@ public class ImportService {
     @Autowired
     FamilleService familleService;
     @Autowired
-    UdmService udmService;
+    DeviseService deviseService;
     @Autowired
     FournisseurService fournisseurService;
     @Autowired
     IdGenerator idGenerator;
+    @Autowired
+    BonLivraisonMereService bonLivraisonMereService;
 
     public void importCSVFamille(MultipartFile familleFile) {
         try (InputStreamReader reader = new InputStreamReader(familleFile.getInputStream());
@@ -129,4 +133,43 @@ public class ImportService {
         }
 
     }
+
+    public void importCSVBLMere(MultipartFile factureFile) {
+        try (InputStreamReader reader = new InputStreamReader(factureFile.getInputStream());
+             CSVReader csvReader = new CSVReaderBuilder(reader)
+                     .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
+                     .build()) {
+
+            String[] column;
+            csvReader.readNext(); // Ignorer l'en-tête
+
+            while ((column = csvReader.readNext()) != null) {
+
+                String idFacture = column[0].trim();
+                if (idFacture.isEmpty()) continue;
+
+                // ✅ Vérification : ne pas réinsérer si facture déjà importée
+                if (bonLivraisonMereService.existsByIdFacture(idFacture)) {
+                    continue; // ou log: "déjà existant"
+                }
+
+                BonLivraisonMere bonLivraisonMere = new BonLivraisonMere();
+                bonLivraisonMere.setId(idGenerator);
+                bonLivraisonMere.setIdFacture(idFacture);
+
+                bonLivraisonMere.setDevise(
+                        deviseService.getDeviseById(1)
+                                .orElseThrow(() -> new RuntimeException("Devise non trouvée avec l'id: 1"))
+                );
+
+                bonLivraisonMere.setDescription("Bon de livraison importé - Facture N° " + idFacture);
+
+                bonLivraisonMereService.insertBonLivraisonMere(bonLivraisonMere);
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de l'importation du fichier CSV", e);
+        }
+    }
+
 }

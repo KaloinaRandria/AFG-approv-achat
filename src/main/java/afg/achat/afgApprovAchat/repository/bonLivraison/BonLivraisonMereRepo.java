@@ -62,5 +62,10 @@ public interface BonLivraisonMereRepo extends JpaRepository<BonLivraisonMere,Str
             @Param("dateTo") LocalDateTime dateTo,
             Pageable pageable
     );
+    @Query("SELECT bl FROM BonLivraisonMere  bl WHERE bl.idFacture = :idFacture")
+    BonLivraisonMere findByIdFacture(String idFacture);
+
+    boolean existsByIdFacture(String idFacture);
+
 
 }

@@ -36,6 +36,8 @@ public class BonLivraisonMere {
     Devise devise;
     @Column(name = "total_prix")
     Double totalPrix;
+    @Column(name = "id_facture")
+    String idFacture;
 
     public void setId(IdGenerator idGenerator) {
         this.id = idGenerator.generateId("BL","bon_livraison_mere_id_bl_mere_seq");

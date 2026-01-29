@@ -59,4 +59,12 @@ public class BonLivraisonMereService {
     public Optional<BonLivraisonMere> getBonLivraisonMereById(String id) {
         return this.bonLivraisonMereRepo.findById(id);
     }
+
+    public BonLivraisonMere getBonLivraisonMereByIdFacture(String idFacture) {
+        return this.bonLivraisonMereRepo.findById(idFacture).orElse(null);
+    }
+
+    public boolean existsByIdFacture(String idFacture) {
+        return bonLivraisonMereRepo.existsByIdFacture(idFacture);
+    }
 }
