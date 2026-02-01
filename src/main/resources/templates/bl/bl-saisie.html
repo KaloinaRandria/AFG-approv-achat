@@ -346,6 +346,14 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+
+    // ✅ Global : accessible partout
+    const fournisseurs = [
+        /*[# th:each="f : ${fournisseurs}"]*/
+        { id: /*[[${f.id}]]*/, nom: /*[[${f.nom}]]*/ },
+        /*[/]*/
+    ];
+
     document.addEventListener("DOMContentLoaded", function () {
         updatePrixUnitaireState();
 
@@ -691,7 +699,18 @@
             }
 
             // ------- Remplir infos générales
-            document.getElementById("pvBLFournisseur").textContent = getSelectText("fournisseurs");
+            const fid = document.getElementById("fournisseurId")?.value;
+            if (!fid) {
+                const input = document.getElementById("fournisseurInput");
+                input?.classList.add("is-invalid");
+                input?.focus();
+                return;
+            }
+
+            const fname = fournisseurs.find(f => String(f.id) === String(fid))?.nom;
+
+            document.getElementById("pvBLFournisseur").textContent = fname || "---";
+
             document.getElementById("pvBLDevise").textContent = getSelectText("devises");
 
             const rawDate = document.getElementById("dateLivraison")?.value;
@@ -751,12 +770,7 @@
 
         if (!input || !list || !hidden) return;
 
-        // ✅ Construire un tableau JS propre (id/nom)
-        const fournisseurs = [
-            /*[# th:each="f : ${fournisseurs}"]*/
-            { id: /*[[${f.id}]]*/, nom: /*[[${f.nom}]]*/ },
-            /*[/]*/
-        ];
+
 
         function clearList() { list.innerHTML = ""; }
 
