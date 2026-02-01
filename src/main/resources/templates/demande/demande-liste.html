@@ -196,7 +196,7 @@
                             <td th:text="${demande.id}"></td>
                             <td th:text="${#temporals.format(demande.dateDemande, 'dd/MM/yyyy HH:mm')}"></td>
                             <td th:if="${showDemandeurColumn}"
-                                th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom + ' (' + demande.demandeur.departement.acronyme+ ')'}">
+                                th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom }">
                             </td>
                             <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
                                 class="td-nature-demande"

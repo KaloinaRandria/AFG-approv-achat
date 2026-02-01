@@ -22,7 +22,7 @@ public class DemandeFille {
     Article article;
     double quantite;
     @Enumerated(EnumType.STRING) @Column(name = "statut_demande", nullable = false)
-    DemandeMere.StatutDemande statutDemande;
+    DemandeMere.StatutDemande statutDemande = DemandeMere.StatutDemande.CREE;
 
     public void setQuantite(String quantite) {
         this.quantite = Double.parseDouble(quantite);

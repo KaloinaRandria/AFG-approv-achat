@@ -59,7 +59,6 @@ public class DemandeController {
     @PostMapping("/save")
     public String insertDemande(@RequestParam(name = "dateSortie") String dateSortie,
                                 @RequestParam(name = "motif") String motif,
-                                @RequestParam(name = "departement") String departement,
                                 @RequestParam(name = "description") String description,
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
                                 @RequestParam(name = "quantite[]") List<String> quantite,
@@ -77,13 +76,6 @@ public class DemandeController {
                 redirectAttributes.addFlashAttribute("ko", "Le motif evoqué est obligatoire.");
                 return "redirect:/demande/add";
             }
-            if (departement == null || departement.isEmpty()) {
-                redirectAttributes.addFlashAttribute("ko", "Le département est obligatoire.");
-                return "redirect:/demande/add";
-            }
-            Departement departement1 = departementService.getDepartementById(Integer.parseInt(departement))
-                    .orElseThrow(() -> new IllegalArgumentException("Département introuvable"));
-
             DemandeMere demandeMere = new DemandeMere();
             demandeMere.setId(idGenerator);
             demandeMere.setDateDemande(String.valueOf(LocalDateTime.now()));
