@@ -61,7 +61,7 @@ public class BonLivraisonMereService {
     }
 
     public BonLivraisonMere getBonLivraisonMereByIdFacture(String idFacture) {
-        return this.bonLivraisonMereRepo.findById(idFacture).orElse(null);
+        return bonLivraisonMereRepo.findByIdFacture(idFacture);
     }
 
     public boolean existsByIdFacture(String idFacture) {
