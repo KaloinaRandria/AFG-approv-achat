@@ -5,6 +5,7 @@ import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.repository.ArticleRepo;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonFilleService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
@@ -89,7 +90,7 @@ public class ApiController {
 
         dto.setId(demandeMere.getId());
 
-        // Demandeur (avec sécurité + département si tu veux)
+        // Demandeur
         String nom = demandeMere.getDemandeur() != null ? demandeMere.getDemandeur().getNom() : "";
         String prenom = demandeMere.getDemandeur() != null ? demandeMere.getDemandeur().getPrenom() : "";
         String dep = (demandeMere.getDemandeur() != null
@@ -107,9 +108,17 @@ public class ApiController {
                 demandeMere.getNatureDemande() != null ? demandeMere.getNatureDemande().toString() : "-"
         );
 
-        dto.setStatutDemande(
-                demandeMere.getStatutDemande() != null ? demandeMere.getStatutDemande().toString() : "-"
+        // ✅ Statut (libellé)
+        Map<Integer, String> statutLabels = Map.of(
+                StatutDemande.CREE, "CREE",
+                StatutDemande.VALIDATION_N1, "EN_VALIDATION",
+                StatutDemande.VALIDATION_N2, "EN_VALIDATION",
+                StatutDemande.VALIDATION_N3, "EN_VALIDATION",
+                StatutDemande.VALIDATION_N4, "EN_VALIDATION",
+                StatutDemande.VALIDE, "VALIDE",
+                StatutDemande.REFUSE, "REFUSE"
         );
+        dto.setStatutDemande(statutLabels.getOrDefault(demandeMere.getStatut(), "INCONNU"));
 
         // Articles
         List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demandeMere);
@@ -148,8 +157,8 @@ public class ApiController {
         if (val == null || val.trim().isEmpty()) {
             demande.setNatureDemande(null);
         } else {
-            if (demande.getStatutDemande() != DemandeMere.StatutDemande.CREE) {
-                return ResponseEntity.badRequest().body("Impossible de modifier le type : demande déjà soumise.");
+            if (demande.getStatut() != 1) {
+                return ResponseEntity.badRequest().body("Impossible de modifier le type : demande déjà en cours de validation.");
             }
             demande.setNatureDemande(DemandeMere.NatureDemande.valueOf(val.trim().toUpperCase()));
         }

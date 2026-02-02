@@ -29,16 +29,10 @@ public class DemandeMere {
     String id;
     @ManyToOne @JoinColumn(name = "id_demandeur", referencedColumnName = "id_utilisateur")
     Utilisateur demandeur;
-    @ManyToOne @JoinColumn(name = "id_adresse", referencedColumnName = "id_adresse")
-    Adresse adresse;
     @Column(name = "date_demande")
     LocalDateTime dateDemande;
     @Column(name = "date_sortie") //date prevue livraison
     LocalDateTime dateSortie;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "statut_demande", nullable = false)
-    StatutDemande statutDemande = StatutDemande.CREE;
 
 
     @Enumerated(EnumType.STRING)
@@ -61,6 +55,8 @@ public class DemandeMere {
     @Column(name = "total_prix")
     double totalPrix;
 
+    int statut;
+
     public enum PrioriteDemande {
         BASSE,
         NORMALE,
@@ -69,15 +65,6 @@ public class DemandeMere {
     public enum NatureDemande {
         OPEX,
         CAPEX
-    }
-
-    public enum StatutDemande {
-        CREE,        // créée mais non soumise
-        SOUMISE,          // envoyée pour validation
-        EN_VALIDATION,    // en cours (optionnel)
-        VALIDEE,          // approuvée
-        REJETEE,          // refusée
-        ANNULEE           // annulée par le demandeur
     }
 
     public void setId(IdGenerator idGenerator) {
@@ -90,8 +77,7 @@ public class DemandeMere {
     public void setDateSortie(String dateSortie) {
         this.dateSortie = LocalDateTime.parse(dateSortie);
     }
-    public DemandeMere(Adresse adresse, String dateDemande, String dateSortie) {
-        this.setAdresse(adresse);
+    public DemandeMere(String dateDemande, String dateSortie) {
         this.setDateDemande(dateDemande);
         this.setDateSortie(dateSortie);
     }

@@ -2,8 +2,7 @@ package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
-import afg.achat.afgApprovAchat.model.util.Adresse;
-import afg.achat.afgApprovAchat.model.util.Departement;
+import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
@@ -25,7 +24,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/demande")
@@ -83,6 +84,7 @@ public class DemandeController {
             demandeMere.setMotifEvoque(motif);
             demandeMere.setDemandeur(utilisateur);
             demandeMere.setDescription(description);
+            demandeMere.setStatut(1);
 
             this.demandeMereService.saveDemandeMere(demandeMere);
 
@@ -94,6 +96,7 @@ public class DemandeController {
                 demandeFille.setArticle(articleService.getArticleByCodeArticle(articleCodes.get(i))
                         .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + articleCodes.get(finalI))));
                 demandeFille.setQuantite(quantite.get(i));
+                demandeFille.setStatut(1);
                 demandeFilles.add(demandeFille);
 
                 this.demandeFilleService.saveDemandeFille(demandeFille);
@@ -148,10 +151,13 @@ public class DemandeController {
                                   @RequestParam(defaultValue = "10") int size,
                                   @RequestParam(defaultValue = "dateDemande") String sort,
                                   @RequestParam(defaultValue = "desc") String dir,
+
+                                  // ✅ statut optionnel (0 ou null = Tous)
+                                  @RequestParam(required = false) Integer statut,
+
                                   @RequestParam(required = false) String num,
                                   @RequestParam(required = false) String demandeur,
                                   @RequestParam(required = false) String type,
-                                  @RequestParam(required = false) String statut,
                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
                                   @RequestParam(required = false, defaultValue = "ALL") String scope) {
@@ -165,15 +171,36 @@ public class DemandeController {
                         a.getAuthority().equals("ROLE_MOYENS_GENERAUX")
         );
 
+        // ✅ statutLabels (affichage table)
+        Map<Integer, String> statutLabels = Map.of(
+                StatutDemande.CREE, "CREE",
+                StatutDemande.VALIDATION_N1, "EN_VALIDATION",
+                StatutDemande.VALIDATION_N2, "EN_VALIDATION",
+                StatutDemande.VALIDATION_N3, "EN_VALIDATION",
+                StatutDemande.VALIDATION_N4, "EN_VALIDATION",
+                StatutDemande.VALIDE, "VALIDE",
+                StatutDemande.REFUSE, "REFUSE"
+        );
+
+        // ✅ filtre statut (select)
+        Map<Integer, String> statutFiltre = new LinkedHashMap<>();
+        statutFiltre.put(StatutDemande.CREE, "CREE");
+        statutFiltre.put(StatutDemande.VALIDATION_N1, "EN_VALIDATION");
+        statutFiltre.put(StatutDemande.VALIDE, "VALIDE");
+        statutFiltre.put(StatutDemande.REFUSE, "REFUSE");
+
+        model.addAttribute("statutFiltre", statutFiltre);
+
+        // ✅ normalisation : 0 ou null => pas de filtre
+        Integer statutFilter = (statut == null || statut == 0) ? null : statut;
+
         List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(utilisateur.getId());
         boolean hasChildren = visibleIds.size() > 1;
 
         boolean showDemandeurColumn = isAdminOrMG || hasChildren;
         model.addAttribute("showDemandeurColumn", showDemandeurColumn);
 
-        // afficher le filtre "Portée" seulement si n+1 (ou admin/mg si tu veux)
         boolean showScopeFilter = hasChildren && !isAdminOrMG;
-        // (si tu veux aussi pour admin/mg -> mets: (hasChildren || isAdminOrMG))
         model.addAttribute("showDemandeurScopeFilter", showScopeFilter);
 
         // calcule ids selon scope
@@ -185,16 +212,14 @@ public class DemandeController {
                 idsToUse = visibleIds.stream()
                         .filter(id -> !id.equals(utilisateur.getId()))
                         .toList();
-            } else {
-                idsToUse = visibleIds; // ALL
             }
         }
 
         var demandesMeres = isAdminOrMG
-                ? demandeMereService.searchDemandes(num, demandeur, type, statut, dateFrom, dateTo, page, size, sort, dir)
+                ? demandeMereService.searchDemandes(num, demandeur, type, statutFilter, dateFrom, dateTo, page, size, sort, dir)
                 : (idsToUse.isEmpty()
-                ? demandeMereService.searchDemandesVisibleParUtilisateur(num, demandeur, type, statut, dateFrom, dateTo, List.of(-1), page, size, sort, dir)
-                : demandeMereService.searchDemandesVisibleParUtilisateur(num, demandeur, type, statut, dateFrom, dateTo, idsToUse, page, size, sort, dir)
+                ? demandeMereService.searchDemandesVisibleParUtilisateur(num, demandeur, type, statutFilter, dateFrom, dateTo, List.of(-1), page, size, sort, dir)
+                : demandeMereService.searchDemandesVisibleParUtilisateur(num, demandeur, type, statutFilter, dateFrom, dateTo, idsToUse, page, size, sort, dir)
         );
 
         model.addAttribute("currentUri", request.getRequestURI());
@@ -204,17 +229,19 @@ public class DemandeController {
         model.addAttribute("size", size);
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
+
         model.addAttribute("num", num == null ? "" : num);
         model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
         model.addAttribute("type", type == null ? "" : type);
-        model.addAttribute("statut", statut == null ? "" : statut);
-        model.addAttribute("statuts", DemandeMere.StatutDemande.values());
         model.addAttribute("dateFrom", dateFrom);
         model.addAttribute("dateTo", dateTo);
-
         model.addAttribute("scope", scope);
+
+        // ✅ pour garder la sélection dans le select
+        model.addAttribute("statut", (statut == null) ? 0 : statut);
+
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
-        model.addAttribute("statuts", DemandeMere.StatutDemande.values());
+        model.addAttribute("statutLabels", statutLabels);
 
         return "demande/demande-liste";
     }

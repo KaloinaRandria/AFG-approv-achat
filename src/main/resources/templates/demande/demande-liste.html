@@ -64,18 +64,23 @@
                         </select>
                     </div>
 
+
                     <!-- Statut -->
                     <div class="col-md-2">
                         <label class="form-label mb-1">Statut</label>
                         <select class="form-select" name="statut">
-                            <option value="" th:selected="${statut == null || statut == ''}">Tous</option>
-                            <option th:each="s : ${statuts}"
-                                    th:value="${s.name()}"
-                                    th:text="${s.name()}"
-                                    th:selected="${statut == s.name()}">
-                            </option>
+                            <option value="0" th:selected="${statut == null || statut == 0}">Tous</option>
+
+                            <th:block th:if="${statutFiltre != null}">
+                                <option th:each="entry : ${statutFiltre.entrySet()}"
+                                        th:value="${entry.key}"
+                                        th:text="${entry.value}"
+                                        th:selected="${statut != null && statut == entry.key}">
+                                </option>
+                            </th:block>
                         </select>
                     </div>
+
                     <!-- Taille (⚠️ pas d'auto-submit si tu veux appliquer avec Filtrer) -->
                     <div class="col-md-2">
                         <label class="form-label mb-1">
@@ -202,7 +207,7 @@
                                 class="td-nature-demande"
                                 th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">
                             </td>
-                            <td th:text="${demande.statutDemande}"></td>
+                            <td th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></td>
                             <td class="text-center">
                                 <button type="button"
                                         class="btn btn-sm btn-view-demandeDetails"
@@ -231,7 +236,10 @@
                         <li class="page-item" th:classappend="${demandesMeres.first} ? 'disabled'">
                             <a class="page-link"
                                th:href="@{/demande/list(page=${demandesMeres.number - 1}, size=${size},
-               q=${q},dateFrom=${dateFrom},dateTo=${dateTo},sort=${sort},dir=${dir})}">
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort=${sort},dir=${dir})}"
+                            >
                                 Précédente
                             </a>
                         </li>
@@ -246,8 +254,10 @@
                                 th:classappend="${p == demandesMeres.number} ? 'active'">
                                 <a class="page-link"
                                    th:href="@{/demande/list(page=${p}, size=${size},
-                   q=${q},dateFrom=${dateFrom},dateTo=${dateTo},sort=${sort},dir=${dir})}"
-                                   th:text="${p + 1}">
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort=${sort},dir=${dir})}"
+                                >
                                 </a>
                             </li>
                         </th:block>
@@ -256,7 +266,10 @@
                         <li class="page-item" th:classappend="${demandesMeres.last} ? 'disabled'">
                             <a class="page-link"
                                th:href="@{/demande/list(page=${demandesMeres.number + 1}, size=${size},
-               q=${q},dateFrom=${dateFrom},dateTo=${dateTo},sort=${sort},dir=${dir})}">
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort=${sort},dir=${dir})}"
+                            >
                                 Suivante
                             </a>
                         </li>

@@ -23,7 +23,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
                 :q = ''
                 or lower(dm.id) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dm.natureDemande, '')) like lower(concat('%', :q, '%'))
-                or lower(coalesce(cast(dm.statutDemande as string), '')) like lower(concat('%', :q, '%'))
+              
                 or lower(coalesce(dmd.prenom, '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dep.acronyme, '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dmd.nom, '')) like lower(concat('%', :q, '%'))
@@ -47,7 +47,6 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
                 :q = ''
                 or lower(dm.id) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dm.natureDemande, '')) like lower(concat('%', :q, '%'))
-                or lower(coalesce(cast(dm.statutDemande as string), '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dmd.prenom, '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dep.acronyme, '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dmd.nom, '')) like lower(concat('%', :q, '%'))
@@ -72,7 +71,6 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
                 :q = ''
                 or lower(dm.id) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dm.natureDemande, '')) like lower(concat('%', :q, '%'))
-                or lower(coalesce(cast(dm.statutDemande as string), '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dmd.prenom, '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dep.acronyme, '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dmd.nom, '')) like lower(concat('%', :q, '%'))
@@ -90,7 +88,6 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
     @Query("""
     select dm from DemandeMere dm
     left join dm.demandeur dmd
-    left join dmd.departement dep
     where dm.dateDemande between :dateFrom and :dateTo
 
       and (:num = '' or lower(dm.id) like lower(concat('%', :num, '%')))
@@ -99,23 +96,22 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
             :demandeur = ''
             or lower(coalesce(dmd.prenom, '')) like lower(concat('%', :demandeur, '%'))
             or lower(coalesce(dmd.nom, '')) like lower(concat('%', :demandeur, '%'))
-            or lower(coalesce(dep.acronyme, '')) like lower(concat('%', :demandeur, '%'))
-            or lower(coalesce(dep.nom, '')) like lower(concat('%', :demandeur, '%'))
       )
 
       and (:type = '' or lower(coalesce(dm.natureDemande, '')) = lower(:type))
 
-      and (:statut = '' or lower(cast(dm.statutDemande as string)) = lower(:statut))
+      and (:statut is null or dm.statut = :statut)
 """)
     Page<DemandeMere> searchMulti(
             @Param("num") String num,
             @Param("demandeur") String demandeur,
             @Param("type") String type,
-            @Param("statut") String statut,
+            @Param("statut") Integer statut,
             @Param("dateFrom") LocalDateTime dateFrom,
             @Param("dateTo") LocalDateTime dateTo,
             Pageable pageable
     );
+
 
 
     @Query("""
@@ -137,17 +133,18 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
 
       and (:type = '' or lower(coalesce(dm.natureDemande, '')) = lower(:type))
 
-      and (:statut = '' or lower(cast(dm.statutDemande as string)) = lower(:statut))
+      and (:statut is null or dm.statut = :statut)
 """)
     Page<DemandeMere> searchMultiByDemandeurIds(
             @Param("num") String num,
             @Param("demandeur") String demandeur,
             @Param("type") String type,
-            @Param("statut") String statut,
+            @Param("statut") Integer statut,
             @Param("dateFrom") LocalDateTime dateFrom,
             @Param("dateTo") LocalDateTime dateTo,
             @Param("demandeurIds") List<Integer> demandeurIds,
             Pageable pageable
     );
+
 
 }

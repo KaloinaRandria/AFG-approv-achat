@@ -22,9 +22,7 @@ public class ValidationDemande {
     DemandeMere demandeMere;
     @ManyToOne @JoinColumn(name = "id_validateur" , referencedColumnName = "id_utilisateur")
     Utilisateur validateur;
-    @Column(name = "statut_demande")
-    @Enumerated(EnumType.STRING)
-    DemandeMere.StatutDemande statut;
+    int statut;
     @Column(name = "date_action")
     LocalDateTime dateAction;
 

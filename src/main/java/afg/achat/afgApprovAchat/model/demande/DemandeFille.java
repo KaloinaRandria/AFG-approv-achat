@@ -21,8 +21,7 @@ public class DemandeFille {
     @ManyToOne @JoinColumn(name = "id_article", referencedColumnName = "id_article")
     Article article;
     double quantite;
-    @Enumerated(EnumType.STRING) @Column(name = "statut_demande", nullable = false)
-    DemandeMere.StatutDemande statutDemande = DemandeMere.StatutDemande.CREE;
+    int statut;
 
     public void setQuantite(String quantite) {
         this.quantite = Double.parseDouble(quantite);
