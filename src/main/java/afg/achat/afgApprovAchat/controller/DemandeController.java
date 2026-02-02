@@ -177,7 +177,6 @@ public class DemandeController {
                 StatutDemande.VALIDATION_N1, "EN_VALIDATION",
                 StatutDemande.VALIDATION_N2, "EN_VALIDATION",
                 StatutDemande.VALIDATION_N3, "EN_VALIDATION",
-                StatutDemande.VALIDATION_N4, "EN_VALIDATION",
                 StatutDemande.VALIDE, "VALIDE",
                 StatutDemande.REFUSE, "REFUSE"
         );
@@ -327,7 +326,6 @@ public class DemandeController {
         statutLabels.put(StatutDemande.VALIDATION_N1, "EN VALIDATION");
         statutLabels.put(StatutDemande.VALIDATION_N2, "EN VALIDATION");
         statutLabels.put(StatutDemande.VALIDATION_N3, "EN VALIDATION");
-        statutLabels.put(StatutDemande.VALIDATION_N4, "EN VALIDATION");
         statutLabels.put(StatutDemande.VALIDE, "VALIDÉE");
         statutLabels.put(StatutDemande.REFUSE, "REFUSÉE");
 

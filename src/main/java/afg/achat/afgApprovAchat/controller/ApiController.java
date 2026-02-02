@@ -114,7 +114,6 @@ public class ApiController {
                 StatutDemande.VALIDATION_N1, "EN_VALIDATION",
                 StatutDemande.VALIDATION_N2, "EN_VALIDATION",
                 StatutDemande.VALIDATION_N3, "EN_VALIDATION",
-                StatutDemande.VALIDATION_N4, "EN_VALIDATION",
                 StatutDemande.VALIDE, "VALIDE",
                 StatutDemande.REFUSE, "REFUSE"
         );
