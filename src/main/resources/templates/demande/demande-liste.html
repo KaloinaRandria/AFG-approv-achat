@@ -66,7 +66,7 @@
 
 
                     <!-- Statut -->
-                    <div class="col-md-2">
+                    <div class="col-md-2" th:if="${!isMGOnly}">
                         <label class="form-label mb-1">Statut</label>
                         <select class="form-select" name="statut">
                             <option value="0" th:selected="${statut == null || statut == 0}">Tous</option>
@@ -80,6 +80,9 @@
                             </th:block>
                         </select>
                     </div>
+
+                    <!-- Si MG : on force statut=11 en hidden -->
+                    <input type="hidden" name="statut" th:if="${isMGOnly}" th:value="${T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
 
                     <!-- Taille (⚠️ pas d'auto-submit si tu veux appliquer avec Filtrer) -->
                     <div class="col-md-2">

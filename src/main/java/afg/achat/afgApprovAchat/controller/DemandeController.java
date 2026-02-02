@@ -241,11 +241,13 @@ public class DemandeController {
         model.addAttribute("dateTo", dateTo);
         model.addAttribute("scope", scope);
 
+        model.addAttribute("natures", DemandeMere.NatureDemande.values());
+        model.addAttribute("statutLabels", statutLabels);
+        model.addAttribute("isMGOnly", isMG);
+
         // ✅ pour garder la sélection dans le select
         model.addAttribute("statut", (statut == null) ? 0 : statut);
 
-        model.addAttribute("natures", DemandeMere.NatureDemande.values());
-        model.addAttribute("statutLabels", statutLabels);
 
         return "demande/demande-liste";
     }
