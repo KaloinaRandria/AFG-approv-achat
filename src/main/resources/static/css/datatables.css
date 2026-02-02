@@ -1,5 +1,28 @@
 @charset "UTF-8";
 
+
+.file-upload-card {
+    background: #f8fafc;
+    border-style: dashed !important;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+.file-upload-card:hover {
+    background: #eef4ff;
+    border-color: #00439c;
+}
+
+.file-upload-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-upload-content {
+    pointer-events: none;
+}
 /* ================================ */
 /* ===== PAGINATION style DT ====== */
 /* ================================ */

@@ -1,7 +1,6 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="fr"
-      xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+      xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Nouvelle demande</title>
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
@@ -34,7 +33,12 @@
             </div>
 
             <div class="card-body">
-                <form method="post" id="demandeForm" th:action="@{/demande/save}" class="needs-validation" novalidate>
+                <form method="post"
+                      id="demandeForm"
+                      th:action="@{/demande/save}"
+                      class="needs-validation"
+                      novalidate
+                      enctype="multipart/form-data">
                     <div class="mb-4">
                         <h6 class="form-section-title">
                             <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations générales
@@ -42,10 +46,10 @@
 
                         <div class="row">
 
-<!--                            Date de la demande-->
+<!--                            Date prevue livraison-->
                             <div class="col-md-6 mb-3">
-                                <label for="dateDemande" class="form-label fw-bold required-field">
-                                    Date de la demande
+                                <label for="dateSortie" class="form-label fw-bold required-field">
+                                    Date prévue pour la livraison
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">
@@ -53,70 +57,53 @@
                                     </span>
                                     <input type="datetime-local"
                                            class="form-control"
-                                           id="dateDemande"
-                                           name="dateDemande"
+                                           id="dateSortie"
+                                           name="dateSortie"
                                            required>
                                 </div>
                                 <div class="form-text text-muted mt-1">
-                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la date de demande
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la date prévue pour la livraison
                                 </div>
                             </div>
-<!--                            Adresse -->
                             <div class="col-md-6 mb-3">
-                                <label for="adresse" class="form-label fw-bold required-field">
-                                    Adresse
-                                </label>
+                                <label for="priorite" class="form-label fw-bold required-field">Priorité</label>
+
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">
-                                        <i class="fas fa-map-marker-alt icon-gradient-blue"></i>
+                                        <i class="fas fa-bolt icon-gradient-blue"></i>
                                     </span>
-                                    <select class="form-select select2-searchable"
-                                            id="adresse"
-                                            name="adresse"
-                                            data-placeholder="Recherchez ou sélectionnez un adresse..."
-                                            required>
-                                        <option value=""></option>
-                                        <option th:each="adresse : ${adresses}"
-                                                th:value="${adresse.getId()}"
-                                                th:text="${adresse.getAdresse()}">
-                                        </option>
-
+                                    <select id="priorite" name="priorite" class="form-select" required>
+                                        <option value="">-- Choisir --</option>
+                                        <option th:each="p : ${priorites}"
+                                                th:value="${p.name()}"
+                                                th:text="${p.name()}">
                                         </option>
                                     </select>
                                 </div>
+
                                 <div class="form-text text-muted mt-1">
-                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez l'adresse du demandeur
+                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la priorité de la demande
                                 </div>
                             </div>
 
-                            <!--                            Service-->
+<!--                            Motif evoque -->
                             <div class="col-md-6 mb-3">
-                                <label for="departement" class="form-label fw-bold required-field">
-                                    Departement / Service
+                                <label for="motif" class="form-label fw-bold required-field">
+                                    Motif evoqué
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">
-                                        <i class="fas fa-sitemap icon-gradient-blue"></i>
+                                        <i class="fas fa-tag icon-gradient-blue"></i>
                                     </span>
-                                    <select class="form-select select2-
-                                    searchable"
-                                            id="departement"
-                                            name="departement"
-                                            data-placeholder="Recherchez ou sélectionnez un adresse..."
-                                            required>
-                                        <option value=""></option>
-                                        <option th:each="departement : ${departements}"
-                                                th:value="${departement.getId()}"
-                                                th:text="${departement.getNom()}">
-                                        </option>
-
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="form-text text-muted mt-1">
-                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez l'adresse du demandeur
+                                    <input type="text"
+                                           class="form-control"
+                                           id="motif"
+                                           name="motif"
+                                           required
+                                    >
                                 </div>
                             </div>
+
                             <!-- Description -->
                             <div class="col-md-12 mb-3">
                                 <label for="description" class="form-label fw-bold">
@@ -136,6 +123,68 @@
                                     <i class="fas fa-info-circle me-1"></i> Informations complémentaires sur la demande de materiel
                                 </div>
                             </div>
+
+<!--                            <div class="col-md-6 mb-3">-->
+<!--                                <label for="lignebudgetaire" class="form-label fw-bold required-field">Ligne budgétaire</label>-->
+
+<!--                                <div class="input-group">-->
+<!--                                    <span class="input-group-text bg-light">-->
+<!--                                        <i class="fas fa-coins icon-gradient-blue"></i>-->
+<!--                                    </span>-->
+<!--                                    <select id="lignebudgetaire" name="ligneBudgetaires" class="form-select" required>-->
+<!--                                        <option value="">&#45;&#45; Choisir &#45;&#45;</option>-->
+<!--                                        <option th:each="lb : ${ligneBudgetaires}"-->
+<!--                                                th:value="${lb.id}"-->
+<!--                                                th:text="${lb.codeCentre +' '+ lb.description}">-->
+<!--                                        </option>-->
+<!--                                    </select>-->
+<!--                                </div>-->
+
+<!--                                <div class="form-text text-muted mt-1">-->
+<!--                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez la ligne budgétaire-->
+<!--                                </div>-->
+<!--                            </div>-->
+
+                            <!-- Pièces jointes -->
+                            <div class="col-md-12 mb-4">
+                                <label for="piecesJointes" class="form-label fw-bold">
+                                    Pièces jointes
+                                </label>
+
+                                <div class="file-upload-card border rounded-4 p-4 text-center position-relative">
+                                    <input type="file"
+                                           class="file-upload-input"
+                                           id="piecesJointes"
+                                           name="piecesJointes"
+                                           multiple
+                                           accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+
+                                    <div class="file-upload-content">
+                                        <div class="mb-2">
+                                            <i class="fas fa-paperclip fa-2x text-gradient-blue"></i>
+                                        </div>
+                                        <p class="mb-1 fw-semibold">
+                                            Glissez-déposez vos fichiers ici
+                                        </p>
+                                        <p class="text-muted mb-2">
+                                            ou cliquez pour sélectionner
+                                        </p>
+                                        <span class="badge bg-light text-dark border">
+                PDF · Word · Excel · Images
+            </span>
+                                    </div>
+                                </div>
+
+                                <div class="form-text text-muted mt-2">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Plusieurs fichiers peuvent être joints (taille raisonnable recommandée).
+                                </div>
+
+                                <!-- Liste des fichiers sélectionnés -->
+                                <ul id="fileList" class="list-group list-group-flush mt-3"></ul>
+                            </div>
+
+
                         </div>
                     </div>
 
@@ -214,6 +263,7 @@
 
 </div>
 
+<!-- Modal Aperçu avant soumission -->
 <div class="modal fade" id="previewDemandeModal" tabindex="-1"
      aria-labelledby="previewDemandeModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -235,23 +285,23 @@
                         <tbody>
                         <tr>
                             <th class="text-muted w-25">
-                                <i class="fas fa-calendar-alt me-2 icon-gradient-blue"></i>Date de la demande
+                                <i class="fas fa-calendar-alt me-2 icon-gradient-blue"></i>Date prévue pour la livraison
                             </th>
                             <td id="pvDateDemande" class="fw-semibold"></td>
                         </tr>
 
                         <tr>
                             <th class="text-muted">
-                                <i class="fas fa-map-marker-alt me-2 icon-gradient-blue"></i>Adresse
+                                <i class="fas fa-bolt me-2 icon-gradient-blue"></i>Priorité
                             </th>
-                            <td id="pvAdresse"></td>
+                            <td id="pvPriorite"></td>
                         </tr>
 
                         <tr>
                             <th class="text-muted">
-                                <i class="fas fa-sitemap me-2 icon-gradient-blue"></i>Département / Service
+                                <i class="fas fa-tag me-2 icon-gradient-blue"></i>Motif évoqué
                             </th>
-                            <td id="pvDepartement"></td>
+                            <td id="pvMotif"></td>
                         </tr>
 
                         <tr>
@@ -292,7 +342,6 @@
                     <i class="fas fa-pen me-1"></i>Modifier
                 </button>
 
-                <!-- ✅ Le vrai submit du formulaire -->
                 <button type="submit" class="btn btn-gradient-green" form="demandeForm">
                     <i class="fas fa-save me-1"></i>Confirmer et soumettre
                 </button>
@@ -302,291 +351,17 @@
     </div>
 </div>
 
-<script th:inline="none">
+
+<script th:inline="javascript">
     /*<![CDATA[*/
-    document.addEventListener("DOMContentLoaded", function() {
-        const demandeFilleBody = document.getElementById("demandeFilleBody");
-        const addBtn = document.getElementById("addDemandeFille");
+    (() => {
+        "use strict";
 
-        addBtn.addEventListener("click", () => {
-            const newRow = document.createElement("tr");
-            newRow.innerHTML = `
-            <td style="position: relative;">
-                                            <input type="text"
-                                                   class="form-control article-input"
-                                                   name="articles[]"
-                                                   placeholder="Code ou désignation"
-                                                   autocomplete="off"
-                                                   required>
-                                            <input type="hidden"
-                                                   name="articleCodes[]">
-                                            <div class="autocomplete-list list-group position-absolute w-100"></div>
-                                        </td>
-
-                                        <td>
-                                            <input type="text"
-                                                   class="form-control quantite-input text-end"
-                                                   name="quantiteAffiche[]"
-                                                   inputmode="decimal"
-                                                   autocomplete="off"
-                                                   required>
-
-                                            <input type="hidden"
-                                                   name="quantite[]">
-                                        </td>
-                                                    <td class="text-center">
-                <button type="button"
-                        class="btn btn-outline-danger btn-sm btn-remove">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        `;
-            demandeFilleBody.appendChild(newRow);
-        });
-
-        demandeFilleBody.addEventListener("click", (e) => {
-            if (e.target.closest(".btn-remove")) {
-                const rows = demandeFilleBody.querySelectorAll("tr");
-                if (rows.length >1) {
-                    e.target.closest("tr").remove();
-                }
-            }
-        });
-    });
-
-    document.addEventListener("input", function (e) {
-        if (!e.target.classList.contains("article-input")) return;
-
-        const input = e.target;
-        const list = input.closest("td").querySelector(".autocomplete-list");
-        const keyword = input.value.trim();
-
-        list.innerHTML = "";
-        if (keyword.length < 2) return;
-
-        // Récupérer tous les articles déjà sélectionnés
-        const selectedArticles = Array.from(document.querySelectorAll('input[name="articleCodes[]"]'))
-            .map(i => i.value)
-            .filter(v => v); // on ignore les vides
-
-        fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`)
-            .then(res => res.json())
-            .then(data => {
-                // Filtrer les articles déjà sélectionnés
-                const filteredData = data.filter(article => !selectedArticles.includes(article.code));
-
-                filteredData.forEach(article => {
-                    const item = document.createElement("button");
-                    item.type = "button";
-                    item.className = "list-group-item list-group-item-action";
-                    item.textContent = `${article.code} - ${article.designation}`;
-
-                    item.onclick = () => {
-                        input.value = `${article.code} - ${article.designation}`;
-                        input.closest("td").querySelector('input[type="hidden"]').value = article.code;
-                        list.innerHTML = "";
-                    };
-
-                    list.appendChild(item);
-                });
-            });
-    });
-
-    function formatQuantiteInput(input) {
-        let value = input.value;
-
-        // Autoriser chiffres + virgule
-        value = value.replace(/[^\d,]/g, "");
-
-        const numericValue = value.replace(/\s/g, "").replace(",", ".");
-
-        if (!numericValue) {
-            input.value = "";
-            input.nextElementSibling.value = "";
-            return;
-        }
-
-        const parts = numericValue.split(".");
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-
-        input.value = parts.join(",");
-        input.nextElementSibling.value = numericValue;
-    }
-
-    function formatDateTimeFR(dateTimeValue) {
-        if (!dateTimeValue) return "-";
-
-        const date = new Date(dateTimeValue);
-
-        const pad = (n) => n.toString().padStart(2, "0");
-
-        const day    = pad(date.getDate());
-        const month  = pad(date.getMonth() + 1);
-        const year   = date.getFullYear();
-        const hour   = pad(date.getHours());
-        const minute = pad(date.getMinutes());
-
-        return `${day}/${month}/${year} ${hour}:${minute}`;
-    }
-
-    document.addEventListener("input", function (e) {
-
-        if (
-            e.target.classList.contains("quantite-input")
-        ) {
-            formatQuantiteInput(e.target);
-        }
-
-    });
-
-    // 1) Rouge / Vert sur les champs du formulaire
-    (function () {
-        const form = document.getElementById("demandeForm");
-        if (!form) return;
-
-        function mark(el) {
-            if (el.checkValidity()) {
-                el.classList.remove("is-invalid");
-                el.classList.add("is-valid");
-            } else {
-                el.classList.remove("is-valid");
-                el.classList.add("is-invalid");
-            }
-        }
-
-        // inputs + textarea + select (généraux)
-        form.querySelectorAll("input, textarea, select").forEach(el => {
-            const evt = (el.tagName === "SELECT") ? "change" : "input";
-            el.addEventListener(evt, () => mark(el));
-        });
-
-        // IMPORTANT : si l'utilisateur retape dans article-input -> on vide le code caché
-        document.addEventListener("input", function (e) {
-            if (!e.target.classList.contains("article-input")) return;
-
-            const td = e.target.closest("td");
-            if (!td) return;
-
-            const hiddenCode = td.querySelector('input[name="articleCodes[]"]');
-            if (hiddenCode) hiddenCode.value = ""; // invalide le choix précédent
-        });
-
-        // 2) Validation des lignes détail (code article + quantité numérique)
-        function validateDetailsRows() {
-            const body = document.getElementById("demandeFilleBody");
-            if (!body) return false;
-
-            const rows = Array.from(body.querySelectorAll("tr"));
-            if (rows.length === 0) return false;
-
-            let ok = true;
-
-            rows.forEach(row => {
-                const articleInput = row.querySelector(".article-input");
-                const codeHidden   = row.querySelector('input[name="articleCodes[]"]');
-                const qtyInput     = row.querySelector(".quantite-input");
-                const qtyHidden    = row.querySelector('input[name="quantite[]"]');
-
-                // Validation visuelle des champs visibles
-                if (articleInput) mark(articleInput);
-                if (qtyInput) mark(qtyInput);
-
-                // Code article obligatoire (doit être rempli via autocomplete)
-                if (!codeHidden || !codeHidden.value) {
-                    ok = false;
-                    if (articleInput) {
-                        articleInput.classList.remove("is-valid");
-                        articleInput.classList.add("is-invalid");
-                    }
-                }
-
-                // Quantité numérique obligatoire (hidden "quantite[]")
-                if (!qtyHidden || !qtyHidden.value) {
-                    ok = false;
-                    if (qtyInput) {
-                        qtyInput.classList.remove("is-valid");
-                        qtyInput.classList.add("is-invalid");
-                    }
-                }
-            });
-
-            return ok;
-        }
-
-        // 3) Select2 : bordure rouge/vert sur la box Select2 (optionnel)
-        function setSelect2State(selectEl, isValid) {
-            if (!window.$) return;
-            const container = $(selectEl).next(".select2-container");
-            const selection = container.find(".select2-selection");
-            selection.removeClass("is-valid is-invalid");
-            selection.addClass(isValid ? "is-valid" : "is-invalid");
-        }
-
-        if (window.$ && $.fn.select2) {
-            $("#adresse, #departement").on("change", function () {
-                setSelect2State(this, this.checkValidity());
-            });
-        }
-
-        // 4) Bouton Aperçu & confirmer -> remplir le modal + ouvrir
-        const btnPreview = document.getElementById("btnPreviewDemande");
-        if (!btnPreview) return;
-
-        btnPreview.addEventListener("click", function (e) {
-
-            const generalOk = form.checkValidity();
-            const detailsOk = validateDetailsRows();
-
-            if (!generalOk || !detailsOk) {
-                form.classList.add("was-validated");
-                form.reportValidity();
-                e.preventDefault();
-                e.stopPropagation();
-                return;
-            }
-
-            // ---- Remplir l'aperçu (infos générales)
-            const rawDate = document.getElementById("dateDemande")?.value;
-            document.getElementById("pvDateDemande").textContent =
-                formatDateTimeFR(rawDate);
-
-
-            // select2 text (safe) sinon option:checked
-            const adresseText = (window.$ && $.fn.select2)
-                ? ($("#adresse").select2("data")[0]?.text || "---")
-                : (document.querySelector("#adresse option:checked")?.textContent || "---");
-
-            const deptText = (window.$ && $.fn.select2)
-                ? ($("#departement").select2("data")[0]?.text || "---")
-                : (document.querySelector("#departement option:checked")?.textContent || "---");
-
-            document.getElementById("pvAdresse").textContent = adresseText;
-            document.getElementById("pvDepartement").textContent = deptText;
-
-            document.getElementById("pvDescription").textContent =
-                document.getElementById("description")?.value || "-";
-
-            // ---- Remplir détails
-            const pvBody = document.getElementById("pvDemandeDetailsBody");
-            pvBody.innerHTML = "";
-
-            document.querySelectorAll("#demandeFilleBody tr").forEach(row => {
-                const articleVisible = row.querySelector(".article-input")?.value || "-";
-                const qtyVisible     = row.querySelector(".quantite-input")?.value || "-";
-
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>${escapeHtml(articleVisible)}</td>
-                    <td class="text-end fw-semibold">${escapeHtml(qtyVisible)}</td>
-                `;
-                pvBody.appendChild(tr);
-            });
-
-            // ---- Ouvrir modal (Bootstrap 5)
-            window.bootstrap.Modal
-                .getOrCreateInstance(document.getElementById("previewDemandeModal"))
-                .show();
-        });
+        // =========================
+        // Helpers
+        // =========================
+        const $ = (sel, root = document) => root.querySelector(sel);
+        const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
         function escapeHtml(str) {
             return String(str)
@@ -597,8 +372,347 @@
                 .replaceAll("'", "&#039;");
         }
 
+        function pad(n) { return String(n).padStart(2, "0"); }
+
+        function formatDateTimeFR(dateTimeValue) {
+            if (!dateTimeValue) return "-";
+            const d = new Date(dateTimeValue);
+            if (isNaN(d.getTime())) return "-";
+            return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        function mark(el) {
+            if (!el) return;
+            if (el.checkValidity()) {
+                el.classList.remove("is-invalid");
+                el.classList.add("is-valid");
+            } else {
+                el.classList.remove("is-valid");
+                el.classList.add("is-invalid");
+            }
+        }
+
+        function formatQuantiteInput(input) {
+            let value = input.value || "";
+
+            // Autoriser chiffres + virgule
+            value = value.replace(/[^\d,]/g, "");
+
+            // valeur numérique pour hidden (point décimal)
+            const numericValue = value.replace(/\s/g, "").replace(",", ".");
+
+            const hidden = input.nextElementSibling; // <input type="hidden" name="quantite[]">
+            if (!numericValue) {
+                input.value = "";
+                if (hidden) hidden.value = "";
+                return;
+            }
+
+            // Formatter affichage (FR) avec séparateur de milliers
+            const parts = numericValue.split(".");
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+            input.value = parts.join(",");
+
+            if (hidden) hidden.value = numericValue;
+        }
+
+        // =========================
+        // DOM refs
+        // =========================
+        const form = $("#demandeForm");
+        const body = $("#demandeFilleBody");
+        const addBtn = $("#addDemandeFille");
+        const btnPreview = $("#btnPreviewDemande");
+
+        const pvDate = $("#pvDateDemande");
+        const pvDesc = $("#pvDescription");
+        const pvBody = $("#pvDemandeDetailsBody");
+        const modalEl = $("#previewDemandeModal");
+
+        const fileInput = $("#piecesJointes");
+        const fileList = $("#fileList");
+        const btnClearFiles = $("#btnClearFiles"); // si tu n'as pas ce bouton, c'est OK (optionnel)
+
+        if (!form) return;
+
+        // =========================
+        // 1) Ajout / suppression lignes
+        // =========================
+        function buildRow() {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+      <td style="position: relative;">
+        <input type="text"
+               class="form-control article-input"
+               name="articles[]"
+               placeholder="Code ou désignation"
+               autocomplete="off"
+               required>
+        <input type="hidden" name="articleCodes[]">
+        <div class="autocomplete-list list-group position-absolute w-100"></div>
+      </td>
+
+      <td>
+        <input type="text"
+               class="form-control quantite-input text-end"
+               name="quantiteAffiche[]"
+               inputmode="decimal"
+               autocomplete="off"
+               required>
+        <input type="hidden" name="quantite[]">
+      </td>
+
+      <td class="text-center">
+        <button type="button" class="btn btn-outline-danger btn-sm btn-remove">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
+    `;
+            return tr;
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            if (addBtn && body) {
+                addBtn.addEventListener("click", () => body.appendChild(buildRow()));
+
+                body.addEventListener("click", (e) => {
+                    const btn = e.target.closest(".btn-remove");
+                    if (!btn) return;
+                    const rows = $$("tr", body);
+                    if (rows.length > 1) btn.closest("tr")?.remove();
+                });
+            }
+        });
+
+        // =========================
+        // 2) Autocomplete Article + invalidation code hidden
+        // =========================
+        document.addEventListener("input", (e) => {
+            const input = e.target;
+            if (!input.classList.contains("article-input")) return;
+
+            const td = input.closest("td");
+            if (!td) return;
+
+            const list = $(".autocomplete-list", td);
+            const hiddenCode = $('input[name="articleCodes[]"]', td);
+
+            // si l'utilisateur retape -> on invalide le code précédent
+            if (hiddenCode) hiddenCode.value = "";
+
+            const keyword = input.value.trim();
+            if (list) list.innerHTML = "";
+            if (keyword.length < 2) return;
+
+            // Récupérer tous les articles déjà sélectionnés
+            const selected = $$('input[name="articleCodes[]"]')
+                .map(i => i.value)
+                .filter(Boolean);
+
+            fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`)
+                .then(res => res.json())
+                .then(data => {
+                    const filtered = (data || []).filter(a => !selected.includes(a.code));
+
+                    filtered.forEach(article => {
+                        const item = document.createElement("button");
+                        item.type = "button";
+                        item.className = "list-group-item list-group-item-action";
+                        item.textContent = `${article.code} - ${article.designation}`;
+
+                        item.addEventListener("click", () => {
+                            input.value = `${article.code} - ${article.designation}`;
+                            if (hiddenCode) hiddenCode.value = article.code;
+                            if (list) list.innerHTML = "";
+                            mark(input);
+                        });
+
+                        list?.appendChild(item);
+                    });
+                })
+                .catch(() => {
+                    // optionnel : afficher un message, sinon on ignore
+                });
+        });
+
+        // fermer listes autocomplete quand clique ailleurs
+        document.addEventListener("click", (e) => {
+            if (e.target.classList.contains("article-input")) return;
+            $$(".autocomplete-list").forEach(l => (l.innerHTML = ""));
+        });
+
+        // =========================
+        // 3) Format quantité (affiché + hidden)
+        // =========================
+        document.addEventListener("input", (e) => {
+            const el = e.target;
+            if (!el.classList.contains("quantite-input")) return;
+            formatQuantiteInput(el);
+            mark(el);
+        });
+
+        // =========================
+        // 4) Rouge/Vert sur champs généraux
+        // =========================
+        form.querySelectorAll("input, textarea, select").forEach(el => {
+            const evt = (el.tagName === "SELECT") ? "change" : "input";
+            el.addEventListener(evt, () => mark(el));
+        });
+
+        // =========================
+        // 5) Validation des lignes détail (code + quantité hidden)
+        // =========================
+        function validateDetailsRows() {
+            if (!body) return false;
+
+            const rows = $$("tr", body);
+            if (rows.length === 0) return false;
+
+            let ok = true;
+
+            rows.forEach(row => {
+                const articleInput = $(".article-input", row);
+                const codeHidden = $('input[name="articleCodes[]"]', row);
+
+                const qtyInput = $(".quantite-input", row);
+                const qtyHidden = $('input[name="quantite[]"]', row);
+
+                // visuel
+                mark(articleInput);
+                mark(qtyInput);
+
+                // code obligatoire
+                if (!codeHidden?.value) {
+                    ok = false;
+                    articleInput?.classList.remove("is-valid");
+                    articleInput?.classList.add("is-invalid");
+                }
+
+                // quantité obligatoire (hidden)
+                if (!qtyHidden?.value) {
+                    ok = false;
+                    qtyInput?.classList.remove("is-valid");
+                    qtyInput?.classList.add("is-invalid");
+                }
+            });
+
+            return ok;
+        }
+
+        // =========================
+        // 6) Aperçu & confirmer (sans adresse / departement)
+        // =========================
+        if (btnPreview && modalEl) {
+            btnPreview.addEventListener("click", (e) => {
+                const generalOk = form.checkValidity();
+                const detailsOk = validateDetailsRows();
+
+                if (!generalOk || !detailsOk) {
+                    form.classList.add("was-validated");
+                    form.reportValidity();
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
+
+                // Infos générales
+                $("#pvPriorite").textContent = $("#priorite option:checked")?.textContent || "---";
+                $("#pvMotif").textContent = $("#motif")?.value || "-";
+
+                const rawDate = $("#dateSortie")?.value; // ✅ ton champ réel
+                if (pvDate) pvDate.textContent = formatDateTimeFR(rawDate);
+
+                if (pvDesc) pvDesc.textContent = $("#description")?.value || "-";
+
+                // Détails
+                if (pvBody) {
+                    pvBody.innerHTML = "";
+                    $$("tr", body).forEach(row => {
+                        const articleVisible = $(".article-input", row)?.value || "-";
+                        const qtyVisible = $(".quantite-input", row)?.value || "-";
+
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+            <td>${escapeHtml(articleVisible)}</td>
+            <td class="text-end fw-semibold">${escapeHtml(qtyVisible)}</td>
+          `;
+                        pvBody.appendChild(tr);
+                    });
+                }
+
+                // Ouvrir modal
+                window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            });
+        }
+
+        // =========================
+        // 7) Gestion pièces jointes (liste + suppression)
+        // =========================
+        if (fileInput && fileList) {
+            let selectedFiles = [];
+
+            function renderFiles() {
+                fileList.innerHTML = "";
+
+                if (selectedFiles.length === 0) {
+                    const empty = document.createElement("li");
+                    empty.className = "list-group-item text-muted";
+                    empty.innerHTML = `<i class="fas fa-circle-info me-2"></i>Aucun fichier sélectionné`;
+                    fileList.appendChild(empty);
+                    return;
+                }
+
+                selectedFiles.forEach((file, idx) => {
+                    const li = document.createElement("li");
+                    li.className = "list-group-item d-flex align-items-center gap-2";
+                    li.innerHTML = `
+          <i class="fas fa-file-alt text-gradient-blue"></i>
+          <div class="flex-grow-1">
+            <div class="fw-semibold">${escapeHtml(file.name)}</div>
+            <small class="text-muted">${(file.size / 1024).toFixed(1)} KB</small>
+          </div>
+          <button type="button" class="btn btn-outline-danger btn-sm" data-remove-index="${idx}">
+            <i class="fas fa-trash"></i>
+          </button>
+        `;
+                    fileList.appendChild(li);
+                });
+            }
+
+            function syncInputFiles() {
+                const dt = new DataTransfer();
+                selectedFiles.forEach(f => dt.items.add(f));
+                fileInput.files = dt.files;
+            }
+
+            fileInput.addEventListener("change", () => {
+                selectedFiles = Array.from(fileInput.files || []);
+                renderFiles();
+            });
+
+            fileList.addEventListener("click", (e) => {
+                const btn = e.target.closest("[data-remove-index]");
+                if (!btn) return;
+
+                const index = parseInt(btn.getAttribute("data-remove-index"), 10);
+                if (Number.isNaN(index)) return;
+
+                selectedFiles.splice(index, 1);
+                syncInputFiles();
+                renderFiles();
+            });
+
+            btnClearFiles?.addEventListener("click", () => {
+                selectedFiles = [];
+                fileInput.value = "";
+                renderFiles();
+            });
+
+            renderFiles();
+        }
     })();
     /*]]>*/
 </script>
+
 </body>
 </html>

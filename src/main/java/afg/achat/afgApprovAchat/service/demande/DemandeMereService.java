@@ -1,7 +1,10 @@
 package afg.achat.afgApprovAchat.service.demande;
 
+import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.repository.demande.DemandeFilleRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereRepo;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,6 +21,8 @@ import java.util.Optional;
 public class DemandeMereService {
     @Autowired
     DemandeMereRepo demandeMereRepo;
+    @Autowired
+    DemandeFilleRepo demandeFilleRepo;
 
     public DemandeMere[] getAllDemandesMeres() {
         return demandeMereRepo.findAll().toArray(new DemandeMere[0]);
@@ -30,7 +35,7 @@ public class DemandeMereService {
     public Page<DemandeMere> searchDemandes(String num,
                                             String demandeur,
                                             String type,
-                                            String statut,
+                                            Integer statut,
                                             LocalDate dateFrom,
                                             LocalDate dateTo,
                                             int page,
@@ -48,10 +53,13 @@ public class DemandeMereService {
         String n = (num == null) ? "" : num.trim();
         String d = (demandeur == null) ? "" : demandeur.trim();
         String t = (type == null) ? "" : type.trim();
-        String s = (statut == null) ? "" : statut.trim();
 
-        return demandeMereRepo.searchMulti(n, d, t, s, from, to, pageable);
+        // null = tous
+        Integer st = (statut == null || statut == 0) ? null : statut;
+
+        return demandeMereRepo.searchMulti(n, d, t, st, from, to, pageable);
     }
+
 
     public Optional<DemandeMere> getDemandeMereById(String id) {
         return demandeMereRepo.findById(id);
@@ -86,7 +94,7 @@ public class DemandeMereService {
     public Page<DemandeMere> searchDemandesVisibleParUtilisateur(String num,
                                                                  String demandeur,
                                                                  String type,
-                                                                 String statut,
+                                                                 Integer statut,
                                                                  LocalDate dateFrom,
                                                                  LocalDate dateTo,
                                                                  List<Integer> demandeurIds,
@@ -105,11 +113,26 @@ public class DemandeMereService {
         String n = (num == null) ? "" : num.trim();
         String d = (demandeur == null) ? "" : demandeur.trim();
         String t = (type == null) ? "" : type.trim();
-        String s = (statut == null) ? "" : statut.trim();
 
-        return demandeMereRepo.searchMultiByDemandeurIds(n, d, t, s, from, to, demandeurIds, pageable);
+        Integer st = (statut == null || statut == 0) ? null : statut;
+
+        return demandeMereRepo.searchMultiByDemandeurIds(n, d, t, st, from, to, demandeurIds, pageable);
     }
 
+    @Transactional
+    public void appliquerDecisionGlobale(DemandeMere demande, int nouveauStatut) {
+
+        // 1) update demande mère
+        demande.setStatut(nouveauStatut);
+        demandeMereRepo.save(demande);
+
+        // 2) update toutes les filles
+        List<DemandeFille> filles = demandeFilleRepo.findDemandeFilleByDemandeMere(demande);
+        for (DemandeFille f : filles) {
+            f.setStatut(nouveauStatut);
+        }
+        demandeFilleRepo.saveAll(filles);
+    }
 
 
 }
