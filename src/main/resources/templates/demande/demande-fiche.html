@@ -28,9 +28,9 @@
                     <h1 class="fw-bold text-gradient-blue mb-0">
                         <i class="fas fa-file-alt icon-gradient-blue me-2"></i> Fiche demande
                     </h1>
-                    <span class="pill">
-                        Référence : <strong th:text="${demande.id}">-</strong>
-                    </span>
+<!--                    <span class="pill">-->
+<!--                        Référence : <strong th:text="${demande.id}">-</strong>-->
+<!--                    </span>-->
                 </div>
 
                 <div class="d-flex gap-2">
@@ -71,7 +71,6 @@
                             <div>
                                 <strong>Statut :</strong>
                                 <div th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></div>
-                                <!-- Si tu veux un label au lieu du code, tu peux passer statutLabels depuis controller -->
                             </div>
 
                             <div>
@@ -99,6 +98,36 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- MOTIF & DESCRIPTION -->
+                        <div class="px-3 pb-2">
+                            <div class="row g-3">
+
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded bg-light">
+                                        <div class="fw-bold mb-1">
+                                            Motif évoqué
+                                        </div>
+                                        <div th:text="${demande.motifEvoque != null && !demande.motifEvoque.isBlank() ? demande.motifEvoque : '-'}">
+                                            -
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded bg-light">
+                                        <div class="fw-bold mb-1">
+                                            <i class="fas fa-align-left me-2"></i> Description
+                                        </div>
+                                        <div th:text="${demande.description != null && !demande.description.isBlank() ? demande.description : '-'}">
+                                            -
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
 
                         <!-- TABLE ARTICLES -->
                         <div class="bl-body">
@@ -142,16 +171,6 @@
                                     </button>
                                 </form>
                             </div>
-
-                            <div th:unless="${canDecision}" class="text-muted small">
-    <span th:if="${demande.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).CREE}">
-        Demande déjà traitée.
-    </span>
-                                <span th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).CREE}">
-        Validation non disponible sur cette demande.
-    </span>
-                            </div>
-
 
                             <div class="text-muted small"></div>
                         </div>
