@@ -1,7 +1,10 @@
 package afg.achat.afgApprovAchat.service.demande;
 
+import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.repository.demande.DemandeFilleRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereRepo;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,6 +21,8 @@ import java.util.Optional;
 public class DemandeMereService {
     @Autowired
     DemandeMereRepo demandeMereRepo;
+    @Autowired
+    DemandeFilleRepo demandeFilleRepo;
 
     public DemandeMere[] getAllDemandesMeres() {
         return demandeMereRepo.findAll().toArray(new DemandeMere[0]);
@@ -114,6 +119,20 @@ public class DemandeMereService {
         return demandeMereRepo.searchMultiByDemandeurIds(n, d, t, st, from, to, demandeurIds, pageable);
     }
 
+    @Transactional
+    public void appliquerDecisionGlobale(DemandeMere demande, int nouveauStatut) {
+
+        // 1) update demande mère
+        demande.setStatut(nouveauStatut);
+        demandeMereRepo.save(demande);
+
+        // 2) update toutes les filles
+        List<DemandeFille> filles = demandeFilleRepo.findDemandeFilleByDemandeMere(demande);
+        for (DemandeFille f : filles) {
+            f.setStatut(nouveauStatut);
+        }
+        demandeFilleRepo.saveAll(filles);
+    }
 
 
 }

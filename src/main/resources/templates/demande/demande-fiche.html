@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Fiche demande</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+
+    <style>
+        .page-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;}
+        .doc-wrapper{max-width:1100px;margin:0 auto;}
+    </style>
+</head>
+
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <div class="doc-wrapper">
+
+            <div class="page-actions">
+                <div class="d-flex align-items-center gap-2">
+                    <h1 class="fw-bold text-gradient-blue mb-0">
+                        <i class="fas fa-file-alt icon-gradient-blue me-2"></i> Fiche demande
+                    </h1>
+                    <span class="pill">
+                        Référence : <strong th:text="${demande.id}">-</strong>
+                    </span>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a class="btn btn-outline-secondary" th:href="@{/demande/list}">
+                        <i class="fas fa-arrow-left me-1"></i> Retour liste
+                    </a>
+                </div>
+            </div>
+
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-0">
+
+                    <div class="bl-document">
+
+                        <!-- EN-TÊTE DOCUMENT -->
+                        <div class="bl-header">
+                            <div class="bl-company">
+                                <img th:src="@{/img/logo_afg.png}" alt="Logo" height="60">
+                            </div>
+                            <div class="bl-title">
+                                <h3>DEMANDE DE MATERIEL</h3>
+                                <span>Réference : <strong th:text="${demande.id}">-</strong></span>
+                            </div>
+                        </div>
+
+                        <!-- INFOS -->
+                        <div class="bl-infos">
+                            <div>
+                                <strong>Demandeur :</strong>
+                                <div th:text="${demande.demandeur != null ? demande.demandeur.nom + ' ' + demande.demandeur.prenom : '-'}">-</div>
+                            </div>
+
+                            <div>
+                                <strong>Date :</strong>
+                                <div th:text="${demande.dateDemande != null ? #temporals.format(demande.dateDemande,'dd/MM/yyyy HH:mm') : '-'}">-</div>
+                            </div>
+
+                            <div>
+                                <strong>Statut :</strong>
+                                <div th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></div>
+                                <!-- Si tu veux un label au lieu du code, tu peux passer statutLabels depuis controller -->
+                            </div>
+
+                            <div>
+                                <strong>Type de Demande :</strong>
+
+                                <!-- Lecture seule -->
+                                <div th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">-</div>
+
+                                <!-- Edition (MG/Admin) sans Ajax -->
+                                <div sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')" class="mt-2">
+                                    <form th:action="@{/demande/fiche/{id}/type-demande(id=${demande.id})}" method="post">
+                                        <select name="typeDemande" class="form-select form-select-sm">
+                                            <option value="" th:selected="${demande.natureDemande == null}">-- Choisir --</option>
+                                            <option th:each="n : ${natures}"
+                                                    th:value="${n.name()}"
+                                                    th:text="${n.name()}"
+                                                    th:selected="${demande.natureDemande != null && demande.natureDemande.name() == n.name()}">
+                                            </option>
+                                        </select>
+
+                                        <button type="submit" class="btn btn-sm btn-gradient-blue mt-3">
+                                            Enregistrer
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TABLE ARTICLES -->
+                        <div class="bl-body">
+                            <table class="bl-table">
+                                <thead>
+                                <tr>
+                                    <th style="width: 70%">DÉSIGNATION</th>
+                                    <th style="width: 30%" class="text-end">QUANTITÉ</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:if="${lignes == null || lignes.isEmpty()}">
+                                    <td colspan="2" class="text-center text-muted">Aucun article</td>
+                                </tr>
+
+                                <tr th:each="l : ${lignes}">
+                                    <td th:text="${l.article != null ? l.article.designation : '-'}">-</td>
+                                    <td class="text-end" th:text="${l.quantite}">0</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- ACTIONS -->
+                        <div class="p-3 d-flex justify-content-between align-items-center">
+
+                            <div th:if="${canDecision}">
+                                <form th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}" method="post" class="d-inline">
+                                    <input type="hidden" name="decision" value="REJECT">
+                                    <button type="submit" class="btn btn-outline-danger me-2"
+                                            onclick="return confirm('Rejeter cette demande ?');">
+                                        <i class="fas fa-times me-1"></i> Rejeter
+                                    </button>
+                                </form>
+
+                                <form th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}" method="post" class="d-inline">
+                                    <input type="hidden" name="decision" value="APPROVE">
+                                    <button type="submit" class="btn btn-gradient-green"
+                                            onclick="return confirm('Valider cette demande ?');">
+                                        <i class="fas fa-check me-1"></i> Valider
+                                    </button>
+                                </form>
+                            </div>
+
+                            <div th:unless="${canDecision}" class="text-muted small">
+    <span th:if="${demande.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).CREE}">
+        Demande déjà traitée.
+    </span>
+                                <span th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).CREE}">
+        Validation non disponible sur cette demande.
+    </span>
+                            </div>
+
+
+                            <div class="text-muted small"></div>
+                        </div>
+
+                    </div><!-- /bl-document -->
+
+                </div>
+            </div>
+
+        </div>
+    </section>
+</div>
+
+</body>
+</html>

@@ -246,4 +246,165 @@ public class DemandeController {
         return "demande/demande-liste";
     }
 
+    @GetMapping("/fiche/{id}")
+    public String demandeFiche(@PathVariable("id") String id,
+                               Model model,
+                               HttpServletRequest request,
+                               RedirectAttributes redirectAttributes) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        boolean isAdminOrMG = auth.getAuthorities().stream().anyMatch(a ->
+                a.getAuthority().equals("ROLE_ADMIN") ||
+                        a.getAuthority().equals("ROLE_MOYENS_GENERAUX")
+        );
+
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            redirectAttributes.addFlashAttribute("ko", "Demande introuvable : " + id);
+            return "redirect:/demande/list";
+        }
+
+        // accès : admin/MG tout, sinon moi + enfants
+        if (!isAdminOrMG) {
+            List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(utilisateur.getId());
+            Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
+
+            if (demandeurId == null || !visibleIds.contains(demandeurId)) {
+                redirectAttributes.addFlashAttribute("ko", "Accès refusé à cette demande.");
+                return "redirect:/demande/list";
+            }
+        }
+
+        // ✅ canDecision : enfant (pas moi) uniquement
+        List<Integer> childrenIds = utilisateurService.getIdsUtilisateurVisible(utilisateur.getId())
+                .stream().filter(x -> !x.equals(utilisateur.getId())).toList();
+
+        Map<Integer, String> statutLabels = new LinkedHashMap<>();
+        statutLabels.put(StatutDemande.CREE, "CRÉÉE");
+        statutLabels.put(StatutDemande.VALIDATION_N1, "EN VALIDATION N1");
+        statutLabels.put(StatutDemande.VALIDATION_N2, "EN VALIDATION N2");
+        statutLabels.put(StatutDemande.VALIDATION_N3, "EN VALIDATION N3");
+        statutLabels.put(StatutDemande.VALIDATION_N4, "EN VALIDATION N4");
+        statutLabels.put(StatutDemande.VALIDE, "VALIDÉE");
+        statutLabels.put(StatutDemande.REFUSE, "REFUSÉE");
+
+        model.addAttribute("statutLabels", statutLabels);
+
+
+        Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
+        boolean canDecision = (demandeurId != null)
+                && !demandeurId.equals(utilisateur.getId())
+                && childrenIds.contains(demandeurId);
+
+        // lignes
+        List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
+
+        model.addAttribute("currentUri", request.getRequestURI());
+        model.addAttribute("demande", demande);
+        model.addAttribute("lignes", lignes);
+        model.addAttribute("canDecision", canDecision);
+
+        model.addAttribute("natures", DemandeMere.NatureDemande.values());
+
+        return "demande/demande-fiche";
+    }
+
+    @PostMapping("/fiche/{id}/type-demande")
+    public String updateTypeDemande(@PathVariable("id") String id,
+                                    @RequestParam(value = "typeDemande", required = false) String typeDemande,
+                                    RedirectAttributes redirectAttributes) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdminOrMG = auth.getAuthorities().stream().anyMatch(a ->
+                a.getAuthority().equals("ROLE_ADMIN") ||
+                        a.getAuthority().equals("ROLE_MOYENS_GENERAUX")
+        );
+
+        if (!isAdminOrMG) {
+            redirectAttributes.addFlashAttribute("ko", "Accès refusé.");
+            return "redirect:/demande/fiche/" + id;
+        }
+
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            redirectAttributes.addFlashAttribute("ko", "Demande introuvable.");
+            return "redirect:/demande/list";
+        }
+
+        // typeDemande = "OPEX" / "CAPEX" / "" (null)
+        if (typeDemande == null || typeDemande.isBlank()) {
+            demande.setNatureDemande(null);
+        } else {
+            demande.setNatureDemande(DemandeMere.NatureDemande.valueOf(typeDemande.trim().toUpperCase()));
+        }
+
+        demandeMereService.saveDemandeMere(demande);
+        redirectAttributes.addFlashAttribute("ok", "Type de demande enregistré.");
+
+        return "redirect:/demande/fiche/" + id;
+    }
+
+    @PostMapping("/fiche/{id}/decision")
+    public String decision(@PathVariable("id") String id,
+                           @RequestParam("decision") String decision,
+                           RedirectAttributes redirectAttributes, Model model) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            redirectAttributes.addFlashAttribute("ko", "Demande introuvable.");
+            return "redirect:/demande/list";
+        }
+
+        // enfants directs
+        List<Integer> childrenIds = utilisateurService.getIdsUtilisateurVisible(current.getId())
+                .stream()
+                .filter(x -> !x.equals(current.getId()))
+                .toList();
+
+        Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
+
+        boolean isChildDemande = (demandeurId != null)
+                && !demandeurId.equals(current.getId())
+                && childrenIds.contains(demandeurId);
+
+// ✅ N1 peut décider seulement si la demande est encore CREE
+        boolean canDecision = isChildDemande && demande.getStatut() == StatutDemande.CREE;
+
+        model.addAttribute("canDecision", canDecision);
+
+        if (!canDecision) {
+            // message plus clair selon le cas
+            if (!isChildDemande) {
+                redirectAttributes.addFlashAttribute("ko", "Vous n’êtes pas autorisé à valider/rejeter cette demande.");
+            } else {
+                redirectAttributes.addFlashAttribute("ko", "Cette demande a déjà été traitée.");
+            }
+            return "redirect:/demande/fiche/" + id;
+        }
+
+        String d = (decision == null) ? "" : decision.trim().toUpperCase();
+
+        if ("APPROVE".equals(d)) {
+            demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
+            redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1");
+            return "redirect:/demande/fiche/" + id;
+        }
+
+        if ("REJECT".equals(d)) {
+            demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.REFUSE);
+            redirectAttributes.addFlashAttribute("ok", "Demande rejetée");
+            return "redirect:/demande/fiche/" + id;
+        }
+
+        redirectAttributes.addFlashAttribute("ko", "Décision invalide.");
+        return "redirect:/demande/fiche/" + id;
+    }
+
 }
