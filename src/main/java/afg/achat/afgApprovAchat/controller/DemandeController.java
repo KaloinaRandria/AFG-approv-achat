@@ -152,9 +152,7 @@ public class DemandeController {
                                   @RequestParam(defaultValue = "10") int size,
                                   @RequestParam(defaultValue = "dateDemande") String sort,
                                   @RequestParam(defaultValue = "desc") String dir,
-
                                   @RequestParam(required = false) Integer statut,
-
                                   @RequestParam(required = false) String num,
                                   @RequestParam(required = false) String demandeur,
                                   @RequestParam(required = false) String type,
@@ -166,9 +164,13 @@ public class DemandeController {
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
         Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
 
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        boolean isMG = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MOYENS_GENERAUX"));
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        boolean isMG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+        boolean isFinance = auth.getAuthorities().stream().anyMatch(a -> "ROLE_FINANCE".equals(a.getAuthority()));
+
         boolean isAdminOrMG = isAdmin || isMG;
+        boolean isAdminOrFinance = isAdmin || isFinance;
+        boolean isAdminOrMGOrFinance = isAdmin || isMG || isFinance;
 
         // ✅ Labels (table)
         Map<Integer, String> statutLabels = Map.of(
@@ -185,9 +187,9 @@ public class DemandeController {
         statutFiltre.put(StatutDemande.CREE, "CRÉÉE");
         statutFiltre.put(StatutDemande.VALIDATION_N1, "EN_VALIDATION N1");
         statutFiltre.put(StatutDemande.VALIDATION_N2, "EN_VALIDATION N2");
+        statutFiltre.put(StatutDemande.VALIDATION_N3, "EN_VALIDATION N3");
         statutFiltre.put(StatutDemande.VALIDE, "VALIDÉE");
         statutFiltre.put(StatutDemande.REFUSE, "REFUSÉE");
-
         model.addAttribute("statutFiltre", statutFiltre);
 
         // ✅ Normalisation (0/null => pas de filtre)
@@ -197,15 +199,15 @@ public class DemandeController {
         List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
         boolean hasChildren = visibleIds.size() > 1;
 
-        boolean showDemandeurColumn = isAdminOrMG || hasChildren;
+        boolean showDemandeurColumn = isAdminOrMGOrFinance || hasChildren;
         model.addAttribute("showDemandeurColumn", showDemandeurColumn);
 
-        boolean showScopeFilter = hasChildren && !isAdminOrMG;
+        boolean showScopeFilter = hasChildren && !isAdminOrMGOrFinance;
         model.addAttribute("showDemandeurScopeFilter", showScopeFilter);
 
-        // ✅ Scope (uniquement non admin/MG)
+        // ✅ Scope (uniquement non admin/MG/Finance)
         List<Integer> idsToUse = visibleIds;
-        if (!isAdminOrMG) {
+        if (!isAdminOrMGOrFinance) {
             if ("ME".equalsIgnoreCase(scope)) {
                 idsToUse = List.of(current.getId());
             } else if ("CHILDREN".equalsIgnoreCase(scope)) {
@@ -217,10 +219,9 @@ public class DemandeController {
 
         Page<DemandeMere> demandesMeres;
 
-        // ✅ Cas MG : doit voir VALIDATION_N1 + VALIDATION_N2
+        // ✅ Cas MG : voit N1 + N2
         if (isMG && !isAdmin) {
 
-            // 1) on récupère tout (sans pagination) pour N1 et N2
             Page<DemandeMere> p1 = demandeMereService.searchDemandes(
                     num, demandeur, type,
                     StatutDemande.VALIDATION_N1,
@@ -237,28 +238,60 @@ public class DemandeController {
                     sort, dir
             );
 
-            // 2) merge + tri (ex: dateDemande desc)
-            List<DemandeMere> merged = new java.util.ArrayList<>();
+            List<DemandeMere> merged = new ArrayList<>();
             merged.addAll(p1.getContent());
             merged.addAll(p2.getContent());
 
-            // tri simple (si dateDemande existe)
             merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
 
-            // 3) pagination manuelle
             Pageable pageable = PageRequest.of(page, size);
             int start = (int) pageable.getOffset();
             int end = Math.min(start + pageable.getPageSize(), merged.size());
 
-            List<DemandeMere> slice = (start > end) ? List.of() : merged.subList(start, end);
+            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
             demandesMeres = new PageImpl<>(slice, pageable, merged.size());
 
-            // on force le select "Tous" car MG est filtré automatiquement
             model.addAttribute("statut", 0);
 
-        } else {
-            // ✅ Cas normal : un seul statut (ou null)
-            if (isAdminOrMG) {
+        }
+        // ✅ Cas FINANCE : voit N2 + N3
+        else if (isFinance && !isAdmin) {
+
+            Page<DemandeMere> p2 = demandeMereService.searchDemandes(
+                    num, demandeur, type,
+                    StatutDemande.VALIDATION_N2,
+                    dateFrom, dateTo,
+                    0, Integer.MAX_VALUE,
+                    sort, dir
+            );
+
+            Page<DemandeMere> p3 = demandeMereService.searchDemandes(
+                    num, demandeur, type,
+                    StatutDemande.VALIDATION_N3,
+                    dateFrom, dateTo,
+                    0, Integer.MAX_VALUE,
+                    sort, dir
+            );
+
+            List<DemandeMere> merged = new ArrayList<>();
+            merged.addAll(p2.getContent());
+            merged.addAll(p3.getContent());
+
+            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
+
+            Pageable pageable = PageRequest.of(page, size);
+            int start = (int) pageable.getOffset();
+            int end = Math.min(start + pageable.getPageSize(), merged.size());
+
+            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
+            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
+
+            model.addAttribute("statut", 0);
+
+        }
+        // ✅ Cas normal
+        else {
+            if (isAdminOrMGOrFinance) {
                 demandesMeres = demandeMereService.searchDemandes(
                         num, demandeur, type,
                         statutFilter,
@@ -267,7 +300,6 @@ public class DemandeController {
                         sort, dir
                 );
             } else {
-                // non admin/MG => visibleParUtilisateur (si tu as la méthode)
                 demandesMeres = idsToUse.isEmpty()
                         ? demandeMereService.searchDemandesVisibleParUtilisateur(
                         num, demandeur, type, statutFilter,
@@ -307,7 +339,9 @@ public class DemandeController {
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
         model.addAttribute("statutLabels", statutLabels);
 
+        // ✅ flags de vue
         model.addAttribute("isMGOnly", isMG && !isAdmin);
+        model.addAttribute("isFinanceOnly", isFinance && !isAdmin);
 
         return "demande/demande-liste";
     }
@@ -358,10 +392,18 @@ public class DemandeController {
         Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
 
         boolean isAdmin = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
         boolean isMG = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_MOYENS_GENERAUX"));
-        boolean isAdminOrMG = isAdmin || isMG;
+                .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+
+        boolean isFinance = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_FINANCE".equals(a.getAuthority()));
+
+        boolean isSG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
+
+        boolean isAdminOrSpecial = isAdmin || isMG || isFinance || isSG;
 
         DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
         if (demande == null) {
@@ -371,9 +413,9 @@ public class DemandeController {
 
         Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
 
-        // ✅ Accès : Admin/MG = OK ; sinon seulement (moi + enfants)
+        // ✅ Accès : Admin/MG/Finance/SG = OK ; sinon seulement (moi + enfants)
         List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
-        if (!isAdminOrMG) {
+        if (!isAdminOrSpecial) {
             if (demandeurId == null || !visibleIds.contains(demandeurId)) {
                 redirectAttributes.addFlashAttribute("ko", "Accès refusé à cette demande.");
                 return "redirect:/demande/list";
@@ -388,13 +430,11 @@ public class DemandeController {
         // ✅ N+1 du demandeur = la demande appartient à un de mes enfants
         boolean isViewerNplus1OfDemandeur = (demandeurId != null) && childrenIds.contains(demandeurId);
 
-        // ✅ N+1 peut décider uniquement si : demande d’un enfant + statut = CREE
-        boolean canDecision = isViewerNplus1OfDemandeur
-                && demande.getStatut() == StatutDemande.CREE;
-
-        // ✅ MG peut décider uniquement si : statut = VALIDATION_N1
-        boolean canDecisionMG = isMG
-                && demande.getStatut() == StatutDemande.VALIDATION_N1;
+        // ✅ Droits de décision par niveau
+        boolean canDecisionN1 = isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.CREE;
+        boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
+        boolean canDecisionFinance = isFinance && demande.getStatut() == StatutDemande.VALIDATION_N2;
+        boolean canDecisionSG = isSG && demande.getStatut() == StatutDemande.VALIDATION_N3;
 
         // ✅ Lignes
         List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
@@ -408,31 +448,54 @@ public class DemandeController {
         statutLabels.put(StatutDemande.VALIDE, "VALIDÉE");
         statutLabels.put(StatutDemande.REFUSE, "REFUSÉE");
 
-        // ✅ statutLabel
         String statutLabel = statutLabels.getOrDefault(demande.getStatut(), "INCONNU");
 
-        // ✅ statutHint (UI)
+        // ✅ statutHint (UI) : message adapté au viewer
         String statutHint = null;
 
-        // N+1 : il a déjà validé (ça arrive quand statut = VALIDATION_N1)
+        // N+1 a validé (donc la demande est passée à N1)
         if (isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.VALIDATION_N1) {
             statutHint = "Vous avez validé — en attente de traitement par les Moyens Généraux.";
         }
 
-        // MG : il voit que la demande est en attente de SON traitement
-        if (isMG && demande.getStatut() == StatutDemande.VALIDATION_N1) {
-            statutHint = "Demande en attente de votre validation (Moyens Généraux).";
+        // MG : soit en attente de MG (N1), soit déjà traité par MG (N2)
+        if (isMG) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N1) {
+                statutHint = "Demande en attente de votre validation (Moyens Généraux).";
+            } else if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
+                statutHint = "Vous avez validé — en attente de traitement par la Finance.";
+            }
         }
 
-        // ✅ Model (IMPORTANT : mettre les 2 booléens pour Thymeleaf)
+        // Finance : soit en attente Finance (N2), soit déjà traité (N3)
+        if (isFinance) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
+                statutHint = "Demande en attente de votre validation (Finance).";
+            } else if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
+                statutHint = "Vous avez validé — en attente de validation finale (SG).";
+            }
+        }
+
+        // SG : soit en attente SG (N3), soit finalisé
+        if (isSG) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
+                statutHint = "Demande en attente de votre validation finale (SG).";
+            } else if (demande.getStatut() == StatutDemande.VALIDE) {
+                statutHint = "Demande finalisée.";
+            }
+        }
+
+        // ✅ Model (IMPORTANT : toujours envoyer les booléens)
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demande", demande);
         model.addAttribute("lignes", lignes);
 
-        model.addAttribute("canDecision", canDecision);
+        model.addAttribute("canDecisionN1", canDecisionN1);
         model.addAttribute("canDecisionMG", canDecisionMG);
+        model.addAttribute("canDecisionFinance", canDecisionFinance);
+        model.addAttribute("canDecisionSG", canDecisionSG);
 
-        model.addAttribute("statutLabels", statutLabels); // optionnel
+        model.addAttribute("statutLabels", statutLabels);
         model.addAttribute("statutLabel", statutLabel);
         model.addAttribute("statutHint", statutHint);
 
@@ -440,6 +503,7 @@ public class DemandeController {
 
         return "demande/demande-fiche";
     }
+
 
 
 
@@ -459,16 +523,20 @@ public class DemandeController {
         boolean isMG = auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
 
+        boolean isFinance = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_FINANCE".equals(a.getAuthority()));
+
+        boolean isSG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
+
         DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
         if (demande == null) {
             redirectAttributes.addFlashAttribute("ko", "Demande introuvable.");
             return "redirect:/demande/list";
         }
 
-        // Normaliser la décision (sécurise null + espaces)
         String action = (decision == null) ? "" : decision.trim().toUpperCase();
 
-        // Récupérer l'id du demandeur (si null => impossible de décider sauf admin)
         Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
 
         // Enfants directs du current
@@ -477,43 +545,67 @@ public class DemandeController {
                 .filter(x -> !x.equals(current.getId()))
                 .toList();
 
-        // Règles de décision
+        // ✅ Autorisations par niveau
         boolean canDecisionN1 = demandeurId != null
                 && childrenIds.contains(demandeurId)
                 && demande.getStatut() == StatutDemande.CREE;
 
-        boolean canDecisionMG = isMG
-                && demande.getStatut() == StatutDemande.VALIDATION_N1;
+        boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
+        boolean canDecisionFinance = isFinance && demande.getStatut() == StatutDemande.VALIDATION_N2;
+        boolean canDecisionSG = isSG && demande.getStatut() == StatutDemande.VALIDATION_N3;
 
-        // Admin : droit total (si tu veux qu'il respecte le workflow, enlève "isAdmin" ci-dessous)
-        boolean allowed = isAdmin || canDecisionN1 || canDecisionMG;
+        boolean allowed = isAdmin || canDecisionN1 || canDecisionMG || canDecisionFinance || canDecisionSG;
 
         if (!allowed) {
             redirectAttributes.addFlashAttribute("ko", "Cette demande ne peut pas être traitée par vous.");
             return "redirect:/demande/fiche/" + id;
         }
 
-        // ----- Traitement REJECT -----
+        // ----- REJECT : tout validateur autorisé peut refuser -----
         if ("REJECT".equals(action)) {
             demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.REFUSE);
             redirectAttributes.addFlashAttribute("ok", "Demande rejetée.");
             return "redirect:/demande/fiche/" + id;
         }
 
-        // ----- Traitement APPROVE -----
+        // ----- APPROVE : transition selon le niveau -----
         if ("APPROVE".equals(action)) {
 
-            // N+1 valide -> envoie en VALIDATION_N1
             if (canDecisionN1) {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
-                redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1.");
+                redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
                 return "redirect:/demande/fiche/" + id;
             }
 
-            // MG (ou Admin) valide -> passe au niveau suivant (à adapter)
-            if (canDecisionMG || isAdmin) {
+            if (canDecisionMG) {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
-                redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux.");
+                redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+            if (canDecisionFinance) {
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
+                redirectAttributes.addFlashAttribute("ok", "Demande validée par la Finance (N3).");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+            if (canDecisionSG) {
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
+                redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée (SG).");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+            // Admin : si tu veux le laisser forcer la suite même s'il n'est pas le bon rôle
+            if (isAdmin) {
+                int next = switch (demande.getStatut()) {
+                    case StatutDemande.CREE -> StatutDemande.VALIDATION_N1;
+                    case StatutDemande.VALIDATION_N1 -> StatutDemande.VALIDATION_N2;
+                    case StatutDemande.VALIDATION_N2 -> StatutDemande.VALIDATION_N3;
+                    case StatutDemande.VALIDATION_N3 -> StatutDemande.VALIDE;
+                    default -> demande.getStatut();
+                };
+                demandeMereService.appliquerDecisionGlobale(demande, next);
+                redirectAttributes.addFlashAttribute("ok", "Statut mis à jour (ADMIN).");
                 return "redirect:/demande/fiche/" + id;
             }
         }
@@ -521,6 +613,7 @@ public class DemandeController {
         redirectAttributes.addFlashAttribute("ko", "Décision invalide.");
         return "redirect:/demande/fiche/" + id;
     }
+
 
 
 }

@@ -159,12 +159,25 @@
                         <!-- ACTIONS -->
                         <div class="p-3 d-flex justify-content-between align-items-center">
 
-                            <div th:if="${(canDecision ?: false) or (canDecisionMG ?: false)}">
+                            <div th:if="${(canDecisionN1 ?: false)
+                                  or (canDecisionMG ?: false)
+                                  or (canDecisionFinance ?: false)
+                                  or (canDecisionSG ?: false)}">
 
-                            <div class="text-muted small mb-2" th:if="${canDecisionMG}">
+                                <!-- Label selon le niveau -->
+                                <div class="text-muted small mb-2" th:if="${canDecisionMG ?: false}">
                                     <i class="fas fa-user-shield me-1"></i> Validation Moyens Généraux
                                 </div>
 
+                                <div class="text-muted small mb-2" th:if="${canDecisionFinance ?: false}">
+                                    <i class="fas fa-coins me-1"></i> Validation Finance
+                                </div>
+
+                                <div class="text-muted small mb-2" th:if="${canDecisionSG ?: false}">
+                                    <i class="fas fa-gavel me-1"></i> Validation Secrétaire Général
+                                </div>
+
+                                <!-- Bouton REJECT -->
                                 <form th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}" method="post" class="d-inline">
                                     <input type="hidden" name="decision" value="REJECT">
                                     <button type="submit" class="btn btn-outline-danger me-2"
@@ -173,6 +186,7 @@
                                     </button>
                                 </form>
 
+                                <!-- Bouton APPROVE -->
                                 <form th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}" method="post" class="d-inline">
                                     <input type="hidden" name="decision" value="APPROVE">
                                     <button type="submit" class="btn btn-gradient-green"
