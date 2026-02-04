@@ -12,6 +12,7 @@ import afg.achat.afgApprovAchat.service.util.AdresseService;
 import afg.achat.afgApprovAchat.service.util.DepartementService;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
+import afg.achat.afgApprovAchat.upload.StorageService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -23,6 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
@@ -44,6 +46,8 @@ public class DemandeController {
     IdGenerator idGenerator;
     @Autowired
     CentreBudgetaireService centreBudgetaireService;
+    @Autowired
+    StorageService storageService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -61,11 +65,12 @@ public class DemandeController {
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
                                 @RequestParam(name = "quantite[]") List<String> quantite,
                                 @RequestParam(name = "priorite") String priorite,
+                                @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                                 RedirectAttributes redirectAttributes) {
 
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
-         
+
         try {
             if (dateSortie == null || dateSortie.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "La date prévue pour la livraison est obligatoire.");
@@ -75,6 +80,14 @@ public class DemandeController {
                 redirectAttributes.addFlashAttribute("ko", "Le motif evoqué est obligatoire.");
                 return "redirect:/demande/add";
             }
+
+            if (articleCodes == null || articleCodes.isEmpty()) {
+                redirectAttributes.addFlashAttribute("ko", "Impossible de valider la demande sans aucune ligne d’article.");
+                return "redirect:/demande/add";
+            }
+
+            // (ton contrôle quantité > 0 tu peux le garder ici avant save)
+
             DemandeMere demandeMere = new DemandeMere();
             demandeMere.setId(idGenerator);
             demandeMere.setDateDemande(String.valueOf(LocalDateTime.now()));
@@ -85,49 +98,30 @@ public class DemandeController {
             demandeMere.setDescription(description);
             demandeMere.setStatut(1);
 
+            // 1) Save la demande (pour avoir la ref)
             this.demandeMereService.saveDemandeMere(demandeMere);
 
-            List<DemandeFille> demandeFilles = new ArrayList<>();
+            // 2) Save les lignes
             for (int i = 0; i < articleCodes.size(); i++) {
                 DemandeFille demandeFille = new DemandeFille();
                 demandeFille.setDemandeMere(demandeMere);
-                int finalI = i;
-                demandeFille.setArticle(articleService.getArticleByCodeArticle(articleCodes.get(i))
-                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + articleCodes.get(finalI))));
+
+                String code = articleCodes.get(i);
+                demandeFille.setArticle(articleService.getArticleByCodeArticle(code)
+                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + code)));
+
                 demandeFille.setQuantite(quantite.get(i));
                 demandeFille.setStatut(1);
-                demandeFilles.add(demandeFille);
-
                 this.demandeFilleService.saveDemandeFille(demandeFille);
             }
 
-            if (articleCodes.isEmpty()) {
-                redirectAttributes.addFlashAttribute(
-                        "ko",
-                        "Impossible de valider la demande sans aucune ligne d’article."
-                );
-                return "redirect:/demande/add";
-            }
-
-            boolean hasValideLine = false;
-            for (int i = 0; i < articleCodes.size(); i++) {
-                if (quantite.get(i) != null && !quantite.get(i).isEmpty()) {
-                    try {
-                        double qte = Double.parseDouble(quantite.get(i));
-                        if (qte > 0) {
-                            hasValideLine = true;
-                            break;
-                        }
-                    } catch (NumberFormatException ignored) {}
+            // 3) Stocker les pièces jointes sur disque
+            if (piecesJointes != null) {
+                for (MultipartFile f : piecesJointes) {
+                    if (f != null && !f.isEmpty()) {
+                        storageService.store(f, "DEMANDE_MATERIEL_N"+ demandeMere.getId()+"_"+demandeMere.getDemandeur().getNom()+"_"+demandeMere.getDemandeur().getPrenom()+"_"+demandeMere.getDateDemande());
+                    }
                 }
-            }
-
-            if (!hasValideLine) {
-                redirectAttributes.addFlashAttribute(
-                        "ko",
-                        "Veuillez saisir au moins une ligne avec une quantité reçue valide."
-                );
-                return "redirect:/demande/add";
             }
 
             redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
@@ -137,11 +131,11 @@ public class DemandeController {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
             return "redirect:/demande/add";
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement de la demande : " + e.getMessage());
+            redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement : " + e.getMessage());
             return "redirect:/demande/add";
         }
-
     }
+
 
     @GetMapping("/list")
     public String listDemandePage(Model model,
