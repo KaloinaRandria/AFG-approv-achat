@@ -33,10 +33,6 @@ import java.util.*;
 @RequestMapping("/demande")
 public class DemandeController {
     @Autowired
-    AdresseService adresseService;
-    @Autowired
-    DepartementService departementService;
-    @Autowired
     DemandeMereService demandeMereService;
     @Autowired
     DemandeFilleService demandeFilleService;
@@ -64,6 +60,7 @@ public class DemandeController {
                                 @RequestParam(name = "description") String description,
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
                                 @RequestParam(name = "quantite[]") List<String> quantite,
+                                @RequestParam(name = "priorite") String priorite,
                                 RedirectAttributes redirectAttributes) {
 
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -82,6 +79,7 @@ public class DemandeController {
             demandeMere.setId(idGenerator);
             demandeMere.setDateDemande(String.valueOf(LocalDateTime.now()));
             demandeMere.setDateSortie(dateSortie);
+            demandeMere.setPriorite(DemandeMere.PrioriteDemande.valueOf(priorite.trim()));
             demandeMere.setMotifEvoque(motif);
             demandeMere.setDemandeur(utilisateur);
             demandeMere.setDescription(description);
@@ -167,27 +165,29 @@ public class DemandeController {
         boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
         boolean isMG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
         boolean isFinance = auth.getAuthorities().stream().anyMatch(a -> "ROLE_FINANCE".equals(a.getAuthority()));
+        boolean isSG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
 
         boolean isAdminOrMG = isAdmin || isMG;
         boolean isAdminOrFinance = isAdmin || isFinance;
         boolean isAdminOrMGOrFinance = isAdmin || isMG || isFinance;
+        boolean isBackofficeValidator = isAdmin || isMG || isFinance || isSG;
 
         // ✅ Labels (table)
         Map<Integer, String> statutLabels = Map.of(
-                StatutDemande.CREE, "CRÉÉE",
-                StatutDemande.VALIDATION_N1, "EN_VALIDATION N1",
-                StatutDemande.VALIDATION_N2, "EN_VALIDATION N2",
-                StatutDemande.VALIDATION_N3, "EN_VALIDATION N3",
+                StatutDemande.CREE, "En attente N+1",
+                StatutDemande.VALIDATION_N1, "En attente M.G.",
+                StatutDemande.VALIDATION_N2, "En attente Finance",
+                StatutDemande.VALIDATION_N3, "En attente S.G.",
                 StatutDemande.VALIDE, "VALIDÉE",
                 StatutDemande.REFUSE, "REFUSÉE"
         );
 
         // ✅ Filtre (select)
         Map<Integer, String> statutFiltre = new LinkedHashMap<>();
-        statutFiltre.put(StatutDemande.CREE, "CRÉÉE");
-        statutFiltre.put(StatutDemande.VALIDATION_N1, "EN_VALIDATION N1");
-        statutFiltre.put(StatutDemande.VALIDATION_N2, "EN_VALIDATION N2");
-        statutFiltre.put(StatutDemande.VALIDATION_N3, "EN_VALIDATION N3");
+        statutFiltre.put(StatutDemande.CREE, "En attente N+1");
+        statutFiltre.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
+        statutFiltre.put(StatutDemande.VALIDATION_N2, "En attente Finance");
+        statutFiltre.put(StatutDemande.VALIDATION_N3, "En attente S.G.");
         statutFiltre.put(StatutDemande.VALIDE, "VALIDÉE");
         statutFiltre.put(StatutDemande.REFUSE, "REFUSÉE");
         model.addAttribute("statutFiltre", statutFiltre);
@@ -199,10 +199,10 @@ public class DemandeController {
         List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
         boolean hasChildren = visibleIds.size() > 1;
 
-        boolean showDemandeurColumn = isAdminOrMGOrFinance || hasChildren;
+        boolean showDemandeurColumn = isBackofficeValidator || hasChildren;
         model.addAttribute("showDemandeurColumn", showDemandeurColumn);
 
-        boolean showScopeFilter = hasChildren && !isAdminOrMGOrFinance;
+        boolean showScopeFilter = hasChildren && !isBackofficeValidator;
         model.addAttribute("showDemandeurScopeFilter", showScopeFilter);
 
         // ✅ Scope (uniquement non admin/MG/Finance)
@@ -219,7 +219,7 @@ public class DemandeController {
 
         Page<DemandeMere> demandesMeres;
 
-        // ✅ Cas MG : voit N1 + N2
+// ✅ Cas MG : voit N1 + N2
         if (isMG && !isAdmin) {
 
             Page<DemandeMere> p1 = demandeMereService.searchDemandes(
@@ -252,9 +252,8 @@ public class DemandeController {
             demandesMeres = new PageImpl<>(slice, pageable, merged.size());
 
             model.addAttribute("statut", 0);
-
         }
-        // ✅ Cas FINANCE : voit N2 + N3
+// ✅ Cas FINANCE : voit N2 + N3
         else if (isFinance && !isAdmin) {
 
             Page<DemandeMere> p2 = demandeMereService.searchDemandes(
@@ -287,11 +286,23 @@ public class DemandeController {
             demandesMeres = new PageImpl<>(slice, pageable, merged.size());
 
             model.addAttribute("statut", 0);
-
         }
-        // ✅ Cas normal
+// ✅ Cas SG : voit uniquement N3 (En attente S.G.)
+        else if (isSG && !isAdmin) {
+
+            demandesMeres = demandeMereService.searchDemandes(
+                    num, demandeur, type,
+                    StatutDemande.VALIDATION_N3,
+                    dateFrom, dateTo,
+                    page, size,     // ✅ pas besoin de merge ici
+                    sort, dir
+            );
+
+            model.addAttribute("statut", 0);
+        }
+// ✅ Cas normal / admin
         else {
-            if (isAdminOrMGOrFinance) {
+            if (isBackofficeValidator) {
                 demandesMeres = demandeMereService.searchDemandes(
                         num, demandeur, type,
                         statutFilter,
@@ -342,6 +353,7 @@ public class DemandeController {
         // ✅ flags de vue
         model.addAttribute("isMGOnly", isMG && !isAdmin);
         model.addAttribute("isFinanceOnly", isFinance && !isAdmin);
+        model.addAttribute("isSGOnly", isSG && !isAdmin);
 
         return "demande/demande-liste";
     }
@@ -441,10 +453,10 @@ public class DemandeController {
 
         // ✅ Labels
         Map<Integer, String> statutLabels = new LinkedHashMap<>();
-        statutLabels.put(StatutDemande.CREE, "CRÉÉE");
-        statutLabels.put(StatutDemande.VALIDATION_N1, "EN VALIDATION N1");
-        statutLabels.put(StatutDemande.VALIDATION_N2, "EN VALIDATION N2");
-        statutLabels.put(StatutDemande.VALIDATION_N3, "EN VALIDATION N3");
+        statutLabels.put(StatutDemande.CREE, "En attente N+1");
+        statutLabels.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
+        statutLabels.put(StatutDemande.VALIDATION_N2, "En attente Finance");
+        statutLabels.put(StatutDemande.VALIDATION_N3, "En attente S.G.");
         statutLabels.put(StatutDemande.VALIDE, "VALIDÉE");
         statutLabels.put(StatutDemande.REFUSE, "REFUSÉE");
 
@@ -511,6 +523,7 @@ public class DemandeController {
     @PostMapping("/fiche/{id}/decision")
     public String decision(@PathVariable("id") String id,
                            @RequestParam("decision") String decision,
+                           @RequestParam(value = "typeDemande", required = false) String typeDemande,
                            RedirectAttributes redirectAttributes) {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
@@ -578,6 +591,22 @@ public class DemandeController {
             }
 
             if (canDecisionMG) {
+                //MG doit obligatoirement choisir le type (OPEX/CAPEX)
+                String td = (typeDemande == null) ? "" : typeDemande.trim().toUpperCase();
+                if (td.isBlank()) {
+                    redirectAttributes.addFlashAttribute("ko", "Veuillez choisir le Type de demande (OPEX/CAPEX) avant de valider.");
+                    return "redirect:/demande/fiche/" + id;
+                }
+
+                try {
+                    demande.setNatureDemande(DemandeMere.NatureDemande.valueOf(td));
+                } catch (IllegalArgumentException ex) {
+                    redirectAttributes.addFlashAttribute("ko", "Type de demande invalide : " + typeDemande);
+                    return "redirect:/demande/fiche/" + id;
+                }
+
+                // ✅ On enregistre le type puis on passe au statut suivant
+                demandeMereService.saveDemandeMere(demande);
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
                 return "redirect:/demande/fiche/" + id;
