@@ -29,6 +29,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Controller
@@ -119,7 +120,13 @@ public class DemandeController {
             if (piecesJointes != null) {
                 for (MultipartFile f : piecesJointes) {
                     if (f != null && !f.isEmpty()) {
-                        storageService.store(f, "DEMANDE_MATERIEL_N"+ demandeMere.getId()+"_"+demandeMere.getDemandeur().getNom()+"_"+demandeMere.getDemandeur().getPrenom()+"_"+demandeMere.getDateDemande());
+                        String safeDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                        String ref = "DEMANDE_MATERIEL_" + demandeMere.getId()
+                                + "_" + demandeMere.getDemandeur().getNom()
+                                + "_" + demandeMere.getDemandeur().getPrenom()
+                                + "_" + safeDate;
+
+                        storageService.store(f, ref);
                     }
                 }
             }
