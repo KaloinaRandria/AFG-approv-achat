@@ -1,7 +1,6 @@
 package afg.achat.afgApprovAchat.model.demande;
 
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
-import afg.achat.afgApprovAchat.model.util.Adresse;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.persistence.*;
@@ -58,9 +57,9 @@ public class DemandeMere {
     int statut;
 
     public enum PrioriteDemande {
-        BASSE,
-        NORMALE,
-        ELEVEE
+        P2,
+        P1,
+        P0
     }
     public enum NatureDemande {
         OPEX,

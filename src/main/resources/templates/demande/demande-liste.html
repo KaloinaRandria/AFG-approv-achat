@@ -66,8 +66,9 @@
 
 
                     <!-- Statut -->
-                    <div class="col-md-2">
-                        <label class="form-label mb-1">Statut</label>
+                    <div class="col-md-2"
+                         th:if="${!(isMGOnly ?: false) and !(isFinanceOnly ?: false) and !(isSGOnly ?: false)}">
+                    <label class="form-label mb-1">Statut</label>
                         <select class="form-select" name="statut">
                             <option value="0" th:selected="${statut == null || statut == 0}">Tous</option>
 
@@ -80,6 +81,7 @@
                             </th:block>
                         </select>
                     </div>
+
 
                     <!-- Taille (⚠️ pas d'auto-submit si tu veux appliquer avec Filtrer) -->
                     <div class="col-md-2">

@@ -207,7 +207,6 @@
                                         <td style="position: relative;">
                                             <input type="text"
                                                    class="form-control article-input"
-                                                   name="articles[]"
                                                    placeholder="Code ou désignation"
                                                    autocomplete="off"
                                                    required>
@@ -219,7 +218,6 @@
                                         <td>
                                             <input type="text"
                                                    class="form-control quantite-input text-end"
-                                                   name="quantiteAffiche[]"
                                                    inputmode="decimal"
                                                    autocomplete="off"
                                                    required>
@@ -264,8 +262,13 @@
 </div>
 
 <!-- Modal Aperçu avant soumission -->
-<div class="modal fade" id="previewDemandeModal" tabindex="-1"
-     aria-labelledby="previewDemandeModalLabel" aria-hidden="true">
+<div class="modal fade"
+     id="previewDemandeModal"
+     tabindex="-1"
+     aria-labelledby="previewDemandeModalLabel"
+     aria-hidden="true"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
 
@@ -273,8 +276,6 @@
                 <h5 class="modal-title" id="previewDemandeModalLabel">
                     <i class="fas fa-eye me-2 icon-gradient-blue"></i>Aperçu avant soumission
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
             </div>
 
             <div class="modal-body">
@@ -444,7 +445,7 @@
       <td style="position: relative;">
         <input type="text"
                class="form-control article-input"
-               name="articles[]"
+
                placeholder="Code ou désignation"
                autocomplete="off"
                required>
@@ -455,7 +456,7 @@
       <td>
         <input type="text"
                class="form-control quantite-input text-end"
-               name="quantiteAffiche[]"
+
                inputmode="decimal"
                autocomplete="off"
                required>

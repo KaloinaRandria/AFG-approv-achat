@@ -146,5 +146,32 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
             Pageable pageable
     );
 
+    @Query("""
+    select dm from DemandeMere dm
+    left join dm.demandeur dmd
+    where dm.dateDemande between :dateFrom and :dateTo
+      and (:num = '' or lower(dm.id) like lower(concat('%', :num, '%')))
+      and (
+            :demandeur = ''
+            or lower(coalesce(dmd.prenom, '')) like lower(concat('%', :demandeur, '%'))
+            or lower(coalesce(dmd.nom, '')) like lower(concat('%', :demandeur, '%'))
+      )
+      and (:type = '' or lower(coalesce(dm.natureDemande, '')) = lower(:type))
+      and (
+            :statuts is null
+            or dm.statut in :statuts
+      )
+""")
+    Page<DemandeMere> searchMultiWithStatuts(
+            @Param("num") String num,
+            @Param("demandeur") String demandeur,
+            @Param("type") String type,
+            @Param("statuts") List<Integer> statuts,
+            @Param("dateFrom") LocalDateTime dateFrom,
+            @Param("dateTo") LocalDateTime dateTo,
+            Pageable pageable
+    );
+
+
 
 }

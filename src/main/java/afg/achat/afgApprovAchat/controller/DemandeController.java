@@ -12,29 +12,29 @@ import afg.achat.afgApprovAchat.service.util.AdresseService;
 import afg.achat.afgApprovAchat.service.util.DepartementService;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
+import afg.achat.afgApprovAchat.upload.StorageService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @Controller
 @RequestMapping("/demande")
 public class DemandeController {
-    @Autowired
-    AdresseService adresseService;
-    @Autowired
-    DepartementService departementService;
     @Autowired
     DemandeMereService demandeMereService;
     @Autowired
@@ -47,6 +47,8 @@ public class DemandeController {
     IdGenerator idGenerator;
     @Autowired
     CentreBudgetaireService centreBudgetaireService;
+    @Autowired
+    StorageService storageService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -63,11 +65,13 @@ public class DemandeController {
                                 @RequestParam(name = "description") String description,
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
                                 @RequestParam(name = "quantite[]") List<String> quantite,
+                                @RequestParam(name = "priorite") String priorite,
+                                @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                                 RedirectAttributes redirectAttributes) {
 
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
-         
+
         try {
             if (dateSortie == null || dateSortie.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "La date prévue pour la livraison est obligatoire.");
@@ -77,58 +81,54 @@ public class DemandeController {
                 redirectAttributes.addFlashAttribute("ko", "Le motif evoqué est obligatoire.");
                 return "redirect:/demande/add";
             }
+
+            if (articleCodes == null || articleCodes.isEmpty()) {
+                redirectAttributes.addFlashAttribute("ko", "Impossible de valider la demande sans aucune ligne d’article.");
+                return "redirect:/demande/add";
+            }
+
+            // (ton contrôle quantité > 0 tu peux le garder ici avant save)
+
             DemandeMere demandeMere = new DemandeMere();
             demandeMere.setId(idGenerator);
             demandeMere.setDateDemande(String.valueOf(LocalDateTime.now()));
             demandeMere.setDateSortie(dateSortie);
+            demandeMere.setPriorite(DemandeMere.PrioriteDemande.valueOf(priorite.trim()));
             demandeMere.setMotifEvoque(motif);
             demandeMere.setDemandeur(utilisateur);
             demandeMere.setDescription(description);
             demandeMere.setStatut(1);
 
+            // 1) Save la demande (pour avoir la ref)
             this.demandeMereService.saveDemandeMere(demandeMere);
 
-            List<DemandeFille> demandeFilles = new ArrayList<>();
+            // 2) Save les lignes
             for (int i = 0; i < articleCodes.size(); i++) {
                 DemandeFille demandeFille = new DemandeFille();
                 demandeFille.setDemandeMere(demandeMere);
-                int finalI = i;
-                demandeFille.setArticle(articleService.getArticleByCodeArticle(articleCodes.get(i))
-                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + articleCodes.get(finalI))));
+
+                String code = articleCodes.get(i);
+                demandeFille.setArticle(articleService.getArticleByCodeArticle(code)
+                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + code)));
+
                 demandeFille.setQuantite(quantite.get(i));
                 demandeFille.setStatut(1);
-                demandeFilles.add(demandeFille);
-
                 this.demandeFilleService.saveDemandeFille(demandeFille);
             }
 
-            if (articleCodes.isEmpty()) {
-                redirectAttributes.addFlashAttribute(
-                        "ko",
-                        "Impossible de valider la demande sans aucune ligne d’article."
-                );
-                return "redirect:/demande/add";
-            }
+            // 3) Stocker les pièces jointes sur disque
+            if (piecesJointes != null) {
+                for (MultipartFile f : piecesJointes) {
+                    if (f != null && !f.isEmpty()) {
+                        String safeDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                        String ref = "DEMANDE_MATERIEL_" + demandeMere.getId()
+                                + "_" + demandeMere.getDemandeur().getNom()
+                                + "_" + demandeMere.getDemandeur().getPrenom()
+                                + "_" + safeDate;
 
-            boolean hasValideLine = false;
-            for (int i = 0; i < articleCodes.size(); i++) {
-                if (quantite.get(i) != null && !quantite.get(i).isEmpty()) {
-                    try {
-                        double qte = Double.parseDouble(quantite.get(i));
-                        if (qte > 0) {
-                            hasValideLine = true;
-                            break;
-                        }
-                    } catch (NumberFormatException ignored) {}
+                        storageService.store(f, ref);
+                    }
                 }
-            }
-
-            if (!hasValideLine) {
-                redirectAttributes.addFlashAttribute(
-                        "ko",
-                        "Veuillez saisir au moins une ligne avec une quantité reçue valide."
-                );
-                return "redirect:/demande/add";
             }
 
             redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
@@ -138,11 +138,11 @@ public class DemandeController {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
             return "redirect:/demande/add";
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement de la demande : " + e.getMessage());
+            redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement : " + e.getMessage());
             return "redirect:/demande/add";
         }
-
     }
+
 
     @GetMapping("/list")
     public String listDemandePage(Model model,
@@ -151,10 +151,7 @@ public class DemandeController {
                                   @RequestParam(defaultValue = "10") int size,
                                   @RequestParam(defaultValue = "dateDemande") String sort,
                                   @RequestParam(defaultValue = "desc") String dir,
-
-                                  // ✅ statut optionnel (0 ou null = Tous)
                                   @RequestParam(required = false) Integer statut,
-
                                   @RequestParam(required = false) String num,
                                   @RequestParam(required = false) String demandeur,
                                   @RequestParam(required = false) String type,
@@ -164,69 +161,178 @@ public class DemandeController {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
-        Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(principal.getMail());
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
 
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        boolean isMG = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MOYENS_GENERAUX"));
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        boolean isMG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+        boolean isFinance = auth.getAuthorities().stream().anyMatch(a -> "ROLE_FINANCE".equals(a.getAuthority()));
+        boolean isSG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
+
         boolean isAdminOrMG = isAdmin || isMG;
+        boolean isAdminOrFinance = isAdmin || isFinance;
+        boolean isAdminOrMGOrFinance = isAdmin || isMG || isFinance;
+        boolean isBackofficeValidator = isAdmin || isMG || isFinance || isSG;
 
-
-        // ✅ statutLabels (affichage table)
+        // ✅ Labels (table)
         Map<Integer, String> statutLabels = Map.of(
-                StatutDemande.CREE, "CREE",
-                StatutDemande.VALIDATION_N1, "EN_VALIDATION",
-                StatutDemande.VALIDATION_N2, "EN_VALIDATION",
-                StatutDemande.VALIDATION_N3, "EN_VALIDATION",
-                StatutDemande.VALIDATION_N4, "EN_VALIDATION",
-                StatutDemande.VALIDE, "VALIDE",
-                StatutDemande.REFUSE, "REFUSE"
+                StatutDemande.CREE, "En attente N+1",
+                StatutDemande.VALIDATION_N1, "En attente M.G.",
+                StatutDemande.VALIDATION_N2, "En attente Finance",
+                StatutDemande.VALIDATION_N3, "En attente S.G.",
+                StatutDemande.VALIDE, "VALIDÉE",
+                StatutDemande.REFUSE, "REFUSÉE"
         );
 
-        // ✅ filtre statut (select)
+        // ✅ Filtre (select)
         Map<Integer, String> statutFiltre = new LinkedHashMap<>();
-        statutFiltre.put(StatutDemande.CREE, "CREE");
-        statutFiltre.put(StatutDemande.VALIDATION_N1, "EN_VALIDATION");
-        statutFiltre.put(StatutDemande.VALIDE, "VALIDE");
-        statutFiltre.put(StatutDemande.REFUSE, "REFUSE");
-
+        statutFiltre.put(StatutDemande.CREE, "En attente N+1");
+        statutFiltre.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
+        statutFiltre.put(StatutDemande.VALIDATION_N2, "En attente Finance");
+        statutFiltre.put(StatutDemande.VALIDATION_N3, "En attente S.G.");
+        statutFiltre.put(StatutDemande.VALIDE, "VALIDÉE");
+        statutFiltre.put(StatutDemande.REFUSE, "REFUSÉE");
         model.addAttribute("statutFiltre", statutFiltre);
 
-        //normalisation : 0 ou null => pas de filtre
+        // ✅ Normalisation (0/null => pas de filtre)
         Integer statutFilter = (statut == null || statut == 0) ? null : statut;
 
-        //MG voit uniquement VALIDATION_N1 (11)
-        if (isMG && !isAdmin) {
-            statutFilter = StatutDemande.VALIDATION_N1;
-        }
-
-        List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(utilisateur.getId());
+        // ✅ Visibilité (moi + enfants)
+        List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
         boolean hasChildren = visibleIds.size() > 1;
 
-        boolean showDemandeurColumn = isAdminOrMG || hasChildren;
+        boolean showDemandeurColumn = isBackofficeValidator || hasChildren;
         model.addAttribute("showDemandeurColumn", showDemandeurColumn);
 
-        boolean showScopeFilter = hasChildren && !isAdminOrMG;
+        boolean showScopeFilter = hasChildren && !isBackofficeValidator;
         model.addAttribute("showDemandeurScopeFilter", showScopeFilter);
 
-        // calcule ids selon scope
-        List<Integer> idsToUse = visibleIds; // ALL par défaut (moi + enfants)
-        if (!isAdminOrMG) {
+        // ✅ Scope (uniquement non admin/MG/Finance)
+        List<Integer> idsToUse = visibleIds;
+        if (!isAdminOrMGOrFinance) {
             if ("ME".equalsIgnoreCase(scope)) {
-                idsToUse = List.of(utilisateur.getId());
+                idsToUse = List.of(current.getId());
             } else if ("CHILDREN".equalsIgnoreCase(scope)) {
                 idsToUse = visibleIds.stream()
-                        .filter(id -> !id.equals(utilisateur.getId()))
+                        .filter(idU -> !idU.equals(current.getId()))
                         .toList();
             }
         }
 
-        var demandesMeres = isAdminOrMG
-                ? demandeMereService.searchDemandes(num, demandeur, type, statutFilter, dateFrom, dateTo, page, size, sort, dir)
-                : (idsToUse.isEmpty()
-                ? demandeMereService.searchDemandesVisibleParUtilisateur(num, demandeur, type, statutFilter, dateFrom, dateTo, List.of(-1), page, size, sort, dir)
-                : demandeMereService.searchDemandesVisibleParUtilisateur(num, demandeur, type, statutFilter, dateFrom, dateTo, idsToUse, page, size, sort, dir)
-        );
+        Page<DemandeMere> demandesMeres;
 
+// ✅ Cas MG : voit N1 + N2
+        if (isMG && !isAdmin) {
+
+            Page<DemandeMere> p1 = demandeMereService.searchDemandes(
+                    num, demandeur, type,
+                    StatutDemande.VALIDATION_N1,
+                    dateFrom, dateTo,
+                    0, Integer.MAX_VALUE,
+                    sort, dir
+            );
+
+            Page<DemandeMere> p2 = demandeMereService.searchDemandes(
+                    num, demandeur, type,
+                    StatutDemande.VALIDATION_N2,
+                    dateFrom, dateTo,
+                    0, Integer.MAX_VALUE,
+                    sort, dir
+            );
+
+            List<DemandeMere> merged = new ArrayList<>();
+            merged.addAll(p1.getContent());
+            merged.addAll(p2.getContent());
+
+            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
+
+            Pageable pageable = PageRequest.of(page, size);
+            int start = (int) pageable.getOffset();
+            int end = Math.min(start + pageable.getPageSize(), merged.size());
+
+            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
+            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
+
+            model.addAttribute("statut", 0);
+        }
+// ✅ Cas FINANCE : voit N2 + N3
+        else if (isFinance && !isAdmin) {
+
+            Page<DemandeMere> p2 = demandeMereService.searchDemandes(
+                    num, demandeur, type,
+                    StatutDemande.VALIDATION_N2,
+                    dateFrom, dateTo,
+                    0, Integer.MAX_VALUE,
+                    sort, dir
+            );
+
+            Page<DemandeMere> p3 = demandeMereService.searchDemandes(
+                    num, demandeur, type,
+                    StatutDemande.VALIDATION_N3,
+                    dateFrom, dateTo,
+                    0, Integer.MAX_VALUE,
+                    sort, dir
+            );
+
+            List<DemandeMere> merged = new ArrayList<>();
+            merged.addAll(p2.getContent());
+            merged.addAll(p3.getContent());
+
+            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
+
+            Pageable pageable = PageRequest.of(page, size);
+            int start = (int) pageable.getOffset();
+            int end = Math.min(start + pageable.getPageSize(), merged.size());
+
+            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
+            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
+
+            model.addAttribute("statut", 0);
+        }
+// ✅ Cas SG : voit uniquement N3 (En attente S.G.)
+        else if (isSG && !isAdmin) {
+
+            demandesMeres = demandeMereService.searchDemandes(
+                    num, demandeur, type,
+                    StatutDemande.VALIDATION_N3,
+                    dateFrom, dateTo,
+                    page, size,     // ✅ pas besoin de merge ici
+                    sort, dir
+            );
+
+            model.addAttribute("statut", 0);
+        }
+// ✅ Cas normal / admin
+        else {
+            if (isBackofficeValidator) {
+                demandesMeres = demandeMereService.searchDemandes(
+                        num, demandeur, type,
+                        statutFilter,
+                        dateFrom, dateTo,
+                        page, size,
+                        sort, dir
+                );
+            } else {
+                demandesMeres = idsToUse.isEmpty()
+                        ? demandeMereService.searchDemandesVisibleParUtilisateur(
+                        num, demandeur, type, statutFilter,
+                        dateFrom, dateTo,
+                        List.of(-1),
+                        page, size,
+                        sort, dir
+                )
+                        : demandeMereService.searchDemandesVisibleParUtilisateur(
+                        num, demandeur, type, statutFilter,
+                        dateFrom, dateTo,
+                        idsToUse,
+                        page, size,
+                        sort, dir
+                );
+            }
+
+            model.addAttribute("statut", (statut == null) ? 0 : statut);
+        }
+
+        // ✅ Model commun
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demandesMeres", demandesMeres);
 
@@ -242,11 +348,13 @@ public class DemandeController {
         model.addAttribute("dateTo", dateTo);
         model.addAttribute("scope", scope);
 
-        // ✅ pour garder la sélection dans le select
-        model.addAttribute("statut", (statut == null) ? 0 : statut);
-
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
         model.addAttribute("statutLabels", statutLabels);
+
+        // ✅ flags de vue
+        model.addAttribute("isMGOnly", isMG && !isAdmin);
+        model.addAttribute("isFinanceOnly", isFinance && !isAdmin);
+        model.addAttribute("isSGOnly", isSG && !isAdmin);
 
         return "demande/demande-liste";
     }
@@ -294,12 +402,21 @@ public class DemandeController {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
-        Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(principal.getMail());
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
 
-        boolean isAdminOrMG = auth.getAuthorities().stream().anyMatch(a ->
-                a.getAuthority().equals("ROLE_ADMIN") ||
-                        a.getAuthority().equals("ROLE_MOYENS_GENERAUX")
-        );
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        boolean isMG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+
+        boolean isFinance = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_FINANCE".equals(a.getAuthority()));
+
+        boolean isSG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
+
+        boolean isAdminOrSpecial = isAdmin || isMG || isFinance || isSG;
 
         DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
         if (demande == null) {
@@ -307,46 +424,93 @@ public class DemandeController {
             return "redirect:/demande/list";
         }
 
-        // accès : admin/MG tout, sinon moi + enfants
-        if (!isAdminOrMG) {
-            List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(utilisateur.getId());
-            Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
+        Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
 
+        // ✅ Accès : Admin/MG/Finance/SG = OK ; sinon seulement (moi + enfants)
+        List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
+        if (!isAdminOrSpecial) {
             if (demandeurId == null || !visibleIds.contains(demandeurId)) {
                 redirectAttributes.addFlashAttribute("ko", "Accès refusé à cette demande.");
                 return "redirect:/demande/list";
             }
         }
 
-        // ✅ canDecision : enfant (pas moi) uniquement
-        List<Integer> childrenIds = utilisateurService.getIdsUtilisateurVisible(utilisateur.getId())
-                .stream().filter(x -> !x.equals(utilisateur.getId())).toList();
+        // ✅ Enfants directs (sans moi)
+        List<Integer> childrenIds = visibleIds.stream()
+                .filter(x -> !x.equals(current.getId()))
+                .toList();
 
+        // ✅ N+1 du demandeur = la demande appartient à un de mes enfants
+        boolean isViewerNplus1OfDemandeur = (demandeurId != null) && childrenIds.contains(demandeurId);
+
+        // ✅ Droits de décision par niveau
+        boolean canDecisionN1 = isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.CREE;
+        boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
+        boolean canDecisionFinance = isFinance && demande.getStatut() == StatutDemande.VALIDATION_N2;
+        boolean canDecisionSG = isSG && demande.getStatut() == StatutDemande.VALIDATION_N3;
+
+        // ✅ Lignes
+        List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
+
+        // ✅ Labels
         Map<Integer, String> statutLabels = new LinkedHashMap<>();
-        statutLabels.put(StatutDemande.CREE, "CRÉÉE");
-        statutLabels.put(StatutDemande.VALIDATION_N1, "EN VALIDATION");
-        statutLabels.put(StatutDemande.VALIDATION_N2, "EN VALIDATION");
-        statutLabels.put(StatutDemande.VALIDATION_N3, "EN VALIDATION");
-        statutLabels.put(StatutDemande.VALIDATION_N4, "EN VALIDATION");
+        statutLabels.put(StatutDemande.CREE, "En attente N+1");
+        statutLabels.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
+        statutLabels.put(StatutDemande.VALIDATION_N2, "En attente Finance");
+        statutLabels.put(StatutDemande.VALIDATION_N3, "En attente S.G.");
         statutLabels.put(StatutDemande.VALIDE, "VALIDÉE");
         statutLabels.put(StatutDemande.REFUSE, "REFUSÉE");
 
-        model.addAttribute("statutLabels", statutLabels);
+        String statutLabel = statutLabels.getOrDefault(demande.getStatut(), "INCONNU");
 
+        // ✅ statutHint (UI) : message adapté au viewer
+        String statutHint = null;
 
-        Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
-        boolean canDecision = (demandeurId != null)
-                && !demandeurId.equals(utilisateur.getId())
-                && childrenIds.contains(demandeurId)
-                && demande.getStatut() == StatutDemande.CREE;
+        // N+1 a validé (donc la demande est passée à N1)
+        if (isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.VALIDATION_N1) {
+            statutHint = "Vous avez validé — en attente de traitement par les Moyens Généraux.";
+        }
 
-        // lignes
-        List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
+        // MG : soit en attente de MG (N1), soit déjà traité par MG (N2)
+        if (isMG) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N1) {
+                statutHint = "Demande en attente de votre validation (Moyens Généraux).";
+            } else if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
+                statutHint = "Vous avez validé — en attente de traitement par la Finance.";
+            }
+        }
 
+        // Finance : soit en attente Finance (N2), soit déjà traité (N3)
+        if (isFinance) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
+                statutHint = "Demande en attente de votre validation (Finance).";
+            } else if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
+                statutHint = "Vous avez validé — en attente de validation finale (SG).";
+            }
+        }
+
+        // SG : soit en attente SG (N3), soit finalisé
+        if (isSG) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
+                statutHint = "Demande en attente de votre validation finale (SG).";
+            } else if (demande.getStatut() == StatutDemande.VALIDE) {
+                statutHint = "Demande finalisée.";
+            }
+        }
+
+        // ✅ Model (IMPORTANT : toujours envoyer les booléens)
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demande", demande);
         model.addAttribute("lignes", lignes);
-        model.addAttribute("canDecision", canDecision);
+
+        model.addAttribute("canDecisionN1", canDecisionN1);
+        model.addAttribute("canDecisionMG", canDecisionMG);
+        model.addAttribute("canDecisionFinance", canDecisionFinance);
+        model.addAttribute("canDecisionSG", canDecisionSG);
+
+        model.addAttribute("statutLabels", statutLabels);
+        model.addAttribute("statutLabel", statutLabel);
+        model.addAttribute("statutHint", statutHint);
 
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
 
@@ -355,14 +519,29 @@ public class DemandeController {
 
 
 
+
+
     @PostMapping("/fiche/{id}/decision")
     public String decision(@PathVariable("id") String id,
                            @RequestParam("decision") String decision,
-                           RedirectAttributes redirectAttributes, Model model) {
+                           @RequestParam(value = "typeDemande", required = false) String typeDemande,
+                           RedirectAttributes redirectAttributes) {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
         Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        boolean isMG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+
+        boolean isFinance = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_FINANCE".equals(a.getAuthority()));
+
+        boolean isSG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
 
         DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
         if (demande == null) {
@@ -370,42 +549,101 @@ public class DemandeController {
             return "redirect:/demande/list";
         }
 
-        // enfants directs
-        List<Integer> childrenIds = utilisateurService.getIdsUtilisateurVisible(current.getId())
-                .stream().filter(x -> !x.equals(current.getId())).toList();
+        String action = (decision == null) ? "" : decision.trim().toUpperCase();
 
         Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
 
-        boolean canDecision = (demandeurId != null)
-                && !demandeurId.equals(current.getId())
+        // Enfants directs du current
+        List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
+        List<Integer> childrenIds = visibleIds.stream()
+                .filter(x -> !x.equals(current.getId()))
+                .toList();
+
+        // ✅ Autorisations par niveau
+        boolean canDecisionN1 = demandeurId != null
                 && childrenIds.contains(demandeurId)
                 && demande.getStatut() == StatutDemande.CREE;
 
+        boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
+        boolean canDecisionFinance = isFinance && demande.getStatut() == StatutDemande.VALIDATION_N2;
+        boolean canDecisionSG = isSG && demande.getStatut() == StatutDemande.VALIDATION_N3;
 
-        model.addAttribute("canDecision", canDecision);
+        boolean allowed = isAdmin || canDecisionN1 || canDecisionMG || canDecisionFinance || canDecisionSG;
 
-        if (!canDecision) {
-            // message plus clair selon le cas
-            redirectAttributes.addFlashAttribute("ko", "Cette demande a déjà été traitée.");
+        if (!allowed) {
+            redirectAttributes.addFlashAttribute("ko", "Cette demande ne peut pas être traitée par vous.");
             return "redirect:/demande/fiche/" + id;
         }
 
-        String d = (decision == null) ? "" : decision.trim().toUpperCase();
-
-        if ("APPROVE".equals(d)) {
-            demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
-            redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1");
-            return "redirect:/demande/fiche/" + id;
-        }
-
-        if ("REJECT".equals(d)) {
+        // ----- REJECT : tout validateur autorisé peut refuser -----
+        if ("REJECT".equals(action)) {
             demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.REFUSE);
-            redirectAttributes.addFlashAttribute("ok", "Demande rejetée");
+            redirectAttributes.addFlashAttribute("ok", "Demande rejetée.");
             return "redirect:/demande/fiche/" + id;
+        }
+
+        // ----- APPROVE : transition selon le niveau -----
+        if ("APPROVE".equals(action)) {
+
+            if (canDecisionN1) {
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
+                redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+            if (canDecisionMG) {
+                //MG doit obligatoirement choisir le type (OPEX/CAPEX)
+                String td = (typeDemande == null) ? "" : typeDemande.trim().toUpperCase();
+                if (td.isBlank()) {
+                    redirectAttributes.addFlashAttribute("ko", "Veuillez choisir le Type de demande (OPEX/CAPEX) avant de valider.");
+                    return "redirect:/demande/fiche/" + id;
+                }
+
+                try {
+                    demande.setNatureDemande(DemandeMere.NatureDemande.valueOf(td));
+                } catch (IllegalArgumentException ex) {
+                    redirectAttributes.addFlashAttribute("ko", "Type de demande invalide : " + typeDemande);
+                    return "redirect:/demande/fiche/" + id;
+                }
+
+                // ✅ On enregistre le type puis on passe au statut suivant
+                demandeMereService.saveDemandeMere(demande);
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
+                redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+            if (canDecisionFinance) {
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
+                redirectAttributes.addFlashAttribute("ok", "Demande validée par la Finance (N3).");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+            if (canDecisionSG) {
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
+                redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée (SG).");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+            // Admin : si tu veux le laisser forcer la suite même s'il n'est pas le bon rôle
+            if (isAdmin) {
+                int next = switch (demande.getStatut()) {
+                    case StatutDemande.CREE -> StatutDemande.VALIDATION_N1;
+                    case StatutDemande.VALIDATION_N1 -> StatutDemande.VALIDATION_N2;
+                    case StatutDemande.VALIDATION_N2 -> StatutDemande.VALIDATION_N3;
+                    case StatutDemande.VALIDATION_N3 -> StatutDemande.VALIDE;
+                    default -> demande.getStatut();
+                };
+                demandeMereService.appliquerDecisionGlobale(demande, next);
+                redirectAttributes.addFlashAttribute("ok", "Statut mis à jour (ADMIN).");
+                return "redirect:/demande/fiche/" + id;
+            }
         }
 
         redirectAttributes.addFlashAttribute("ko", "Décision invalide.");
         return "redirect:/demande/fiche/" + id;
     }
+
+
 
 }

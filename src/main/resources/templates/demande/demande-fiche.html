@@ -70,7 +70,12 @@
 
                             <div>
                                 <strong>Statut :</strong>
-                                <div th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></div>
+                                <div th:text="${statutLabel}">-</div>
+
+                                <div th:if="${statutHint != null}" class="text-success small mt-1">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    <span th:text="${statutHint}"></span>
+                                </div>
                             </div>
 
                             <div>
@@ -78,24 +83,6 @@
 
                                 <!-- Lecture seule -->
                                 <div th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">-</div>
-
-                                <!-- Edition (MG/Admin) sans Ajax -->
-                                <div sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')" class="mt-2">
-                                    <form th:action="@{/demande/fiche/{id}/type-demande(id=${demande.id})}" method="post">
-                                        <select name="typeDemande" class="form-select form-select-sm">
-                                            <option value="" th:selected="${demande.natureDemande == null}">-- Choisir --</option>
-                                            <option th:each="n : ${natures}"
-                                                    th:value="${n.name()}"
-                                                    th:text="${n.name()}"
-                                                    th:selected="${demande.natureDemande != null && demande.natureDemande.name() == n.name()}">
-                                            </option>
-                                        </select>
-
-                                        <button type="submit" class="btn btn-sm btn-gradient-blue mt-3">
-                                            Enregistrer
-                                        </button>
-                                    </form>
-                                </div>
                             </div>
                         </div>
 
@@ -154,26 +141,67 @@
                         <!-- ACTIONS -->
                         <div class="p-3 d-flex justify-content-between align-items-center">
 
-                            <div th:if="${canDecision}">
-                                <form th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}" method="post" class="d-inline">
-                                    <input type="hidden" name="decision" value="REJECT">
-                                    <button type="submit" class="btn btn-outline-danger me-2"
+                            <div th:if="${(canDecisionN1 ?: false)
+          or (canDecisionMG ?: false)
+          or (canDecisionFinance ?: false)
+          or (canDecisionSG ?: false)}">
+
+                                <!-- Form unique -->
+                                <form th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}"
+                                      method="post" class="d-inline">
+
+                                    <!-- Label selon le niveau -->
+                                    <div class="text-muted small mb-2" th:if="${canDecisionMG ?: false}">
+                                        <i class="fas fa-user-shield me-1"></i> Validation Moyens Généraux
+                                    </div>
+                                    <div class="text-muted small mb-2" th:if="${canDecisionFinance ?: false}">
+                                        <i class="fas fa-coins me-1"></i> Validation Finance
+                                    </div>
+                                    <div class="text-muted small mb-2" th:if="${canDecisionSG ?: false}">
+                                        <i class="fas fa-gavel me-1"></i> Validation Secrétaire Général
+                                    </div>
+
+                                    <!-- Type de demande uniquement quand MG valide -->
+                                    <div class="mb-2" th:if="${canDecisionMG ?: false}">
+                                        <label class="form-label mb-1">Type de demande <span class="text-danger">*</span></label>
+                                        <select class="form-select form-select-sm"
+                                                name="typeDemande"
+                                                th:attr="required=${canDecisionMG}">
+                                            <option value="" th:selected="${demande.natureDemande == null}">-- Choisir --</option>
+                                            <option th:each="n : ${natures}"
+                                                    th:value="${n.name()}"
+                                                    th:text="${n.name()}"
+                                                    th:selected="${demande.natureDemande != null && demande.natureDemande.name() == n.name()}">
+                                            </option>
+                                        </select>
+
+                                        <div class="text-muted small mt-1">
+                                            Obligatoire pour valider en Moyens Généraux.
+                                        </div>
+                                    </div>
+
+                                    <!-- BOUTONS -->
+                                    <button type="submit"
+                                            name="decision" value="REJECT"
+                                            class="btn btn-outline-danger me-2"
                                             onclick="return confirm('Rejeter cette demande ?');">
                                         <i class="fas fa-times me-1"></i> Rejeter
                                     </button>
-                                </form>
 
-                                <form th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}" method="post" class="d-inline">
-                                    <input type="hidden" name="decision" value="APPROVE">
-                                    <button type="submit" class="btn btn-gradient-green"
+                                    <button type="submit"
+                                            name="decision" value="APPROVE"
+                                            class="btn btn-gradient-green"
                                             onclick="return confirm('Valider cette demande ?');">
                                         <i class="fas fa-check me-1"></i> Valider
                                     </button>
+
                                 </form>
                             </div>
 
                             <div class="text-muted small"></div>
                         </div>
+
+
 
                     </div><!-- /bl-document -->
 

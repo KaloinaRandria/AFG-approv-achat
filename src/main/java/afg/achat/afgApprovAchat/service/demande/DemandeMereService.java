@@ -134,5 +134,43 @@ public class DemandeMereService {
         demandeFilleRepo.saveAll(filles);
     }
 
+    public Page<DemandeMere> searchDemandes(String num,
+                                            String demandeur,
+                                            String type,
+                                            List<Integer> statuts,
+                                            LocalDate dateFrom,
+                                            LocalDate dateTo,
+                                            int page,
+                                            int size,
+                                            String sort,
+                                            String dir) {
+
+        // ✅ tri / pagination
+        String sortBy = (sort == null || sort.isBlank()) ? "dateDemande" : sort;
+        Sort.Direction direction = "desc".equalsIgnoreCase(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        // ✅ dates (borne large si null)
+        LocalDateTime from = (dateFrom == null)
+                ? LocalDate.of(1900, 1, 1).atStartOfDay()
+                : dateFrom.atStartOfDay();
+
+        LocalDateTime to = (dateTo == null)
+                ? LocalDate.of(2999, 12, 31).atTime(23, 59, 59)
+                : dateTo.atTime(23, 59, 59);
+
+        // ✅ normalisation des champs texte
+        String n = (num == null) ? "" : num.trim();
+        String d = (demandeur == null) ? "" : demandeur.trim();
+        String t = (type == null) ? "" : type.trim();
+
+        // ✅ statuts : null ou vide => pas de filtre
+        List<Integer> st = (statuts == null || statuts.isEmpty()) ? null : statuts;
+
+        return demandeMereRepo.searchMultiWithStatuts(n, d, t, st, from, to, pageable);
+    }
+
+
+
 
 }
