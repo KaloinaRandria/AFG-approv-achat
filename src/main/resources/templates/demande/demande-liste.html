@@ -7,6 +7,28 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <style>
+        .badge-status{
+            display:inline-flex;
+            align-items:center;
+            gap:.45rem;
+            padding:.35rem .65rem;
+            border-radius:999px;
+            font-weight:700;
+            font-size:.78rem;
+            letter-spacing:.2px;
+            border:1px solid rgba(0,0,0,.08);
+            white-space:nowrap;
+        }
+
+        .badge-wait{ background:#fff7ed; color:#9a3412; border-color:rgba(154,52,18,.18); }     /* orange */
+        .badge-info{ background:#eff6ff; color:#1d4ed8; border-color:rgba(29,78,216,.18); }     /* bleu */
+        .badge-purple{ background:#f5f3ff; color:#6d28d9; border-color:rgba(109,40,217,.18);}   /* violet */
+        .badge-success{ background:#ecfdf5; color:#047857; border-color:rgba(4,120,87,.18);}    /* vert */
+        .badge-danger{ background:#fef2f2; color:#b91c1c; border-color:rgba(185,28,28,.18);}    /* rouge */
+
+        .badge-status i{ font-size:.9em; opacity:.9; }
+    </style>
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
@@ -209,7 +231,30 @@
                                 class="td-nature-demande"
                                 th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">
                             </td>
-                            <td th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></td>
+                            <td>
+                              <span class="badge-status"
+                                    th:classappend="
+                                      ${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).CREE} ? ' badge-wait' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1} ? ' badge-info' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N2} ? ' badge-purple' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N3} ? ' badge-purple' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE} ? ' badge-success' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' badge-danger' : ' badge-info')))))">
+
+                                <i class="fas"
+                                   th:classappend="
+                                     ${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).CREE} ? ' fa-user-clock' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1} ? ' fa-clipboard-check' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N2} ? ' fa-coins' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N3} ? ' fa-gavel' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE} ? ' fa-circle-check' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' fa-circle-xmark' : ' fa-circle-info')))))">
+                                </i>
+
+                                <span th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></span>
+                              </span>
+                            </td>
+
                             <td class="text-center">
                                 <a class="btn btn-sm btn-gradient-blue"
                                    th:href="@{/demande/fiche/{id}(id=${demande.id})}"
