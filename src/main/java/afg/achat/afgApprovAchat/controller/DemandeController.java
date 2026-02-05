@@ -2,14 +2,15 @@ package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.model.demande.DemandePieceJointe;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
-import afg.achat.afgApprovAchat.service.util.AdresseService;
-import afg.achat.afgApprovAchat.service.util.DepartementService;
+import afg.achat.afgApprovAchat.service.demande.DemandePieceJointeService;
+import org.springframework.core.io.Resource;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
 import afg.achat.afgApprovAchat.upload.StorageService;
@@ -20,6 +21,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -49,6 +52,8 @@ public class DemandeController {
     CentreBudgetaireService centreBudgetaireService;
     @Autowired
     StorageService storageService;
+    @Autowired
+    DemandePieceJointeService demandePieceJointeService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -116,20 +121,33 @@ public class DemandeController {
                 this.demandeFilleService.saveDemandeFille(demandeFille);
             }
 
-            // 3) Stocker les pièces jointes sur disque
+            // 3) Stocker les pièces jointes sur disque + enregistrer en DB
             if (piecesJointes != null) {
                 for (MultipartFile f : piecesJointes) {
-                    if (f != null && !f.isEmpty()) {
-                        String safeDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-                        String ref = "DEMANDE_MATERIEL_" + demandeMere.getId()
-                                + "_" + demandeMere.getDemandeur().getNom()
-                                + "_" + demandeMere.getDemandeur().getPrenom()
-                                + "_" + safeDate;
+                    if (f == null || f.isEmpty()) continue;
 
-                        storageService.store(f, ref);
-                    }
+                    String safeDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                    String ref = demandeMere.getId()
+                            + "_" + demandeMere.getDemandeur().getNom()
+                            + "_" + demandeMere.getDemandeur().getPrenom()
+                            + "_" + safeDate;
+
+                    // 1) sauvegarde disque (retourne le nom stocké)
+                    String storedName = storageService.store(f, ref);
+
+                    // 2) sauvegarde DB
+                    DemandePieceJointe pj = new DemandePieceJointe();
+                    pj.setDemande(demandeMere);
+                    pj.setOriginalName(f.getOriginalFilename());
+                    pj.setStoredName(storedName);
+                    pj.setContentType(f.getContentType() != null ? f.getContentType() : "application/octet-stream");
+                    pj.setSize(f.getSize());
+                    pj.setUploadedAt(LocalDateTime.now());
+
+                    demandePieceJointeService.insert(pj);
                 }
             }
+
 
             redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
             return "redirect:/demande/list";
@@ -498,6 +516,10 @@ public class DemandeController {
             }
         }
 
+        List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
+        model.addAttribute("piecesJointes", piecesJointes);
+
+
         // ✅ Model (IMPORTANT : toujours envoyer les booléens)
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demande", demande);
@@ -642,6 +664,17 @@ public class DemandeController {
 
         redirectAttributes.addFlashAttribute("ko", "Décision invalide.");
         return "redirect:/demande/fiche/" + id;
+    }
+
+    @GetMapping("/files/{id}/{filename:.+}")
+    public ResponseEntity<Resource> downloadDemandeFile(@PathVariable String id,
+                                                        @PathVariable String filename) {
+
+        Resource file = storageService.loadAsResource(filename);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFilename() + "\"")
+                .body(file);
     }
 
 

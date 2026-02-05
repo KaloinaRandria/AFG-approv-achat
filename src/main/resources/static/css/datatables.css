@@ -1,5 +1,8 @@
 @charset "UTF-8";
 
+.page-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;}
+.doc-wrapper{max-width:1100px;margin:0 auto;}
+
 
 .file-upload-card {
     background: #f8fafc;
