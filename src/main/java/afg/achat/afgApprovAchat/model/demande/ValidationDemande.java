@@ -25,6 +25,8 @@ public class ValidationDemande {
     int statut;
     @Column(name = "date_action")
     LocalDateTime dateAction;
+    @Column(columnDefinition = "TEXT")
+    String commentaire;
 
     public void setDateAction(String dateAction) {
         this.dateAction = LocalDateTime.parse(dateAction);

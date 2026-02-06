@@ -3,6 +3,7 @@ package afg.achat.afgApprovAchat.controller;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.demande.DemandePieceJointe;
+import afg.achat.afgApprovAchat.model.demande.ValidationDemande;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.ArticleService;
@@ -10,6 +11,7 @@ import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.demande.DemandePieceJointeService;
+import afg.achat.afgApprovAchat.service.demande.ValidationDemandeService;
 import org.springframework.core.io.Resource;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
@@ -54,6 +56,8 @@ public class DemandeController {
     StorageService storageService;
     @Autowired
     DemandePieceJointeService demandePieceJointeService;
+    @Autowired
+    ValidationDemandeService validationDemandeService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -186,8 +190,7 @@ public class DemandeController {
         boolean isFinance = auth.getAuthorities().stream().anyMatch(a -> "ROLE_FINANCE".equals(a.getAuthority()));
         boolean isSG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
 
-        boolean isAdminOrMG = isAdmin || isMG;
-        boolean isAdminOrFinance = isAdmin || isFinance;
+
         boolean isAdminOrMGOrFinance = isAdmin || isMG || isFinance;
         boolean isBackofficeValidator = isAdmin || isMG || isFinance || isSG;
 
@@ -547,6 +550,7 @@ public class DemandeController {
     public String decision(@PathVariable("id") String id,
                            @RequestParam("decision") String decision,
                            @RequestParam(value = "typeDemande", required = false) String typeDemande,
+                           @RequestParam(value = "commentaire", required = false) String commentaire,
                            RedirectAttributes redirectAttributes) {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
@@ -597,18 +601,37 @@ public class DemandeController {
             return "redirect:/demande/fiche/" + id;
         }
 
-        // ----- REJECT : tout validateur autorisé peut refuser -----
+        String cmt = (commentaire == null) ? "" : commentaire.trim();
+
+// ----- REJECT : commentaire obligatoire -----
         if ("REJECT".equals(action)) {
+            if (cmt.isBlank()) {
+                redirectAttributes.addFlashAttribute("ko", "Le commentaire est obligatoire pour rejeter une demande.");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+
             demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.REFUSE);
+
+            ValidationDemande validationDemande = new ValidationDemande();
+            validationDemande.setStatut(StatutDemande.REFUSE);
+            validationDemande.setDemandeMere(demande);
+            validationDemande.setValidateur(current);
+            validationDemande.setCommentaire(cmt);
+            validationDemande.setDateAction(String.valueOf(LocalDateTime.now()));
+
+            validationDemandeService.logAction(validationDemande);
             redirectAttributes.addFlashAttribute("ok", "Demande rejetée.");
             return "redirect:/demande/fiche/" + id;
         }
+
 
         // ----- APPROVE : transition selon le niveau -----
         if ("APPROVE".equals(action)) {
 
             if (canDecisionN1) {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
+                logValidation(demande, current, StatutDemande.VALIDATION_N1, cmt);
                 redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -631,18 +654,21 @@ public class DemandeController {
                 // ✅ On enregistre le type puis on passe au statut suivant
                 demandeMereService.saveDemandeMere(demande);
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
+                logValidation(demande, current, StatutDemande.VALIDATION_N2, cmt);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
                 return "redirect:/demande/fiche/" + id;
             }
 
             if (canDecisionFinance) {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
+                logValidation(demande, current, StatutDemande.VALIDATION_N3, cmt);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par la Finance (N3).");
                 return "redirect:/demande/fiche/" + id;
             }
 
             if (canDecisionSG) {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
+                logValidation(demande, current, StatutDemande.VALIDE, cmt);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée (SG).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -657,6 +683,7 @@ public class DemandeController {
                     default -> demande.getStatut();
                 };
                 demandeMereService.appliquerDecisionGlobale(demande, next);
+                logValidation(demande, current, next, cmt);
                 redirectAttributes.addFlashAttribute("ok", "Statut mis à jour (ADMIN).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -677,6 +704,15 @@ public class DemandeController {
                 .body(file);
     }
 
+    private void logValidation(DemandeMere demande, Utilisateur current, int statut, String commentaire) {
+        ValidationDemande v = new ValidationDemande();
+        v.setStatut(statut);
+        v.setDemandeMere(demande);
+        v.setValidateur(current);
+        v.setCommentaire((commentaire == null) ? null : commentaire.trim());
+        v.setDateAction(String.valueOf(LocalDateTime.now())); // ou v.setDateAction(LocalDateTime.now()) si tu changes l'entity
+        validationDemandeService.logAction(v);
+    }
 
 
 }

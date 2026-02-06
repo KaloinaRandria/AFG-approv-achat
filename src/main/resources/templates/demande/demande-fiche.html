@@ -172,10 +172,12 @@
           or (canDecisionSG ?: false)}">
 
                                 <!-- Form unique -->
-                                <form th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}"
+                                <form id="decisionForm"
+                                      th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}"
                                       method="post" class="d-inline">
 
-                                    <!-- Label selon le niveau -->
+
+                                <!-- Label selon le niveau -->
                                     <div class="text-muted small mb-2" th:if="${canDecisionMG ?: false}">
                                         <i class="fas fa-user-shield me-1"></i> Validation Moyens Généraux
                                     </div>
@@ -185,6 +187,8 @@
                                     <div class="text-muted small mb-2" th:if="${canDecisionSG ?: false}">
                                         <i class="fas fa-gavel me-1"></i> Validation Secrétaire Général
                                     </div>
+
+                                    <input type="hidden" name="commentaire" id="decisionCommentaire">
 
                                     <!-- Type de demande uniquement quand MG valide -->
                                     <div class="mb-2" th:if="${canDecisionMG ?: false}">
@@ -206,28 +210,25 @@
                                     </div>
 
                                     <!-- BOUTONS -->
-                                    <button type="submit"
-                                            name="decision" value="REJECT"
+                                    <button type="button"
                                             class="btn btn-outline-danger me-2"
-                                            onclick="return confirm('Rejeter cette demande ?');">
+                                            id="btnOpenReject">
                                         <i class="fas fa-times me-1"></i> Rejeter
                                     </button>
 
-                                    <button type="submit"
-                                            name="decision" value="APPROVE"
+                                    <button type="button"
                                             class="btn btn-gradient-green"
-                                            onclick="return confirm('Valider cette demande ?');">
+                                            id="btnOpenApprove">
                                         <i class="fas fa-check me-1"></i> Valider
                                     </button>
 
+                                    <!-- hidden input décision envoyé au controller -->
+                                    <input type="hidden" name="decision" id="decisionValue">
+
                                 </form>
                             </div>
-
                             <div class="text-muted small"></div>
                         </div>
-
-
-
                     </div><!-- /bl-document -->
 
                 </div>
@@ -236,6 +237,122 @@
         </div>
     </section>
 </div>
+<div class="modal fade" id="decisionModal" tabindex="-1"
+     aria-labelledby="decisionModalLabel" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
 
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title" id="decisionModalLabel">
+                    <i class="fas fa-comment-dots me-2"></i>
+                    Confirmation
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="alert alert-info mb-3" id="decisionModalInfo">
+                    <!-- rempli par JS -->
+                </div>
+
+                <label class="form-label fw-bold" for="commentaireInput">
+                    Commentaire <span class="text-danger" id="commentaireRequiredStar" style="display:none">*</span>
+                </label>
+
+                <textarea class="form-control"
+                          id="commentaireInput"
+                          rows="3"
+                          placeholder="Ajoutez un commentaire..."></textarea>
+
+                <div class="invalid-feedback d-block" id="commentaireError" style="display:none">
+                    Le commentaire est obligatoire pour un refus.
+                </div>
+
+                <div class="text-muted small mt-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Facultatif si vous validez, obligatoire si vous rejetez.
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-arrow-left me-1"></i> Annuler
+                </button>
+
+                <button type="button" class="btn btn-gradient-green" id="btnConfirmDecision">
+                    <i class="fas fa-paper-plane me-1"></i> Confirmer
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("decisionForm");
+        const modalEl = document.getElementById("decisionModal");
+
+        if (!form || !modalEl) return;
+
+        const btnApprove = document.getElementById("btnOpenApprove");
+        const btnReject  = document.getElementById("btnOpenReject");
+        const btnConfirm = document.getElementById("btnConfirmDecision");
+
+        const decisionValue = document.getElementById("decisionValue");
+        const hiddenComment = document.getElementById("decisionCommentaire");
+
+        const commentInput = document.getElementById("commentaireInput");
+        const infoBox = document.getElementById("decisionModalInfo");
+        const err = document.getElementById("commentaireError");
+        const star = document.getElementById("commentaireRequiredStar");
+
+        const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        function openModal(decision) {
+            decisionValue.value = decision;
+
+            // Reset UI
+            commentInput.value = "";
+            commentInput.classList.remove("is-invalid");
+            err.style.display = "none";
+
+            const isReject = (decision === "REJECT");
+            star.style.display = isReject ? "inline" : "none";
+
+            infoBox.className = "alert " + (isReject ? "alert-warning" : "alert-success");
+            infoBox.innerHTML = isReject
+                ? "<i class='fas fa-triangle-exclamation me-2'></i>Vous êtes sur le point de <b>rejeter</b> cette demande. Un commentaire est obligatoire."
+                : "<i class='fas fa-circle-check me-2'></i>Vous êtes sur le point de <b>valider</b> cette demande. Le commentaire est facultatif.";
+
+            modal.show();
+        }
+
+        btnApprove?.addEventListener("click", () => openModal("APPROVE"));
+        btnReject?.addEventListener("click",  () => openModal("REJECT"));
+
+        btnConfirm?.addEventListener("click", () => {
+            const decision = decisionValue.value;
+            const commentaire = (commentInput.value || "").trim();
+
+            const isReject = (decision === "REJECT");
+
+            if (isReject && commentaire.length === 0) {
+                commentInput.classList.add("is-invalid");
+                err.style.display = "block";
+                return;
+            }
+
+            // sync vers le hidden
+            hiddenComment.value = commentaire;
+
+            // submit du form
+            form.submit();
+        });
+    });
+    /*]]>*/
+</script>
 </body>
 </html>
