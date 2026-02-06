@@ -710,7 +710,7 @@ public class DemandeController {
         v.setDemandeMere(demande);
         v.setValidateur(current);
         v.setCommentaire((commentaire == null) ? null : commentaire.trim());
-        v.setDateAction(String.valueOf(LocalDateTime.now())); // ou v.setDateAction(LocalDateTime.now()) si tu changes l'entity
+        v.setDateAction(String.valueOf(LocalDateTime.now()));
         validationDemandeService.logAction(v);
     }
 

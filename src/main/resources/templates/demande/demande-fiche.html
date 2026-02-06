@@ -7,6 +7,19 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <style>
+        .bl-footer{
+            border-top: 1px solid rgba(0,0,0,.15);
+            margin-top: 18px;
+            padding: 10px 16px;
+            text-align: center;
+            font-size: 11px;
+            color: #6b7280;
+            letter-spacing: .2px;
+            line-height: 1.35;
+            text-transform: uppercase;
+        }
+    </style>
 </head>
 
 <body>
@@ -229,6 +242,13 @@
                             </div>
                             <div class="text-muted small"></div>
                         </div>
+                        <!-- FOOTER -->
+                        <div class="bl-footer">
+                            <div>AFG BANK MADAGASCAR SOCIETE ANONYME AU CAPITAL DE MGA 95 000 000 000</div>
+                            <div>SIEGE SOCIAL IMMEUBLE GATEWAY RUE SETH RANOHISOA ANKORONDRANO ANTANANARIVO 101</div>
+                            <div>RCS 2023B00266 - NIF 5017735499 - STAT 64191 11 2023 0 10266</div>
+                        </div>
+
                     </div><!-- /bl-document -->
 
                 </div>
@@ -248,8 +268,6 @@
                     <i class="fas fa-comment-dots me-2"></i>
                     Confirmation
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
             </div>
 
             <div class="modal-body">
@@ -324,8 +342,8 @@
 
             infoBox.className = "alert " + (isReject ? "alert-warning" : "alert-success");
             infoBox.innerHTML = isReject
-                ? "<i class='fas fa-triangle-exclamation me-2'></i>Vous êtes sur le point de <b>rejeter</b> cette demande. Un commentaire est obligatoire."
-                : "<i class='fas fa-circle-check me-2'></i>Vous êtes sur le point de <b>valider</b> cette demande. Le commentaire est facultatif.";
+                ? "<i class='fas fa-exclamation-triangle me-2'></i>Vous êtes sur le point de <b>rejeter</b> cette demande. Un commentaire est obligatoire."
+                : "<i class='fas fa-check-circle me-2'></i>Vous êtes sur le point de <b>valider</b> cette demande. Le commentaire est facultatif.";
 
             modal.show();
         }

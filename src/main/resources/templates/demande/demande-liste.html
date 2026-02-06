@@ -249,6 +249,7 @@
                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N3} ? ' fa-gavel' :
                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE} ? ' fa-check-circle' :
                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' fa-stop-circle-o' : ' fa-info-circle')))))">
+
                                 </i>
                                 <span th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></span>
                               </span>
@@ -300,6 +301,7 @@
     num=${num},demandeur=${demandeur},type=${type},statut=${statut},
     dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
     sort=${sort},dir=${dir})}"
+                                   th:text="${p + 1}"
                                 >
                                 </a>
                             </li>

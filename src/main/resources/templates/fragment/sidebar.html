@@ -83,6 +83,7 @@
                         data-bs-target="#collapseFournisseurs"
                         aria-expanded="false"
                         aria-controls="collapseFournisseurs"
+                        sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
                         th:classappend="${currentUri.contains('/fournisseur') ? '' : 'collapsed'}">
                     <i class="fas fa-building me-3"></i> Fournisseurs
                 </button>
@@ -105,7 +106,7 @@
                             <a class="nav-link text-white sidebar-sub" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
                                th:href="@{/fournisseur/add}"
                                th:classappend="${currentUri == '/fournisseur/add' ? 'active' : ''}">
-                                Ajouter un article
+                                Ajouter un nouveau fournisseur
                             </a>
                         </li>
                     </ul>
