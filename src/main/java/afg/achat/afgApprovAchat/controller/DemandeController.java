@@ -522,6 +522,20 @@ public class DemandeController {
         List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
         model.addAttribute("piecesJointes", piecesJointes);
 
+// 0=N+1, 1=MG, 2=Finance, 3=SG, 4=Terminé
+        int currentStep = switch (demande.getStatut()) {
+            case StatutDemande.CREE -> 0;              // En attente N+1
+            case StatutDemande.VALIDATION_N1 -> 1;     // En attente MG
+            case StatutDemande.VALIDATION_N2 -> 2;     // En attente Finance
+            case StatutDemande.VALIDATION_N3 -> 3;     // En attente SG
+            case StatutDemande.VALIDE -> 4;            // Terminé (validé)
+            case StatutDemande.REFUSE -> -1;           // Terminé (refusé)
+            default -> 0;
+        };
+
+        model.addAttribute("currentStep", currentStep);
+        model.addAttribute("isRefused", demande.getStatut() == StatutDemande.REFUSE);
+        model.addAttribute("isValidated", demande.getStatut() == StatutDemande.VALIDE);
 
         // ✅ Model (IMPORTANT : toujours envoyer les booléens)
         model.addAttribute("currentUri", request.getRequestURI());

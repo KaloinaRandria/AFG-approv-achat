@@ -7,6 +7,82 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <style>
+        .approval-stepper{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            padding:12px 14px;
+            border:1px solid rgba(0,0,0,.08);
+            border-radius:14px;
+            background:#fafafa;
+        }
+
+        .approval-stepper .step{
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            min-width:90px;
+            opacity:.75;
+        }
+
+        .approval-stepper .dot{
+            width:34px;
+            height:34px;
+            border-radius:999px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            border:2px solid #cbd5e1;
+            background:#fff;
+            font-weight:700;
+        }
+
+        .approval-stepper .label{
+            margin-top:6px;
+            font-size:.85rem;
+            text-align:center;
+            line-height:1.1;
+        }
+
+        .approval-stepper .line{
+            flex:1;
+            height:3px;
+            background:#e2e8f0;
+            border-radius:999px;
+        }
+
+        /* DONE */
+        .approval-stepper .step.is-done{
+            opacity:1;
+        }
+        .approval-stepper .step.is-done .dot{
+            border-color:#16a34a;
+            background:#16a34a;
+            color:#fff;
+        }
+        .approval-stepper .line.is-done{
+            background:#16a34a;
+        }
+
+        /* CURRENT */
+        .approval-stepper .step.is-current{
+            opacity:1;
+        }
+        .approval-stepper .step.is-current .dot{
+            border-color:#2563eb;
+            background:#2563eb;
+            color:#fff;
+            box-shadow:0 0 0 4px rgba(37,99,235,.15);
+        }
+
+        /* REFUSED */
+        .approval-stepper .step.is-disabled{
+            opacity:.4;
+        }
+
+    </style>
 </head>
 
 <body>
@@ -45,6 +121,64 @@
                             <div class="bl-title">
                                 <h3>DEMANDE DE MATERIEL</h3>
                                 <span>Réference : <strong th:text="${demande.id}">-</strong></span>
+                            </div>
+                        </div>
+                        <!-- STEPPER VALIDATION -->
+                        <div class="px-3 pb-2">
+                            <div class="approval-stepper">
+
+                                <div class="step"
+                                     th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 0 ? 'is-done' : (currentStep == 0 ? 'is-current' : ''))}">
+                                    <div class="dot"><span>1</span></div>
+                                    <div class="label">N+1</div>
+                                </div>
+
+                                <div class="line"
+                                     th:classappend="${currentStep > 0 ? 'is-done' : ''}"></div>
+
+                                <div class="step"
+                                     th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 1 ? 'is-done' : (currentStep == 1 ? 'is-current' : ''))}">
+                                    <div class="dot"><span>2</span></div>
+                                    <div class="label">Moyens Généraux</div>
+                                </div>
+
+                                <div class="line"
+                                     th:classappend="${currentStep > 1 ? 'is-done' : ''}"></div>
+
+                                <div class="step"
+                                     th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 2 ? 'is-done' : (currentStep == 2 ? 'is-current' : ''))}">
+                                    <div class="dot"><span>3</span></div>
+                                    <div class="label">Finance</div>
+                                </div>
+
+                                <div class="line"
+                                     th:classappend="${currentStep > 2 ? 'is-done' : ''}"></div>
+
+                                <div class="step"
+                                     th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 3 ? 'is-done' : (currentStep == 3 ? 'is-current' : ''))}">
+                                    <div class="dot"><span>4</span></div>
+                                    <div class="label">SG</div>
+                                </div>
+                            </div>
+
+                            <!-- Badges finaux -->
+                            <div class="mt-2 text-center">
+        <span class="badge bg-success"
+              th:if="${isValidated}">
+            <i class="fas fa-check-circle me-1"></i> Demande validée
+        </span>
+
+                                <span class="badge bg-danger"
+                                      th:if="${isRefused}">
+            <i class="fas fa-times-circle me-1"></i> Demande refusée
+        </span>
+
+                                <span class="text-muted small"
+                                      th:if="${!isValidated and !isRefused}">
+            <i class="fas fa-info-circle me-1"></i>
+            Étape en cours :
+            <b th:text="${currentStep == 0 ? 'N+1' : (currentStep == 1 ? 'Moyens Généraux' : (currentStep == 2 ? 'Finance' : 'SG'))}"></b>
+        </span>
                             </div>
                         </div>
 
