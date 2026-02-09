@@ -7,82 +7,7 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
-    <style>
-        .approval-stepper{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:10px;
-            padding:12px 14px;
-            border:1px solid rgba(0,0,0,.08);
-            border-radius:14px;
-            background:#fafafa;
-        }
 
-        .approval-stepper .step{
-            display:flex;
-            flex-direction:column;
-            align-items:center;
-            min-width:90px;
-            opacity:.75;
-        }
-
-        .approval-stepper .dot{
-            width:34px;
-            height:34px;
-            border-radius:999px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            border:2px solid #cbd5e1;
-            background:#fff;
-            font-weight:700;
-        }
-
-        .approval-stepper .label{
-            margin-top:6px;
-            font-size:.85rem;
-            text-align:center;
-            line-height:1.1;
-        }
-
-        .approval-stepper .line{
-            flex:1;
-            height:3px;
-            background:#e2e8f0;
-            border-radius:999px;
-        }
-
-        /* DONE */
-        .approval-stepper .step.is-done{
-            opacity:1;
-        }
-        .approval-stepper .step.is-done .dot{
-            border-color:#16a34a;
-            background:#16a34a;
-            color:#fff;
-        }
-        .approval-stepper .line.is-done{
-            background:#16a34a;
-        }
-
-        /* CURRENT */
-        .approval-stepper .step.is-current{
-            opacity:1;
-        }
-        .approval-stepper .step.is-current .dot{
-            border-color:#2563eb;
-            background:#2563eb;
-            color:#fff;
-            box-shadow:0 0 0 4px rgba(37,99,235,.15);
-        }
-
-        /* REFUSED */
-        .approval-stepper .step.is-disabled{
-            opacity:.4;
-        }
-
-    </style>
 </head>
 
 <body>
@@ -324,6 +249,30 @@
 
                                 </tbody>
                             </table>
+                        </div>
+                        <!-- TOTAL (style document formel) -->
+                        <div class="px-3 pb-3 mt-2"
+                             sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_FINANCE','ROLE_SG')">
+
+                            <div class="d-flex justify-content-end">
+
+                                <table style="min-width: 320px; border-collapse: collapse;">
+                                    <tr style="border-top: 2px solid #000;">
+                                        <td class="text-end fw-bold" style="padding: 8px 12px;">
+                                            TOTAL
+                                        </td>
+
+                                        <td class="text-end fw-bold"
+                                            style="padding: 8px 12px; font-size: 1.15rem; min-width: 140px;">
+                    <span th:text="${demande.totalPrix != null
+                        ? #numbers.formatDecimal(demande.totalPrix, 1, 'COMMA', 2, 'POINT')
+                        : '0,00'}">
+                    </span>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                            </div>
                         </div>
 
                         <!-- ACTIONS -->

@@ -1,5 +1,102 @@
 @charset "UTF-8";
+.approval-stepper{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 14px;
+    border:1px solid rgba(0,0,0,.08);
+    border-radius:14px;
+    background:#fafafa;
+}
 
+.approval-stepper .step{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-width:90px;
+    opacity:.75;
+}
+
+.approval-stepper .dot{
+    width:34px;
+    height:34px;
+    border-radius:999px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:2px solid #cbd5e1;
+    background:#fff;
+    font-weight:700;
+}
+
+.approval-stepper .label{
+    margin-top:6px;
+    font-size:.85rem;
+    text-align:center;
+    line-height:1.1;
+}
+
+.approval-stepper .line{
+    flex:1;
+    height:3px;
+    background:#e2e8f0;
+    border-radius:999px;
+}
+
+/* DONE */
+.approval-stepper .step.is-done{
+    opacity:1;
+}
+.approval-stepper .step.is-done .dot{
+    border-color:#16a34a;
+    background:#16a34a;
+    color:#fff;
+}
+.approval-stepper .line.is-done{
+    background:#16a34a;
+}
+
+/* CURRENT */
+.approval-stepper .step.is-current{
+    opacity:1;
+}
+.approval-stepper .step.is-current .dot{
+    border-color:#2563eb;
+    background:#2563eb;
+    color:#fff;
+    box-shadow:0 0 0 4px rgba(37,99,235,.15);
+}
+
+/* REFUSED */
+.approval-stepper .step.is-disabled{
+    opacity:.4;
+}
+
+
+.clickable-row { cursor: pointer; }
+.clickable-row:hover td { background: rgba(0,0,0,.03); }
+
+.badge-status{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.35rem .65rem;
+    border-radius:999px;
+    font-weight:700;
+    font-size:.78rem;
+    letter-spacing:.2px;
+    border:1px solid rgba(0,0,0,.08);
+    white-space:nowrap;
+}
+
+.badge-wait{ background:#fff7ed; color:#9a3412; border-color:rgba(154,52,18,.18); }     /* orange */
+.badge-info{ background:#eff6ff; color:#1d4ed8; border-color:rgba(29,78,216,.18); }     /* bleu */
+.badge-purple{ background:#f5f3ff; color:#6d28d9; border-color:rgba(109,40,217,.18);}   /* violet */
+.badge-success{ background:#ecfdf5; color:#047857; border-color:rgba(4,120,87,.18);}    /* vert */
+.badge-danger{ background:#fef2f2; color:#b91c1c; border-color:rgba(185,28,28,.18);}    /* rouge */
+
+.badge-status i{ font-size:.9em; opacity:.9; }
 
 .bl-footer{
     border-top: 1px solid rgba(0,0,0,.15);

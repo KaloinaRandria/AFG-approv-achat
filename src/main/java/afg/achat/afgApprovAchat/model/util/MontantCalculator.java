@@ -29,7 +29,7 @@ public final class MontantCalculator {
     /**
      * Parse sécurisé (évite NumberFormatException)
      */
-    private static double parseDoubleSafe(String value) {
+    public static double parseDoubleSafe(String value) {
         if (value == null || value.isBlank()) return 0;
         try {
             return Double.parseDouble(value.replace(",", "."));
