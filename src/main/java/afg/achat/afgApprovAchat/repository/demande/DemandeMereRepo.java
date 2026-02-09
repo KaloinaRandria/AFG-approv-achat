@@ -17,7 +17,6 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
     @Query("""
         select dm from DemandeMere dm
         left join dm.demandeur dmd
-        left join dmd.departement dep
         where dm.dateDemande between :dateFrom and :dateTo
           and (
                 :q = ''
@@ -25,9 +24,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
                 or lower(coalesce(dm.natureDemande, '')) like lower(concat('%', :q, '%'))
               
                 or lower(coalesce(dmd.prenom, '')) like lower(concat('%', :q, '%'))
-                or lower(coalesce(dep.acronyme, '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dmd.nom, '')) like lower(concat('%', :q, '%'))
-                or lower(coalesce(dep.nom, '')) like lower(concat('%', :q, '%'))
           )
     """)
     Page<DemandeMere> search(
@@ -40,7 +37,6 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
     @Query("""
         select dm from DemandeMere dm
         left join dm.demandeur dmd
-        left join dmd.departement dep
         where dm.dateDemande between :dateFrom and :dateTo
           and dmd.id = :demandeurId
           and (
@@ -48,9 +44,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
                 or lower(dm.id) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dm.natureDemande, '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dmd.prenom, '')) like lower(concat('%', :q, '%'))
-                or lower(coalesce(dep.acronyme, '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dmd.nom, '')) like lower(concat('%', :q, '%'))
-                or lower(coalesce(dep.nom, '')) like lower(concat('%', :q, '%'))
           )
     """)
     Page<DemandeMere> searchByDemandeur(
@@ -64,7 +58,6 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
     @Query("""
         select dm from DemandeMere dm
         left join dm.demandeur dmd
-        left join dmd.departement dep
         where dm.dateDemande between :dateFrom and :dateTo
           and dmd.id in :demandeurIds
           and (
@@ -72,9 +65,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
                 or lower(dm.id) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dm.natureDemande, '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dmd.prenom, '')) like lower(concat('%', :q, '%'))
-                or lower(coalesce(dep.acronyme, '')) like lower(concat('%', :q, '%'))
                 or lower(coalesce(dmd.nom, '')) like lower(concat('%', :q, '%'))
-                or lower(coalesce(dep.nom, '')) like lower(concat('%', :q, '%'))
           )
     """)
     Page<DemandeMere> searchByDemandeurIds(
@@ -117,7 +108,6 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
     @Query("""
     select dm from DemandeMere dm
     left join dm.demandeur dmd
-    left join dmd.departement dep
     where dm.dateDemande between :dateFrom and :dateTo
       and dmd.id in :demandeurIds
 
@@ -127,8 +117,6 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
             :demandeur = ''
             or lower(coalesce(dmd.prenom, '')) like lower(concat('%', :demandeur, '%'))
             or lower(coalesce(dmd.nom, '')) like lower(concat('%', :demandeur, '%'))
-            or lower(coalesce(dep.acronyme, '')) like lower(concat('%', :demandeur, '%'))
-            or lower(coalesce(dep.nom, '')) like lower(concat('%', :demandeur, '%'))
       )
 
       and (:type = '' or lower(coalesce(dm.natureDemande, '')) = lower(:type))

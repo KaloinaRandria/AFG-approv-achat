@@ -27,6 +27,7 @@
     <!--        DEVISE -->
     <div class="px-3 mb-2">
         <a class="nav-link text-white d-flex align-items-center sidebar-link"
+           sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','FINANCE')"
            th:href="@{/devise/devise-pages}"
             th:classappend="${currentUri == '/devise/devise-pages' ? 'active' : ''}">
             <i class="fas fa-coins me-3"></i> Devise et Cours
@@ -83,6 +84,7 @@
                         data-bs-target="#collapseFournisseurs"
                         aria-expanded="false"
                         aria-controls="collapseFournisseurs"
+                        sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
                         th:classappend="${currentUri.contains('/fournisseur') ? '' : 'collapsed'}">
                     <i class="fas fa-building me-3"></i> Fournisseurs
                 </button>
@@ -105,7 +107,7 @@
                             <a class="nav-link text-white sidebar-sub" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
                                th:href="@{/fournisseur/add}"
                                th:classappend="${currentUri == '/fournisseur/add' ? 'active' : ''}">
-                                Ajouter un article
+                                Ajouter un nouveau fournisseur
                             </a>
                         </li>
                     </ul>

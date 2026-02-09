@@ -7,6 +7,7 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+
 </head>
 
 <body>
@@ -23,9 +24,6 @@
                     <h1 class="fw-bold text-gradient-blue mb-0">
                         <i class="fas fa-file-alt icon-gradient-blue me-2"></i> Fiche demande
                     </h1>
-<!--                    <span class="pill">-->
-<!--                        Référence : <strong th:text="${demande.id}">-</strong>-->
-<!--                    </span>-->
                 </div>
 
                 <div class="d-flex gap-2">
@@ -48,6 +46,64 @@
                             <div class="bl-title">
                                 <h3>DEMANDE DE MATERIEL</h3>
                                 <span>Réference : <strong th:text="${demande.id}">-</strong></span>
+                            </div>
+                        </div>
+                        <!-- STEPPER VALIDATION -->
+                        <div class="px-3 pb-2">
+                            <div class="approval-stepper">
+
+                                <div class="step"
+                                     th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 0 ? 'is-done' : (currentStep == 0 ? 'is-current' : ''))}">
+                                    <div class="dot"><span>1</span></div>
+                                    <div class="label">N+1</div>
+                                </div>
+
+                                <div class="line"
+                                     th:classappend="${currentStep > 0 ? 'is-done' : ''}"></div>
+
+                                <div class="step"
+                                     th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 1 ? 'is-done' : (currentStep == 1 ? 'is-current' : ''))}">
+                                    <div class="dot"><span>2</span></div>
+                                    <div class="label">Moyens Généraux</div>
+                                </div>
+
+                                <div class="line"
+                                     th:classappend="${currentStep > 1 ? 'is-done' : ''}"></div>
+
+                                <div class="step"
+                                     th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 2 ? 'is-done' : (currentStep == 2 ? 'is-current' : ''))}">
+                                    <div class="dot"><span>3</span></div>
+                                    <div class="label">Finance</div>
+                                </div>
+
+                                <div class="line"
+                                     th:classappend="${currentStep > 2 ? 'is-done' : ''}"></div>
+
+                                <div class="step"
+                                     th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 3 ? 'is-done' : (currentStep == 3 ? 'is-current' : ''))}">
+                                    <div class="dot"><span>4</span></div>
+                                    <div class="label">SG</div>
+                                </div>
+                            </div>
+
+                            <!-- Badges finaux -->
+                            <div class="mt-2 text-center">
+        <span class="badge bg-success"
+              th:if="${isValidated}">
+            <i class="fas fa-check-circle me-1"></i> Demande validée
+        </span>
+
+                                <span class="badge bg-danger"
+                                      th:if="${isRefused}">
+            <i class="fas fa-times-circle me-1"></i> Demande refusée
+        </span>
+
+                                <span class="text-muted small"
+                                      th:if="${!isValidated and !isRefused}">
+            <i class="fas fa-info-circle me-1"></i>
+            Étape en cours :
+            <b th:text="${currentStep == 0 ? 'N+1' : (currentStep == 1 ? 'Moyens Généraux' : (currentStep == 2 ? 'Finance' : 'SG'))}"></b>
+        </span>
                             </div>
                         </div>
 
@@ -146,21 +202,77 @@
                             <table class="bl-table">
                                 <thead>
                                 <tr>
-                                    <th style="width: 70%">DÉSIGNATION</th>
-                                    <th style="width: 30%" class="text-end">QUANTITÉ</th>
+
+                                    <!-- DESIGNATION -->
+                                    <th th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_FINANCE'',''ROLE_SG'')')}
+                          ? 'width:55%' : 'width:70%'">
+                                        DÉSIGNATION
+                                    </th>
+
+                                    <!-- QUANTITE -->
+                                    <th class="text-end"
+                                        th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_FINANCE'',''ROLE_SG'')')}
+                          ? 'width:20%' : 'width:30%'">
+                                        QUANTITÉ
+                                    </th>
+
+                                    <!-- PRIX -->
+                                    <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_FINANCE','ROLE_SG')"
+                                        style="width:25%"
+                                        class="text-end">
+                                        PRIX UNITAIRE
+                                    </th>
+
                                 </tr>
                                 </thead>
+
                                 <tbody>
+
                                 <tr th:if="${lignes == null || lignes.isEmpty()}">
-                                    <td colspan="2" class="text-center text-muted">Aucun article</td>
+                                    <td th:colspan="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_FINANCE'',''ROLE_SG'')')} ? 3 : 2"
+                                        class="text-center text-muted">
+                                        Aucun article
+                                    </td>
                                 </tr>
 
                                 <tr th:each="l : ${lignes}">
                                     <td th:text="${l.article != null ? l.article.designation : '-'}">-</td>
+
                                     <td class="text-end" th:text="${l.quantite}">0</td>
+
+                                    <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_FINANCE','ROLE_SG')"
+                                        class="text-end"
+                                        th:text="${l.article.prixUnitaire}">
+                                        0
+                                    </td>
                                 </tr>
+
                                 </tbody>
                             </table>
+                        </div>
+                        <!-- TOTAL (style document formel) -->
+                        <div class="px-3 pb-3 mt-2"
+                             sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_FINANCE','ROLE_SG')">
+
+                            <div class="d-flex justify-content-end">
+
+                                <table style="min-width: 320px; border-collapse: collapse;">
+                                    <tr style="border-top: 2px solid #000;">
+                                        <td class="text-end fw-bold" style="padding: 8px 12px;">
+                                            TOTAL
+                                        </td>
+
+                                        <td class="text-end fw-bold"
+                                            style="padding: 8px 12px; font-size: 1.15rem; min-width: 140px;">
+                    <span th:text="${demande.totalPrix != null
+                        ? #numbers.formatDecimal(demande.totalPrix, 1, 'COMMA', 2, 'POINT')
+                        : '0,00'}">
+                    </span>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                            </div>
                         </div>
 
                         <!-- ACTIONS -->
@@ -172,10 +284,12 @@
           or (canDecisionSG ?: false)}">
 
                                 <!-- Form unique -->
-                                <form th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}"
+                                <form id="decisionForm"
+                                      th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}"
                                       method="post" class="d-inline">
 
-                                    <!-- Label selon le niveau -->
+
+                                <!-- Label selon le niveau -->
                                     <div class="text-muted small mb-2" th:if="${canDecisionMG ?: false}">
                                         <i class="fas fa-user-shield me-1"></i> Validation Moyens Généraux
                                     </div>
@@ -185,6 +299,8 @@
                                     <div class="text-muted small mb-2" th:if="${canDecisionSG ?: false}">
                                         <i class="fas fa-gavel me-1"></i> Validation Secrétaire Général
                                     </div>
+
+                                    <input type="hidden" name="commentaire" id="decisionCommentaire">
 
                                     <!-- Type de demande uniquement quand MG valide -->
                                     <div class="mb-2" th:if="${canDecisionMG ?: false}">
@@ -206,27 +322,25 @@
                                     </div>
 
                                     <!-- BOUTONS -->
-                                    <button type="submit"
-                                            name="decision" value="REJECT"
+                                    <button type="button"
                                             class="btn btn-outline-danger me-2"
-                                            onclick="return confirm('Rejeter cette demande ?');">
+                                            id="btnOpenReject">
                                         <i class="fas fa-times me-1"></i> Rejeter
                                     </button>
 
-                                    <button type="submit"
-                                            name="decision" value="APPROVE"
+                                    <button type="button"
                                             class="btn btn-gradient-green"
-                                            onclick="return confirm('Valider cette demande ?');">
+                                            id="btnOpenApprove">
                                         <i class="fas fa-check me-1"></i> Valider
                                     </button>
 
+                                    <!-- hidden input décision envoyé au controller -->
+                                    <input type="hidden" name="decision" id="decisionValue">
+
                                 </form>
                             </div>
-
                             <div class="text-muted small"></div>
                         </div>
-
-
 
                     </div><!-- /bl-document -->
 
@@ -236,6 +350,120 @@
         </div>
     </section>
 </div>
+<div class="modal fade" id="decisionModal" tabindex="-1"
+     aria-labelledby="decisionModalLabel" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
 
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title" id="decisionModalLabel">
+                    <i class="fas fa-comment-dots me-2"></i>
+                    Confirmation
+                </h5>
+            </div>
+
+            <div class="modal-body">
+                <div class="alert alert-info mb-3" id="decisionModalInfo">
+                    <!-- rempli par JS -->
+                </div>
+
+                <label class="form-label fw-bold" for="commentaireInput">
+                    Commentaire <span class="text-danger" id="commentaireRequiredStar" style="display:none">*</span>
+                </label>
+
+                <textarea class="form-control"
+                          id="commentaireInput"
+                          rows="3"
+                          placeholder="Ajoutez un commentaire..."></textarea>
+
+                <div class="invalid-feedback d-block" id="commentaireError" style="display:none">
+                    Le commentaire est obligatoire pour un refus.
+                </div>
+
+                <div class="text-muted small mt-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Facultatif si vous validez, obligatoire si vous rejetez.
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-arrow-left me-1"></i> Annuler
+                </button>
+
+                <button type="button" class="btn btn-gradient-green" id="btnConfirmDecision">
+                    <i class="fas fa-paper-plane me-1"></i> Confirmer
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("decisionForm");
+        const modalEl = document.getElementById("decisionModal");
+
+        if (!form || !modalEl) return;
+
+        const btnApprove = document.getElementById("btnOpenApprove");
+        const btnReject  = document.getElementById("btnOpenReject");
+        const btnConfirm = document.getElementById("btnConfirmDecision");
+
+        const decisionValue = document.getElementById("decisionValue");
+        const hiddenComment = document.getElementById("decisionCommentaire");
+
+        const commentInput = document.getElementById("commentaireInput");
+        const infoBox = document.getElementById("decisionModalInfo");
+        const err = document.getElementById("commentaireError");
+        const star = document.getElementById("commentaireRequiredStar");
+
+        const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        function openModal(decision) {
+            decisionValue.value = decision;
+
+            // Reset UI
+            commentInput.value = "";
+            commentInput.classList.remove("is-invalid");
+            err.style.display = "none";
+
+            const isReject = (decision === "REJECT");
+            star.style.display = isReject ? "inline" : "none";
+
+            infoBox.className = "alert " + (isReject ? "alert-warning" : "alert-success");
+            infoBox.innerHTML = isReject
+                ? "<i class='fas fa-exclamation-triangle me-2'></i>Vous êtes sur le point de <b>rejeter</b> cette demande. Un commentaire est obligatoire."
+                : "<i class='fas fa-check-circle me-2'></i>Vous êtes sur le point de <b>valider</b> cette demande. Le commentaire est facultatif.";
+
+            modal.show();
+        }
+
+        btnApprove?.addEventListener("click", () => openModal("APPROVE"));
+        btnReject?.addEventListener("click",  () => openModal("REJECT"));
+
+        btnConfirm?.addEventListener("click", () => {
+            const decision = decisionValue.value;
+            const commentaire = (commentInput.value || "").trim();
+
+            const isReject = (decision === "REJECT");
+
+            if (isReject && commentaire.length === 0) {
+                commentInput.classList.add("is-invalid");
+                err.style.display = "block";
+                return;
+            }
+
+            // sync vers le hidden
+            hiddenComment.value = commentaire;
+
+            // submit du form
+            form.submit();
+        });
+    });
+    /*]]>*/
+</script>
 </body>
 </html>
