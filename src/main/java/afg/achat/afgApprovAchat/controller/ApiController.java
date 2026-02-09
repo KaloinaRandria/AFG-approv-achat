@@ -93,12 +93,7 @@ public class ApiController {
         // Demandeur
         String nom = demandeMere.getDemandeur() != null ? demandeMere.getDemandeur().getNom() : "";
         String prenom = demandeMere.getDemandeur() != null ? demandeMere.getDemandeur().getPrenom() : "";
-        String dep = (demandeMere.getDemandeur() != null
-                && demandeMere.getDemandeur().getDepartement() != null)
-                ? demandeMere.getDemandeur().getDepartement().getAcronyme()
-                : "";
 
-        dto.setDemandeur((nom + " " + prenom).trim() + (dep.isBlank() ? "" : " (" + dep + ")"));
 
         // Date
         dto.setDateDemande(demandeMere.getDateDemande());
