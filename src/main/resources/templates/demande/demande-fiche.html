@@ -277,19 +277,51 @@
                             <table class="bl-table">
                                 <thead>
                                 <tr>
-                                    <th style="width: 70%">DÉSIGNATION</th>
-                                    <th style="width: 30%" class="text-end">QUANTITÉ</th>
+
+                                    <!-- DESIGNATION -->
+                                    <th th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_FINANCE'',''ROLE_SG'')')}
+                          ? 'width:55%' : 'width:70%'">
+                                        DÉSIGNATION
+                                    </th>
+
+                                    <!-- QUANTITE -->
+                                    <th class="text-end"
+                                        th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_FINANCE'',''ROLE_SG'')')}
+                          ? 'width:20%' : 'width:30%'">
+                                        QUANTITÉ
+                                    </th>
+
+                                    <!-- PRIX -->
+                                    <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_FINANCE','ROLE_SG')"
+                                        style="width:25%"
+                                        class="text-end">
+                                        PRIX UNITAIRE
+                                    </th>
+
                                 </tr>
                                 </thead>
+
                                 <tbody>
+
                                 <tr th:if="${lignes == null || lignes.isEmpty()}">
-                                    <td colspan="2" class="text-center text-muted">Aucun article</td>
+                                    <td th:colspan="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_FINANCE'',''ROLE_SG'')')} ? 3 : 2"
+                                        class="text-center text-muted">
+                                        Aucun article
+                                    </td>
                                 </tr>
 
                                 <tr th:each="l : ${lignes}">
                                     <td th:text="${l.article != null ? l.article.designation : '-'}">-</td>
+
                                     <td class="text-end" th:text="${l.quantite}">0</td>
+
+                                    <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_FINANCE','ROLE_SG')"
+                                        class="text-end"
+                                        th:text="${l.article.prixUnitaire}">
+                                        0
+                                    </td>
                                 </tr>
+
                                 </tbody>
                             </table>
                         </div>
