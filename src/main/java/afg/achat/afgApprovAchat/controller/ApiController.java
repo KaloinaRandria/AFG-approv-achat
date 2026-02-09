@@ -64,7 +64,8 @@ public class ApiController {
         dto.setId(bonLivraisonMere.getId());
         dto.setFournisseur(bonLivraisonMere.getFournisseur().getNom());
         dto.setDate(bonLivraisonMere.getDateReception().toString());
-        dto.setDevise(bonLivraisonMere.getDevise().getDesignation());
+        dto.setDevise(bonLivraisonMere.getDevise().getAcronyme());
+        dto.setTotalPrix(bonLivraisonMere.getTotalPrix());
 
         List<BonLivraisonFille> lignes =
                 bonLivraisonFilleService.getBonLivraisonFillesByMereId(id);
@@ -72,6 +73,7 @@ public class ApiController {
             ArticleLivraisonDTO a = new ArticleLivraisonDTO();
             a.setDesignation(ligne.getArticle().getDesignation());
             a.setQuantite(ligne.getQuantiteRecu());
+            a.setPrixUnitaire(ligne.getPrixUnitaire());
             return a;
         }).toList();
 

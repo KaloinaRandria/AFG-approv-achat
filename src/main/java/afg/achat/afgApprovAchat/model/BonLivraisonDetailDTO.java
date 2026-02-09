@@ -17,5 +17,6 @@ public class BonLivraisonDetailDTO {
     private String fournisseur;
     private String date;
     private String devise;
+    private Double totalPrix;
     private List<ArticleLivraisonDTO> articles;
 }
