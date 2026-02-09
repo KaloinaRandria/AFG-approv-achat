@@ -14,4 +14,14 @@ public interface StockFilleRepo extends JpaRepository<StockFille,Integer> {
         where sf.article.codeArticle = :codeArticle
     """)
     Double getStockDisponible(@Param("codeArticle") String codeArticle);
+
+    @Query("""
+    select coalesce(sum(sf.sortie), 0)
+    from StockFille sf
+    join sf.stockMere sm
+    where sm.demandeMere.id = :demandeId
+      and sf.article.codeArticle = :codeArticle
+""")
+    Double totalSortieByDemandeAndArticle(String demandeId, String codeArticle);
+
 }

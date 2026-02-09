@@ -56,6 +56,11 @@ public class DemandeMere {
 
     int statut;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name="etat_livraison")
+    EtatLivraison etatLivraison = EtatLivraison.NON_LIVREE;
+
+
     public enum PrioriteDemande {
         P2,
         P1,
@@ -65,6 +70,8 @@ public class DemandeMere {
         OPEX,
         CAPEX
     }
+
+    public enum EtatLivraison { NON_LIVREE, PARTIELLE, LIVREE }
 
     public void setId(IdGenerator idGenerator) {
         this.id = idGenerator.generateId("DM","demande_mere_id_demande_mere_seq");
