@@ -7,6 +7,9 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <style>
+
+    </style>
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
@@ -50,7 +53,7 @@
                         <div class="input-group">
                             <span class="input-group-text"><i class="far fa-user"></i></span>
                             <input class="form-control" type="text" name="demandeur"
-                                   th:value="${demandeur}" placeholder="Nom / Prénom / Dept..." />
+                                   th:value="${demandeur}" placeholder="Nom / Prénom ..." />
                         </div>
                     </div>
 
@@ -64,18 +67,24 @@
                         </select>
                     </div>
 
+
                     <!-- Statut -->
                     <div class="col-md-2">
-                        <label class="form-label mb-1">Statut</label>
+                    <label class="form-label mb-1">Statut</label>
                         <select class="form-select" name="statut">
-                            <option value="" th:selected="${statut == null || statut == ''}">Tous</option>
-                            <option th:each="s : ${statuts}"
-                                    th:value="${s.name()}"
-                                    th:text="${s.name()}"
-                                    th:selected="${statut == s.name()}">
-                            </option>
+                            <option value="0" th:selected="${statut == null || statut == 0}">Tous</option>
+
+                            <th:block th:if="${statutFiltre != null}">
+                                <option th:each="entry : ${statutFiltre.entrySet()}"
+                                        th:value="${entry.key}"
+                                        th:text="${entry.value}"
+                                        th:selected="${statut != null && statut == entry.key}">
+                                </option>
+                            </th:block>
                         </select>
                     </div>
+
+
                     <!-- Taille (⚠️ pas d'auto-submit si tu veux appliquer avec Filtrer) -->
                     <div class="col-md-2">
                         <label class="form-label mb-1">
@@ -186,37 +195,52 @@
                             </th>
                             <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"><i class="fas fa-tags me-2 icon-gradient-light-blue"></i>Type de demande</th>
                             <th>Statut</th>
-                            <th class="text-center"><i class="fas fa-cogs me-2 icon-gradient-light-blue"></i>Action</th>
                         </tr>
                         </thead>
 
                         <tbody>
                         <!-- ✅ Pageable -->
-                        <tr th:each="demande : ${demandesMeres.content}">
+                        <tr th:each="demande : ${demandesMeres.content}"
+                            class="clickable-row"
+                            th:attr="data-href=@{/demande/fiche/{id}(id=${demande.id})}">
+
                             <td th:text="${demande.id}"></td>
                             <td th:text="${#temporals.format(demande.dateDemande, 'dd/MM/yyyy HH:mm')}"></td>
                             <td th:if="${showDemandeurColumn}"
-                                th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom + ' (' + demande.demandeur.departement.acronyme+ ')'}">
+                                th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom }">
                             </td>
                             <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
                                 class="td-nature-demande"
                                 th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">
                             </td>
-                            <td th:text="${demande.statutDemande}"></td>
-                            <td class="text-center">
-                                <button type="button"
-                                        class="btn btn-sm btn-view-demandeDetails"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#demandeDetailsModal"
-                                        th:data-id="${demande.id}"
-                                        title="Voir la demande">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+                            <td>
+                              <span class="badge-status"
+                                    th:classappend="
+                                      ${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).CREE} ? ' badge-wait' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1} ? ' badge-info' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N2} ? ' badge-purple' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N3} ? ' badge-purple' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE} ? ' badge-success' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' badge-danger' : ' badge-info')))))">
+
+                                <i class="fas"
+                                   th:classappend="
+                                     ${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).CREE} ? ' fa-user-clock' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1} ? ' fa-clipboard-check' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N2} ? ' fa-coins' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N3} ? ' fa-gavel' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE} ? ' fa-check-circle' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' fa-stop-circle-o' : ' fa-info-circle')))))">
+
+                                </i>
+                                <span th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></span>
+                              </span>
                             </td>
                         </tr>
 
                         <tr th:if="${demandesMeres.totalElements == 0}">
-                            <td colspan="6" class="text-center text-muted py-4">
+                            <td class="text-center text-muted py-4"
+                                th:colspan="${(showDemandeurColumn?1:0) + (#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'')')?1:0) + 3}">
                                 Aucune demande trouvée
                             </td>
                         </tr>
@@ -231,7 +255,10 @@
                         <li class="page-item" th:classappend="${demandesMeres.first} ? 'disabled'">
                             <a class="page-link"
                                th:href="@{/demande/list(page=${demandesMeres.number - 1}, size=${size},
-               q=${q},dateFrom=${dateFrom},dateTo=${dateTo},sort=${sort},dir=${dir})}">
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort=${sort},dir=${dir})}"
+                            >
                                 Précédente
                             </a>
                         </li>
@@ -246,8 +273,11 @@
                                 th:classappend="${p == demandesMeres.number} ? 'active'">
                                 <a class="page-link"
                                    th:href="@{/demande/list(page=${p}, size=${size},
-                   q=${q},dateFrom=${dateFrom},dateTo=${dateTo},sort=${sort},dir=${dir})}"
-                                   th:text="${p + 1}">
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort=${sort},dir=${dir})}"
+                                   th:text="${p + 1}"
+                                >
                                 </a>
                             </li>
                         </th:block>
@@ -256,7 +286,10 @@
                         <li class="page-item" th:classappend="${demandesMeres.last} ? 'disabled'">
                             <a class="page-link"
                                th:href="@{/demande/list(page=${demandesMeres.number + 1}, size=${size},
-               q=${q},dateFrom=${dateFrom},dateTo=${dateTo},sort=${sort},dir=${dir})}">
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort=${sort},dir=${dir})}"
+                            >
                                 Suivante
                             </a>
                         </li>
@@ -274,199 +307,28 @@
         </div>
     </section>
 </div>
-
-<div class="modal fade" id="demandeDetailsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content bl-document">
-
-            <!-- EN-TÊTE DOCUMENT -->
-            <div class="bl-header">
-                <div class="bl-company">
-                    <img th:src="@{/img/logo_afg.png}" alt="Logo" height="60">
-                </div>
-                <div class="bl-title">
-                    <h3>DEMANDE DE MATERIEL</h3>
-                    <span>Réference : <strong id="modalDemandeId"></strong></span>
-                </div>
-            </div>
-
-            <!-- INFOS GÉNÉRALES -->
-            <div class="bl-infos">
-                <div>
-                    <strong>Demandeur :</strong>
-                    <div id="modalDemandeDemandeur"></div>
-                </div>
-                <div>
-                    <strong>Date :</strong>
-                    <div id="modalDemandeDate"></div>
-                </div>
-                <div>
-                    <strong>Statut :</strong>
-                    <div id="modalDemandeStatut"></div>
-                </div>
-                <div>
-                    <strong>Type de Demande :</strong>
-
-                    <!-- Lecture seule (tout le monde) -->
-                    <div id="modalDemandeNatureText"></div>
-
-                    <!-- Edition (MG/Admin uniquement) -->
-                    <div sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')" class="mt-2">
-                        <select id="modalDemandeNatureSelect" class="form-select form-select-sm">
-                            <option value="">-- Choisir --</option>
-                            <option th:each="n : ${natures}"
-                                    th:value="${n.name()}"
-                                    th:text="${n.name()}">
-                            </option>
-                        </select>
-
-
-                        <button id="btnSaveNature" type="button" class="btn btn-sm btn-gradient-blue mt-3">
-                            Enregistrer
-                        </button>
-
-
-                        <div id="natureSaveMsg" class="small mt-1"></div>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- TABLE ARTICLES -->
-            <div class="bl-body">
-                <table class="bl-table">
-                    <thead>
-                    <tr>
-                        <th style="width: 70%">DÉSIGNATION</th>
-                        <th style="width: 30%" class="text-end">QUANTITÉ</th>
-                    </tr>
-                    </thead>
-                    <tbody id="modalDemandeArticles">
-                    <tr>
-                        <td colspan="2" class="text-center text-muted">
-                            Chargement...
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- FOOTER -->
-            <div class="modal-footer bl-footer">
-                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                    Fermer
-                </button>
-            </div>
-
-        </div>
-    </div>
-</div>
-<script th:inline="none">
+<script th:inline="javascript">
     /*<![CDATA[*/
-    const formatQte = new Intl.NumberFormat('fr-FR', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2
-    });
+    document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll("tr.clickable-row").forEach(row => {
+            row.addEventListener("click", (e) => {
+                // Si on clique sur un lien/bouton/input à l'intérieur, on laisse le comportement normal
+                if (e.target.closest("a, button, input, select, textarea, label")) return;
 
-    let currentDemandeId = null;
-    let $currentRow = null;
+                const href = row.getAttribute("data-href");
+                if (!href) return;
 
-    document.addEventListener('DOMContentLoaded', () => {
-
-        // Ouvrir le modal + charger détails
-        $('#demandeTable').on('click', '.btn-view-demandeDetails', function () {
-            const demandeId = $(this).data('id');
-            currentDemandeId = demandeId;
-            $currentRow = $(this).closest('tr');
-
-            // reset modal
-            $('#modalDemandeId').text(demandeId);
-            $('#modalDemandeDemandeur').text('');
-            $('#modalDemandeDate').text('');
-            $('#modalDemandeStatut').text('');
-            $('#modalDemandeNatureText').text('');
-            $('#modalDemandeNatureSelect').val('');
-            $('#natureSaveMsg').text('').removeClass('text-danger text-success');
-            $('#modalDemandeArticles').html('<tr><td colspan="2" class="text-center text-muted">Chargement...</td></tr>');
-
-            $.ajax({
-                url: '/api/demande/' + demandeId + '/details',
-                method: 'GET',
-                success: function (data) {
-
-                    $('#modalDemandeId').text(data.id ?? '-');
-                    $('#modalDemandeDemandeur').text(data.demandeur ?? '-');
-                    $('#modalDemandeStatut').text(data.statutDemande ?? '-');
-
-                    // ✅ Type demande: texte + préselection select
-                    const type = (data.typeDemande ?? '').toString().trim(); // "OPEX" / "CAPEX" / ""
-                    $('#modalDemandeNatureText').text(type !== '' ? type : '-');
-                    $('#modalDemandeNatureSelect').val(type); // si "" => revient sur option value=""
-
-                    // date format
-                    if (data.dateDemande) {
-                        const dateObj = new Date(data.dateDemande);
-                        const day = String(dateObj.getDate()).padStart(2, '0');
-                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                        const year = dateObj.getFullYear();
-                        const hours = String(dateObj.getHours()).padStart(2, '0');
-                        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-                        $('#modalDemandeDate').text(`${day}/${month}/${year} ${hours}:${minutes}`);
-                    } else {
-                        $('#modalDemandeDate').text('-');
-                    }
-
-                    // lignes
-                    if (data.articles && data.articles.length > 0) {
-                        let rows = '';
-                        data.articles.forEach(a => {
-                            const qte = Number(String(a.quantite).replace(/\s/g, '').replace(',', '.'));
-                            rows += `<tr>
-              <td>${a.designation ?? '-'}</td>
-              <td class="text-end">${formatQte.format(isNaN(qte) ? 0 : qte)}</td>
-            </tr>`;
-                        });
-                        $('#modalDemandeArticles').html(rows);
-                    } else {
-                        $('#modalDemandeArticles').html('<tr><td colspan="2" class="text-center text-muted">Aucun article</td></tr>');
-                    }
-                },
-                error: function () {
-                    $('#modalDemandeArticles').html('<tr><td colspan="2" class="text-center text-danger">Erreur de chargement</td></tr>');
+                // Ctrl/Cmd click => nouvel onglet
+                if (e.ctrlKey || e.metaKey) {
+                    window.open(href, "_blank");
+                } else {
+                    window.location.href = href;
                 }
             });
         });
-
-        // Enregistrer type demande (PUT)
-        $('#btnSaveNature').on('click', function () {
-            const val = $('#modalDemandeNatureSelect').val(); // "OPEX" / "CAPEX" / ""
-
-            $.ajax({
-                url: `/api/demande/${currentDemandeId}/type-demande`,
-                method: 'PUT',
-                contentType: 'application/json',
-                data: JSON.stringify({ typeDemande: val }),
-                success: function () {
-                    $('#natureSaveMsg').text('Type de demande enregistré')
-                        .removeClass('text-danger').addClass('text-success');
-
-                    // Mise à jour dans le modal
-                    $('#modalDemandeNatureText').text(val ? val : '-');
-
-                    // Mise à jour dans la table
-                    if ($currentRow) {
-                        $currentRow.find('.td-nature-demande').text(val ? val : '-');
-                    }
-                },
-                error: function (xhr) {
-                    const msg = xhr.responseText ? xhr.responseText : 'Erreur';
-                    $('#natureSaveMsg').text(msg).removeClass('text-success').addClass('text-danger');
-                }
-            });
-        });
-
     });
     /*]]>*/
 </script>
+
 </body>
 </html>

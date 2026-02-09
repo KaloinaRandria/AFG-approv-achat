@@ -3,6 +3,7 @@ package afg.achat.afgApprovAchat.service;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.Famille;
 import afg.achat.afgApprovAchat.model.util.ArticleHistorique;
+import afg.achat.afgApprovAchat.model.util.MontantCalculator;
 import afg.achat.afgApprovAchat.model.util.Udm;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.ArticleRepo;
@@ -169,4 +170,21 @@ public class ArticleService {
 
         return articleRepo.searchMulti(c, d, f, u, pageable);
     }
+
+
+    @Transactional
+    public void updatePrixUnitaire(String codeArticle, String prixUnitaireStr) {
+        if (prixUnitaireStr == null || prixUnitaireStr.isBlank()) return;
+
+        Article a = this.getArticleByCodeArticle(codeArticle)
+                .orElseThrow(() -> new IllegalArgumentException("Article introuvable: " + codeArticle));
+
+        a.setPrixUnitaire(prixUnitaireStr);
+        articleRepo.save(a);
+    }
+
+    public Article getArticleByCodeProvisoire(String codeProvisoire) {
+        return articleRepo.findArticlesByCodeProvisoire(codeProvisoire);
+    }
+
 }

@@ -22,11 +22,11 @@ public class ValidationDemande {
     DemandeMere demandeMere;
     @ManyToOne @JoinColumn(name = "id_validateur" , referencedColumnName = "id_utilisateur")
     Utilisateur validateur;
-    @Column(name = "statut_demande")
-    @Enumerated(EnumType.STRING)
-    DemandeMere.StatutDemande statut;
+    int statut;
     @Column(name = "date_action")
     LocalDateTime dateAction;
+    @Column(columnDefinition = "TEXT")
+    String commentaire;
 
     public void setDateAction(String dateAction) {
         this.dateAction = LocalDateTime.parse(dateAction);

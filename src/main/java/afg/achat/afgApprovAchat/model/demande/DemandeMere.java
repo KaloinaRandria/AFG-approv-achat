@@ -1,6 +1,6 @@
 package afg.achat.afgApprovAchat.model.demande;
 
-import afg.achat.afgApprovAchat.model.util.Adresse;
+import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.persistence.*;
@@ -28,37 +28,42 @@ public class DemandeMere {
     String id;
     @ManyToOne @JoinColumn(name = "id_demandeur", referencedColumnName = "id_utilisateur")
     Utilisateur demandeur;
-    @ManyToOne @JoinColumn(name = "id_adresse", referencedColumnName = "id_adresse")
-    Adresse adresse;
     @Column(name = "date_demande")
     LocalDateTime dateDemande;
-    @Column(name = "date_sortie")
+    @Column(name = "date_sortie") //date prevue livraison
     LocalDateTime dateSortie;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "statut_demande", nullable = false)
-    StatutDemande statutDemande = StatutDemande.CREE;
 
 
     @Enumerated(EnumType.STRING)
     @Column(name = "nature_demande")
     NatureDemande natureDemande;
 
-    @Column(name = "description")
+    @Column(name = "description", columnDefinition = "TEXT")
     String description;
 
-    public enum NatureDemande {
-        OPEX, // Remplacement, Maintenance
-        CAPEX//Nouvel Equipement
-    }
+    @Column(name = "motif_evoque", columnDefinition = "TEXT")
+    String motifEvoque;
 
-    public enum StatutDemande {
-        CREE,        // créée mais non soumise
-        SOUMISE,          // envoyée pour validation
-        EN_VALIDATION,    // en cours (optionnel)
-        VALIDEE,          // approuvée
-        REJETEE,          // refusée
-        ANNULEE           // annulée par le demandeur
+    @Enumerated(EnumType.STRING)
+    PrioriteDemande priorite;
+
+    @ManyToOne
+    @JoinColumn(name = "id_centre_budgetaire", referencedColumnName = "id_centre_budgetaire")
+    CentreBudgetaire centreBudgetaire;
+
+    @Column(name = "total_prix")
+    double totalPrix;
+
+    int statut;
+
+    public enum PrioriteDemande {
+        P2,
+        P1,
+        P0
+    }
+    public enum NatureDemande {
+        OPEX,
+        CAPEX
     }
 
     public void setId(IdGenerator idGenerator) {
@@ -71,8 +76,7 @@ public class DemandeMere {
     public void setDateSortie(String dateSortie) {
         this.dateSortie = LocalDateTime.parse(dateSortie);
     }
-    public DemandeMere(Adresse adresse, String dateDemande, String dateSortie) {
-        this.setAdresse(adresse);
+    public DemandeMere(String dateDemande, String dateSortie) {
         this.setDateDemande(dateDemande);
         this.setDateSortie(dateSortie);
     }

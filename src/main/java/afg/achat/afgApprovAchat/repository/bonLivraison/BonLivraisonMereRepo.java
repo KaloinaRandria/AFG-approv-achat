@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Repository
 public interface BonLivraisonMereRepo extends JpaRepository<BonLivraisonMere,String> {
@@ -62,5 +63,10 @@ public interface BonLivraisonMereRepo extends JpaRepository<BonLivraisonMere,Str
             @Param("dateTo") LocalDateTime dateTo,
             Pageable pageable
     );
+    @Query("SELECT bl FROM BonLivraisonMere  bl WHERE bl.idFacture = :idFacture")
+    BonLivraisonMere findByIdFacture(String idFacture);
+
+    boolean existsByIdFacture(String idFacture);
+
 
 }
