@@ -7,19 +7,6 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
-    <style>
-        .bl-footer{
-            border-top: 1px solid rgba(0,0,0,.15);
-            margin-top: 18px;
-            padding: 10px 16px;
-            text-align: center;
-            font-size: 11px;
-            color: #6b7280;
-            letter-spacing: .2px;
-            line-height: 1.35;
-            text-transform: uppercase;
-        }
-    </style>
 </head>
 
 <body>
@@ -36,9 +23,6 @@
                     <h1 class="fw-bold text-gradient-blue mb-0">
                         <i class="fas fa-file-alt icon-gradient-blue me-2"></i> Fiche demande
                     </h1>
-<!--                    <span class="pill">-->
-<!--                        Référence : <strong th:text="${demande.id}">-</strong>-->
-<!--                    </span>-->
                 </div>
 
                 <div class="d-flex gap-2">
@@ -242,12 +226,7 @@
                             </div>
                             <div class="text-muted small"></div>
                         </div>
-                        <!-- FOOTER -->
-                        <div class="bl-footer">
-                            <div>AFG BANK MADAGASCAR SOCIETE ANONYME AU CAPITAL DE MGA 95 000 000 000</div>
-                            <div>SIEGE SOCIAL IMMEUBLE GATEWAY RUE SETH RANOHISOA ANKORONDRANO ANTANANARIVO 101</div>
-                            <div>RCS 2023B00266 - NIF 5017735499 - STAT 64191 11 2023 0 10266</div>
-                        </div>
+                        <div th:replace="~{fragment/footer-doc :: footer-doc}"></div>
 
                     </div><!-- /bl-document -->
 
