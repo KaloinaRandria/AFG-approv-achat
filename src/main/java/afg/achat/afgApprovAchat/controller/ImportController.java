@@ -26,8 +26,8 @@ public class ImportController {
 
     @PostMapping("/import-data")
     public String importData(@RequestParam(name = "file1") MultipartFile file1,
-//                             @RequestParam(name = "file2") MultipartFile file2,
-//                             @RequestParam(name = "file3") MultipartFile file3,
+                             @RequestParam(name = "file2") MultipartFile file2,
+                             @RequestParam(name = "file3") MultipartFile file3,
                              RedirectAttributes redirectAttributes, HttpServletRequest request) {
 //        if (file1.isEmpty() || file2.isEmpty() || file3.isEmpty()) {
 //            redirectAttributes.addFlashAttribute("ko",
@@ -35,9 +35,9 @@ public class ImportController {
 //            return "redirect:/import/import-saisie-page";
 //        }
 
-//        importService.importCSVFamille(file2);
-//        importService.importCSVArticle(file1);
-//        importService.importCSVFournisseur(file3);
+        importService.importCSVFamille(file2);
+        importService.importCSVArticle(file1);
+        importService.importCSVFournisseur(file3);
         importService.importCSVBLFille(file1);
         redirectAttributes.addFlashAttribute("ok",
                 "Import effectué avec succès");

@@ -109,3 +109,14 @@ WHERE COALESCE(sf.entree, 0) > 0 OR COALESCE(sf.sortie, 0) > 0
 
 ORDER BY date_mouvement DESC;
 
+SELECT conname, pg_get_constraintdef(c.oid)
+FROM pg_constraint c
+         JOIN pg_class t ON t.oid = c.conrelid
+WHERE t.relname = 'demande_mere'
+  AND c.conname = 'demande_mere_priorite_check';
+
+ALTER TABLE demande_mere DROP CONSTRAINT demande_mere_priorite_check;
+
+ALTER TABLE demande_mere
+    ADD CONSTRAINT demande_mere_priorite_check
+        CHECK (priorite IN ('P1','P2','P3'));

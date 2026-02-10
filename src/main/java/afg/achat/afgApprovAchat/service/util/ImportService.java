@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.FileReader;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class ImportService {
@@ -38,9 +39,11 @@ public class ImportService {
     BonLivraisonMereService bonLivraisonMereService;
     @Autowired
     BonLivraisonFilleRepo bonLivraisonFilleRepo;
+    @Autowired
+    UdmService udmService;
 
     public void importCSVFamille(MultipartFile familleFile) {
-        try (InputStreamReader reader = new InputStreamReader(familleFile.getInputStream());
+        try (InputStreamReader reader = new InputStreamReader(familleFile.getInputStream(), StandardCharsets.UTF_8);
              CSVReader csvReader = new CSVReaderBuilder(reader)
                 .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
                 .build()) {
@@ -61,7 +64,7 @@ public class ImportService {
     }
 
     public void importCSVFournisseur(MultipartFile fournisseurFile) {
-        try (InputStreamReader reader = new InputStreamReader(fournisseurFile.getInputStream());
+        try (InputStreamReader reader = new InputStreamReader(fournisseurFile.getInputStream(), StandardCharsets.UTF_8);
         CSVReader csvReader = new CSVReaderBuilder(reader)
                 .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
                 .build()) {
@@ -93,7 +96,7 @@ public class ImportService {
     }
 
     public void importCSVArticle(MultipartFile articleFile) {
-        try (InputStreamReader reader = new InputStreamReader(articleFile.getInputStream());
+        try (InputStreamReader reader = new InputStreamReader(articleFile.getInputStream(), StandardCharsets.ISO_8859_1);
              CSVReader csvReader = new CSVReaderBuilder(reader)
                 .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
                 .build()) {
@@ -114,6 +117,9 @@ public class ImportService {
                     seuilMin = Integer.parseInt(column[4].trim());
                 }
                 article.setSeuilMin(seuilMin);
+                String[] finalColumn = column;
+                article.setUdm(udmService.getUdmById(Integer.parseInt(column[6].trim()))
+                        .orElseThrow(() -> new RuntimeException("Udm non trouvée avec l'id: " + finalColumn[6].trim())));
 
                 articleService.saveArticle(article);
             }
@@ -124,7 +130,7 @@ public class ImportService {
     }
 
     public void importCSVAchat(MultipartFile achatFile) {
-        try(InputStreamReader reader = new InputStreamReader(achatFile.getInputStream());
+        try(InputStreamReader reader = new InputStreamReader(achatFile.getInputStream(), StandardCharsets.ISO_8859_1);
             CSVReader csvReader = new CSVReaderBuilder(reader)
                     .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
                     .build()) {
@@ -139,7 +145,7 @@ public class ImportService {
     }
 
     public void importCSVBLMere(MultipartFile factureFile) {
-        try (InputStreamReader reader = new InputStreamReader(factureFile.getInputStream());
+        try (InputStreamReader reader = new InputStreamReader(factureFile.getInputStream(), StandardCharsets.UTF_8);
              CSVReader csvReader = new CSVReaderBuilder(reader)
                      .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
                      .build()) {
@@ -178,7 +184,7 @@ public class ImportService {
 
     @Transactional
     public void importCSVBLFille(MultipartFile file) {
-        try (InputStreamReader reader = new InputStreamReader(file.getInputStream());
+        try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
              CSVReader csvReader = new CSVReaderBuilder(reader)
                      .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
                      .build()) {
