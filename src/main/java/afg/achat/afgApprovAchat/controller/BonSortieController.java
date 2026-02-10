@@ -35,7 +35,7 @@ public class BonSortieController {
     @Autowired BonSortieMereRepo bsMereRepo;
     @Autowired BonSortieFilleRepo bsFilleRepo;
 
-    @Autowired BonSortieFilleService bonSortieService; // contient confirmerSortie()
+    @Autowired BonSortieFilleService bonSortieService;
     @Autowired StockFilleService stockFilleService;
 
     @Autowired IdGenerator idGenerator;
