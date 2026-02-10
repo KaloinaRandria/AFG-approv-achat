@@ -5,12 +5,13 @@ import afg.achat.afgApprovAchat.model.Famille;
 import afg.achat.afgApprovAchat.model.Fournisseur;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
-import afg.achat.afgApprovAchat.model.stock.StockFille;
+import afg.achat.afgApprovAchat.model.stock.StockMere;
 import afg.achat.afgApprovAchat.repository.bonLivraison.BonLivraisonFilleRepo;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FamilleService;
 import afg.achat.afgApprovAchat.service.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
+import afg.achat.afgApprovAchat.service.stock.StockMereService;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
@@ -19,9 +20,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class ImportService {
@@ -41,6 +47,8 @@ public class ImportService {
     BonLivraisonFilleRepo bonLivraisonFilleRepo;
     @Autowired
     UdmService udmService;
+    @Autowired
+    StockMereService stockMereService;
 
     public void importCSVFamille(MultipartFile familleFile) {
         try (InputStreamReader reader = new InputStreamReader(familleFile.getInputStream(), StandardCharsets.UTF_8);
@@ -129,20 +137,6 @@ public class ImportService {
         }
     }
 
-    public void importCSVAchat(MultipartFile achatFile) {
-        try(InputStreamReader reader = new InputStreamReader(achatFile.getInputStream(), StandardCharsets.ISO_8859_1);
-            CSVReader csvReader = new CSVReaderBuilder(reader)
-                    .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
-                    .build()) {
-            String[] column;
-            csvReader.readNext(); // Ignorer l'en-tête
-
-
-        } catch (Exception e) {
-            throw new RuntimeException("Erreur lors de l'importation du fichier CSV", e);
-        }
-
-    }
 
     public void importCSVBLMere(MultipartFile factureFile) {
         try (InputStreamReader reader = new InputStreamReader(factureFile.getInputStream(), StandardCharsets.UTF_8);
@@ -257,6 +251,143 @@ public class ImportService {
         return Double.parseDouble(cleaned);
     }
 
+    @Transactional
+    public void importCSVAchat(MultipartFile achatFile) {
+        try (InputStreamReader reader = new InputStreamReader(achatFile.getInputStream(), StandardCharsets.UTF_8);
+             CSVReader csvReader = new CSVReaderBuilder(reader)
+                     .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
+                     .build()) {
 
+            csvReader.readNext(); // header
+            String[] row;
+
+            // Cache par facture pour éviter 1000 requêtes
+            Map<String, BonLivraisonMere> blCache = new HashMap<>();
+            Map<String, Double> totalCache = new HashMap<>();
+
+            while ((row = csvReader.readNext()) != null) {
+
+                String idFacture = safe(row, 15);    // ✅ adapte
+                String codeArt   = safe(row, 2);    // ✅ adapte (code provisoire)
+                String qteStr    = safe(row, 9);    // ✅ adapte
+                String puStr     = safe(row, 10);    // ✅ adapte
+                String dateStr   = safe(row, 1);    // ✅ adapte si tu as une date, sinon ""
+
+                if (idFacture.isEmpty() || codeArt.isEmpty() || qteStr.isEmpty()) continue;
+
+                double qte = parseDoubleFlexible(qteStr);
+                double pu  = puStr.isEmpty() ? 0.0 : parseDoubleFlexible(puStr);
+
+                // 1) BL MERE (get or create)
+                BonLivraisonMere blMere = blCache.get(idFacture);
+                if (blMere == null) {
+                    if (bonLivraisonMereService.existsByIdFacture(idFacture)) {
+                        blMere = bonLivraisonMereService.getBonLivraisonMereByIdFacture(idFacture);
+                    } else {
+                        blMere = new BonLivraisonMere();
+                        blMere.setId(idGenerator);
+                        blMere.setIdFacture(idFacture);
+
+                        blMere.setDevise(deviseService.getDeviseById(1)
+                                .orElseThrow(() -> new RuntimeException("Devise non trouvée id=1")));
+
+                        blMere.setDescription("BL importé depuis achat - Facture N° " + idFacture);
+
+                        // date réception
+                        if (!dateStr.isEmpty()) {
+                            blMere.setDateReception(String.valueOf(parseDateReception(dateStr)));
+                            // si format ISO-8601
+                        } else {
+                            blMere.setDateReception(String.valueOf(java.time.LocalDateTime.now()));
+                        }
+
+                        blMere.setTotalPrix(0.0);
+                        bonLivraisonMereService.insertBonLivraisonMere(blMere);
+                    }
+
+                    blCache.put(idFacture, blMere);
+                    totalCache.put(idFacture, blMere.getTotalPrix() == null ? 0.0 : blMere.getTotalPrix());
+                }
+
+                // 2) Article
+                Article article = articleService.getArticleByCodeProvisoire(codeArt);
+
+                // 3) Update dernier prix article (dernier prix = celui de la dernière ligne lue)
+                if (pu > 0) {
+                    article.setPrixUnitaire(String.valueOf(pu));
+                    // si tu veux éviter save à chaque ligne, tu peux laisser JPA dirty-checker,
+                    // mais safe: articleService.saveArticle(article) ou articleRepo.save(article)
+                    articleService.saveArticle(article);
+                }
+
+                // 4) BL Fille (cumule)
+                BonLivraisonMere finalBlMere = blMere;
+                BonLivraisonFille blFille = bonLivraisonFilleRepo
+                        .findByBonLivraisonMereAndArticle(blMere, article)
+                        .orElseGet(() -> {
+                            BonLivraisonFille n = new BonLivraisonFille();
+                            n.setBonLivraisonMere(finalBlMere);
+                            n.setArticle(article);
+                            n.setPrixUnitaire(String.valueOf(pu));
+                            n.setQuantiteRecu("0");
+                            n.setQuantiteDemande("0");
+                            return n;
+                        });
+
+                // on garde le dernier PU (celui importé le plus récent)
+                if (pu > 0) blFille.setPrixUnitaire(String.valueOf(pu));
+
+                blFille.setQuantiteRecu(String.valueOf(blFille.getQuantiteRecu() + qte));
+                blFille.setQuantiteDemande(String.valueOf(blFille.getQuantiteDemande() + qte));
+                bonLivraisonFilleRepo.save(blFille);
+
+                // 5) Stock : entrée
+                StockMere stockMere = stockMereService.getOrCreateStockMere(blMere);
+                stockMereService.addEntree(stockMere, article, qte);
+
+                // 6) Total BL
+                double ligneTotal = qte * pu;
+                totalCache.put(idFacture, totalCache.get(idFacture) + ligneTotal);
+            }
+
+            // ✅ à la fin : update totalPrix de chaque BL
+            for (Map.Entry<String, BonLivraisonMere> e : blCache.entrySet()) {
+                String idFacture = e.getKey();
+                BonLivraisonMere bl = e.getValue();
+                bl.setTotalPrix(totalCache.get(idFacture));
+                bonLivraisonMereService.insertBonLivraisonMere(bl); // ou save/update selon ton service
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de l'importation achat (BL + Stock)", e);
+        }
+    }
+
+    private LocalDateTime parseDateReception(String s) {
+        if (s == null) return LocalDateTime.now();
+        String v = s.trim();
+        if (v.isEmpty()) return LocalDateTime.now();
+
+        // 1) dd/MM/yyyy
+        try {
+            DateTimeFormatter f = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            LocalDate d = LocalDate.parse(v, f);
+            return d.atStartOfDay();
+        } catch (DateTimeParseException ignored) {}
+
+        // 2) dd/MM/yyyy HH:mm
+        try {
+            DateTimeFormatter f = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            return LocalDateTime.parse(v, f);
+        } catch (DateTimeParseException ignored) {}
+
+        // 3) ISO fallback (2024-11-26T10:15:00)
+        try {
+            return LocalDateTime.parse(v);
+        } catch (DateTimeParseException ignored) {}
+
+        // fallback final
+        return LocalDateTime.now();
+    }
 
 }
