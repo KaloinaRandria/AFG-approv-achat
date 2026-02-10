@@ -2,6 +2,7 @@ package afg.achat.afgApprovAchat.service.stock;
 
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
+import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.stock.StockFille;
 import afg.achat.afgApprovAchat.model.stock.StockMere;
 import afg.achat.afgApprovAchat.repository.stock.StockFilleRepo;
@@ -41,6 +42,26 @@ public class StockMereService {
 
         sf.setEntree(String.valueOf(sf.getEntree() + qte));
         // sortie reste 0 ici
+        stockFilleRepo.save(sf);
+    }
+
+    public StockMere getOrCreateStockMere(DemandeMere dm) {
+        return stockMereRepo.findByDemandeMere(dm)
+                .orElseGet(() -> stockMereRepo.save(new StockMere(dm, null)));
+    }
+
+    public void addSortie(StockMere stockMere, Article article, double qte) {
+        StockFille sf = stockFilleRepo.findByStockMereAndArticle(stockMere, article)
+                .orElseGet(() -> {
+                    StockFille n = new StockFille();
+                    n.setStockMere(stockMere);
+                    n.setArticle(article);
+                    n.setEntree("0");
+                    n.setSortie("0");
+                    return n;
+                });
+
+        sf.setSortie(String.valueOf(sf.getSortie() + qte));
         stockFilleRepo.save(sf);
     }
 }

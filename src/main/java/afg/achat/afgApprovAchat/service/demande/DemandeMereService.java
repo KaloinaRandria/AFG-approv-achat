@@ -4,6 +4,7 @@ import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.repository.demande.DemandeFilleRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereRepo;
+import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -23,7 +24,8 @@ public class DemandeMereService {
     DemandeMereRepo demandeMereRepo;
     @Autowired
     DemandeFilleRepo demandeFilleRepo;
-
+    @Autowired
+    IdGenerator idGenerator;
     public DemandeMere[] getAllDemandesMeres() {
         return demandeMereRepo.findAll().toArray(new DemandeMere[0]);
     }
@@ -171,6 +173,20 @@ public class DemandeMereService {
     }
 
 
+    public void saveIfNotExists(DemandeMere dm) {
+        demandeMereRepo.existsById(dm.getId());
+    }
 
+    @Transactional
+    public DemandeMere getOrCreateByCodeProvisoire(String refDemande, LocalDateTime dt) {
+        return demandeMereRepo.findByCodeProvisoire(refDemande)
+                .orElseGet(() -> {
+                    DemandeMere dm = new DemandeMere();
+                    dm.setId(idGenerator);           // SI ton setId(IdGenerator) existe
+                    dm.setCodeProvisoire(refDemande);
+                    dm.setDateDemande(String.valueOf(dt));           // ou String si ton champ est String
+                    return demandeMereRepo.save(dm);
+                });
+    }
 
 }

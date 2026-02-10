@@ -5,12 +5,14 @@ import afg.achat.afgApprovAchat.model.Famille;
 import afg.achat.afgApprovAchat.model.Fournisseur;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
+import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.stock.StockMere;
 import afg.achat.afgApprovAchat.repository.bonLivraison.BonLivraisonFilleRepo;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FamilleService;
 import afg.achat.afgApprovAchat.service.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
+import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
@@ -49,6 +51,8 @@ public class ImportService {
     UdmService udmService;
     @Autowired
     StockMereService stockMereService;
+    @Autowired
+    DemandeMereService demandeMereService;
 
     public void importCSVFamille(MultipartFile familleFile) {
         try (InputStreamReader reader = new InputStreamReader(familleFile.getInputStream(), StandardCharsets.UTF_8);
@@ -389,5 +393,68 @@ public class ImportService {
         // fallback final
         return LocalDateTime.now();
     }
+
+    private LocalDateTime parseDateJour(String s) {
+        if (s == null || s.isBlank()) return LocalDateTime.now();
+        try {
+            DateTimeFormatter f = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            LocalDate d = LocalDate.parse(s.trim(), f);
+            return d.atStartOfDay();
+        } catch (DateTimeParseException ex) {
+            return LocalDateTime.now();
+        }
+    }
+
+
+    @Transactional
+    public void importCSVSortieStock(MultipartFile demandeFile) {
+        try (InputStreamReader reader = new InputStreamReader(demandeFile.getInputStream(), StandardCharsets.ISO_8859_1);
+             CSVReader csvReader = new CSVReaderBuilder(reader)
+                     .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
+                     .build()) {
+
+            csvReader.readNext(); // header
+            String[] row;
+
+            // cache pour éviter de recréer la même demande
+            Map<String, DemandeMere> dmCache = new HashMap<>();
+
+            while ((row = csvReader.readNext()) != null) {
+                String refDemande = safe(row, 0); // référence de la demande (ex: "DM-2024-001")
+                String dateStr    = safe(row, 1);   // dd/MM/yyyy
+                String codeArt    = safe(row, 2);   // CODE (code provisoire)
+                String qteStr     = safe(row, 8);   // Qte
+
+
+                if (codeArt.isEmpty() || qteStr.isEmpty()) continue;
+
+                double qte = parseDoubleFlexible(qteStr);
+                if (qte <= 0) continue;
+
+                LocalDateTime dt = parseDateJour(dateStr); // 26/11/2024 -> 2024-11-26T00:00
+
+                // 1) DemandeMere (get or create)
+                DemandeMere dm = dmCache.get(refDemande);
+                if (dm == null) {
+                    dm = demandeMereService.getOrCreateByCodeProvisoire(refDemande, dt);
+                    dmCache.put(refDemande, dm);
+                }
+
+
+                // 2) Article (chez toi via code provisoire)
+                Article article = articleService.getArticleByCodeProvisoire(codeArt);
+
+                // 3) StockMere lié à demande
+                StockMere stockMere = stockMereService.getOrCreateStockMere(dm);
+
+                // 4) StockFille : sortie
+                stockMereService.addSortie(stockMere, article, qte);
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de l'importation sorties stock", e);
+        }
+    }
+
 
 }

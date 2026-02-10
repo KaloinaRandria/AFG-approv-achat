@@ -29,4 +29,5 @@ public interface StockFilleRepo extends JpaRepository<StockFille,Integer> {
     Double totalSortieByDemandeAndArticle(String demandeId, String codeArticle);
 
     Optional<StockFille> findByStockMereAndArticle(StockMere stockMere, Article article);
+
 }

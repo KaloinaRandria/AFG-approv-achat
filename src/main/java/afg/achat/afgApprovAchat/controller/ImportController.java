@@ -39,8 +39,8 @@ public class ImportController {
 //        importService.importCSVArticle(file1);
 
         // 2) achats -> BL + stock
-        importService.importCSVAchat(file4); // <= c’est ici qu’on crée BL_MERE + BL_FILLE + STOCK_MERE + STOCK_FILLE
-
+//        importService.importCSVAchat(file4); // <= c’est ici qu’on crée BL_MERE + BL_FILLE + STOCK_MERE + STOCK_FILLE
+        importService.importCSVSortieStock(file4);
         redirectAttributes.addFlashAttribute("ok", "Import effectué avec succès");
         return "redirect:/import/import-saisie-page";
     }

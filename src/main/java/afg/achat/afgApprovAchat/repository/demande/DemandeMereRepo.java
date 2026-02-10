@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
@@ -160,6 +161,8 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
             Pageable pageable
     );
 
+    boolean existsById(String id);
 
+    Optional<DemandeMere> findByCodeProvisoire(String codeProvisoire);
 
 }

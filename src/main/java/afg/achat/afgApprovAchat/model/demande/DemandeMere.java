@@ -60,6 +60,9 @@ public class DemandeMere {
     @Column(name="etat_livraison")
     EtatLivraison etatLivraison = EtatLivraison.NON_LIVREE;
 
+    @Column(name = "code_provisoire")
+    String codeProvisoire;
+
 
     public enum PrioriteDemande {
         P2,
@@ -71,7 +74,11 @@ public class DemandeMere {
         CAPEX
     }
 
-    public enum EtatLivraison { NON_LIVREE, PARTIELLE, LIVREE }
+    public enum EtatLivraison {
+        NON_LIVREE,
+        PARTIELLE,
+        LIVREE
+    }
 
     public void setId(IdGenerator idGenerator) {
         this.id = idGenerator.generateId("DM","demande_mere_id_demande_mere_seq");
