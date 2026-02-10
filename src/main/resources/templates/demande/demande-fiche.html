@@ -27,10 +27,20 @@
                 </div>
 
                 <div class="d-flex gap-2">
+
+                    <!-- ✅ Créer / Ouvrir le bon de sortie (MG + ADMIN) -->
+                    <a class="btn btn-outline-primary"
+                       sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
+                       th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE}"
+                       th:href="@{/bon-sortie/create-from-demande/{id}(id=${demande.id})}">
+                        <i class="fas fa-truck-loading me-1"></i> Bon de sortie
+                    </a>
+
                     <a class="btn btn-outline-secondary" th:href="@{/demande/list}">
                         <i class="fas fa-arrow-left me-1"></i> Retour liste
                     </a>
                 </div>
+
             </div>
 
             <div class="card shadow-lg border-0">

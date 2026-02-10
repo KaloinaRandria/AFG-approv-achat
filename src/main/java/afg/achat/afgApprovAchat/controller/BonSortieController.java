@@ -10,7 +10,7 @@ import afg.achat.afgApprovAchat.repository.demande.bonSortie.BonSortieFilleRepo;
 import afg.achat.afgApprovAchat.repository.demande.bonSortie.BonSortieMereRepo;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
-import afg.achat.afgApprovAchat.service.demande.bonSortie.BonSortieFilleService; // ton service confirmerSortie
+import afg.achat.afgApprovAchat.service.demande.bonSortie.BonSortieFilleService;
 import afg.achat.afgApprovAchat.service.stock.StockFilleService;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
@@ -144,7 +144,7 @@ public class BonSortieController {
         model.addAttribute("isCree", bs.getStatut() == BonSortieMere.Statut.CREE);
         model.addAttribute("isValidee", bs.getStatut() == BonSortieMere.Statut.VALIDEE);
 
-        return "bonSortie/bon-sortie-fiche";
+        return "bonSortie/bs-fiche";
     }
 
     // ✅ Sauvegarder les quantités saisies (sans impact stock)
