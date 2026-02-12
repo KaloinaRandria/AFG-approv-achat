@@ -10,6 +10,10 @@ import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.util.UdmService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
+import java.util.Set;
 
 @Controller
 @RequestMapping("/article")
@@ -33,17 +38,47 @@ public class ArticleController {
 
 
     @GetMapping("/list")
-    public String listArticles(Model model, HttpServletRequest request) {
-        Article[] articles = articleService.getAllArticles();
-        Udm[] udms = udmService.getAllUdms();
-        Famille[] familles = familleService.getAllFamilles();
+    public String listArticles(
+            Model model,
+            HttpServletRequest request,
+
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String designation,
+            @RequestParam(required = false) String famille,
+            @RequestParam(required = false) String udm,
+
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "codeArticle") String sort,
+            @RequestParam(defaultValue = "asc") String dir
+    ) {
+        // ✅ sécuriser le sort (important)
+        if (!Set.of("codeArticle", "designation", "seuilMin").contains(sort)) {
+            sort = "codeArticle";
+        }
+        Sort.Direction direction = "desc".equalsIgnoreCase(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
+
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Article> articlesPage = articleService.searchArticlesMulti(code, designation, famille, udm, pageable);
 
         model.addAttribute("currentUri", request.getRequestURI());
-        model.addAttribute("articles", articles);
-        model.addAttribute("udms", udms);
-        model.addAttribute("familles", familles);
+        model.addAttribute("articlesPage", articlesPage);
 
-        // Ajouter un DTO vide pour le formulaire
+        model.addAttribute("page", page);
+        model.addAttribute("size", size);
+        model.addAttribute("sort", sort);
+        model.addAttribute("dir", dir);
+
+        // ✅ garder valeurs dans inputs
+        model.addAttribute("code", code == null ? "" : code);
+        model.addAttribute("designation", designation == null ? "" : designation);
+        model.addAttribute("famille", famille == null ? "" : famille);
+        model.addAttribute("udm", udm == null ? "" : udm);
+
+        model.addAttribute("udms", udmService.getAllUdms());
+        model.addAttribute("familles", familleService.getAllFamilles());
         model.addAttribute("articleDto", new ArticleModificationDto());
 
         return "article/article-liste";

@@ -14,4 +14,12 @@ public class StockFilleService {
         this.stockFilleRepo.save(stockFille);
     }
 
+    public Double getStockDisponible(String codeArticle) {
+        return this.stockFilleRepo.getStockDisponible(codeArticle);
+    }
+
+    public Double getTotalSortieByDemandeAndArticle(String demandeId, String codeArticle) {
+        return this.stockFilleRepo.totalSortieByDemandeAndArticle(demandeId, codeArticle);
+    }
+
 }

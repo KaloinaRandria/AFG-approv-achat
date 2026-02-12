@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Controller
@@ -108,62 +109,72 @@ public class StockController {
     public String getEtatStock(
             Model model,
             HttpServletRequest request,
-            @RequestParam(value = "q", required = false) String q,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size,
-            @RequestParam(value = "sort", defaultValue = "codeArticle") String sort,
-            @RequestParam(value = "dir", defaultValue = "asc") String dir
+
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String designation,
+            @RequestParam(required = false) String udm,
+            @RequestParam(required = false) String etat, // RUPTURE / SEUIL / NORMAL
+
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "codeArticle") String sort,
+            @RequestParam(defaultValue = "asc") String dir
     ) {
-        Sort.Direction direction = "desc".equalsIgnoreCase(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sort));
+        // sécurité sort (évite PropertyReferenceException)
+        if (!Set.of("codeArticle", "designation", "stockDisponible", "seuilMin").contains(sort)) {
+            sort = "codeArticle";
+        }
 
-        // ✅ 1) Table stock pageable
-        Page<VEtatStock> etatPage = vEtatStockService.getEtatStocksPage(q, pageable);
+        Pageable pageable = PageRequest.of(page, size);
+        // ✅ Recherche multi-critère
+        Page<VEtatStock> etatPage = vEtatStockService.searchEtatStockMulti(code, designation, udm, etat, pageable);
 
-        // ✅ 2) codes page courante
+        // ✅ codes page courante
         List<String> codes = etatPage.getContent().stream()
                 .map(VEtatStock::getCodeArticle)
                 .toList();
 
-        // ✅ 3) alertes uniquement pour ces codes (pour la colonne Etat)
+        // ✅ alertes map uniquement pour la colonne Etat
         Map<String, StockAlerte> alertesMapPage = stockAlerteService.getAlertesMapForCodes(codes);
 
-        // ✅ 4) conversion DTO pour la page
-        List<EtatStockAlerteDTO> dtoContent = etatPage.getContent().stream().map(etat -> {
-            EtatStockAlerteDTO dto = new EtatStockAlerteDTO(etat);
-            StockAlerte alerte = alertesMapPage.get(etat.getCodeArticle());
+        // ✅ conversion DTO
+        List<EtatStockAlerteDTO> dtoContent = etatPage.getContent().stream().map(etatStock -> {
+            EtatStockAlerteDTO dto = new EtatStockAlerteDTO(etatStock);
+            StockAlerte alerte = alertesMapPage.get(etatStock.getCodeArticle());
             if (alerte != null) dto.setAlerte(alerte);
             return dto;
         }).toList();
 
         Page<EtatStockAlerteDTO> etatStocks = new PageImpl<>(dtoContent, pageable, etatPage.getTotalElements());
 
-        // ✅ badge count total (si ton service le calcule déjà)
+        // ✅ badge + modal alertes (inchangé)
         int alertesCount = stockAlerteService.getAlertesCount();
-
-        // ✅ Modal : TOUTES les alertes en scroll (pas de pagination)
         List<StockAlerte> alertes = stockAlerteService.getAlertesAll();
-
         long ruptureCount = alertes.stream().filter(a -> "RUPTURE".equals(a.getTypeAlerte())).count();
         long seuilCount   = alertes.stream().filter(a -> "SEUIL".equals(a.getTypeAlerte())).count();
 
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("etatStocks", etatStocks);
 
-        model.addAttribute("q", q);
+        model.addAttribute("page", page);
         model.addAttribute("size", size);
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
 
-        model.addAttribute("alertesCount", alertesCount);
+        // ✅ pour garder les valeurs dans les inputs
+        model.addAttribute("code", code == null ? "" : code);
+        model.addAttribute("designation", designation == null ? "" : designation);
+        model.addAttribute("udm", udm == null ? "" : udm);
+        model.addAttribute("etat", etat == null ? "" : etat);
 
-        // ✅ modal
+        model.addAttribute("alertesCount", alertesCount);
         model.addAttribute("alertes", alertes);
         model.addAttribute("ruptureCount", ruptureCount);
         model.addAttribute("seuilCount", seuilCount);
 
         return "stock/stock-liste";
     }
+
 
 
 

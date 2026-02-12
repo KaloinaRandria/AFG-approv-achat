@@ -19,6 +19,13 @@ create sequence bon_livraison_mere_id_bl_mere_seq
     no maxvalue
     cache 1;
 
+create sequence bon_sortie_mere_id_bon_sortie_mere_seq
+    start with 1
+    increment by 1
+    no minvalue
+    no maxvalue
+    cache 1;
+
 
 -- View Pour afficher l'état du stock
 CREATE OR REPLACE VIEW v_etat_stock AS
@@ -98,7 +105,96 @@ FROM stock_fille sf
          LEFT JOIN utilisateur u       ON u.id_utilisateur = dm.id_demandeur
          LEFT JOIN udm                 ON udm.id_udm = a.id_udm
 
-WHERE COALESCE(sf.entree, 0) > 0 OR COALESCE(sf.sortie, 0) > 0
+WHERE sf.entree > 0 OR sf.sortie > 0
 
 ORDER BY date_mouvement DESC;
 
+SELECT conname, pg_get_constraintdef(c.oid)
+FROM pg_constraint c
+         JOIN pg_class t ON t.oid = c.conrelid
+WHERE t.relname = 'demande_mere'
+  AND c.conname = 'demande_mere_priorite_check';
+
+ALTER TABLE demande_mere DROP CONSTRAINT demande_mere_priorite_check;
+
+ALTER TABLE demande_mere
+    ADD CONSTRAINT demande_mere_priorite_check
+        CHECK (priorite IN ('P1','P2','P3'));
+
+
+-- Listes des INDEX :
+-- demandes
+CREATE INDEX IF NOT EXISTS idx_demande_mere_demandeur   ON demande_mere (id_demandeur);
+CREATE INDEX IF NOT EXISTS idx_demande_mere_centre      ON demande_mere (id_centre_budgetaire);
+
+CREATE INDEX IF NOT EXISTS idx_demande_fille_mere       ON demande_fille (id_demande_mere);
+CREATE INDEX IF NOT EXISTS idx_demande_fille_article    ON demande_fille (id_article);
+
+CREATE INDEX IF NOT EXISTS idx_validation_demande_mere  ON validation_demande (id_demande_mere);
+CREATE INDEX IF NOT EXISTS idx_validation_demande_valid ON validation_demande (id_validateur);
+
+CREATE INDEX IF NOT EXISTS idx_piece_jointe_mere        ON piece_jointe (id_demande_mere);
+CREATE INDEX IF NOT EXISTS idx_demande_pj_mere          ON demande_piece_jointe (id_demande_mere);
+
+-- Bons , Stock
+CREATE INDEX IF NOT EXISTS idx_stock_fille_stock_mere   ON stock_fille (id_stock_mere);
+CREATE INDEX IF NOT EXISTS idx_stock_fille_article      ON stock_fille (id_article);
+
+CREATE INDEX IF NOT EXISTS idx_stock_mere_bl_mere       ON stock_mere (id_bl_mere);
+CREATE INDEX IF NOT EXISTS idx_stock_mere_demande_mere  ON stock_mere (id_demande_mere);
+
+CREATE INDEX IF NOT EXISTS idx_bl_fille_bl_mere         ON bon_livraison_fille (id_bl_mere);
+CREATE INDEX IF NOT EXISTS idx_bl_fille_article         ON bon_livraison_fille (id_article);
+
+CREATE INDEX IF NOT EXISTS idx_bon_sortie_mere_dm        ON bon_sortie_mere (id_demande_mere);
+CREATE INDEX IF NOT EXISTS idx_bon_sortie_fille_mere     ON bon_sortie_fille (id_bon_sortie_mere);
+CREATE INDEX IF NOT EXISTS idx_bon_sortie_fille_article  ON bon_sortie_fille (id_article);
+
+-- historiques
+CREATE INDEX IF NOT EXISTS idx_article_famille          ON article (id_famille);
+CREATE INDEX IF NOT EXISTS idx_article_udm              ON article (id_udm);
+
+CREATE INDEX IF NOT EXISTS idx_article_hist_article     ON article_historique (id_article);
+CREATE INDEX IF NOT EXISTS idx_fourn_hist_fournisseur   ON fournisseur_historique (id_fournisseur);
+CREATE INDEX IF NOT EXISTS idx_devise_hist_devise       ON devise_historique (id_devise);
+
+CREATE INDEX IF NOT EXISTS idx_utilisateur_pdp          ON utilisateur (id_pdp);
+CREATE INDEX IF NOT EXISTS idx_utilisateur_superieur    ON utilisateur (id_superieur);
+CREATE INDEX IF NOT EXISTS idx_utilisateur_poste        ON utilisateur (id_poste);
+
+-- perf tri
+CREATE INDEX IF NOT EXISTS idx_demande_mere_date         ON demande_mere (date_demande DESC);
+CREATE INDEX IF NOT EXISTS idx_demande_mere_statut       ON demande_mere (statut);
+CREATE INDEX IF NOT EXISTS idx_demande_mere_date_statut  ON demande_mere (statut, date_demande DESC);
+
+-- stock fille
+CREATE INDEX IF NOT EXISTS idx_stock_fille_article_stockmere ON stock_fille (id_article, id_stock_mere);
+
+CREATE INDEX IF NOT EXISTS idx_stock_fille_entree_pos
+    ON stock_fille (id_stock_mere, id_article)
+    WHERE entree > 0;
+
+CREATE INDEX IF NOT EXISTS idx_stock_fille_sortie_pos
+    ON stock_fille (id_stock_mere, id_article)
+    WHERE sortie > 0;
+
+
+
+
+CREATE INDEX IF NOT EXISTS idx_bl_mere_date_reception
+    ON bon_livraison_mere (date_reception DESC);
+
+CREATE INDEX IF NOT EXISTS idx_dm_date_sortie
+    ON demande_mere (date_sortie DESC);
+
+CREATE INDEX IF NOT EXISTS idx_dm_date_demande
+    ON demande_mere (date_demande DESC);
+
+
+CREATE INDEX IF NOT EXISTS idx_bl_mere_fournisseur
+    ON bon_livraison_mere (id_fournisseur);
+CREATE INDEX IF NOT EXISTS idx_bl_mere_devise
+    ON bon_livraison_mere (id_devise);
+
+CREATE INDEX IF NOT EXISTS idx_validation_validateur_date
+    ON validation_demande (id_validateur, date_action DESC);

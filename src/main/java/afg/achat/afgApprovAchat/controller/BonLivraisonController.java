@@ -6,6 +6,7 @@ import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
 import afg.achat.afgApprovAchat.model.stock.StockFille;
 import afg.achat.afgApprovAchat.model.stock.StockMere;
 import afg.achat.afgApprovAchat.model.util.Devise;
+import afg.achat.afgApprovAchat.model.util.MontantCalculator;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonFilleService;
@@ -71,7 +72,6 @@ public class BonLivraisonController {
                                      @RequestParam("quantiteDemande[]") List<String> qteDemandes,
                                      @RequestParam("quantiteRecu[]") List<String> qteRecues,
                                      @RequestParam("prixUnitaire[]") List<String> prixUnitaires,
-                                     Model model,
                                      RedirectAttributes redirectAttributes) {
         try {
             if (fournisseurId == null || fournisseurId.isEmpty()) {
@@ -88,6 +88,8 @@ public class BonLivraisonController {
             Devise devise = deviseService.getDeviseById(Integer.parseInt(deviseId))
                     .orElseThrow(() -> new IllegalArgumentException("Devise introuvable"));
 
+            double totalGeneral = MontantCalculator.calculerTotal(qteRecues, prixUnitaires);
+
 //            Enregistrement du bon de livraison mère
             BonLivraisonMere bonLivraisonMere = new BonLivraisonMere();
             bonLivraisonMere.setId(idGenerator);
@@ -95,6 +97,7 @@ public class BonLivraisonController {
             bonLivraisonMere.setDevise(devise);
             bonLivraisonMere.setDateReception(dateLivraison);
             bonLivraisonMere.setDescription(description != null ? description : "");
+            bonLivraisonMere.setTotalPrix(totalGeneral);
 
             this.bonLivraisonMereService.insertBonLivraisonMere(bonLivraisonMere);
 
@@ -111,6 +114,7 @@ public class BonLivraisonController {
                 bonLivraisonFille.setQuantiteRecu(qteRecues.get(i));
                 bonLivraisonFille.setPrixUnitaire(prixUnitaires.get(i));
 
+                articleService.updatePrixUnitaire(articleCodes.get(i), prixUnitaires.get(i));
                 bonLivraisonFilles.add(bonLivraisonFille);
                 this.bonLivraisonFilleService.insertBonLivraisonFilleList(bonLivraisonFille);
             }
@@ -186,16 +190,23 @@ public class BonLivraisonController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "dateReception") String sort,
             @RequestParam(defaultValue = "desc") String dir,
-            @RequestParam(required = false) String q,
+
+            @RequestParam(required = false) String num,
+            @RequestParam(required = false) String fournisseur,
+            @RequestParam(required = false) String devise,
+
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+
             Model model,
             HttpServletRequest request
     ) {
         // sécurité sort (évite PropertyReferenceException)
         if (!Set.of("id", "dateReception").contains(sort)) sort = "dateReception";
 
-        Page<BonLivraisonMere> result = bonLivraisonMereService.searchBonLivraisonMeres(q, dateFrom, dateTo, page, size, sort, dir);
+        Page<BonLivraisonMere> result = bonLivraisonMereService.searchBonLivraisonMeres(
+                num, fournisseur, devise, dateFrom, dateTo, page, size, sort, dir
+        );
 
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("bonLivraisonMeres", result);
@@ -204,13 +215,17 @@ public class BonLivraisonController {
         model.addAttribute("size", size);
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
-        model.addAttribute("q", q);
 
         // ✅ pour afficher la valeur dans les inputs
+        model.addAttribute("num", num == null ? "" : num);
+        model.addAttribute("fournisseur", fournisseur == null ? "" : fournisseur);
+        model.addAttribute("devise", devise == null ? "" : devise);
+
         model.addAttribute("dateFrom", dateFrom);
         model.addAttribute("dateTo", dateTo);
 
         return "bl/bl-liste";
     }
+
 
 }

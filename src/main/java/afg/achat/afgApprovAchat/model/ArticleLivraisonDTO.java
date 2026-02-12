@@ -12,4 +12,5 @@ import lombok.Setter;
 public class ArticleLivraisonDTO {
     private String designation;
     private Double quantite;
+    private Double prixUnitaire;
 }
