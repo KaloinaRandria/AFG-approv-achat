@@ -165,9 +165,11 @@
                         <tbody>
                         <tr th:each="bl : ${bonLivraisonMeres.content}">
                             <td th:text="${bl.id}"></td>
-                            <td th:text="${bl.fournisseur.nom}"></td>
+                            <td th:text="${bl.fournisseur != null ? bl.fournisseur.nom : '-'}"></td>
+
                             <td th:text="${#temporals.format(bl.dateReception, 'dd/MM/yyyy HH:mm')}"></td>
-                            <td th:text="${bl.devise.designation +' ('+bl.devise.acronyme + ')'}"></td>
+                            <td th:text="${bl.devise != null ? (bl.devise.designation + ' (' + bl.devise.acronyme + ')') : '-'}"></td>
+
                             <td class="text-center">
                                 <button type="button"
                                         class="btn btn-sm btn-view-bl"

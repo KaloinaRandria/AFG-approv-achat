@@ -16,7 +16,7 @@ public interface BonLivraisonMereRepo extends JpaRepository<BonLivraisonMere,Str
 
     @Query("""
         select bl from BonLivraisonMere bl
-        left join bl.fournisseur f
+        join bl.fournisseur f
         left join bl.devise d
         where (
             :q = '' or
@@ -38,7 +38,7 @@ public interface BonLivraisonMereRepo extends JpaRepository<BonLivraisonMere,Str
 
     @Query("""
     select bl from BonLivraisonMere bl
-    left join bl.fournisseur f
+    join bl.fournisseur f
     left join bl.devise d
     where bl.dateReception between :dateFrom and :dateTo
 

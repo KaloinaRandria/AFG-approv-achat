@@ -17,7 +17,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
 
     @Query("""
         select dm from DemandeMere dm
-        left join dm.demandeur dmd
+        join dm.demandeur dmd
         where dm.dateDemande between :dateFrom and :dateTo
           and (
                 :q = ''
@@ -37,7 +37,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
 
     @Query("""
         select dm from DemandeMere dm
-        left join dm.demandeur dmd
+        join dm.demandeur dmd
         where dm.dateDemande between :dateFrom and :dateTo
           and dmd.id = :demandeurId
           and (
@@ -58,7 +58,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
 
     @Query("""
         select dm from DemandeMere dm
-        left join dm.demandeur dmd
+        join dm.demandeur dmd
         where dm.dateDemande between :dateFrom and :dateTo
           and dmd.id in :demandeurIds
           and (
@@ -79,7 +79,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
 
     @Query("""
     select dm from DemandeMere dm
-    left join dm.demandeur dmd
+    join dm.demandeur dmd
     where dm.dateDemande between :dateFrom and :dateTo
 
       and (:num = '' or lower(dm.id) like lower(concat('%', :num, '%')))
@@ -108,7 +108,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
 
     @Query("""
     select dm from DemandeMere dm
-    left join dm.demandeur dmd
+    join dm.demandeur dmd
     where dm.dateDemande between :dateFrom and :dateTo
       and dmd.id in :demandeurIds
 
@@ -137,7 +137,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
 
     @Query("""
     select dm from DemandeMere dm
-    left join dm.demandeur dmd
+    join dm.demandeur dmd
     where dm.dateDemande between :dateFrom and :dateTo
       and (:num = '' or lower(dm.id) like lower(concat('%', :num, '%')))
       and (
