@@ -7,6 +7,8 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+
+    <meta name="context-path" th:content="@{/}" />
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
@@ -354,10 +356,11 @@
             $('#modalBlDate').text('');
             $('#modalBlDevise').text('');
             $('#modalBlArticles').html('<tr><td colspan="2" class="text-center text-muted">Chargement...</td></tr>');
+            const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
 
             // Appel AJAX
             $.ajax({
-                url: '/api/bonlivraison/' + blId + '/details',
+                url: `${CONTEXT_PATH}api/bonlivraison/` + blId + '/details',
                 method: 'GET',
                 success: function (data) {
                     // Infos générales

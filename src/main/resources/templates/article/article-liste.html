@@ -7,6 +7,8 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+
+    <meta name="context-path" th:content="@{/}" />
 </head>
 
 <body>
@@ -397,11 +399,11 @@
             </td>
         </tr>
     `);
-
+        const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
         // URL du contrôleur - NOTEZ LE CHANGEMENT ICI !
         // Le contrôleur utilise @GetMapping("/article/{codeArticle}")
         // Donc l'URL doit être: /admin/api/historique/article/CODE_ARTICLE
-        const url = `/api/historique/article/${encodeURIComponent(codeArticle)}?page=0&size=10`;
+        const url = `${CONTEXT_PATH}api/historique/article/${encodeURIComponent(codeArticle)}?page=0&size=10`;
         console.log("URL de requête:", url);
 
         $.ajax({
