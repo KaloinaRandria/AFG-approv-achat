@@ -485,62 +485,157 @@
             }
         });
 
-        // =========================
-        // 2) Autocomplete Article + invalidation code hidden
-        // =========================
-        document.addEventListener("input", (e) => {
-            const input = e.target;
-            if (!input.classList.contains("article-input")) return;
+        (function () {
+            // Portal global unique
+            let portal = document.getElementById("articleAutocompletePortal");
+            if (!portal) {
+                portal = document.createElement("div");
+                portal.id = "articleAutocompletePortal";
+                portal.className = "list-group";
+                document.body.appendChild(portal);
+            }
 
-            const td = input.closest("td");
-            if (!td) return;
+            let activeInput = null;
+            let abortController = null;
 
-            const list = $(".autocomplete-list", td);
-            const hiddenCode = $('input[name="articleCodes[]"]', td);
+            function hidePortal() {
+                portal.style.display = "none";
+                portal.innerHTML = "";
+                activeInput = null;
+                if (abortController) abortController.abort();
+                abortController = null;
+            }
 
-            // si l'utilisateur retape -> on invalide le code précédent
-            if (hiddenCode) hiddenCode.value = "";
+            function positionPortal(input) {
+                const r = input.getBoundingClientRect();
+                const gap = 2;
+                portal.style.left = `${r.left}px`;
+                portal.style.top = `${r.bottom + gap}px`;
+                portal.style.width = `${r.width}px`;
+            }
 
-            const keyword = input.value.trim();
-            if (list) list.innerHTML = "";
-            if (keyword.length < 2) return;
+            function debounce(fn, delay = 250) {
+                let t;
+                return (...args) => {
+                    clearTimeout(t);
+                    t = setTimeout(() => fn(...args), delay);
+                };
+            }
 
-            // Récupérer tous les articles déjà sélectionnés
-            const selected = $$('input[name="articleCodes[]"]')
-                .map(i => i.value)
-                .filter(Boolean);
+            const loadSuggestions = debounce(async (input, keyword) => {
+                if (abortController) abortController.abort();
+                abortController = new AbortController();
 
-            fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`)
-                .then(res => res.json())
-                .then(data => {
-                    const filtered = (data || []).filter(a => !selected.includes(a.code));
+                // Codes déjà choisis (pour éviter doublons)
+                const selectedCodes = Array.from(document.querySelectorAll('input[name="articleCodes[]"]'))
+                    .map(i => i.value)
+                    .filter(Boolean);
 
-                    filtered.forEach(article => {
+                try {
+                    const res = await fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`, {
+                        signal: abortController.signal
+                    });
+                    if (!res.ok) throw new Error("HTTP " + res.status);
+                    const data = await res.json();
+
+                    if (activeInput !== input) return;
+
+                    const filtered = (data || []).filter(a => !selectedCodes.includes(a.code));
+
+                    portal.innerHTML = "";
+
+                    if (filtered.length === 0) {
+                        const empty = document.createElement("div");
+                        empty.className = "list-group-item text-muted";
+                        empty.textContent = "Aucun résultat";
+                        portal.appendChild(empty);
+                        portal.style.display = "block";
+                        positionPortal(input);
+                        return;
+                    }
+
+                    filtered.slice(0, 10).forEach(article => {
                         const item = document.createElement("button");
                         item.type = "button";
                         item.className = "list-group-item list-group-item-action";
                         item.textContent = `${article.code} - ${article.designation}`;
 
-                        item.addEventListener("click", () => {
+                        // mousedown pour éviter le blur avant click
+                        item.addEventListener("mousedown", (e) => {
+                            e.preventDefault();
+
                             input.value = `${article.code} - ${article.designation}`;
-                            if (hiddenCode) hiddenCode.value = article.code;
-                            if (list) list.innerHTML = "";
-                            mark(input);
+
+                            // ⚠️ Dans ta ligne demande: hidden est input[name="articleCodes[]"] dans le même td
+                            const td = input.closest("td");
+                            const hidden = td?.querySelector('input[name="articleCodes[]"]');
+                            if (hidden) hidden.value = article.code;
+
+                            hidePortal();
                         });
 
-                        list?.appendChild(item);
+                        portal.appendChild(item);
                     });
-                })
-                .catch(() => {
-                    // optionnel : afficher un message, sinon on ignore
-                });
-        });
 
-        // fermer listes autocomplete quand clique ailleurs
-        document.addEventListener("click", (e) => {
-            if (e.target.classList.contains("article-input")) return;
-            $$(".autocomplete-list").forEach(l => (l.innerHTML = ""));
-        });
+                    portal.style.display = "block";
+                    positionPortal(input);
+
+                } catch (err) {
+                    if (err?.name === "AbortError") return;
+                    console.error("Autocomplete error:", err);
+                    hidePortal();
+                }
+            }, 250);
+
+            // Ouvrir / MAJ sur input (pour les .article-input de la demande)
+            document.addEventListener("input", function (e) {
+                if (!e.target.classList.contains("article-input")) return;
+
+                const input = e.target;
+                const keyword = input.value.trim();
+
+                // Si l'utilisateur retape -> invalider le code caché
+                const td = input.closest("td");
+                const hidden = td?.querySelector('input[name="articleCodes[]"]');
+                if (hidden) hidden.value = "";
+
+                if (keyword.length < 2) {
+                    hidePortal();
+                    return;
+                }
+
+                activeInput = input;
+                portal.style.display = "block";
+                portal.innerHTML = `<div class="list-group-item text-muted">Recherche...</div>`;
+                positionPortal(input);
+
+                loadSuggestions(input, keyword);
+            });
+
+            // Repositionner au scroll/resize (important dans table responsive)
+            window.addEventListener("scroll", () => {
+                if (activeInput && portal.style.display === "block") positionPortal(activeInput);
+            }, true);
+
+            window.addEventListener("resize", () => {
+                if (activeInput && portal.style.display === "block") positionPortal(activeInput);
+            });
+
+            // Fermer quand on clique ailleurs
+            document.addEventListener("mousedown", function (e) {
+                if (!portal.contains(e.target) && !e.target.classList.contains("article-input")) {
+                    hidePortal();
+                }
+            });
+
+            // Fermer si focus ailleurs
+            document.addEventListener("focusin", function (e) {
+                if (!e.target.classList.contains("article-input") && !portal.contains(e.target)) {
+                    hidePortal();
+                }
+            });
+
+        })();
 
         // =========================
         // 3) Format quantité (affiché + hidden)
