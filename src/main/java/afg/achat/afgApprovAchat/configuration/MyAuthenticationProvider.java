@@ -53,6 +53,15 @@ public class MyAuthenticationProvider implements AuthenticationProvider{
 				return new UsernamePasswordAuthenticationToken(user, null,
 				        Collections.singletonList(new SimpleGrantedAuthority("ROLE_"+user.getRole().getLibelle())));
 			}*/
+
+            if(email.equals("suzy.ratovonkery@afgbank.mg") && password.equals("mdp")) {
+                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+                        .toList();
+
+                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+            }
             if(email.equals("jao.razanajaonarijery@afgbank.mg") && password.equals("mdp")) {
                 Utilisateur user = utilisateurService.getUtilisateurByMail(email);
                 Collection<GrantedAuthority> authorities = user.getRoles().stream()
