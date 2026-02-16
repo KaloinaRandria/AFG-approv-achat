@@ -77,7 +77,7 @@ public class DemandeController {
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
                                 @RequestParam(name = "quantite[]") List<String> quantite,
                                 @RequestParam(name = "priorite") String priorite,
-                                @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
+                                @RequestParam(name = "piecesJointes") MultipartFile[] piecesJointes,
                                 RedirectAttributes redirectAttributes) {
 
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -145,7 +145,6 @@ public class DemandeController {
                 this.demandeFilleService.saveDemandeFille(demandeFille);
             }
 
-            // 3) Stocker les pièces jointes sur disque + enregistrer en DB
             if (piecesJointes != null) {
                 for (MultipartFile f : piecesJointes) {
                     if (f == null || f.isEmpty()) continue;
@@ -579,15 +578,17 @@ public class DemandeController {
         List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
         model.addAttribute("piecesJointes", piecesJointes);
 
-// 0=N+1, 1=MG, 2=Finance, 3=SG, 4=Terminé
+// 0=Créée, 1=N+1, 2=MG, 3=Finance, 4=DFC, 5=Terminé
         int currentStep = switch (demande.getStatut()) {
-            case StatutDemande.CREE -> 0;              // En attente N+1
-            case StatutDemande.VALIDATION_N1 -> 1;     // En attente MG
-            case StatutDemande.VALIDATION_N2 -> 2;     // En attente Finance
-            case StatutDemande.VALIDATION_N3 -> 3;     // En attente SG
-            case StatutDemande.VALIDE -> 4;            // Terminé (validé)
-            case StatutDemande.REFUSE -> -1;           // Terminé (refusé)
-            default -> 0;
+
+            case StatutDemande.CREE -> 1;              // N+1 en cours
+            case StatutDemande.VALIDATION_N1 -> 2;     // MG en cours
+            case StatutDemande.VALIDATION_N2 -> 3;     // Finance en cours
+            case StatutDemande.VALIDATION_N3 -> 4;     // DFC en cours
+            case StatutDemande.VALIDE -> 5;            // Terminé
+            case StatutDemande.REFUSE -> -1;           // Refusé
+
+            default -> 1;
         };
 
         model.addAttribute("currentStep", currentStep);
