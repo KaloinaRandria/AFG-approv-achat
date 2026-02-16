@@ -762,15 +762,15 @@
                     const li = document.createElement("li");
                     li.className = "list-group-item d-flex align-items-center gap-2";
                     li.innerHTML = `
-          <i class="fas fa-file-alt text-gradient-blue"></i>
-          <div class="flex-grow-1">
-            <div class="fw-semibold">${escapeHtml(file.name)}</div>
-            <small class="text-muted">${(file.size / 1024).toFixed(1)} KB</small>
-          </div>
-          <button type="button" class="btn btn-outline-danger btn-sm" data-remove-index="${idx}">
-            <i class="fas fa-trash"></i>
-          </button>
-        `;
+              <i class="fas fa-file-alt text-gradient-blue"></i>
+              <div class="flex-grow-1">
+                <div class="fw-semibold">${escapeHtml(file.name)}</div>
+                <small class="text-muted">${(file.size / 1024).toFixed(1)} KB</small>
+              </div>
+              <button type="button" class="btn btn-outline-danger btn-sm" data-remove-index="${idx}">
+                <i class="fas fa-trash"></i>
+              </button>
+            `;
                     fileList.appendChild(li);
                 });
             }
@@ -782,10 +782,27 @@
             }
 
             fileInput.addEventListener("change", () => {
-                selectedFiles = Array.from(fileInput.files || []);
-                renderFiles();
-            });
+                const newFiles = Array.from(fileInput.files || []);
 
+                newFiles.forEach(newFile => {
+                    // éviter les doublons (optionnel mais recommandé)
+                    const exists = selectedFiles.some(existingFile =>
+                        existingFile.name === newFile.name &&
+                        existingFile.size === newFile.size &&
+                        existingFile.lastModified === newFile.lastModified
+                    );
+
+                    if (!exists) {
+                        selectedFiles.push(newFile);
+                    }
+                });
+
+                syncInputFiles();   // 🔥 très important
+                renderFiles();
+
+                // reset input pour permettre de re-sélectionner le même fichier
+                fileInput.value = "";
+            });
             fileList.addEventListener("click", (e) => {
                 const btn = e.target.closest("[data-remove-index]");
                 if (!btn) return;
