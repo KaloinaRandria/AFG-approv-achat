@@ -352,9 +352,9 @@
                         <div class="p-3 d-flex justify-content-between align-items-center">
 
                             <div th:if="${(canDecisionN1 ?: false)
-          or (canDecisionMG ?: false)
-          or (canDecisionFinance ?: false)
-          or (canDecisionSG ?: false)}">
+                              or (canDecisionMG ?: false)
+                              or (canDecisionFinance ?: false)
+                              or (canDecisionSG ?: false)}">
 
                                 <!-- Form unique -->
                                 <form id="decisionForm"
@@ -414,8 +414,111 @@
                             </div>
                             <div class="text-muted small"></div>
                         </div>
+                        <!-- HISTORIQUE VALIDATION -->
+                        <div class="px-3 pb-3 mt-3">
+                            <div class="p-3 border rounded bg-light">
+                                <div class="fw-bold mb-3">
+                                    <i class="fas fa-history me-2"></i> Historique de validation
+                                </div>
 
-                    </div><!-- /bl-document -->
+                                <!-- Aucun historique -->
+                                <div th:if="${historiques == null || historiques.isEmpty()}"
+                                     class="text-muted">
+                                    Aucun historique disponible
+                                </div>
+
+                                <!-- Tableau historique -->
+                                <div th:if="${historiques != null && !historiques.isEmpty()}">
+                                    <div class="table-responsive">
+                                        <table class="table align-middle table-hover table-bordered bg-white shadow-sm rounded overflow-hidden">
+                                            <thead class="table-light">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Validé par</th>
+                                                <th>Étape</th>
+                                                <th>Décision</th>
+                                                <th>Commentaire</th>
+                                            </tr>
+                                            </thead>
+
+                                            <tbody>
+                                            <tr th:each="h : ${historiques}">
+
+                                                <!-- Date -->
+                                                <td th:text="${h.dateAction != null ?
+                                                    #temporals.format(h.dateAction,'dd/MM/yyyy HH:mm') : '-'}">
+                                                    -
+                                                </td>
+
+                                                <!-- Validateur -->
+                                                <td>
+                                                    <div th:if="${h.validateur != null}">
+                                                        <div class="fw-semibold"
+                                                             th:text="${h.validateur.nom + ' ' + h.validateur.prenom}">
+                                                        </div>
+                                                        <small class="text-muted"
+                                                               th:text="${
+                                                               (h.validateur.poste != null ? h.validateur.poste.poste : '') +
+                                                               (h.validateur.service != null ? ' - ' + h.validateur.service.acronyme : '')
+                                                           }">
+                                                        </small>
+                                                    </div>
+                                                </td>
+
+                                                <!-- Étape (déduite du statut de la demande au moment de validation) -->
+                                                <td>
+                                                    <span th:text="${
+                                                        h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1 ? 'N+1' :
+                                                        (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N2 ? 'Moyens Généraux' :
+                                                        (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N3 ? 'Finance' :
+                                                        (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE ? 'Secrétaire Général' :
+                                                        (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE ? 'Refus' :
+                                                        'Création'))))
+                                                    }"></span>
+                                                </td>
+
+
+                                                <!-- ✅ DECISION -->
+                                                <td>
+                                                    <span class="badge"
+                                                          th:classappend="${
+                                                              h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
+                                                              ? ' bg-danger'
+                                                              : ' bg-success'
+                                                          }">
+
+                                                        <i class="fas"
+                                                           th:classappend="${
+                                                               h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
+                                                               ? ' fa-times-circle'
+                                                               : ' fa-check-circle'
+                                                           }"></i>
+
+                                                        <span th:text="${
+                                                            h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
+                                                            ? 'REFUSÉE'
+                                                            : 'VALIDÉE'
+                                                        }"></span>
+                                                    </span>
+                                                </td>
+
+
+
+                                                <!-- Commentaire -->
+                                                <td th:text="${h.commentaire != null && !h.commentaire.isBlank() ? h.commentaire : '-'}">
+                                                    -
+                                                </td>
+
+                                            </tr>
+                                            </tbody>
+
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
 
                 </div>
             </div>

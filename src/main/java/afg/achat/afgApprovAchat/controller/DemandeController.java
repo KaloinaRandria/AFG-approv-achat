@@ -576,7 +576,7 @@ public class DemandeController {
         }
 
         List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
-        model.addAttribute("piecesJointes", piecesJointes);
+
 
 // 0=Créée, 1=N+1, 2=MG, 3=Finance, 4=DFC, 5=Terminé
         int currentStep = switch (demande.getStatut()) {
@@ -591,6 +591,11 @@ public class DemandeController {
             default -> 1;
         };
 
+        List<ValidationDemande> historiques =
+                validationDemandeService.getHistorique(demande);
+
+        model.addAttribute("historiques", historiques);
+        model.addAttribute("piecesJointes", piecesJointes);
         model.addAttribute("currentStep", currentStep);
         model.addAttribute("isRefused", demande.getStatut() == StatutDemande.REFUSE);
         model.addAttribute("isValidated", demande.getStatut() == StatutDemande.VALIDE);
@@ -672,7 +677,7 @@ public class DemandeController {
 
         String cmt = (commentaire == null) ? "" : commentaire.trim();
 
-// ----- REJECT : commentaire obligatoire -----
+        // ----- REJECT : commentaire obligatoire -----
         if ("REJECT".equals(action)) {
             if (cmt.isBlank()) {
                 redirectAttributes.addFlashAttribute("ko", "Le commentaire est obligatoire pour rejeter une demande.");
