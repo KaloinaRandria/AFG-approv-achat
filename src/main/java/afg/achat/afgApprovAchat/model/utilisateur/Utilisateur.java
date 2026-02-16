@@ -1,12 +1,12 @@
 package afg.achat.afgApprovAchat.model.utilisateur;
 
-import afg.achat.afgApprovAchat.model.util.Departement;
+
+import afg.achat.afgApprovAchat.model.util.Service;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.DialectOverride;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -37,6 +37,8 @@ public class Utilisateur {
     Pdp pdp;
     @ManyToOne @JoinColumn(name = "id_poste", referencedColumnName = "id_poste", nullable = true)
     Poste poste;
+    @ManyToOne @JoinColumn(name = "id_service", referencedColumnName = "id_service", nullable = true)
+    Service service;
 
     public Utilisateur(String nom, String prenom, String mail, Set<Role> roles, Utilisateur superieurHierarchique, String contact) {
         this.setNom(nom);

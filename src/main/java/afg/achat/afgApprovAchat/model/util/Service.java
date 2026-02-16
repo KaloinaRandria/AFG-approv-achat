@@ -11,13 +11,10 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "adresse")
-public class Adresse {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_adresse")
+@Table(name = "service")
+public class Service {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_service")
     int id;
-    String adresse;
-
-    public Adresse(String adresse) {
-        this.setAdresse(adresse);
-    }
+    String libelle;
+    String acronyme;
 }

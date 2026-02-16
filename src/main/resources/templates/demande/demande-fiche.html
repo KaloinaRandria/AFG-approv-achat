@@ -121,7 +121,23 @@
                         <div class="bl-infos">
                             <div>
                                 <strong>Demandeur :</strong>
-                                <div th:text="${demande.demandeur != null ? demande.demandeur.nom + ' ' + demande.demandeur.prenom : '-'}">-</div>
+                                <div th:if="${demande.demandeur != null}">
+
+                                    <!-- Nom + prénom -->
+                                    <div class="fw-semibold"
+                                         th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom}">
+                                    </div>
+
+                                    <!-- Poste + Service -->
+                                    <small class="text-muted"
+                                           th:text="${
+                                           (demande.demandeur.poste != null ? demande.demandeur.poste.poste : '') +
+                                           (demande.demandeur.service != null ? ' - ' + demande.demandeur.service.acronyme : '')
+                                       }">
+                                    </small>
+
+                                </div>
+
                             </div>
 
                             <div>
