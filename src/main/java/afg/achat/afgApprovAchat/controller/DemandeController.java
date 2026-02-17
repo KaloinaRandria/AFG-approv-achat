@@ -615,6 +615,21 @@ public class DemandeController {
         return "demande/demande-fiche";
     }
 
+    @PostMapping("/ligne/{id}/refuser")
+    public String refuserLigne(@PathVariable int id,
+                               @RequestParam(value = "commentaire", required = false) String commentaire) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        DemandeFille ligne = demandeFilleService.getDemandeFilleById(id);
+
+        demandeFilleService.refuserLigne(ligne, current, commentaire);
+
+        return "redirect:/demande/fiche/" + ligne.getDemandeMere().getId();
+    }
+
 
     @PostMapping("/fiche/{id}/decision")
     public String decision(@PathVariable("id") String id,

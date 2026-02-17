@@ -2,6 +2,7 @@ package afg.achat.afgApprovAchat.service.demande;
 
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.repository.demande.DemandeFilleRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereRepo;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
@@ -128,11 +129,15 @@ public class DemandeMereService {
         demande.setStatut(nouveauStatut);
         demandeMereRepo.save(demande);
 
-        // 2) update toutes les filles
+        // 2) update uniquement les lignes NON refusées
         List<DemandeFille> filles = demandeFilleRepo.findDemandeFilleByDemandeMere(demande);
+
         for (DemandeFille f : filles) {
-            f.setStatut(nouveauStatut);
+            if (f.getStatut() != StatutDemande.REFUSE) {
+                f.setStatut(nouveauStatut);
+            }
         }
+
         demandeFilleRepo.saveAll(filles);
     }
 
@@ -188,5 +193,17 @@ public class DemandeMereService {
                     return demandeMereRepo.save(dm);
                 });
     }
+
+    @Transactional
+    public void recalculerTotal(DemandeMere demande) {
+
+        double total = demandeFilleRepo
+                .calculerTotal(demande, StatutDemande.REFUSE);
+
+        demande.setTotalPrix(total);
+
+        demandeMereRepo.save(demande);
+    }
+
 
 }

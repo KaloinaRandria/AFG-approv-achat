@@ -235,7 +235,6 @@
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
                         <!-- PIECES JOINTES -->
@@ -295,6 +294,9 @@
                                         class="text-end">
                                         PRIX UNITAIRE
                                     </th>
+                                    <th style="width:10%" class="text-center">
+                                        ACTION
+                                    </th>
 
                                 </tr>
                                 </thead>
@@ -308,8 +310,10 @@
                                     </td>
                                 </tr>
 
-                                <tr th:each="l : ${lignes}">
-                                    <td th:text="${l.article != null ? l.article.designation : '-'}">-</td>
+                                <tr th:each="l : ${lignes}"
+                                    th:classappend="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? 'ligne-refusee'">
+
+                                <td th:text="${l.article != null ? l.article.designation : '-'}">-</td>
 
                                     <td class="text-end" th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">0</td>
 
@@ -317,6 +321,17 @@
                                         class="text-end"
                                         th:text="${#numbers.formatDecimal(l.article.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')}">
                                         0
+                                    </td>
+
+                                    <td class="text-center">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger btnRefuserArticle"
+                                                th:data-id="${l.id}"
+                                                th:data-designation="${l.article.designation}"
+                                                th:data-codearticle="${l.article.codeArticle}"
+                                                th:disabled="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE}">
+                                        <i class="fas fa-times-circle me-1"></i>
+                                        </button>
                                     </td>
                                 </tr>
 
@@ -576,6 +591,69 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="refusArticleModal"
+     tabindex="-1"
+     aria-hidden="true"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title">
+                    <i class="fas fa-comment-dots me-2"></i>
+                    Commentaire de refus pour l'article
+                </h5>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="alert alert-info mb-3" id="refusArticleInfo">
+                    <!-- rempli dynamiquement -->
+                </div>
+
+                <label class="form-label fw-bold">
+                    Commentaire <span class="text-danger">*</span>
+                </label>
+
+                <textarea class="form-control"
+                          id="refusArticleCommentaire"
+                          rows="3"
+                          placeholder="Ajoutez un commentaire..."></textarea>
+
+                <div class="invalid-feedback d-block"
+                     id="refusArticleError"
+                     style="display:none">
+                    Le commentaire est obligatoire pour refuser cet article.
+                </div>
+
+                <div class="text-muted small mt-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Le commentaire est obligatoire pour confirmer le refus.
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Annuler
+                </button>
+
+                <button type="button"
+                        class="btn btn-gradient-green"
+                        id="btnConfirmRefusArticle">
+                    <i class="fas fa-paper-plane me-1"></i>
+                    Confirmer
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
 <script th:inline="javascript">
     /*<![CDATA[*/
     document.addEventListener("DOMContentLoaded", () => {
@@ -639,6 +717,54 @@
             form.submit();
         });
     });
+
+    // REFUS ARTICLE
+    let articleIdToRefuse = null;
+    const refusArticleModal =
+        new bootstrap.Modal(document.getElementById('refusArticleModal'));
+
+    document.querySelectorAll(".btnRefuserArticle").forEach(btn => {
+
+        btn.addEventListener("click", function () {
+
+            articleIdToRefuse = this.dataset.id;
+
+            document.getElementById("refusArticleInfo").innerHTML =
+                "<strong>Article :</strong> " +this.dataset.codearticle+'-'+ this.dataset.designation;
+
+            document.getElementById("refusArticleCommentaire").value = "";
+            document.getElementById("refusArticleError").style.display = "none";
+
+            refusArticleModal.show();
+        });
+
+    });
+
+    document.getElementById("btnConfirmRefusArticle")
+        .addEventListener("click", function () {
+
+            const commentaire =
+                document.getElementById("refusArticleCommentaire").value.trim();
+
+            if (commentaire === "") {
+                document.getElementById("refusArticleError").style.display = "block";
+                return;
+            }
+
+            const form = document.createElement("form");
+            form.method = "POST";
+            form.action = "/demande/ligne/" + articleIdToRefuse + "/refuser";
+
+
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "commentaire";
+            input.value = commentaire;
+
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        });
     /*]]>*/
 </script>
 </body>

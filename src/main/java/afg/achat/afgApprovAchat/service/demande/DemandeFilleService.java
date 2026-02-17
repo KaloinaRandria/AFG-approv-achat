@@ -1,17 +1,30 @@
 package afg.achat.afgApprovAchat.service.demande;
 
+import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.model.demande.ValidationDemande;
+import afg.achat.afgApprovAchat.model.util.StatutDemande;
+import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.demande.DemandeFilleRepo;
+import afg.achat.afgApprovAchat.repository.demande.DemandeMereRepo;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class DemandeFilleService {
     @Autowired
     DemandeFilleRepo demandeFilleRepo;
+    @Autowired
+    DemandeMereRepo demandeMereRepo;
+    @Autowired
+    private DemandeMereService demandeMereService;
+    @Autowired
+    private ValidationDemandeService validationDemandeService;
 
     public DemandeFille[] getAllDemandesFilles() {
         return demandeFilleRepo.findAll().toArray(new DemandeFille[0]);
@@ -23,4 +36,48 @@ public class DemandeFilleService {
     public List<DemandeFille> getDemandeFilleByDemandeMere(DemandeMere demandeMere) {
         return this.demandeFilleRepo.findDemandeFilleByDemandeMere(demandeMere);
     }
+    public DemandeFille getDemandeFilleById(int id) {
+        return this.demandeFilleRepo.findById(id).orElse(null);
+    }
+
+    @Transactional
+    public void refuserLigne(DemandeFille ligne,
+                             Utilisateur validateur,
+                             String commentaire) {
+
+        ligne.setStatut(StatutDemande.REFUSE);
+        demandeFilleRepo.save(ligne);
+
+        // 🔥 Recalcul total
+        demandeMereService.recalculerTotal(ligne.getDemandeMere());
+
+        // 🔥 Historique
+        ValidationDemande historique = new ValidationDemande();
+        historique.setDemandeMere(ligne.getDemandeMere());
+        historique.setValidateur(validateur);
+        historique.setStatut(StatutDemande.REFUSE);
+
+        String designation = ligne.getArticle() != null
+                ? ligne.getArticle().getDesignation()
+                : "Article inconnu";
+        String codeArticle = ligne.getArticle() != null ?
+                ligne.getArticle().getCodeArticle() : "N/A";
+
+        historique.setCommentaire(
+                "Refus de l'article : " + codeArticle+"-"+ designation +
+                        (commentaire != null && !commentaire.isBlank()
+                                ? " | Motif : " + commentaire
+                                : "")
+        );
+
+        historique.setDateAction(String.valueOf(LocalDateTime.now()));
+
+        validationDemandeService.logAction(historique);
+    }
+
+    public Article getArticleByIdDemandeFille(int idDemandeFille) {
+        return demandeFilleRepo.findArticleByIdDemandeFille(idDemandeFille);
+    }
+
+
 }
