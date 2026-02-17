@@ -92,7 +92,7 @@
                                 <div class="line"
                                      th:classappend="${currentStep > 2 ? 'is-done' : ''}"></div>
 
-                                <!-- ETAPE 3 : Finance -->
+
                                 <div class="step"
                                      th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 3 ? 'is-done' : (currentStep == 3 ? 'is-current' : ''))}">
                                     <div class="dot"><span>3</span></div>
@@ -102,7 +102,7 @@
                                 <div class="line"
                                      th:classappend="${currentStep > 3 ? 'is-done' : ''}"></div>
 
-                                <!-- ETAPE 4 : SG -->
+
                                 <div class="step"
                                      th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 4 ? 'is-done' : (currentStep == 4 ? 'is-current' : ''))}">
                                     <div class="dot"><span>4</span></div>
@@ -277,20 +277,20 @@
                                 <tr>
 
                                     <!-- DESIGNATION -->
-                                    <th th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_FINANCE'',''ROLE_SG'')')}
+                                    <th th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'')')}
                           ? 'width:55%' : 'width:70%'">
                                         DÉSIGNATION
                                     </th>
 
                                     <!-- QUANTITE -->
                                     <th class="text-end"
-                                        th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_FINANCE'',''ROLE_SG'')')}
+                                        th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'')')}
                           ? 'width:20%' : 'width:30%'">
                                         QUANTITÉ
                                     </th>
 
                                     <!-- PRIX -->
-                                    <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_FINANCE','ROLE_SG')"
+                                    <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_CONTROLEUR','ROLE_DFC')"
                                         style="width:25%"
                                         class="text-end">
                                         PRIX UNITAIRE
@@ -302,7 +302,7 @@
                                 <tbody>
 
                                 <tr th:if="${lignes == null || lignes.isEmpty()}">
-                                    <td th:colspan="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_FINANCE'',''ROLE_SG'')')} ? 3 : 2"
+                                    <td th:colspan="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'')')} ? 3 : 2"
                                         class="text-center text-muted">
                                         Aucun article
                                     </td>
@@ -313,7 +313,7 @@
 
                                     <td class="text-end" th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">0</td>
 
-                                    <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_FINANCE','ROLE_SG')"
+                                    <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_CONTROLEUR','ROLE_DFC')"
                                         class="text-end"
                                         th:text="${#numbers.formatDecimal(l.article.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')}">
                                         0
@@ -325,7 +325,7 @@
                         </div>
                         <!-- TOTAL (style document formel) -->
                         <div class="px-3 pb-3 mt-2"
-                             sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_FINANCE','ROLE_SG')">
+                             sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_CONTROLEUR','ROLE_DFC')">
 
                             <div class="d-flex justify-content-end">
 
@@ -353,8 +353,8 @@
 
                             <div th:if="${(canDecisionN1 ?: false)
                               or (canDecisionMG ?: false)
-                              or (canDecisionFinance ?: false)
-                              or (canDecisionSG ?: false)}">
+                              or (canDecisionControleur ?: false)
+                              or (canDecisionDFC ?: false)}">
 
                                 <!-- Form unique -->
                                 <form id="decisionForm"
@@ -366,11 +366,11 @@
                                     <div class="text-muted small mb-2" th:if="${canDecisionMG ?: false}">
                                         <i class="fas fa-user-shield me-1"></i> Validation Moyens Généraux
                                     </div>
-                                    <div class="text-muted small mb-2" th:if="${canDecisionFinance ?: false}">
-                                        <i class="fas fa-coins me-1"></i> Validation Finance
+                                    <div class="text-muted small mb-2" th:if="${canDecisionControleur ?: false}">
+                                        <i class="fas fa-coins me-1"></i> Validation contrôleur de gestion
                                     </div>
-                                    <div class="text-muted small mb-2" th:if="${canDecisionSG ?: false}">
-                                        <i class="fas fa-gavel me-1"></i> Validation Secrétaire Général
+                                    <div class="text-muted small mb-2" th:if="${canDecisionDFC ?: false}">
+                                        <i class="fas fa-gavel me-1"></i> Validation D.F.C.
                                     </div>
 
                                     <input type="hidden" name="commentaire" id="decisionCommentaire">
@@ -470,8 +470,8 @@
                                                     <span th:text="${
                                                         h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1 ? 'N+1' :
                                                         (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N2 ? 'Moyens Généraux' :
-                                                        (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N3 ? 'Finance' :
-                                                        (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE ? 'Secrétaire Général' :
+                                                        (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N3 ? 'Contrôleur de gestion' :
+                                                        (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE ? 'D.F.C.' :
                                                         (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE ? 'Refus' :
                                                         'Création'))))
                                                     }"></span>
