@@ -7,6 +7,8 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+
+    <meta name="context-path" th:content="@{/}" />
 </head>
 
 <body>
@@ -617,110 +619,178 @@
         tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
     });
 
-    $('#historiqueModal').on('show.bs.modal', function (event) {
-        var button = $(event.relatedTarget);
-        var codeArticle = button.data('codearticle');
+    let historiqueState = {
+        codeArticle: null,
+        page: 0,
+        size: 10,
+        totalPages: 0,
+        totalElements: 0
+    };
 
-        console.log("Ouverture du modal pour l'article: " + codeArticle);
+    function loadHistorique(page = 0) {
+        historiqueState.page = page;
 
+        // Loading
         $('#historiqueTableBody').html(`
-        <tr>
-            <td colspan="6" class="text-center py-4">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Chargement...</span>
-                </div>
-                <p class="mt-2 text-muted">Chargement de l'historique...</p>
-            </td>
-        </tr>
+      <tr>
+        <td colspan="7" class="text-center py-4">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 text-muted">Chargement de l'historique...</p>
+        </td>
+      </tr>
     `);
-        const url = `/api/historique/stock/${encodeURIComponent(codeArticle)}?page=0&size=10`;
-        console.log(url);
+        const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
+
+        const url = `${CONTEXT_PATH}api/historique/stock/${encodeURIComponent(historiqueState.codeArticle)}?page=${historiqueState.page}&size=${historiqueState.size}`;
+
         $.ajax({
-            url: url,
+            url,
             method: 'GET',
             success: function (response) {
-                console.log("Réponse reçue:", response);
-                if (response.data && response.data.length > 0) {
-                    let html = '';
-                    response.data.forEach(function (h) {
-                        const type = (h.typeMouvement || '').toUpperCase();
+                const data = response.data || [];
+                const pag = response.pagination || {};
 
-                        const rowClass = type === 'ENTREE'
-                            ? 'mv-row mv-entree'
-                            : (type === 'SORTIE' ? 'mv-row mv-sortie' : 'mv-row');
+                historiqueState.totalPages = pag.totalPages ?? 1;
+                historiqueState.totalElements = pag.totalElements ?? data.length;
 
-                        const pill = type === 'ENTREE'
-                            ? `<span class="mv-pill mv-pill-entree"><i class="fas fa-arrow-down"></i> ENTREE</span>`
-                            : (type === 'SORTIE'
-                                ? `<span class="mv-pill mv-pill-sortie"><i class="fas fa-arrow-up"></i> SORTIE</span>`
-                                : `<span class="mv-pill mv-pill-unk"><i class="fas fa-question-circle"></i> INCONNU</span>`);
+                $('#historiqueCount').text(historiqueState.totalElements + ' mouvement(s)');
 
-                        // Quantité signée (+ entrée / - sortie)
-                        const qtySign = type === 'ENTREE' ? '+' : (type === 'SORTIE' ? '-' : '');
-                        const qtyClass = type === 'ENTREE'
-                            ? 'mv-qty mv-qty-entree'
-                            : (type === 'SORTIE' ? 'mv-qty mv-qty-sortie' : 'mv-qty');
+                if (data.length === 0) {
+                    $('#historiqueTableBody').html(`
+            <tr>
+              <td colspan="7" class="text-center py-4">
+                <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                <p class="text-muted">Aucun mouvement trouvé</p>
+              </td>
+            </tr>
+          `);
+                    renderHistoriquePagination();
+                    return;
+                }
 
-                        // Article label (code + designation)
-                        const articleLabel = `${h.codeArticle || '-'}${h.designation ? ' - ' + h.designation : ''}`;
+                let html = '';
+                data.forEach(function (h) {
+                    const type = (h.typeMouvement || '').toUpperCase();
 
-                        // UDM label
-                        const udmLabel = `${h.descUdm || '-'}${h.udm ? ' (' + h.udm + ')' : ''}`;
+                    const rowClass = type === 'ENTREE'
+                        ? 'mv-row mv-entree'
+                        : (type === 'SORTIE' ? 'mv-row mv-sortie' : 'mv-row');
 
-                        html += `
-        <tr class="${rowClass}">
-            <td class="ps-4">
+                    const pill = type === 'ENTREE'
+                        ? `<span class="mv-pill mv-pill-entree"><i class="fas fa-arrow-down"></i> ENTREE</span>`
+                        : (type === 'SORTIE'
+                            ? `<span class="mv-pill mv-pill-sortie"><i class="fas fa-arrow-up"></i> SORTIE</span>`
+                            : `<span class="mv-pill mv-pill-unk"><i class="fas fa-question-circle"></i> INCONNU</span>`);
+
+                    const qtySign = type === 'ENTREE' ? '+' : (type === 'SORTIE' ? '-' : '');
+                    const qtyClass = type === 'ENTREE'
+                        ? 'mv-qty mv-qty-entree'
+                        : (type === 'SORTIE' ? 'mv-qty mv-qty-sortie' : 'mv-qty');
+
+                    const articleLabel = `${h.codeArticle || '-'}${h.designation ? ' - ' + h.designation : ''}`;
+                    const udmLabel = `${h.descUdm || '-'}${h.udm ? ' (' + h.udm + ')' : ''}`;
+
+                    html += `
+            <tr class="${rowClass}">
+              <td class="ps-4">
                 <div class="fw-semibold">${h.dateMouvement || '-'}</div>
                 <div class="mv-muted">${h.refBlMere ? 'BL: ' + h.refBlMere : (h.refDemandeMere ? 'DM: ' + h.refDemandeMere : '')}</div>
-            </td>
+              </td>
+              <td>${pill}</td>
+              <td><div class="fw-semibold">${articleLabel}</div></td>
+              <td class="${qtyClass}">${qtySign}${h.quantite ?? '-'}</td>
+              <td>${udmLabel}</td>
+              <td>${h.reference || '-'}</td>
+              <td class="pe-4">${h.auteur || '-'}</td>
+            </tr>
+          `;
+                });
 
-            <td>${pill}</td>
+                $('#historiqueTableBody').html(html);
 
-            <td>
-                <div class="fw-semibold">${articleLabel}</div>
-            </td>
+                // infos "Page X / Y"
+                $('#historiquePageInfo').text(
+                    `Page ${historiqueState.page + 1} / ${historiqueState.totalPages} — Total: ${historiqueState.totalElements}`
+                );
 
-            <td class="${qtyClass}">${qtySign}${h.quantite ?? '-'}</td>
-
-            <td>${udmLabel}</td>
-
-            <td>${h.reference || '-'}</td>
-
-            <td class="pe-4">${h.auteur || '-'}</td>
-        </tr>
-    `;
-                    });
-
-                    $('#historiqueTableBody').html(html);
-                    const totalElements = response.pagination ? response.pagination.totalElements : response.data.lenght;
-                    $('#historiqueCount').text(totalElements + ' mouvement(s)');
-                } else {
-                    console.log("Aucun historique trouvé.");
-                    $('#historiqueTableBody').html(`
-                    <tr>
-                        <td colspan="6" class="text-center py-4">
-                            <i class="fas fa-history fa-2x text-muted mb-2"></i>
-                            <p class="text-muted">Aucune modification trouvée</p>
-                        </td>
-                    </tr>
-                `);
-                    $('#historiqueCount').text('0 mouvement(s)');
-                }
+                renderHistoriquePagination();
             },
             error: function (xhr, status, error) {
-                console.error("Erreur AJAX:", status, error, xhr.responseText);
                 $('#historiqueTableBody').html(`
-                <tr>
-                    <td colspan="6" class="text-center py-4 text-danger">
-                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                        <p>Erreur lors du chargement de l'historique</p>
-                        <small class="text-muted">Status: ${status}, Erreur: ${error}</small>
-                        <br><small>Réponse: ${xhr.responseText}</small>
-                    </td>
-                </tr>
-            `);
+          <tr>
+            <td colspan="7" class="text-center py-4 text-danger">
+              <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+              <p>Erreur lors du chargement de l'historique</p>
+              <small class="text-muted">Status: ${status}, Erreur: ${error}</small>
+            </td>
+          </tr>
+        `);
+                $('#historiquePagination').addClass('d-none');
             }
         });
+    }
+
+    function renderHistoriquePagination() {
+        const ul = $('#historiquePaginationUl');
+        ul.empty();
+
+        if (historiqueState.totalPages <= 1) {
+            $('#historiquePagination').addClass('d-none');
+            return;
+        }
+
+        $('#historiquePagination').removeClass('d-none');
+
+        const cur = historiqueState.page;
+        const total = historiqueState.totalPages;
+
+        const start = Math.max(0, cur - 2);
+        const end = Math.min(total - 1, cur + 2);
+
+        // Prev
+        ul.append(`
+      <li class="page-item ${cur === 0 ? 'disabled' : ''}">
+        <a class="page-link" href="#" data-page="${cur - 1}">Précédente</a>
+      </li>
+    `);
+
+        // Pages
+        for (let p = start; p <= end; p++) {
+            ul.append(`
+        <li class="page-item ${p === cur ? 'active' : ''}">
+          <a class="page-link" href="#" data-page="${p}">${p + 1}</a>
+        </li>
+      `);
+        }
+
+        // Next
+        ul.append(`
+      <li class="page-item ${cur >= total - 1 ? 'disabled' : ''}">
+        <a class="page-link" href="#" data-page="${cur + 1}">Suivante</a>
+      </li>
+    `);
+    }
+
+    // Click pagination
+    $(document).on('click', '#historiquePaginationUl a.page-link', function (e) {
+        e.preventDefault();
+        const page = parseInt($(this).data('page'), 10);
+        if (isNaN(page) || page < 0 || page >= historiqueState.totalPages) return;
+        loadHistorique(page);
+    });
+
+    // Change size
+    $('#historiqueSize').on('change', function () {
+        historiqueState.size = parseInt($(this).val(), 10) || 10;
+        loadHistorique(0);
+    });
+
+    // Modal open
+    $('#historiqueModal').on('show.bs.modal', function (event) {
+        const button = $(event.relatedTarget);
+        historiqueState.codeArticle = button.data('codearticle');
+        historiqueState.size = parseInt($('#historiqueSize').val(), 10) || 10;
+        loadHistorique(0);
     });
 
     // Fonction pour afficher les détails de l'alerte à partir de l'élément

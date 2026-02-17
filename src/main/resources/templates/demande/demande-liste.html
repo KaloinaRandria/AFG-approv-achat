@@ -206,9 +206,27 @@
 
                             <td th:text="${demande.id}"></td>
                             <td th:text="${#temporals.format(demande.dateDemande, 'dd/MM/yyyy HH:mm')}"></td>
-                            <td th:if="${showDemandeurColumn}"
-                                th:text="${demande.demandeur == null ? '-' : demande.demandeur.nom + ' ' + demande.demandeur.prenom}">
+                            <td th:if="${showDemandeurColumn}">
+                                <div th:if="${demande.demandeur != null}">
+
+                                    <!-- Nom + prénom -->
+                                    <div class="fw-semibold"
+                                         th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom}">
+                                    </div>
+
+                                    <!-- Poste + Service -->
+                                    <small class="text-muted"
+                                           th:text="${
+                                           (demande.demandeur.poste != null ? demande.demandeur.poste.poste : '') +
+                                           (demande.demandeur.service != null ? ' - ' + demande.demandeur.service.acronyme : '')
+                                       }">
+                                    </small>
+
+                                </div>
+
+                                <span th:if="${demande.demandeur == null}">-</span>
                             </td>
+
 
                             <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
                                 class="td-nature-demande"

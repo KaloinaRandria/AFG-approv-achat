@@ -62,58 +62,77 @@
                         <div class="px-3 pb-2">
                             <div class="approval-stepper">
 
+                                <!-- ETAPE 0 : CREER -->
                                 <div class="step"
                                      th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 0 ? 'is-done' : (currentStep == 0 ? 'is-current' : ''))}">
-                                    <div class="dot"><span>1</span></div>
-                                    <div class="label">N+1</div>
+                                    <div class="dot"><span>0</span></div>
+                                    <div class="label">Créée</div>
                                 </div>
 
                                 <div class="line"
                                      th:classappend="${currentStep > 0 ? 'is-done' : ''}"></div>
 
+                                <!-- ETAPE 1 : N+1 -->
                                 <div class="step"
                                      th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 1 ? 'is-done' : (currentStep == 1 ? 'is-current' : ''))}">
-                                    <div class="dot"><span>2</span></div>
-                                    <div class="label">Moyens Généraux</div>
+                                    <div class="dot"><span>1</span></div>
+                                    <div class="label">N+1</div>
                                 </div>
 
                                 <div class="line"
                                      th:classappend="${currentStep > 1 ? 'is-done' : ''}"></div>
 
+                                <!-- ETAPE 2 : MG -->
                                 <div class="step"
                                      th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 2 ? 'is-done' : (currentStep == 2 ? 'is-current' : ''))}">
-                                    <div class="dot"><span>3</span></div>
-                                    <div class="label">Finance</div>
+                                    <div class="dot"><span>2</span></div>
+                                    <div class="label">Moyens Généraux</div>
                                 </div>
 
                                 <div class="line"
                                      th:classappend="${currentStep > 2 ? 'is-done' : ''}"></div>
 
+
                                 <div class="step"
                                      th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 3 ? 'is-done' : (currentStep == 3 ? 'is-current' : ''))}">
-                                    <div class="dot"><span>4</span></div>
-                                    <div class="label">SG</div>
+                                    <div class="dot"><span>3</span></div>
+                                    <div class="label">Contrôleur de gestion</div>
                                 </div>
+
+                                <div class="line"
+                                     th:classappend="${currentStep > 3 ? 'is-done' : ''}"></div>
+
+
+                                <div class="step"
+                                     th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 4 ? 'is-done' : (currentStep == 4 ? 'is-current' : ''))}">
+                                    <div class="dot"><span>4</span></div>
+                                    <div class="label">DFC</div>
+                                </div>
+
                             </div>
 
                             <!-- Badges finaux -->
                             <div class="mt-2 text-center">
-        <span class="badge bg-success"
-              th:if="${isValidated}">
-            <i class="fas fa-check-circle me-1"></i> Demande validée
-        </span>
+                                <span class="badge bg-success"
+                                      th:if="${isValidated}">
+                                    <i class="fas fa-check-circle me-1"></i> Demande validée et à traiter
+                                </span>
 
                                 <span class="badge bg-danger"
                                       th:if="${isRefused}">
-            <i class="fas fa-times-circle me-1"></i> Demande refusée
-        </span>
+                                    <i class="fas fa-times-circle me-1"></i> Demande refusée
+                                </span>
 
                                 <span class="text-muted small"
                                       th:if="${!isValidated and !isRefused}">
-            <i class="fas fa-info-circle me-1"></i>
-            Étape en cours :
-            <b th:text="${currentStep == 0 ? 'N+1' : (currentStep == 1 ? 'Moyens Généraux' : (currentStep == 2 ? 'Finance' : 'SG'))}"></b>
-        </span>
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Étape en cours :
+                                    <b th:text="${currentStep == 1 ? 'N+1' :
+                                                 (currentStep == 2 ? 'Moyens Généraux' :
+                                                 (currentStep == 3 ? 'Contrôleur de gestion' :
+                                                 (currentStep == 4 ? 'DFC' : '')))}">
+                                    </b>
+                                </span>
                             </div>
                         </div>
 
@@ -121,7 +140,23 @@
                         <div class="bl-infos">
                             <div>
                                 <strong>Demandeur :</strong>
-                                <div th:text="${demande.demandeur != null ? demande.demandeur.nom + ' ' + demande.demandeur.prenom : '-'}">-</div>
+                                <div th:if="${demande.demandeur != null}">
+
+                                    <!-- Nom + prénom -->
+                                    <div class="fw-semibold"
+                                         th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom}">
+                                    </div>
+
+                                    <!-- Poste + Service -->
+                                    <small class="text-muted"
+                                           th:text="${
+                                           (demande.demandeur.poste != null ? demande.demandeur.poste.poste : '') +
+                                           (demande.demandeur.service != null ? ' - ' + demande.demandeur.service.acronyme : '')
+                                       }">
+                                    </small>
+
+                                </div>
+
                             </div>
 
                             <div>
@@ -131,13 +166,41 @@
 
                             <div>
                                 <strong>Statut :</strong>
-                                <div th:text="${statutLabel}">-</div>
 
-                                <div th:if="${statutHint != null}" class="text-success small mt-1">
-                                    <i class="fas fa-check-circle me-1"></i>
+                                <div class="mt-1">
+                                    <span class="badge-status"
+                                          th:classappend="
+                                            ${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).CREE} ? ' badge-wait' :
+                                            (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1} ? ' badge-info' :
+                                            (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N2} ? ' badge-purple' :
+                                            (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N3} ? ' badge-purple' :
+                                            (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE} ? ' badge-success' :
+                                            (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' badge-danger' :
+                                            ' badge-info')))))">
+
+                                        <i class="fas"
+                                           th:classappend="
+                                             ${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).CREE} ? ' fa-user-clock' :
+                                             (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1} ? ' fa-clipboard-check' :
+                                             (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N2} ? ' fa-coins' :
+                                             (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N3} ? ' fa-gavel' :
+                                             (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE} ? ' fa-check-circle' :
+                                             (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' fa-times-circle' :
+                                             ' fa-info-circle')))))">
+                                        </i>
+
+                                        <span th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></span>
+                                    </span>
+                                </div>
+
+                                <!-- Message contextuel -->
+                                <div th:if="${statutHint != null}"
+                                     class="text-muted small mt-2">
+                                    <i class="fas fa-info-circle me-1"></i>
                                     <span th:text="${statutHint}"></span>
                                 </div>
                             </div>
+
 
                             <div>
                                 <strong>Type de Demande :</strong>
@@ -214,20 +277,20 @@
                                 <tr>
 
                                     <!-- DESIGNATION -->
-                                    <th th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_FINANCE'',''ROLE_SG'')')}
+                                    <th th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'')')}
                           ? 'width:55%' : 'width:70%'">
                                         DÉSIGNATION
                                     </th>
 
                                     <!-- QUANTITE -->
                                     <th class="text-end"
-                                        th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_FINANCE'',''ROLE_SG'')')}
+                                        th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'')')}
                           ? 'width:20%' : 'width:30%'">
                                         QUANTITÉ
                                     </th>
 
                                     <!-- PRIX -->
-                                    <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_FINANCE','ROLE_SG')"
+                                    <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_CONTROLEUR','ROLE_DFC')"
                                         style="width:25%"
                                         class="text-end">
                                         PRIX UNITAIRE
@@ -239,7 +302,7 @@
                                 <tbody>
 
                                 <tr th:if="${lignes == null || lignes.isEmpty()}">
-                                    <td th:colspan="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_FINANCE'',''ROLE_SG'')')} ? 3 : 2"
+                                    <td th:colspan="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'')')} ? 3 : 2"
                                         class="text-center text-muted">
                                         Aucun article
                                     </td>
@@ -248,11 +311,11 @@
                                 <tr th:each="l : ${lignes}">
                                     <td th:text="${l.article != null ? l.article.designation : '-'}">-</td>
 
-                                    <td class="text-end" th:text="${l.quantite}">0</td>
+                                    <td class="text-end" th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">0</td>
 
-                                    <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_FINANCE','ROLE_SG')"
+                                    <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_CONTROLEUR','ROLE_DFC')"
                                         class="text-end"
-                                        th:text="${l.article.prixUnitaire}">
+                                        th:text="${#numbers.formatDecimal(l.article.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')}">
                                         0
                                     </td>
                                 </tr>
@@ -262,7 +325,7 @@
                         </div>
                         <!-- TOTAL (style document formel) -->
                         <div class="px-3 pb-3 mt-2"
-                             sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_FINANCE','ROLE_SG')">
+                             sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_CONTROLEUR','ROLE_DFC')">
 
                             <div class="d-flex justify-content-end">
 
@@ -274,10 +337,10 @@
 
                                         <td class="text-end fw-bold"
                                             style="padding: 8px 12px; font-size: 1.15rem; min-width: 140px;">
-                    <span th:text="${demande.totalPrix != null
-                        ? #numbers.formatDecimal(demande.totalPrix, 1, 'COMMA', 2, 'POINT')
-                        : '0,00'}">
-                    </span>
+                                            <span th:text="${demande.totalPrix != null
+                                                ? #numbers.formatDecimal(demande.totalPrix, 1, 'DEFAULT', 2, 'DEFAULT')
+                                                : '0,00'}">
+                                            </span>
                                         </td>
                                     </tr>
                                 </table>
@@ -289,9 +352,9 @@
                         <div class="p-3 d-flex justify-content-between align-items-center">
 
                             <div th:if="${(canDecisionN1 ?: false)
-          or (canDecisionMG ?: false)
-          or (canDecisionFinance ?: false)
-          or (canDecisionSG ?: false)}">
+                              or (canDecisionMG ?: false)
+                              or (canDecisionControleur ?: false)
+                              or (canDecisionDFC ?: false)}">
 
                                 <!-- Form unique -->
                                 <form id="decisionForm"
@@ -303,11 +366,11 @@
                                     <div class="text-muted small mb-2" th:if="${canDecisionMG ?: false}">
                                         <i class="fas fa-user-shield me-1"></i> Validation Moyens Généraux
                                     </div>
-                                    <div class="text-muted small mb-2" th:if="${canDecisionFinance ?: false}">
-                                        <i class="fas fa-coins me-1"></i> Validation Finance
+                                    <div class="text-muted small mb-2" th:if="${canDecisionControleur ?: false}">
+                                        <i class="fas fa-coins me-1"></i> Validation contrôleur de gestion
                                     </div>
-                                    <div class="text-muted small mb-2" th:if="${canDecisionSG ?: false}">
-                                        <i class="fas fa-gavel me-1"></i> Validation Secrétaire Général
+                                    <div class="text-muted small mb-2" th:if="${canDecisionDFC ?: false}">
+                                        <i class="fas fa-gavel me-1"></i> Validation D.F.C.
                                     </div>
 
                                     <input type="hidden" name="commentaire" id="decisionCommentaire">
@@ -351,8 +414,111 @@
                             </div>
                             <div class="text-muted small"></div>
                         </div>
+                        <!-- HISTORIQUE VALIDATION -->
+                        <div class="px-3 pb-3 mt-3">
+                            <div class="p-3 border rounded bg-light">
+                                <div class="fw-bold mb-3">
+                                    <i class="fas fa-history me-2"></i> Historique de validation
+                                </div>
 
-                    </div><!-- /bl-document -->
+                                <!-- Aucun historique -->
+                                <div th:if="${historiques == null || historiques.isEmpty()}"
+                                     class="text-muted">
+                                    Aucun historique disponible
+                                </div>
+
+                                <!-- Tableau historique -->
+                                <div th:if="${historiques != null && !historiques.isEmpty()}">
+                                    <div class="table-responsive">
+                                        <table class="table align-middle table-hover table-bordered bg-white shadow-sm rounded overflow-hidden">
+                                            <thead class="table-light">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Validé par</th>
+                                                <th>Étape</th>
+                                                <th>Décision</th>
+                                                <th>Commentaire</th>
+                                            </tr>
+                                            </thead>
+
+                                            <tbody>
+                                            <tr th:each="h : ${historiques}">
+
+                                                <!-- Date -->
+                                                <td th:text="${h.dateAction != null ?
+                                                    #temporals.format(h.dateAction,'dd/MM/yyyy HH:mm') : '-'}">
+                                                    -
+                                                </td>
+
+                                                <!-- Validateur -->
+                                                <td>
+                                                    <div th:if="${h.validateur != null}">
+                                                        <div class="fw-semibold"
+                                                             th:text="${h.validateur.nom + ' ' + h.validateur.prenom}">
+                                                        </div>
+                                                        <small class="text-muted"
+                                                               th:text="${
+                                                               (h.validateur.poste != null ? h.validateur.poste.poste : '') +
+                                                               (h.validateur.service != null ? ' - ' + h.validateur.service.acronyme : '')
+                                                           }">
+                                                        </small>
+                                                    </div>
+                                                </td>
+
+                                                <!-- Étape (déduite du statut de la demande au moment de validation) -->
+                                                <td>
+                                                    <span th:text="${
+                                                        h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1 ? 'N+1' :
+                                                        (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N2 ? 'Moyens Généraux' :
+                                                        (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N3 ? 'Contrôleur de gestion' :
+                                                        (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE ? 'D.F.C.' :
+                                                        (h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE ? 'Refus' :
+                                                        'Création'))))
+                                                    }"></span>
+                                                </td>
+
+
+                                                <!-- ✅ DECISION -->
+                                                <td>
+                                                    <span class="badge"
+                                                          th:classappend="${
+                                                              h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
+                                                              ? ' bg-danger'
+                                                              : ' bg-success'
+                                                          }">
+
+                                                        <i class="fas"
+                                                           th:classappend="${
+                                                               h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
+                                                               ? ' fa-times-circle'
+                                                               : ' fa-check-circle'
+                                                           }"></i>
+
+                                                        <span th:text="${
+                                                            h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
+                                                            ? 'REFUSÉE'
+                                                            : 'VALIDÉE'
+                                                        }"></span>
+                                                    </span>
+                                                </td>
+
+
+
+                                                <!-- Commentaire -->
+                                                <td th:text="${h.commentaire != null && !h.commentaire.isBlank() ? h.commentaire : '-'}">
+                                                    -
+                                                </td>
+
+                                            </tr>
+                                            </tbody>
+
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
 
                 </div>
             </div>

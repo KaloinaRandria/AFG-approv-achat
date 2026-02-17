@@ -8,6 +8,8 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+
+    <meta name="context-path" th:content="@{/}" />
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
@@ -407,8 +409,9 @@
                 <p class="mt-2 text-muted">Chargement de l'historique...</p>
             </td>
         </tr>`);
+        const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
 
-        const url = `/api/historique/devise/${encodeURIComponent(deviseId)}?page=0&size=10`;
+        const url = `${CONTEXT_PATH}api/historique/devise/${encodeURIComponent(deviseId)}?page=0&size=10`;
         console.log("URL de requête:", url);
 
         $.ajax({

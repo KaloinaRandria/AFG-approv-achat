@@ -168,7 +168,7 @@
                                                required>
                                         <input type="hidden"
                                                name="articleCodes[]">
-                                        <div class="autocomplete-list list-group position-absolute w-100"></div>
+<!--                                        <div class="autocomplete-list list-group position-absolute w-100"></div>-->
                                     </td>
 
 
@@ -444,51 +444,162 @@
 
     });
 
-    document.addEventListener("input", function (e) {
-        if (!e.target.classList.contains("article-input")) return;
 
-        const input = e.target;
-        const list = input.closest("td").querySelector(".autocomplete-list");
-        const keyword = input.value.trim();
+    (function () {
+        // 1) Créer le dropdown global (portal) une seule fois
+        let portal = document.getElementById("articleAutocompletePortal");
+        if (!portal) {
+            portal = document.createElement("div");
+            portal.id = "articleAutocompletePortal";
+            portal.className = "list-group";
+            document.body.appendChild(portal);
+        }
 
-        list.innerHTML = "";
-        if (keyword.length < 2) return;
+        let activeInput = null;
+        let abortController = null;
 
-        // Récupérer tous les articles déjà sélectionnés
-        const selectedArticles = Array.from(document.querySelectorAll('input[name="articleCodes[]"]'))
-            .map(i => i.value)
-            .filter(v => v); // on ignore les vides
+        function hidePortal() {
+            portal.style.display = "none";
+            portal.innerHTML = "";
+            activeInput = null;
+            if (abortController) abortController.abort();
+            abortController = null;
+        }
 
-        fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`)
-            .then(res => res.json())
-            .then(data => {
-                // Filtrer les articles déjà sélectionnés
-                const filteredData = data.filter(article => !selectedArticles.includes(article.code));
+        function positionPortal(input) {
+            const r = input.getBoundingClientRect();
+            const gap = 2;
 
-                filteredData.forEach(article => {
+            portal.style.left = `${r.left}px`;
+            portal.style.top  = `${r.bottom + gap}px`;
+            portal.style.width = `${r.width}px`;
+        }
+
+        // Pour éviter trop d'appels API
+        function debounce(fn, delay = 250) {
+            let t;
+            return (...args) => {
+                clearTimeout(t);
+                t = setTimeout(() => fn(...args), delay);
+            };
+        }
+
+        const loadSuggestions = debounce(async (input, keyword) => {
+            // annuler requête précédente
+            if (abortController) abortController.abort();
+            abortController = new AbortController();
+
+            // Articles déjà sélectionnés
+            const selectedArticles = Array.from(document.querySelectorAll('input[name="articleCodes[]"]'))
+                .map(i => i.value)
+                .filter(Boolean);
+
+            try {
+                const res = await fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`, {
+                    signal: abortController.signal
+                });
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const data = await res.json();
+
+                // si l'utilisateur a changé de champ entre temps
+                if (activeInput !== input) return;
+
+                const filtered = (data || []).filter(a => !selectedArticles.includes(a.code));
+
+                portal.innerHTML = "";
+
+                if (filtered.length === 0) {
+                    const empty = document.createElement("div");
+                    empty.className = "list-group-item text-muted";
+                    empty.textContent = "Aucun résultat";
+                    portal.appendChild(empty);
+                    portal.style.display = "block";
+                    positionPortal(input);
+                    return;
+                }
+
+                filtered.slice(0, 10).forEach(article => {
                     const item = document.createElement("button");
                     item.type = "button";
                     item.className = "list-group-item list-group-item-action";
                     item.textContent = `${article.code} - ${article.designation}`;
 
-                    item.onclick = () => {
+                    item.addEventListener("mousedown", (e) => {
+                        // mousedown > évite que blur ferme avant le click
+                        e.preventDefault();
+
                         input.value = `${article.code} - ${article.designation}`;
-                        input.closest("td").querySelector('input[type="hidden"]').value = article.code;
-                        list.innerHTML = "";
-                    };
 
-                    list.appendChild(item);
+                        const td = input.closest("td");
+                        const hidden = td?.querySelector('input[name="articleCodes[]"]');
+                        if (hidden) hidden.value = article.code;
+
+                        hidePortal();
+                    });
+
+                    portal.appendChild(item);
                 });
-            });
-    });
 
+                portal.style.display = "block";
+                positionPortal(input);
 
-    document.addEventListener("click", function (e) {
-        if (!e.target.classList.contains("article-input")) {
-            document.querySelectorAll(".autocomplete-list")
-                .forEach(list => list.innerHTML = "");
-        }
-    });
+            } catch (err) {
+                // Abort = normal
+                if (err?.name === "AbortError") return;
+                console.error("Autocomplete error:", err);
+                hidePortal();
+            }
+        }, 250);
+
+        // 2) Ouvrir / mettre à jour le dropdown sur input
+        document.addEventListener("input", function (e) {
+            if (!e.target.classList.contains("article-input")) return;
+
+            const input = e.target;
+            const keyword = input.value.trim();
+
+            // si on retape, invalider code hidden
+            const td = input.closest("td");
+            const hidden = td?.querySelector('input[name="articleCodes[]"]');
+            if (hidden) hidden.value = "";
+
+            if (keyword.length < 2) {
+                hidePortal();
+                return;
+            }
+
+            activeInput = input;
+            portal.style.display = "block";
+            portal.innerHTML = `<div class="list-group-item text-muted">Recherche...</div>`;
+            positionPortal(input);
+
+            loadSuggestions(input, keyword);
+        });
+
+        // 3) Repositionner quand on scroll / resize
+        window.addEventListener("scroll", () => {
+            if (activeInput && portal.style.display === "block") positionPortal(activeInput);
+        }, true);
+
+        window.addEventListener("resize", () => {
+            if (activeInput && portal.style.display === "block") positionPortal(activeInput);
+        });
+
+        // 4) Fermer quand on clique ailleurs
+        document.addEventListener("mousedown", function (e) {
+            if (!portal.contains(e.target) && !e.target.classList.contains("article-input")) {
+                hidePortal();
+            }
+        });
+
+        // 5) Fermer au blur (mais laisse le mousedown des items fonctionner)
+        document.addEventListener("focusin", function (e) {
+            if (!e.target.classList.contains("article-input") && !portal.contains(e.target)) {
+                hidePortal();
+            }
+        });
+
+    })();
 
     document.addEventListener("input", function (e) {
         if (!e.target.classList.contains("prix-input")) return;
