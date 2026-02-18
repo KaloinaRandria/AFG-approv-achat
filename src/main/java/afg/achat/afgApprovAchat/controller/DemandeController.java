@@ -615,13 +615,28 @@ public class DemandeController {
         return "demande/demande-fiche";
     }
 
+    @PostMapping("/ligne/{id}/refuser")
+    public String refuserLigne(@PathVariable int id,
+                               @RequestParam(value = "commentaire", required = false) String commentaire) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        DemandeFille ligne = demandeFilleService.getDemandeFilleById(id);
+
+        demandeFilleService.refuserLigne(ligne, current, commentaire);
+
+        return "redirect:/demande/fiche/" + ligne.getDemandeMere().getId();
+    }
+
 
     @PostMapping("/fiche/{id}/decision")
     public String decision(@PathVariable("id") String id,
                            @RequestParam("decision") String decision,
                            @RequestParam(value = "typeDemande", required = false) String typeDemande,
                            @RequestParam(value = "commentaire", required = false) String commentaire,
-                           RedirectAttributes redirectAttributes) {
+                           RedirectAttributes redirectAttributes)  {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
@@ -760,6 +775,12 @@ public class DemandeController {
         }
 
         redirectAttributes.addFlashAttribute("ko", "Décision invalide.");
+        return "redirect:/demande/fiche/" + id;
+    }
+
+    @PostMapping("/fiche/{id}/validation-codep")
+    public String validationCodep(@PathVariable("id") String id) {
+
         return "redirect:/demande/fiche/" + id;
     }
 
