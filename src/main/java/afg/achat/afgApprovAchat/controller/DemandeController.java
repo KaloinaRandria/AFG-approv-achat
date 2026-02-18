@@ -636,7 +636,7 @@ public class DemandeController {
                            @RequestParam("decision") String decision,
                            @RequestParam(value = "typeDemande", required = false) String typeDemande,
                            @RequestParam(value = "commentaire", required = false) String commentaire,
-                           RedirectAttributes redirectAttributes) {
+                           RedirectAttributes redirectAttributes)  {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
@@ -775,6 +775,12 @@ public class DemandeController {
         }
 
         redirectAttributes.addFlashAttribute("ko", "Décision invalide.");
+        return "redirect:/demande/fiche/" + id;
+    }
+
+    @PostMapping("/fiche/{id}/validation-codep")
+    public String validationCodep(@PathVariable("id") String id) {
+
         return "redirect:/demande/fiche/" + id;
     }
 

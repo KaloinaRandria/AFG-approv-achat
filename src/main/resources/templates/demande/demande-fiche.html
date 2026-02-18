@@ -109,6 +109,16 @@
                                     <div class="label">DFC</div>
                                 </div>
 
+                                <div class="line"
+                                     th:classappend="${currentStep > 4 ? 'is-done' : ''}"></div>
+
+                                <div class="step"
+                                     th:classappend="${currentStep > 5 ? 'is-done' : (currentStep == 5 ? 'is-current' : '')}">
+                                    <div class="dot"><span>5</span></div>
+                                    <div class="label">Comité Dépense</div>
+                                </div>
+
+
                             </div>
 
                             <!-- Badges finaux -->
@@ -415,17 +425,57 @@
                                     </div>
 
                                     <!-- BOUTONS -->
-                                    <button type="button"
-                                            class="btn btn-outline-danger me-2"
-                                            id="btnOpenReject">
-                                        <i class="fas fa-times me-1"></i> Rejeter
-                                    </button>
+                                    <div class="d-flex gap-2">
 
-                                    <button type="button"
-                                            class="btn btn-gradient-green"
-                                            id="btnOpenApprove">
-                                        <i class="fas fa-check me-1"></i> Valider
-                                    </button>
+                                        <!-- REJET (commun à tous les niveaux) -->
+                                        <button type="button"
+                                                class="btn btn-outline-danger btn-reject"
+                                                data-decision="REJECT"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#decisionModal">
+
+                                        <i class="fas fa-times me-1"></i> Rejeter
+                                        </button>
+
+                                        <!-- ====== CAS MOYENS GENERAUX ====== -->
+                                        <div th:if="${canDecisionMG ?: false}" class="d-flex gap-2">
+
+                                            <!-- Validation normale -->
+                                            <button type="button"
+                                                    class="btn btn-gradient-green btn-approve"
+                                                    data-decision="APPROVE"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#decisionModal">
+
+                                            <i class="fas fa-check me-1"></i>
+                                                Validation normale
+                                            </button>
+
+                                            <!-- Validation CODEP -->
+                                            <button type="button"
+                                                    class="btn btn-gradient-purple"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#codepModal">
+                                                <i class="fas fa-landmark me-1"></i>
+                                                Validation CODEP
+                                            </button>
+
+                                        </div>
+
+                                        <!-- ====== AUTRES NIVEAUX (N1 / Contrôleur / DFC) ====== -->
+                                        <button type="button"
+                                                th:if="${!(canDecisionMG ?: false)}"
+                                                class="btn btn-gradient-green btn-approve"
+                                                id="btnOpenApprove"
+                                                data-decision="APPROVE"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#decisionModal">
+                                            <i class="fas fa-check me-1"></i>
+                                            Valider
+                                        </button>
+
+                                    </div>
+
 
                                     <!-- hidden input décision envoyé au controller -->
                                     <input type="hidden" name="decision" id="decisionValue">
@@ -596,6 +646,62 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="codepModal"
+     tabindex="-1"
+     aria-hidden="true"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header btn-gradient-purple">
+                <h5 class="modal-title">
+                    <i class="fas fa-landmark me-2"></i>
+                    Validation Comité de Dépense
+                </h5>
+            </div>
+
+            <form th:action="@{/demande/{id}/validation-codep(id=${demande.id})}"
+                  method="post"
+                  enctype="multipart/form-data">
+
+                <div class="modal-body">
+
+                    <div class="alert alert-info">
+                        Une pièce jointe (PV ou justificatif CODEP) est obligatoire.
+                    </div>
+
+                    <label class="form-label fw-bold">
+                        Pièce jointe <span class="text-danger">*</span>
+                    </label>
+
+                    <input type="file"
+                           class="form-control"
+                           name="file"
+                           required>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        Annuler
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-gradient-purple">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Confirmer validation CODEP
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
 <div class="modal fade" id="refusArticleModal"
      tabindex="-1"
      aria-hidden="true"
@@ -659,6 +765,7 @@
         </div>
     </div>
 </div>
+
 <script th:inline="javascript">
     /*<![CDATA[*/
     document.addEventListener("DOMContentLoaded", () => {
@@ -667,8 +774,6 @@
 
         if (!form || !modalEl) return;
 
-        const btnApprove = document.getElementById("btnOpenApprove");
-        const btnReject  = document.getElementById("btnOpenReject");
         const btnConfirm = document.getElementById("btnConfirmDecision");
 
         const decisionValue = document.getElementById("decisionValue");
@@ -700,8 +805,12 @@
             modal.show();
         }
 
-        btnApprove?.addEventListener("click", () => openModal("APPROVE"));
-        btnReject?.addEventListener("click",  () => openModal("REJECT"));
+        document.querySelectorAll(".btn-approve, .btn-reject")
+            .forEach(btn => {
+                btn.addEventListener("click", () => {
+                    openModal(btn.dataset.decision);
+                });
+            });
 
         btnConfirm?.addEventListener("click", () => {
             const decision = decisionValue.value;
