@@ -417,54 +417,82 @@
                                     <!-- BOUTONS -->
                                     <div class="d-flex gap-2">
 
-                                        <!-- REJET (commun à tous les niveaux) -->
-                                        <button type="button"
-                                                class="btn btn-outline-danger btn-reject"
-                                                data-decision="REJECT"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#decisionModal">
+                                        <!-- ====== CAS CODEP (PRIORITAIRE) ====== -->
+                                        <div th:if="${canDecisionCodep ?: false}" class="d-flex gap-2">
 
-                                        <i class="fas fa-times me-1"></i> Rejeter
-                                        </button>
+                                            <button type="button"
+                                                    class="btn btn-gradient-purple"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#codepModal">
+                                                <i class="fas fa-check-circle me-1"></i>
+                                                Décision CODEP
+                                            </button>
+
+                                        </div>
+
 
                                         <!-- ====== CAS MOYENS GENERAUX ====== -->
-                                        <div th:if="${canDecisionMG ?: false}" class="d-flex gap-2">
-
-                                            <!-- Validation normale -->
+                                        <div th:if="${!(canDecisionCodep ?: false) and (canDecisionMG ?: false)}"
+                                             class="d-flex gap-2">
                                             <button type="button"
-                                                    class="btn btn-gradient-green btn-approve"
+                                                    class="btn btn-outline-danger"
+                                                    data-decision="REJECT"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#decisionModal">
+                                                <i class="fas fa-times me-1"></i>
+                                                Refuser
+                                            </button>
+
+                                            <button type="button"
+                                                    class="btn btn-gradient-green"
                                                     data-decision="APPROVE"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#decisionModal">
-
-                                            <i class="fas fa-check me-1"></i>
-                                                Validation normale
+                                                <i class="fas fa-check me-1"></i>
+                                                Valider
                                             </button>
 
-                                            <!-- Validation CODEP -->
+
+
                                             <button type="button"
                                                     class="btn btn-gradient-purple"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#codepModal">
                                                 <i class="fas fa-landmark me-1"></i>
-                                                Validation CODEP
+                                                Envoyer au CODEP
                                             </button>
 
                                         </div>
 
-                                        <!-- ====== AUTRES NIVEAUX (N1 / Contrôleur / DFC) ====== -->
-                                        <button type="button"
-                                                th:if="${!(canDecisionMG ?: false)}"
-                                                class="btn btn-gradient-green btn-approve"
-                                                id="btnOpenApprove"
-                                                data-decision="APPROVE"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#decisionModal">
-                                            <i class="fas fa-check me-1"></i>
-                                            Valider
-                                        </button>
+
+
+                                        <!-- ====== AUTRES NIVEAUX ====== -->
+                                        <div th:if="${!(canDecisionCodep ?: false) and !(canDecisionMG ?: false)}"
+                                             class="d-flex gap-2">
+
+                                            <button type="button"
+                                                    class="btn btn-gradient-green"
+                                                    data-decision="APPROVE"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#decisionModal">
+                                                <i class="fas fa-check me-1"></i>
+                                                Valider
+                                            </button>
+
+                                            <button type="button"
+                                                    class="btn btn-outline-danger"
+                                                    data-decision="REJECT"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#decisionModal">
+                                                <i class="fas fa-times me-1"></i>
+                                                Rejeter
+                                            </button>
+
+                                        </div>
 
                                     </div>
+
+
 
 
                                     <!-- hidden input décision envoyé au controller -->
@@ -643,73 +671,42 @@
      data-bs-keyboard="false">
 
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content shadow-lg border-0 rounded-4">
 
-            <div class="modal-header btn-gradient-purple">
+            <!-- HEADER -->
+            <div class="modal-header btn-gradient-purple rounded-top-4">
                 <h5 class="modal-title">
                     <i class="fas fa-landmark me-2"></i>
-                    Validation Comité de Dépense
+                    Envoi au Comité de Dépense
                 </h5>
             </div>
 
-            <form th:action="@{/demande/{id}/validation-codep(id=${demande.id})}"
-                  method="post"
-                  enctype="multipart/form-data">
+            <form th:action="@{/demande/{id}/send-codep(id=${demande.id})}" method="post">
 
                 <div class="modal-body">
 
-                    <!-- Pièces jointes -->
-                    <div class="col-md-12 mb-4">
-                        <label for="piecesJointes" class="form-label fw-bold">
-                            Pièces jointes
-                        </label>
-
-                        <div class="file-upload-card border rounded-4 p-4 text-center position-relative">
-                            <input type="file"
-                                   class="file-upload-input"
-                                   id="piecesJointes"
-                                   name="piecesJointes"
-                                   multiple
-                                   accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
-
-                            <div class="file-upload-content">
-                                <div class="mb-2">
-                                    <i class="fas fa-paperclip fa-2x text-gradient-blue"></i>
-                                </div>
-                                <p class="mb-1 fw-semibold">
-                                    Glissez-déposez vos fichiers ici
-                                </p>
-                                <p class="text-muted mb-2">
-                                    ou cliquez pour sélectionner
-                                </p>
-                                <span class="badge bg-light text-dark border">
-                                    PDF · Word · Excel · Images
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="form-text text-muted mt-2">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Plusieurs fichiers peuvent être joints (taille raisonnable recommandée).
-                        </div>
-
-                        <!-- Liste des fichiers sélectionnés -->
-                        <ul id="fileList" class="list-group list-group-flush mt-3"></ul>
+                    <!-- Message informatif -->
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Cette action est <strong>irréversible</strong> : une fois la demande envoyée au CODEP,
+                        vous ne pourrez plus la modifier ni la valider vous-même.
                     </div>
 
                 </div>
 
-                <div class="modal-footer">
+                <!-- FOOTER -->
+                <div class="modal-footer border-0 pt-0">
                     <button type="button"
-                            class="btn btn-outline-secondary"
+                            class="btn btn-outline-secondary rounded-3"
                             data-bs-dismiss="modal">
+                        <i class="fas fa-arrow-left me-1"></i>
                         Annuler
                     </button>
 
                     <button type="submit"
-                            class="btn btn-gradient-purple">
-                        <i class="fas fa-check-circle me-1"></i>
-                        Confirmer validation CODEP
+                            class="btn btn-gradient-purple rounded-3 px-4">
+                        <i class="fas fa-paper-plane me-1"></i>
+                        Envoyer au CODEP
                     </button>
                 </div>
 

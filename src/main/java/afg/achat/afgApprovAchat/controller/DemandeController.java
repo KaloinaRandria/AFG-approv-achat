@@ -14,6 +14,7 @@ import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.demande.DemandePieceJointeService;
 import afg.achat.afgApprovAchat.service.demande.ValidationDemandeService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
@@ -39,6 +40,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+@Slf4j
 @Controller
 @RequestMapping("/demande")
 public class DemandeController {
@@ -778,8 +780,32 @@ public class DemandeController {
         return "redirect:/demande/fiche/" + id;
     }
 
-    @PostMapping("/fiche/{id}/validation-codep")
-    public String validationCodep(@PathVariable("id") String id) {
+    @PostMapping("/fiche/{id}/send-codep")
+    public String sendToCodep(@PathVariable("id") String id,
+                              RedirectAttributes redirectAttributes) {
+
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            redirectAttributes.addFlashAttribute("ko", "Demande introuvable.");
+            return "redirect:/demande/list";
+        }
+
+        // Vérification : seule la validation MG peut envoyer au CODEP
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+        boolean isMG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+
+        if (!isMG || demande.getStatut() != StatutDemande.VALIDATION_N1) {
+            redirectAttributes.addFlashAttribute("ko", "Vous ne pouvez pas envoyer cette demande au CODEP.");
+            return "redirect:/demande/fiche/" + id;
+        }
+
+        // Passage au statut CODEP
+        demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.DECISION_CODEP);
+        logValidation(demande, current, StatutDemande.DECISION_CODEP, "Envoi au CODEP");
+        redirectAttributes.addFlashAttribute("ok", "Demande envoyée au CODEP (action irréversible).");
 
         return "redirect:/demande/fiche/" + id;
     }
