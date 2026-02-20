@@ -483,7 +483,6 @@
 
 
                                     <!-- ================= BOUTONS ================= -->
-
                                     <div class="d-flex gap-2">
 
                                         <!-- ===== CAS CODEP ===== -->
@@ -493,7 +492,8 @@
                                                     class="btn btn-outline-danger"
                                                     data-decision="REJECT"
                                                     data-bs-toggle="modal"
-                                                    data-bs-target="#decisionModal">
+                                                    data-bs-target="#decisionCodepModal"
+                                                    th:attr="data-demande-id=${demande.id}">
                                                 <i class="fas fa-times me-1"></i>
                                                 Refuser
                                             </button>
@@ -502,7 +502,8 @@
                                                     class="btn btn-gradient-green"
                                                     data-decision="APPROVE"
                                                     data-bs-toggle="modal"
-                                                    data-bs-target="#decisionModal">
+                                                    data-bs-target="#decisionCodepModal"
+                                                    th:attr="data-demande-id=${demande.id}">
                                                 <i class="fas fa-check me-1"></i>
                                                 Valider
                                             </button>
@@ -513,17 +514,19 @@
                                         <!-- ===== CAS MG (avant CODEP) ===== -->
                                         <div th:if="${canDecisionMG and !canDecisionCodep}" class="d-flex gap-2">
 
+
+
                                             <button type="button"
-                                                    class="btn btn-outline-danger"
+                                                    class="btn btn-outline-danger btn-reject"
                                                     data-decision="REJECT"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#decisionModal">
                                                 <i class="fas fa-times me-1"></i>
-                                                Refuser
+                                                Rejeter
                                             </button>
 
                                             <button type="button"
-                                                    class="btn btn-gradient-green"
+                                                    class="btn btn-gradient-green btn-approve"
                                                     data-decision="APPROVE"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#decisionModal">
@@ -531,11 +534,12 @@
                                                 Valider
                                             </button>
 
+                                            <!-- Bouton dans la liste -->
                                             <button type="button"
                                                     class="btn btn-gradient-purple"
                                                     th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}"
-                                                    th:formaction="@{/demande/fiche/{id}/send-codep(id=${demande.id})}"
-                                                    onclick="this.closest('form').action=this.getAttribute('formaction'); this.closest('form').submit();">
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#codepModal">
                                                 <i class="fas fa-landmark me-1"></i>
                                                 Envoyer au CODEP
                                             </button>
@@ -547,21 +551,21 @@
                                         <div th:if="${!canDecisionMG and !canDecisionCodep}" class="d-flex gap-2">
 
                                             <button type="button"
-                                                    class="btn btn-gradient-green"
-                                                    data-decision="APPROVE"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#decisionModal">
-                                                <i class="fas fa-check me-1"></i>
-                                                Valider
-                                            </button>
-
-                                            <button type="button"
-                                                    class="btn btn-outline-danger"
+                                                    class="btn btn-outline-danger btn-reject"
                                                     data-decision="REJECT"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#decisionModal">
                                                 <i class="fas fa-times me-1"></i>
                                                 Rejeter
+                                            </button>
+
+                                            <button type="button"
+                                                    class="btn btn-gradient-green btn-approve"
+                                                    data-decision="APPROVE"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#decisionModal">
+                                                <i class="fas fa-check me-1"></i>
+                                                Valider
                                             </button>
 
                                         </div>
@@ -730,6 +734,100 @@
                     <i class="fas fa-paper-plane me-1"></i> Confirmer
                 </button>
             </div>
+
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="decisionCodepModal" tabindex="-1"
+     aria-labelledby="decisionCodepModalLabel"
+     aria-hidden="true"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title" id="decisionCodepModalLabel">
+                    <i class="fas fa-file-signature me-2"></i>
+                    Décision CODEP
+                </h5>
+            </div>
+            <form th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}" method="post" enctype="multipart/form-data">
+            <div class="modal-body">
+
+                <!-- INFO DYNAMIQUE DECISION CODEP -->
+                <div class="alert mb-3" id="decisionCodepInfo">
+                    <!-- rempli par JS -->
+                </div>
+
+                <!-- COMMENTAIRE -->
+                <label class="form-label fw-bold">
+                    Commentaire <span class="text-danger" id="codepCommentStar" style="display:none">*</span>
+                </label>
+
+                <textarea class="form-control"
+                          id="codepCommentaireInput"
+                          name="commentaire"
+                          rows="3"
+                          placeholder="Ajoutez un commentaire..."></textarea>
+
+                <!-- PIECE JOINTE -->
+                <div class="col-md-12 mb-4">
+                    <label for="piecesJointes" class="form-label fw-bold">
+                        Pièces jointes
+                    </label>
+
+                    <div class="file-upload-card border rounded-4 p-4 text-center position-relative">
+                        <input type="file"
+                               class="file-upload-input"
+                               id="piecesJointes"
+                               name="piecesJointes"
+                               multiple
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+
+                        <div class="file-upload-content">
+                            <div class="mb-2">
+                                <i class="fas fa-paperclip fa-2x text-gradient-blue"></i>
+                            </div>
+                            <p class="mb-1 fw-semibold">
+                                Glissez-déposez vos fichiers ici
+                            </p>
+                            <p class="text-muted mb-2">
+                                ou cliquez pour sélectionner
+                            </p>
+                            <span class="badge bg-light text-dark border">
+                    PDF · Word · Excel · Images
+                </span>
+                        </div>
+                    </div>
+
+                    <div class="form-text text-muted mt-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Plusieurs fichiers peuvent être joints (taille raisonnable recommandée).
+                    </div>
+
+                    <!-- Liste des fichiers sélectionnés -->
+                    <ul id="codepFileList" class="list-group list-group-flush mt-3"></ul>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <input type="hidden" name="decision" id="decisionInput">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+                    Annuler
+                </button>
+
+                <button type="submit"
+                        class="btn btn-gradient-green"
+                        id="btnConfirmDecisionCodep">
+                    Confirmer
+                </button>
+
+            </div>
+            </form>
 
         </div>
     </div>
@@ -962,6 +1060,123 @@
             document.body.appendChild(form);
             form.submit();
         });
+
+    // ================= CODEP DECISION =================
+    const codepModalEl = document.getElementById("decisionCodepModal");
+
+    if (codepModalEl) {
+
+        const codepModal = new bootstrap.Modal(codepModalEl);
+
+        const commentInput = document.getElementById("codepCommentaireInput");
+        const infoBox = document.getElementById("decisionCodepInfo");
+        const star = document.getElementById("codepCommentStar");
+        const fileInput = document.getElementById("piecesJointes");
+        const fileList = document.getElementById("codepFileList");
+        const decisionInput = document.getElementById("decisionInput");
+        const form = codepModalEl.querySelector("form");
+
+        let selectedFiles = [];
+
+        // ====== RÉCUPÉRATION DU data-decision ======
+        document.querySelectorAll('[data-bs-target="#decisionCodepModal"]')
+            .forEach(btn => {
+
+                btn.addEventListener("click", function () {
+
+                    const decision = this.dataset.decision;
+
+                    if (decisionInput) {
+                        decisionInput.value = decision;
+                    }
+
+                    // Reset UI
+                    commentInput.value = "";
+                    commentInput.classList.remove("is-invalid");
+                    star.style.display = (decision === "REJECT") ? "inline" : "none";
+
+                    infoBox.className = "alert " +
+                        (decision === "REJECT" ? "alert-warning" : "alert-success");
+
+                    infoBox.innerHTML =
+                        decision === "REJECT"
+                            ? "<i class='fas fa-exclamation-triangle me-2'></i>Vous êtes sur le point de <b>rejeter</b> cette demande."
+                            : "<i class='fas fa-check-circle me-2'></i>Vous êtes sur le point de <b>valider</b> cette demande.";
+
+                    codepModal.show();
+                });
+
+            });
+
+        // ====== VALIDATION AVANT SUBMIT ======
+        form.addEventListener("submit", function (e) {
+
+            const decision = decisionInput.value;
+            const commentaire = (commentInput.value || "").trim();
+
+            if (decision === "REJECT" && commentaire.length === 0) {
+                e.preventDefault();
+                commentInput.classList.add("is-invalid");
+                star.style.display = "inline";
+                return;
+            }
+        });
+
+        // ========= Gestion affichage fichiers =========
+        function renderFiles() {
+            fileList.innerHTML = "";
+
+            if (selectedFiles.length === 0) {
+                const empty = document.createElement("li");
+                empty.className = "list-group-item text-muted";
+                empty.innerHTML = `<i class="fas fa-circle-info me-2"></i>Aucun fichier sélectionné`;
+                fileList.appendChild(empty);
+                return;
+            }
+
+            selectedFiles.forEach((file, idx) => {
+                const li = document.createElement("li");
+                li.className = "list-group-item d-flex align-items-center gap-2";
+
+                li.innerHTML = `
+                <i class="fas fa-file-alt text-gradient-blue"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">${file.name}</div>
+                    <small class="text-muted">${(file.size / 1024).toFixed(1)} KB</small>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-remove-index="${idx}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+
+                fileList.appendChild(li);
+            });
+        }
+
+        function syncInputFiles() {
+            const dt = new DataTransfer();
+            selectedFiles.forEach(f => dt.items.add(f));
+            fileInput.files = dt.files;
+        }
+
+        fileInput.addEventListener("change", function () {
+            const newFiles = Array.from(this.files || []);
+            selectedFiles = [...selectedFiles, ...newFiles];
+            syncInputFiles();
+            renderFiles();
+        });
+
+        fileList.addEventListener("click", function (e) {
+            const btn = e.target.closest("button[data-remove-index]");
+            if (!btn) return;
+
+            const index = parseInt(btn.dataset.removeIndex);
+            selectedFiles.splice(index, 1);
+
+            syncInputFiles();
+            renderFiles();
+        });
+    }
     /*]]>*/
 </script>
 </body>

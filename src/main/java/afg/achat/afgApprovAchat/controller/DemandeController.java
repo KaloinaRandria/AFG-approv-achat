@@ -1,19 +1,13 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.Article;
-import afg.achat.afgApprovAchat.model.demande.DemandeFille;
-import afg.achat.afgApprovAchat.model.demande.DemandeMere;
-import afg.achat.afgApprovAchat.model.demande.DemandePieceJointe;
-import afg.achat.afgApprovAchat.model.demande.ValidationDemande;
+import afg.achat.afgApprovAchat.model.demande.*;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
-import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
-import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
-import afg.achat.afgApprovAchat.service.demande.DemandePieceJointeService;
-import afg.achat.afgApprovAchat.service.demande.ValidationDemandeService;
+import afg.achat.afgApprovAchat.service.demande.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
@@ -62,6 +56,8 @@ public class DemandeController {
     DemandePieceJointeService demandePieceJointeService;
     @Autowired
     ValidationDemandeService validationDemandeService;
+    @Autowired
+    private CodepPieceJointeService codepPieceJointeService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -651,6 +647,7 @@ public class DemandeController {
                            @RequestParam("decision") String decision,
                            @RequestParam(value = "typeDemande", required = false) String typeDemande,
                            @RequestParam(value = "commentaire", required = false) String commentaire,
+                           @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                            RedirectAttributes redirectAttributes)  {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
@@ -693,8 +690,8 @@ public class DemandeController {
         boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
         boolean canDecisionControleur = isControleur && demande.getStatut() == StatutDemande.VALIDATION_N2;
         boolean canDecisionDFC = isDFC && demande.getStatut() == StatutDemande.VALIDATION_N3;
-
-        boolean allowed = isAdmin || canDecisionN1 || canDecisionMG || canDecisionControleur || canDecisionDFC;
+        boolean canDecisionCodep = isMG && demande.getStatut() == StatutDemande.DECISION_CODEP;
+        boolean allowed = isAdmin || canDecisionN1 || canDecisionMG || canDecisionControleur || canDecisionDFC || canDecisionCodep;
 
         if (!allowed) {
             redirectAttributes.addFlashAttribute("ko", "Cette demande ne peut pas être traitée par vous.");
@@ -735,6 +732,39 @@ public class DemandeController {
                 redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
                 return "redirect:/demande/fiche/" + id;
             }
+            if(canDecisionCodep) {
+
+                if (piecesJointes != null) {
+                    for (MultipartFile f : piecesJointes) {
+                        if (f == null || f.isEmpty()) continue;
+
+                        String safeDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                        String ref = "PV_CODEP_" + demande.getId()
+                                + "_" + demande.getDemandeur().getNom()
+                                + "_" + demande.getDemandeur().getPrenom()
+                                + "_" + safeDate;
+
+                        // 1) sauvegarde disque (retourne le nom stocké)
+                        String storedName = storageService.store(f, ref);
+
+                        // 2) sauvegarde DB
+                        CodepPieceJointe pj = new CodepPieceJointe();
+                        pj.setDemandeMere(demande);
+                        pj.setOriginalName(f.getOriginalFilename());
+                        pj.setStoredName(storedName);
+                        pj.setContentType(f.getContentType() != null ? f.getContentType() : "application/octet-stream");
+                        pj.setSize(f.getSize());
+                        pj.setUploadedAt(LocalDateTime.now());
+
+                        codepPieceJointeService.insert(pj);
+                    }
+                }
+
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
+                logValidation(demande, current, StatutDemande.VALIDE, cmt);
+                redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le Comité de direction.");
+                return "redirect:/demande/fiche/" + id;
+            }
 
             if (canDecisionMG) {
                 //MG doit obligatoirement choisir le type (OPEX/CAPEX)
@@ -751,7 +781,7 @@ public class DemandeController {
                     return "redirect:/demande/fiche/" + id;
                 }
 
-                // ✅ On enregistre le type puis on passe au statut suivant
+                //On enregistre le type puis on passe au statut suivant
                 demandeMereService.saveDemandeMere(demande);
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 logValidation(demande, current, StatutDemande.VALIDATION_N2, cmt);
@@ -788,7 +818,7 @@ public class DemandeController {
                 return "redirect:/demande/fiche/" + id;
             }
         }
-
+        System.out.println(">>> decision reçue = [" + decision + "]");
         redirectAttributes.addFlashAttribute("ko", "Décision invalide.");
         return "redirect:/demande/fiche/" + id;
     }
@@ -815,6 +845,10 @@ public class DemandeController {
             return "redirect:/demande/fiche/" + id;
         }
 
+        if (demande.getNatureDemande() == null) {
+            redirectAttributes.addFlashAttribute("ko", "Veuillez choisir le Type de demande (OPEX/CAPEX) avant de valider.");
+//            demande.setNatureDemande(DemandeMere.NatureDemande.CAPEX);
+        }
         // Passage au statut CODEP
         demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.DECISION_CODEP);
         logValidation(demande, current, StatutDemande.DECISION_CODEP, "Envoi au CODEP");
