@@ -530,10 +530,10 @@ public class DemandeController {
                 .filter(x -> !x.equals(current.getId()))
                 .toList();
 
-        // ✅ N+1 du demandeur = la demande appartient à un de mes enfants
+        // N+1 du demandeur = la demande appartient à un de mes enfants
         boolean isViewerNplus1OfDemandeur = (demandeurId != null) && childrenIds.contains(demandeurId);
 
-        // ✅ Droits de décision par niveau
+        // Droits de décision par niveau
         boolean canDecisionN1 = isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.CREE;
         boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
         boolean canDecisionControleur = isControleur && demande.getStatut() == StatutDemande.VALIDATION_N2;
@@ -541,22 +541,24 @@ public class DemandeController {
         boolean isCodepWorkflow = demande.getStatut() == StatutDemande.DECISION_CODEP;
         boolean canDecisionCodep = isMG && demande.getStatut() == StatutDemande.DECISION_CODEP;
 
+        boolean isValidatedCodep = demande.getStatut() == StatutDemande.VALIDE && demande.getDecisionViaCodep(isCodepWorkflow); // ajouter champ ou méthode
 
-        // ✅ Lignes
+        // Lignes
         List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
 
-        // ✅ Labels
+        // Labels
         Map<Integer, String> statutLabels = new LinkedHashMap<>();
         statutLabels.put(StatutDemande.CREE, "En attente N+1");
         statutLabels.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
         statutLabels.put(StatutDemande.VALIDATION_N2, "En attente Contrôleur");
         statutLabels.put(StatutDemande.VALIDATION_N3, "En attente D.F.C.");
+        statutLabels.put(StatutDemande.DECISION_CODEP,"En attente CODEP");
         statutLabels.put(StatutDemande.VALIDE, "VALIDÉE");
         statutLabels.put(StatutDemande.REFUSE, "REFUSÉE");
 
         String statutLabel = statutLabels.getOrDefault(demande.getStatut(), "INCONNU");
 
-        // ✅ statutHint (UI) : message adapté au viewer
+        // statutHint (UI) : message adapté au viewer
         String statutHint = null;
 
         // N+1 a validé (donc la demande est passée à N1)
@@ -595,22 +597,20 @@ public class DemandeController {
 
 
         int currentStep = switch (demande.getStatut()) {
-
             case StatutDemande.CREE -> 1;
             case StatutDemande.VALIDATION_N1 -> 2;
-
+            case StatutDemande.VALIDATION_N2 -> 3; // Controleur
+            case StatutDemande.VALIDATION_N3 -> 4; // DFC
             case StatutDemande.DECISION_CODEP -> 3; // CODEP
-
-            case StatutDemande.VALIDATION_N2 -> 3;   // Controleur (normal)
-            case StatutDemande.VALIDATION_N3 -> 4;   // DFC
-            case StatutDemande.VALIDE -> 5;
+            case StatutDemande.VALIDE -> {
+                if (isCodepWorkflow) yield 4; // ou 5 selon ton stepper
+                else yield 5;
+            }
             case StatutDemande.REFUSE -> -1;
-
             default -> 1;
         };
 
-        List<ValidationDemande> historiques =
-                validationDemandeService.getHistorique(demande);
+        List<ValidationDemande> historiques = validationDemandeService.getHistorique(demande);
 
         model.addAttribute("historiques", historiques);
         model.addAttribute("piecesJointes", piecesJointes);
@@ -618,6 +618,7 @@ public class DemandeController {
         model.addAttribute("isRefused", demande.getStatut() == StatutDemande.REFUSE);
         model.addAttribute("isValidated", demande.getStatut() == StatutDemande.VALIDE);
         model.addAttribute("isCodepWorkflow", isCodepWorkflow);
+        model.addAttribute("isValidatedCodep", isValidatedCodep);
 
         // Model (IMPORTANT : toujours envoyer les booléens)
         model.addAttribute("currentUri", request.getRequestURI());

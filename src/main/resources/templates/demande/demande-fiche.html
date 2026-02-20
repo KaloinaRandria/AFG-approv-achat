@@ -170,8 +170,8 @@
 
                             <!-- BADGES -->
                             <div class="mt-2 text-center">
-                                <span class="badge bg-success" th:if="${isValidated}">
-                                    <i class="fas fa-check-circle me-1"></i> Demande validée et à traiter
+                                <span class="badge bg-success" th:if="${isValidated and isCodepWorkflow}">
+                                    <i class="fas fa-check-circle me-1"></i> Demande validée par le CODEP
                                 </span>
 
                                 <span class="badge bg-danger" th:if="${isRefused}">

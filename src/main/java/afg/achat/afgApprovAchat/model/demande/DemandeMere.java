@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.model.demande;
 
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
+import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.persistence.*;
@@ -93,5 +94,19 @@ public class DemandeMere {
     public DemandeMere(String dateDemande, String dateSortie) {
         this.setDateDemande(dateDemande);
         this.setDateSortie(dateSortie);
+    }
+
+    public boolean getDecisionViaCodep(Boolean isCodepWorkflow) {
+        // Si la demande est validée et qu'elle est dans le workflow CODEP
+        if (this.statut == StatutDemande.VALIDE && isCodepWorkflow) {
+            return true;
+        }
+
+        // Ou si le statut indique directement que CODEP a pris la décision
+        if (this.statut == StatutDemande.DECISION_CODEP) {
+            return true;
+        }
+
+        return false;
     }
 }
