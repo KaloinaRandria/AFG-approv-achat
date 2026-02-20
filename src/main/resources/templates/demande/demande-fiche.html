@@ -58,19 +58,18 @@
                                 <span>Réference : <strong th:text="${demande.id}">-</strong></span>
                             </div>
                         </div>
-                        <!-- STEPPER VALIDATION -->
-                        <div class="px-3 pb-2">
+                        <!-- STEPPER VALIDATION - WORKFLOW NORMAL -->
+                        <div class="px-3 pb-2" th:if="${!isCodepWorkflow}">
                             <div class="approval-stepper">
 
-                                <!-- ETAPE 0 : CREER -->
+                                <!-- ETAPE 0 : CREÉE -->
                                 <div class="step"
                                      th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 0 ? 'is-done' : (currentStep == 0 ? 'is-current' : ''))}">
                                     <div class="dot"><span>0</span></div>
                                     <div class="label">Créée</div>
                                 </div>
 
-                                <div class="line"
-                                     th:classappend="${currentStep > 0 ? 'is-done' : ''}"></div>
+                                <div class="line" th:classappend="${currentStep > 0 ? 'is-done' : ''}"></div>
 
                                 <!-- ETAPE 1 : N+1 -->
                                 <div class="step"
@@ -79,8 +78,7 @@
                                     <div class="label">N+1</div>
                                 </div>
 
-                                <div class="line"
-                                     th:classappend="${currentStep > 1 ? 'is-done' : ''}"></div>
+                                <div class="line" th:classappend="${currentStep > 1 ? 'is-done' : ''}"></div>
 
                                 <!-- ETAPE 2 : MG -->
                                 <div class="step"
@@ -89,20 +87,18 @@
                                     <div class="label">Moyens Généraux</div>
                                 </div>
 
-                                <div class="line"
-                                     th:classappend="${currentStep > 2 ? 'is-done' : ''}"></div>
+                                <div class="line" th:classappend="${currentStep > 2 ? 'is-done' : ''}"></div>
 
-
+                                <!-- ETAPE 3 : CONTROLEUR -->
                                 <div class="step"
                                      th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 3 ? 'is-done' : (currentStep == 3 ? 'is-current' : ''))}">
                                     <div class="dot"><span>3</span></div>
                                     <div class="label">Contrôleur de gestion</div>
                                 </div>
 
-                                <div class="line"
-                                     th:classappend="${currentStep > 3 ? 'is-done' : ''}"></div>
+                                <div class="line" th:classappend="${currentStep > 3 ? 'is-done' : ''}"></div>
 
-
+                                <!-- ETAPE 4 : DFC -->
                                 <div class="step"
                                      th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 4 ? 'is-done' : (currentStep == 4 ? 'is-current' : ''))}">
                                     <div class="dot"><span>4</span></div>
@@ -111,20 +107,17 @@
 
                             </div>
 
-                            <!-- Badges finaux -->
+                            <!-- BADGES -->
                             <div class="mt-2 text-center">
-                                <span class="badge bg-success"
-                                      th:if="${isValidated}">
+                                <span class="badge bg-success" th:if="${isValidated}">
                                     <i class="fas fa-check-circle me-1"></i> Demande validée et à traiter
                                 </span>
 
-                                <span class="badge bg-danger"
-                                      th:if="${isRefused}">
+                                <span class="badge bg-danger" th:if="${isRefused}">
                                     <i class="fas fa-times-circle me-1"></i> Demande refusée
                                 </span>
 
-                                <span class="text-muted small"
-                                      th:if="${!isValidated and !isRefused}">
+                                <span class="text-muted small" th:if="${!isValidated and !isRefused}">
                                     <i class="fas fa-info-circle me-1"></i>
                                     Étape en cours :
                                     <b th:text="${currentStep == 1 ? 'N+1' :
@@ -135,7 +128,66 @@
                                 </span>
                             </div>
                         </div>
+                        <!-- STEPPER VALIDATION - WORKFLOW CODEP -->
+                        <div class="px-3 pb-2" th:if="${isCodepWorkflow}">
+                            <div class="approval-stepper">
 
+                                <!-- ETAPE 0 : CREÉE -->
+                                <div class="step"
+                                     th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 0 ? 'is-done' : (currentStep == 0 ? 'is-current' : ''))}">
+                                    <div class="dot"><span>0</span></div>
+                                    <div class="label">Créée</div>
+                                </div>
+
+                                <div class="line" th:classappend="${currentStep > 0 ? 'is-done' : ''}"></div>
+
+                                <!-- ETAPE 1 : N+1 -->
+                                <div class="step"
+                                     th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 1 ? 'is-done' : (currentStep == 1 ? 'is-current' : ''))}">
+                                    <div class="dot"><span>1</span></div>
+                                    <div class="label">N+1</div>
+                                </div>
+
+                                <div class="line" th:classappend="${currentStep > 1 ? 'is-done' : ''}"></div>
+
+                                <!-- ETAPE 2 : MG -->
+                                <div class="step"
+                                     th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 2 ? 'is-done' : (currentStep == 2 ? 'is-current' : ''))}">
+                                    <div class="dot"><span>2</span></div>
+                                    <div class="label">Moyens Généraux</div>
+                                </div>
+
+                                <div class="line" th:classappend="${currentStep > 2 ? 'is-done' : ''}"></div>
+
+                                <!-- ETAPE 3 : CODEP -->
+                                <div class="step"
+                                     th:classappend="${currentStep == -1 ? 'is-disabled' : (currentStep > 3 ? 'is-done' : (currentStep == 3 ? 'is-current' : ''))}">
+                                    <div class="dot"><span>3</span></div>
+                                    <div class="label">Comité de Direction</div>
+                                </div>
+
+                            </div>
+
+                            <!-- BADGES -->
+                            <div class="mt-2 text-center">
+                                <span class="badge bg-success" th:if="${isValidated}">
+                                    <i class="fas fa-check-circle me-1"></i> Demande validée et à traiter
+                                </span>
+
+                                <span class="badge bg-danger" th:if="${isRefused}">
+                                    <i class="fas fa-times-circle me-1"></i> Demande refusée
+                                </span>
+
+                                <span class="text-muted small" th:if="${!isValidated and !isRefused}">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Étape en cours :
+                                    <b th:text="${currentStep == 1 ? 'N+1' :
+                                                 (currentStep == 2 ? 'Moyens Généraux' :
+                                                 (currentStep == 3 ? 'Comité de Direction' : ''))}">
+                                    </b>
+                                </span>
+                            </div>
+                        </div>
                         <!-- INFOS -->
                         <div class="bl-infos">
                             <div>
@@ -372,36 +424,51 @@
                         <div class="p-3 d-flex justify-content-between align-items-center">
 
                             <div th:if="${(canDecisionN1 ?: false)
-                              or (canDecisionMG ?: false)
-                              or (canDecisionControleur ?: false)
-                              or (canDecisionDFC ?: false)}">
+                                  or (canDecisionMG ?: false)
+                                  or (canDecisionControleur ?: false)
+                                  or (canDecisionDFC ?: false)
+                                  or (canDecisionCodep ?: false)}">
 
-                                <!-- Form unique -->
                                 <form id="decisionForm"
                                       th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}"
-                                      method="post" class="d-inline">
+                                      method="post"
+                                      class="d-inline">
 
+                                    <input type="hidden" name="commentaire" id="decisionCommentaire">
+                                    <input type="hidden" name="decision" id="decisionValue">
 
-                                <!-- Label selon le niveau -->
-                                    <div class="text-muted small mb-2" th:if="${canDecisionMG ?: false}">
+                                    <!-- ================= LABEL ================= -->
+
+                                    <div class="text-muted small mb-2" th:if="${canDecisionMG}">
                                         <i class="fas fa-user-shield me-1"></i> Validation Moyens Généraux
                                     </div>
-                                    <div class="text-muted small mb-2" th:if="${canDecisionControleur ?: false}">
+
+                                    <div class="text-muted small mb-2" th:if="${canDecisionCodep}">
+                                        <i class="fas fa-landmark me-1"></i> Décision CODEP
+                                    </div>
+
+                                    <div class="text-muted small mb-2" th:if="${canDecisionControleur}">
                                         <i class="fas fa-coins me-1"></i> Validation contrôleur de gestion
                                     </div>
-                                    <div class="text-muted small mb-2" th:if="${canDecisionDFC ?: false}">
+
+                                    <div class="text-muted small mb-2" th:if="${canDecisionDFC}">
                                         <i class="fas fa-gavel me-1"></i> Validation D.F.C.
                                     </div>
 
-                                    <input type="hidden" name="commentaire" id="decisionCommentaire">
 
-                                    <!-- Type de demande uniquement quand MG valide -->
-                                    <div class="mb-2" th:if="${canDecisionMG ?: false}">
-                                        <label class="form-label mb-1">Type de demande <span class="text-danger">*</span></label>
+                                    <!-- ================= TYPE DEMANDE (MG seulement en N1) ================= -->
+
+                                    <div class="mb-2"
+                                         th:if="${canDecisionMG and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
+
+                                        <label class="form-label mb-1">
+                                            Type de demande <span class="text-danger">*</span>
+                                        </label>
+
                                         <select class="form-select form-select-sm"
                                                 name="typeDemande"
-                                                th:attr="required=${canDecisionMG}">
-                                            <option value="" th:selected="${demande.natureDemande == null}">-- Choisir --</option>
+                                                required>
+                                            <option value="">-- Choisir --</option>
                                             <option th:each="n : ${natures}"
                                                     th:value="${n.name()}"
                                                     th:text="${n.name()}"
@@ -414,31 +481,19 @@
                                         </div>
                                     </div>
 
-                                    <!-- BOUTONS -->
+
+                                    <!-- ================= BOUTONS ================= -->
                                     <div class="d-flex gap-2">
 
-                                        <!-- ====== CAS CODEP (PRIORITAIRE) ====== -->
-                                        <div th:if="${canDecisionCodep ?: false}" class="d-flex gap-2">
+                                        <!-- ===== CAS CODEP ===== -->
+                                        <div th:if="${canDecisionCodep}" class="d-flex gap-2">
 
-                                            <button type="button"
-                                                    class="btn btn-gradient-purple"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#codepModal">
-                                                <i class="fas fa-check-circle me-1"></i>
-                                                Décision CODEP
-                                            </button>
-
-                                        </div>
-
-
-                                        <!-- ====== CAS MOYENS GENERAUX ====== -->
-                                        <div th:if="${!(canDecisionCodep ?: false) and (canDecisionMG ?: false)}"
-                                             class="d-flex gap-2">
                                             <button type="button"
                                                     class="btn btn-outline-danger"
                                                     data-decision="REJECT"
                                                     data-bs-toggle="modal"
-                                                    data-bs-target="#decisionModal">
+                                                    data-bs-target="#decisionCodepModal"
+                                                    th:attr="data-demande-id=${demande.id}">
                                                 <i class="fas fa-times me-1"></i>
                                                 Refuser
                                             </button>
@@ -447,15 +502,42 @@
                                                     class="btn btn-gradient-green"
                                                     data-decision="APPROVE"
                                                     data-bs-toggle="modal"
+                                                    data-bs-target="#decisionCodepModal"
+                                                    th:attr="data-demande-id=${demande.id}">
+                                                <i class="fas fa-check me-1"></i>
+                                                Valider
+                                            </button>
+
+                                        </div>
+
+
+                                        <!-- ===== CAS MG (avant CODEP) ===== -->
+                                        <div th:if="${canDecisionMG and !canDecisionCodep}" class="d-flex gap-2">
+
+
+
+                                            <button type="button"
+                                                    class="btn btn-outline-danger btn-reject"
+                                                    data-decision="REJECT"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#decisionModal">
+                                                <i class="fas fa-times me-1"></i>
+                                                Rejeter
+                                            </button>
+
+                                            <button type="button"
+                                                    class="btn btn-gradient-green btn-approve"
+                                                    data-decision="APPROVE"
+                                                    data-bs-toggle="modal"
                                                     data-bs-target="#decisionModal">
                                                 <i class="fas fa-check me-1"></i>
                                                 Valider
                                             </button>
 
-
-
+                                            <!-- Bouton dans la liste -->
                                             <button type="button"
                                                     class="btn btn-gradient-purple"
+                                                    th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#codepModal">
                                                 <i class="fas fa-landmark me-1"></i>
@@ -465,22 +547,11 @@
                                         </div>
 
 
-
-                                        <!-- ====== AUTRES NIVEAUX ====== -->
-                                        <div th:if="${!(canDecisionCodep ?: false) and !(canDecisionMG ?: false)}"
-                                             class="d-flex gap-2">
+                                        <!-- ===== AUTRES NIVEAUX ===== -->
+                                        <div th:if="${!canDecisionMG and !canDecisionCodep}" class="d-flex gap-2">
 
                                             <button type="button"
-                                                    class="btn btn-gradient-green"
-                                                    data-decision="APPROVE"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#decisionModal">
-                                                <i class="fas fa-check me-1"></i>
-                                                Valider
-                                            </button>
-
-                                            <button type="button"
-                                                    class="btn btn-outline-danger"
+                                                    class="btn btn-outline-danger btn-reject"
                                                     data-decision="REJECT"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#decisionModal">
@@ -488,19 +559,22 @@
                                                 Rejeter
                                             </button>
 
+                                            <button type="button"
+                                                    class="btn btn-gradient-green btn-approve"
+                                                    data-decision="APPROVE"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#decisionModal">
+                                                <i class="fas fa-check me-1"></i>
+                                                Valider
+                                            </button>
+
                                         </div>
 
                                     </div>
 
-
-
-
-                                    <!-- hidden input décision envoyé au controller -->
-                                    <input type="hidden" name="decision" id="decisionValue">
-
                                 </form>
                             </div>
-                            <div class="text-muted small"></div>
+
                         </div>
                         <!-- HISTORIQUE VALIDATION -->
                         <div class="px-3 pb-3 mt-3">
@@ -664,6 +738,100 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="decisionCodepModal" tabindex="-1"
+     aria-labelledby="decisionCodepModalLabel"
+     aria-hidden="true"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title" id="decisionCodepModalLabel">
+                    <i class="fas fa-file-signature me-2"></i>
+                    Décision CODEP
+                </h5>
+            </div>
+            <form th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}" method="post" enctype="multipart/form-data">
+            <div class="modal-body">
+
+                <!-- INFO DYNAMIQUE DECISION CODEP -->
+                <div class="alert mb-3" id="decisionCodepInfo">
+                    <!-- rempli par JS -->
+                </div>
+
+                <!-- COMMENTAIRE -->
+                <label class="form-label fw-bold">
+                    Commentaire <span class="text-danger" id="codepCommentStar" style="display:none">*</span>
+                </label>
+
+                <textarea class="form-control"
+                          id="codepCommentaireInput"
+                          name="commentaire"
+                          rows="3"
+                          placeholder="Ajoutez un commentaire..."></textarea>
+
+                <!-- PIECE JOINTE -->
+                <div class="col-md-12 mb-4">
+                    <label for="piecesJointes" class="form-label fw-bold">
+                        Pièces jointes
+                    </label>
+
+                    <div class="file-upload-card border rounded-4 p-4 text-center position-relative">
+                        <input type="file"
+                               class="file-upload-input"
+                               id="piecesJointes"
+                               name="piecesJointes"
+                               multiple
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+
+                        <div class="file-upload-content">
+                            <div class="mb-2">
+                                <i class="fas fa-paperclip fa-2x text-gradient-blue"></i>
+                            </div>
+                            <p class="mb-1 fw-semibold">
+                                Glissez-déposez vos fichiers ici
+                            </p>
+                            <p class="text-muted mb-2">
+                                ou cliquez pour sélectionner
+                            </p>
+                            <span class="badge bg-light text-dark border">
+                    PDF · Word · Excel · Images
+                </span>
+                        </div>
+                    </div>
+
+                    <div class="form-text text-muted mt-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Plusieurs fichiers peuvent être joints (taille raisonnable recommandée).
+                    </div>
+
+                    <!-- Liste des fichiers sélectionnés -->
+                    <ul id="codepFileList" class="list-group list-group-flush mt-3"></ul>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <input type="hidden" name="decision" id="decisionInput">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+                    Annuler
+                </button>
+
+                <button type="submit"
+                        class="btn btn-gradient-green"
+                        id="btnConfirmDecisionCodep">
+                    Confirmer
+                </button>
+
+            </div>
+            </form>
+
+        </div>
+    </div>
+</div>
 <div class="modal fade" id="codepModal"
      tabindex="-1"
      aria-hidden="true"
@@ -681,7 +849,7 @@
                 </h5>
             </div>
 
-            <form th:action="@{/demande/{id}/send-codep(id=${demande.id})}" method="post">
+            <form th:action="@{/demande/fiche/{id}/send-codep(id=${demande.id})}" method="post">
 
                 <div class="modal-body">
 
@@ -892,6 +1060,123 @@
             document.body.appendChild(form);
             form.submit();
         });
+
+    // ================= CODEP DECISION =================
+    const codepModalEl = document.getElementById("decisionCodepModal");
+
+    if (codepModalEl) {
+
+        const codepModal = new bootstrap.Modal(codepModalEl);
+
+        const commentInput = document.getElementById("codepCommentaireInput");
+        const infoBox = document.getElementById("decisionCodepInfo");
+        const star = document.getElementById("codepCommentStar");
+        const fileInput = document.getElementById("piecesJointes");
+        const fileList = document.getElementById("codepFileList");
+        const decisionInput = document.getElementById("decisionInput");
+        const form = codepModalEl.querySelector("form");
+
+        let selectedFiles = [];
+
+        // ====== RÉCUPÉRATION DU data-decision ======
+        document.querySelectorAll('[data-bs-target="#decisionCodepModal"]')
+            .forEach(btn => {
+
+                btn.addEventListener("click", function () {
+
+                    const decision = this.dataset.decision;
+
+                    if (decisionInput) {
+                        decisionInput.value = decision;
+                    }
+
+                    // Reset UI
+                    commentInput.value = "";
+                    commentInput.classList.remove("is-invalid");
+                    star.style.display = (decision === "REJECT") ? "inline" : "none";
+
+                    infoBox.className = "alert " +
+                        (decision === "REJECT" ? "alert-warning" : "alert-success");
+
+                    infoBox.innerHTML =
+                        decision === "REJECT"
+                            ? "<i class='fas fa-exclamation-triangle me-2'></i>Vous êtes sur le point de <b>rejeter</b> cette demande."
+                            : "<i class='fas fa-check-circle me-2'></i>Vous êtes sur le point de <b>valider</b> cette demande.";
+
+                    codepModal.show();
+                });
+
+            });
+
+        // ====== VALIDATION AVANT SUBMIT ======
+        form.addEventListener("submit", function (e) {
+
+            const decision = decisionInput.value;
+            const commentaire = (commentInput.value || "").trim();
+
+            if (decision === "REJECT" && commentaire.length === 0) {
+                e.preventDefault();
+                commentInput.classList.add("is-invalid");
+                star.style.display = "inline";
+                return;
+            }
+        });
+
+        // ========= Gestion affichage fichiers =========
+        function renderFiles() {
+            fileList.innerHTML = "";
+
+            if (selectedFiles.length === 0) {
+                const empty = document.createElement("li");
+                empty.className = "list-group-item text-muted";
+                empty.innerHTML = `<i class="fas fa-circle-info me-2"></i>Aucun fichier sélectionné`;
+                fileList.appendChild(empty);
+                return;
+            }
+
+            selectedFiles.forEach((file, idx) => {
+                const li = document.createElement("li");
+                li.className = "list-group-item d-flex align-items-center gap-2";
+
+                li.innerHTML = `
+                <i class="fas fa-file-alt text-gradient-blue"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">${file.name}</div>
+                    <small class="text-muted">${(file.size / 1024).toFixed(1)} KB</small>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-remove-index="${idx}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+
+                fileList.appendChild(li);
+            });
+        }
+
+        function syncInputFiles() {
+            const dt = new DataTransfer();
+            selectedFiles.forEach(f => dt.items.add(f));
+            fileInput.files = dt.files;
+        }
+
+        fileInput.addEventListener("change", function () {
+            const newFiles = Array.from(this.files || []);
+            selectedFiles = [...selectedFiles, ...newFiles];
+            syncInputFiles();
+            renderFiles();
+        });
+
+        fileList.addEventListener("click", function (e) {
+            const btn = e.target.closest("button[data-remove-index]");
+            if (!btn) return;
+
+            const index = parseInt(btn.dataset.removeIndex);
+            selectedFiles.splice(index, 1);
+
+            syncInputFiles();
+            renderFiles();
+        });
+    }
     /*]]>*/
 </script>
 </body>
