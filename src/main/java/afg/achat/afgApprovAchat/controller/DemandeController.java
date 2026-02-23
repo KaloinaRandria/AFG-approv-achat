@@ -530,33 +530,91 @@ public class DemandeController {
                 .filter(x -> !x.equals(current.getId()))
                 .toList();
 
-        // ✅ N+1 du demandeur = la demande appartient à un de mes enfants
+        // N+1 du demandeur = la demande appartient à un de mes enfants
         boolean isViewerNplus1OfDemandeur = (demandeurId != null) && childrenIds.contains(demandeurId);
 
-        // ✅ Droits de décision par niveau
+        // Droits de décision par niveau
         boolean canDecisionN1 = isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.CREE;
         boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
         boolean canDecisionControleur = isControleur && demande.getStatut() == StatutDemande.VALIDATION_N2;
         boolean canDecisionDFC = isDFC && demande.getStatut() == StatutDemande.VALIDATION_N3;
-        boolean isCodepWorkflow = demande.getStatut() == StatutDemande.DECISION_CODEP;
+        boolean isCodepWorkflow = Boolean.TRUE.equals(demande.getViaCodep());
         boolean canDecisionCodep = isMG && demande.getStatut() == StatutDemande.DECISION_CODEP;
 
+        boolean isValidatedCodep = demande.getStatut() == StatutDemande.VALIDE && demande.getDecisionViaCodep(isCodepWorkflow); // ajouter champ ou méthode
 
-        // ✅ Lignes
+        // Lignes
         List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
 
-        // ✅ Labels
+        // Labels
         Map<Integer, String> statutLabels = new LinkedHashMap<>();
         statutLabels.put(StatutDemande.CREE, "En attente N+1");
         statutLabels.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
         statutLabels.put(StatutDemande.VALIDATION_N2, "En attente Contrôleur");
         statutLabels.put(StatutDemande.VALIDATION_N3, "En attente D.F.C.");
+        statutLabels.put(StatutDemande.DECISION_CODEP,"En attente CODEP");
         statutLabels.put(StatutDemande.VALIDE, "VALIDÉE");
         statutLabels.put(StatutDemande.REFUSE, "REFUSÉE");
 
         String statutLabel = statutLabels.getOrDefault(demande.getStatut(), "INCONNU");
 
-        // ✅ statutHint (UI) : message adapté au viewer
+        Map<Integer, String> stepLabels = new HashMap<>();
+
+        stepLabels.put(StatutDemande.CREE, "Création");
+        stepLabels.put(StatutDemande.VALIDATION_N1, "N+1");
+        stepLabels.put(StatutDemande.VALIDATION_N2, "Moyens Généraux");
+        stepLabels.put(StatutDemande.VALIDATION_N3, "Contrôleur de gestion");
+        stepLabels.put(StatutDemande.DECISION_CODEP, "Comité de Direction");
+        stepLabels.put(StatutDemande.REFUSE, "Refus");
+
+// Cas particulier : VALIDE dépend du workflow
+        if (isCodepWorkflow) {
+            stepLabels.put(StatutDemande.VALIDE, "Comité de Direction");
+        } else {
+            stepLabels.put(StatutDemande.VALIDE, "D.F.C.");
+        }
+
+
+        Map<Integer, String> badgeClasses = new HashMap<>();
+        Map<Integer, String> badgeIcons = new HashMap<>();
+
+        badgeClasses.put(StatutDemande.CREE, "badge-wait");
+        badgeClasses.put(StatutDemande.VALIDATION_N1, "badge-info");
+        badgeClasses.put(StatutDemande.VALIDATION_N2, "badge-purple");
+        badgeClasses.put(StatutDemande.VALIDATION_N3, "badge-purple");
+        badgeClasses.put(StatutDemande.VALIDE, "badge-success");
+        badgeClasses.put(StatutDemande.REFUSE, "badge-danger");
+
+        badgeIcons.put(StatutDemande.CREE, "fa-user-clock");
+        badgeIcons.put(StatutDemande.VALIDATION_N1, "fa-clipboard-check");
+        badgeIcons.put(StatutDemande.VALIDATION_N2, "fa-coins");
+        badgeIcons.put(StatutDemande.VALIDATION_N3, "fa-gavel");
+        badgeIcons.put(StatutDemande.VALIDE, "fa-check-circle");
+        badgeIcons.put(StatutDemande.REFUSE, "fa-times-circle");
+
+
+        List<String> steps;
+
+        if (isCodepWorkflow) {
+            steps = List.of(
+                    "Demande créée",
+                    "Supérieur hiérarchique (N+1)",
+                    "Moyens Généraux",
+                    "Comité de Direction"
+            );
+        } else {
+            steps = List.of(
+                    "Demande créée",
+                    "Supérieur hiérarchique (N+1)",
+                    "Moyens Généraux",
+                    "Contrôleur de gestion",
+                    "DFC"
+            );
+        }
+
+        model.addAttribute("steps", steps);
+
+        // statutHint (UI) : message adapté au viewer
         String statutHint = null;
 
         // N+1 a validé (donc la demande est passée à N1)
@@ -595,22 +653,20 @@ public class DemandeController {
 
 
         int currentStep = switch (demande.getStatut()) {
-
             case StatutDemande.CREE -> 1;
             case StatutDemande.VALIDATION_N1 -> 2;
-
+            case StatutDemande.VALIDATION_N2 -> 3; // Controleur
+            case StatutDemande.VALIDATION_N3 -> 4; // DFC
             case StatutDemande.DECISION_CODEP -> 3; // CODEP
-
-            case StatutDemande.VALIDATION_N2 -> 3;   // Controleur (normal)
-            case StatutDemande.VALIDATION_N3 -> 4;   // DFC
-            case StatutDemande.VALIDE -> 5;
+            case StatutDemande.VALIDE -> {
+                if (isCodepWorkflow) yield 4; // ou 5 selon ton stepper
+                else yield 5;
+            }
             case StatutDemande.REFUSE -> -1;
-
             default -> 1;
         };
 
-        List<ValidationDemande> historiques =
-                validationDemandeService.getHistorique(demande);
+        List<ValidationDemande> historiques = validationDemandeService.getHistorique(demande);
 
         model.addAttribute("historiques", historiques);
         model.addAttribute("piecesJointes", piecesJointes);
@@ -618,6 +674,7 @@ public class DemandeController {
         model.addAttribute("isRefused", demande.getStatut() == StatutDemande.REFUSE);
         model.addAttribute("isValidated", demande.getStatut() == StatutDemande.VALIDE);
         model.addAttribute("isCodepWorkflow", isCodepWorkflow);
+        model.addAttribute("isValidatedCodep", isValidatedCodep);
 
         // Model (IMPORTANT : toujours envoyer les booléens)
         model.addAttribute("currentUri", request.getRequestURI());
@@ -633,6 +690,9 @@ public class DemandeController {
         model.addAttribute("statutLabels", statutLabels);
         model.addAttribute("statutLabel", statutLabel);
         model.addAttribute("statutHint", statutHint);
+        model.addAttribute("stepLabels", stepLabels);
+        model.addAttribute("badgeClasses", badgeClasses);
+        model.addAttribute("badgeIcons", badgeIcons);
 
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
 
@@ -845,10 +905,12 @@ public class DemandeController {
             return "redirect:/demande/fiche/" + id;
         }
 
-        if (demande.getNatureDemande() == null) {
-            redirectAttributes.addFlashAttribute("ko", "Veuillez choisir le Type de demande (OPEX/CAPEX) avant de valider.");
-//            demande.setNatureDemande(DemandeMere.NatureDemande.CAPEX);
-        }
+//        if (demande.getNatureDemande() == null) {
+//            redirectAttributes.addFlashAttribute("ko", "Veuillez choisir le Type de demande (OPEX/CAPEX) avant de valider.");
+//            return "redirect:/demande/fiche/" + id;
+//        }
+        demande.setNatureDemande(DemandeMere.NatureDemande.CAPEX);
+        demande.setViaCodep(true);
         // Passage au statut CODEP
         demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.DECISION_CODEP);
         logValidation(demande, current, StatutDemande.DECISION_CODEP, "Envoi au CODEP");
