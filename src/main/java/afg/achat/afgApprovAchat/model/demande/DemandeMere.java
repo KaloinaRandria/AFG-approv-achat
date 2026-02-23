@@ -57,6 +57,8 @@ public class DemandeMere {
 
     int statut;
 
+    private Boolean viaCodep = false;
+
     @Enumerated(EnumType.STRING)
     @Column(name="etat_livraison")
     EtatLivraison etatLivraison = EtatLivraison.NON_LIVREE;

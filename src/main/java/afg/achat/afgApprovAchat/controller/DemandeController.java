@@ -538,7 +538,7 @@ public class DemandeController {
         boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
         boolean canDecisionControleur = isControleur && demande.getStatut() == StatutDemande.VALIDATION_N2;
         boolean canDecisionDFC = isDFC && demande.getStatut() == StatutDemande.VALIDATION_N3;
-        boolean isCodepWorkflow = demande.getStatut() == StatutDemande.DECISION_CODEP;
+        boolean isCodepWorkflow = Boolean.TRUE.equals(demande.getViaCodep());
         boolean canDecisionCodep = isMG && demande.getStatut() == StatutDemande.DECISION_CODEP;
 
         boolean isValidatedCodep = demande.getStatut() == StatutDemande.VALIDE && demande.getDecisionViaCodep(isCodepWorkflow); // ajouter champ ou méthode
@@ -557,6 +557,62 @@ public class DemandeController {
         statutLabels.put(StatutDemande.REFUSE, "REFUSÉE");
 
         String statutLabel = statutLabels.getOrDefault(demande.getStatut(), "INCONNU");
+
+        Map<Integer, String> stepLabels = new HashMap<>();
+
+        stepLabels.put(StatutDemande.CREE, "Création");
+        stepLabels.put(StatutDemande.VALIDATION_N1, "N+1");
+        stepLabels.put(StatutDemande.VALIDATION_N2, "Moyens Généraux");
+        stepLabels.put(StatutDemande.VALIDATION_N3, "Contrôleur de gestion");
+        stepLabels.put(StatutDemande.DECISION_CODEP, "Comité de Direction");
+        stepLabels.put(StatutDemande.REFUSE, "Refus");
+
+// Cas particulier : VALIDE dépend du workflow
+        if (isCodepWorkflow) {
+            stepLabels.put(StatutDemande.VALIDE, "Comité de Direction");
+        } else {
+            stepLabels.put(StatutDemande.VALIDE, "D.F.C.");
+        }
+
+
+        Map<Integer, String> badgeClasses = new HashMap<>();
+        Map<Integer, String> badgeIcons = new HashMap<>();
+
+        badgeClasses.put(StatutDemande.CREE, "badge-wait");
+        badgeClasses.put(StatutDemande.VALIDATION_N1, "badge-info");
+        badgeClasses.put(StatutDemande.VALIDATION_N2, "badge-purple");
+        badgeClasses.put(StatutDemande.VALIDATION_N3, "badge-purple");
+        badgeClasses.put(StatutDemande.VALIDE, "badge-success");
+        badgeClasses.put(StatutDemande.REFUSE, "badge-danger");
+
+        badgeIcons.put(StatutDemande.CREE, "fa-user-clock");
+        badgeIcons.put(StatutDemande.VALIDATION_N1, "fa-clipboard-check");
+        badgeIcons.put(StatutDemande.VALIDATION_N2, "fa-coins");
+        badgeIcons.put(StatutDemande.VALIDATION_N3, "fa-gavel");
+        badgeIcons.put(StatutDemande.VALIDE, "fa-check-circle");
+        badgeIcons.put(StatutDemande.REFUSE, "fa-times-circle");
+
+
+        List<String> steps;
+
+        if (isCodepWorkflow) {
+            steps = List.of(
+                    "Demande créée",
+                    "Supérieur hiérarchique (N+1)",
+                    "Moyens Généraux",
+                    "Comité de Direction"
+            );
+        } else {
+            steps = List.of(
+                    "Demande créée",
+                    "Supérieur hiérarchique (N+1)",
+                    "Moyens Généraux",
+                    "Contrôleur de gestion",
+                    "DFC"
+            );
+        }
+
+        model.addAttribute("steps", steps);
 
         // statutHint (UI) : message adapté au viewer
         String statutHint = null;
@@ -634,6 +690,9 @@ public class DemandeController {
         model.addAttribute("statutLabels", statutLabels);
         model.addAttribute("statutLabel", statutLabel);
         model.addAttribute("statutHint", statutHint);
+        model.addAttribute("stepLabels", stepLabels);
+        model.addAttribute("badgeClasses", badgeClasses);
+        model.addAttribute("badgeIcons", badgeIcons);
 
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
 
@@ -846,10 +905,12 @@ public class DemandeController {
             return "redirect:/demande/fiche/" + id;
         }
 
-        if (demande.getNatureDemande() == null) {
-            redirectAttributes.addFlashAttribute("ko", "Veuillez choisir le Type de demande (OPEX/CAPEX) avant de valider.");
-//            demande.setNatureDemande(DemandeMere.NatureDemande.CAPEX);
-        }
+//        if (demande.getNatureDemande() == null) {
+//            redirectAttributes.addFlashAttribute("ko", "Veuillez choisir le Type de demande (OPEX/CAPEX) avant de valider.");
+//            return "redirect:/demande/fiche/" + id;
+//        }
+        demande.setNatureDemande(DemandeMere.NatureDemande.CAPEX);
+        demande.setViaCodep(true);
         // Passage au statut CODEP
         demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.DECISION_CODEP);
         logValidation(demande, current, StatutDemande.DECISION_CODEP, "Envoi au CODEP");
