@@ -749,6 +749,32 @@ table.dataTable tbody tr:hover {
     color: white !important;
 }
 
+/* Bleu outline – style secondary */
+.btn-outline-gradient-blue {
+    background-color: transparent !important;
+    border: 2px solid #00129f !important;
+    color: #00129f !important;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-gradient-blue:hover {
+    background: linear-gradient(
+            45deg,
+            #001051 0%,
+            #00129f 80%
+    ) !important;
+    border-color: transparent !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 18, 159, 0.35);
+}
+
+.btn-outline-gradient-blue:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(0, 18, 159, 0.25);
+}
+
 /* Vert */
 .btn-gradient-green {
     background: linear-gradient(

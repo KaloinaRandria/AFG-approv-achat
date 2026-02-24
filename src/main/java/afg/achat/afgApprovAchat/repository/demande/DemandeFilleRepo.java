@@ -26,4 +26,6 @@ public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
     @Query("select dmf.article from DemandeFille dmf where dmf.id = :idDemandeFille")
     Article findArticleByIdDemandeFille(int idDemandeFille);
 
+    @Query("SELECT df FROM DemandeFille df WHERE df.demandeMere = :demandeMere AND df.statut = 14")
+    List<DemandeFille> findByDemandeMereAndStatutValidee(DemandeMere demandeMere);
 }

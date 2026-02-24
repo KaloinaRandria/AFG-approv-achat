@@ -1,0 +1,61 @@
+@startuml
+
+title Workflow de Validation d'une Demande de Matériel (Vue Fonctionnelle)
+
+actor Utilisateur
+actor "Supérieur Hiérarchique" as SH
+actor "Moyens Généraux" as MG
+actor "Contrôleur de Gestion" as CG
+actor "Direction Finance" as DF
+actor "Comité de Dépense" as CD
+
+== Création de la demande ==
+Utilisateur -> SH : Soumet la demande de matériel
+
+== Validation du Supérieur ==
+SH -> SH : Analyse de la demande
+
+alt Demande refusée
+    SH --> Utilisateur : Notification de refus
+else Demande validée
+    SH -> MG : Transmission pour traitement
+end
+
+== Analyse des Moyens Généraux ==
+MG -> MG : Qualification CAPEX / OPEX
+
+alt Refus MG
+    MG --> Utilisateur : Notification de refus
+else Envoi au Comité de Dépense CODEP
+    MG -> CD : Transmission de la demande
+
+    CD -> CD : Étude et décision
+
+    alt Refus CODEP
+        CD --> Utilisateur : Notification de refus
+    else Validation CODEP
+        CD -> Utilisateur : Notification de validation
+    end
+else Validation MG (sans CODEP)
+    MG -> CG : Transmission pour contrôle budgétaire
+end
+
+== Contrôleur de gestion ==
+CG -> CG : Vérification et choix ligne budgétaire
+
+alt Refus Contrôle de Gestion
+    CG --> Utilisateur : Notification de refus
+else Validation CG
+    CG -> DF : Transmission pour validation finale
+end
+
+== Validation Direction Finance ==
+DF -> DF : Décision finale
+
+alt Refus Direction Finance
+    DF --> Utilisateur : Notification de refus
+else Validation finale
+    DF -> Utilisateur : Demande validée
+end
+
+@enduml

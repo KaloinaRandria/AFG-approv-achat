@@ -79,5 +79,8 @@ public class DemandeFilleService {
         return demandeFilleRepo.findArticleByIdDemandeFille(idDemandeFille);
     }
 
+    public List<DemandeFille> getDemandeFilleValideeByDemandeMere(DemandeMere demandeMere) {
+        return demandeFilleRepo.findByDemandeMereAndStatutValidee(demandeMere);
+    }
 
 }
