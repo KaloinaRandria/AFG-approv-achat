@@ -564,12 +564,12 @@ public class DemandeController {
         stepLabels.put(StatutDemande.VALIDATION_N1, "N+1");
         stepLabels.put(StatutDemande.VALIDATION_N2, "Moyens Généraux");
         stepLabels.put(StatutDemande.VALIDATION_N3, "Contrôleur de gestion");
-        stepLabels.put(StatutDemande.DECISION_CODEP, "Comité de Direction");
+        stepLabels.put(StatutDemande.DECISION_CODEP, "Comité de dépense");
         stepLabels.put(StatutDemande.REFUSE, "Refus");
 
 // Cas particulier : VALIDE dépend du workflow
         if (isCodepWorkflow) {
-            stepLabels.put(StatutDemande.VALIDE, "Comité de Direction");
+            stepLabels.put(StatutDemande.VALIDE, "Comité de dépense");
         } else {
             stepLabels.put(StatutDemande.VALIDE, "D.F.C.");
         }
@@ -600,7 +600,7 @@ public class DemandeController {
                     "Demande créée",
                     "Supérieur hiérarchique (N+1)",
                     "Moyens Généraux",
-                    "Comité de Direction"
+                    "Comité de dépense"
             );
         } else {
             steps = List.of(
@@ -822,7 +822,7 @@ public class DemandeController {
 
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
                 logValidation(demande, current, StatutDemande.VALIDE, cmt);
-                redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le Comité de direction.");
+                redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le Comité de dépense.");
                 return "redirect:/demande/fiche/" + id;
             }
 

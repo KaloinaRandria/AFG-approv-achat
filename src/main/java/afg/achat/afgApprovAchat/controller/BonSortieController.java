@@ -40,7 +40,7 @@ public class BonSortieController {
 
     @Autowired IdGenerator idGenerator;
 
-    // ✅ Création automatique depuis une demande validée (SG)
+    // Création automatique depuis une demande validée (SG)
     @GetMapping("/create-from-demande/{demandeId}")
     public String createFromDemande(@PathVariable("demandeId") String demandeId,
                                     RedirectAttributes redirectAttributes) {
@@ -82,13 +82,14 @@ public class BonSortieController {
         bs = bsMereRepo.save(bs);
 
         // 2) créer lignes BS depuis demandeFille
-        List<DemandeFille> lignesDemande = demandeFilleService.getDemandeFilleByDemandeMere(demande);
-        if (lignesDemande == null || lignesDemande.isEmpty()) {
+        List<DemandeFille> ligneValidee = demandeFilleService.getDemandeFilleValideeByDemandeMere(demande);
+        if (ligneValidee == null || ligneValidee.isEmpty()) {
             redirectAttributes.addFlashAttribute("ko", "Aucune ligne d'article dans la demande.");
             return "redirect:/demande/fiche/" + demandeId;
         }
 
-        for (DemandeFille l : lignesDemande) {
+        for (DemandeFille l : ligneValidee) {
+
             if (l.getArticle() == null) continue;
             if (l.getQuantite() <= 0) continue;
 
@@ -96,7 +97,8 @@ public class BonSortieController {
             bsf.setBonSortieMere(bs);
             bsf.setArticle(l.getArticle());
             bsf.setQuantiteDemandee(l.getQuantite());
-            bsf.setQuantiteSortie(0); // sera saisi par MG
+            bsf.setQuantiteSortie(0);
+
             bsFilleRepo.save(bsf);
         }
 
@@ -104,7 +106,7 @@ public class BonSortieController {
         return "redirect:/bon-sortie/fiche/" + bs.getId();
     }
 
-    // ✅ Fiche BS
+    //Fiche BS
     @GetMapping("/fiche/{bsId}")
     public String fiche(@PathVariable("bsId") String bsId,
                         Model model,
@@ -136,6 +138,14 @@ public class BonSortieController {
             dispoByArticleId.put(l.getArticle().getId(), dispo);
         }
 
+        boolean isPartielle = lignes.stream()
+                .anyMatch(l -> l.getQuantiteSortie() > 0 && l.getQuantiteSortie() < l.getQuantiteDemandee());
+
+
+        for (BonSortieFille l : lignes) {
+            Double dispo = dispoByArticleId.getOrDefault(l.getArticle().getId(),0.0);
+            l.setMaxSortie(Math.min(dispo, l.getQuantiteDemandee()));
+        }
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("bs", bs);
         model.addAttribute("lignes", lignes);
@@ -144,10 +154,13 @@ public class BonSortieController {
         model.addAttribute("isCree", bs.getStatut() == BonSortieMere.Statut.CREE);
         model.addAttribute("isValidee", bs.getStatut() == BonSortieMere.Statut.VALIDEE);
 
+
+        model.addAttribute("isPartielle", isPartielle);
+
         return "bonSortie/bs-fiche";
     }
 
-    // ✅ Sauvegarder les quantités saisies (sans impact stock)
+    // Sauvegarder les quantités saisies (sans impact stock)
     @PostMapping("/fiche/{bsId}/save")
     public String saveQuantites(@PathVariable("bsId") String bsId,
                                 @RequestParam("lineId[]") List<Integer> lineIds,
@@ -189,7 +202,7 @@ public class BonSortieController {
         return "redirect:/bon-sortie/fiche/" + bsId;
     }
 
-    // ✅ Confirmer (écrit en stock + passe BS à VALIDEE)
+    // Confirmer (écrit en stock + passe BS à VALIDEE)
     @PostMapping("/fiche/{bsId}/confirm")
     public String confirm(@PathVariable("bsId") String bsId,
                           RedirectAttributes redirectAttributes) {

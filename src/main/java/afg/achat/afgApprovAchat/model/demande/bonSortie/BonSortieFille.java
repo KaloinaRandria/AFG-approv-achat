@@ -24,4 +24,14 @@ public class BonSortieFille {
     double quantiteSortie;
     @ManyToOne @JoinColumn(name = "id_bon_sortie_mere", referencedColumnName = "id_bon_sortie_mere")
     BonSortieMere bonSortieMere;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "statut")
+    Statut statut = Statut.EN_ATTENTE;
+    Double maxSortie;
+
+    public enum Statut {
+        EN_ATTENTE, // pas de sortie (stock insuffisant)
+        SORTIE      // sortie effectuée
+    }
+
 }

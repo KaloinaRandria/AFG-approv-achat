@@ -33,8 +33,9 @@ public class BonSortieMere {
     Statut statut = Statut.CREE;
 
     public enum Statut {
-        CREE,
-        VALIDEE
+        CREE,       // BS créé mais non confirmé
+        PARTIELLE,  // BS confirmé partiellement (certaines lignes en attente)
+        VALIDEE     // BS confirmé entièrement
     }
 
     public void setId(IdGenerator idGenerator) {
