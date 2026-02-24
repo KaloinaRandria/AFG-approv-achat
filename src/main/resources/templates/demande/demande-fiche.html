@@ -29,7 +29,7 @@
                 <div class="d-flex gap-2">
 
                     <!-- ✅ Créer / Ouvrir le bon de sortie (MG + ADMIN) -->
-                    <a class="btn btn-outline-primary"
+                    <a class="btn btn-gradient-blue"
                        sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
                        th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE}"
                        th:href="@{/bon-sortie/create-from-demande/{id}(id=${demande.id})}">
@@ -224,7 +224,7 @@
                                                 <span th:text="${pj.originalName}">fichier.pdf</span>
                                             </div>
 
-                                            <a class="btn btn-sm btn-outline-primary"
+                                            <a class="btn btn-sm btn-outline-gradient-blue "
                                                th:href="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}">
                                                 <i class="fas fa-download me-1"></i> Télécharger
                                             </a>
