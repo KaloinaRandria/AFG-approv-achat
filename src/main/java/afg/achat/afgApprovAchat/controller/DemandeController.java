@@ -667,7 +667,7 @@ public class DemandeController {
         };
 
         List<ValidationDemande> historiques = validationDemandeService.getHistorique(demande);
-        
+
         model.addAttribute("steps", steps);
         model.addAttribute("historiques", historiques);
         model.addAttribute("piecesJointes", piecesJointes);
