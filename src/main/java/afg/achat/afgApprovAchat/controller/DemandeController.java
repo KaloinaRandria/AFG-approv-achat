@@ -612,7 +612,7 @@ public class DemandeController {
             );
         }
 
-        model.addAttribute("steps", steps);
+
 
         // statutHint (UI) : message adapté au viewer
         String statutHint = null;
@@ -667,7 +667,8 @@ public class DemandeController {
         };
 
         List<ValidationDemande> historiques = validationDemandeService.getHistorique(demande);
-
+        
+        model.addAttribute("steps", steps);
         model.addAttribute("historiques", historiques);
         model.addAttribute("piecesJointes", piecesJointes);
         model.addAttribute("currentStep", currentStep);
