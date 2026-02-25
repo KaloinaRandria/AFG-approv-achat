@@ -57,7 +57,7 @@ public class DemandeController {
     @Autowired
     ValidationDemandeService validationDemandeService;
     @Autowired
-    private CodepPieceJointeService codepPieceJointeService;
+    CodepPieceJointeService codepPieceJointeService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
