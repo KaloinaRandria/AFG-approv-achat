@@ -397,9 +397,29 @@
                                         </div>
                                     </div>
 
+                                    <!-- ================= LIGNE BUDGETAIRE (Controleur seulement en N2) ================= -->
+                                    <div class="mb-2"
+                                    th:if="${canDecisionControleur and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N2}">
+                                        <label class="form-label mb-1">
+                                            Ligne budgétaire <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="text"
+                                            class="form-control"
+                                            id="ligneBudgetaireInput"
+                                            placeholder="Rechercher la ligne budgétaire..."
+                                            autocomplete="off"
+                                            required>
+                                            <input type="hidden" name="ligneBudgetaire" id="ligneBudgetaireId">
+                                        </div>
+                                        <div id="ligneBudgetaireList"
+                                        class="list-group position-absolute w-100 shadow" style="z-index: 1000;">
+                                        </div>
+                                    </div>
+
 
                                     <!-- ================= BOUTONS ================= -->
-                                    <div class="d-flex gap-2">
+                                     <div class="d-flex gap-2">
 
                                         <!-- ===== CAS CODEP ===== -->
                                         <div th:if="${canDecisionCodep}" class="d-flex gap-2">
@@ -547,7 +567,7 @@
                                                 <td>
                                                     <span th:text="${stepLabels[h.statut]}"></span>
                                                 </td>
-                                                <!-- ✅ DECISION -->
+                                                <!--DECISION -->
                                                 <td>
                                                     <span class="badge"
                                                           th:classappend="${
@@ -856,6 +876,7 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+
     document.addEventListener("DOMContentLoaded", () => {
         const form = document.getElementById("decisionForm");
         const modalEl = document.getElementById("decisionModal");
