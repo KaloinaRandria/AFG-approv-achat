@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.Article;
+import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.demande.*;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
@@ -57,7 +58,7 @@ public class DemandeController {
     @Autowired
     ValidationDemandeService validationDemandeService;
     @Autowired
-    private CodepPieceJointeService codepPieceJointeService;
+    CodepPieceJointeService codepPieceJointeService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -612,7 +613,7 @@ public class DemandeController {
             );
         }
 
-        model.addAttribute("steps", steps);
+
 
         // statutHint (UI) : message adapté au viewer
         String statutHint = null;
@@ -667,7 +668,9 @@ public class DemandeController {
         };
 
         List<ValidationDemande> historiques = validationDemandeService.getHistorique(demande);
+        CentreBudgetaire[] ligneBudgetaires = centreBudgetaireService.getAllCentreBudgetaires();
 
+        model.addAttribute("steps", steps);
         model.addAttribute("historiques", historiques);
         model.addAttribute("piecesJointes", piecesJointes);
         model.addAttribute("currentStep", currentStep);
@@ -695,6 +698,7 @@ public class DemandeController {
         model.addAttribute("badgeIcons", badgeIcons);
 
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
+        model.addAttribute("ligneBudgetaires", ligneBudgetaires);
 
         return "demande/demande-fiche";
     }
@@ -708,6 +712,7 @@ public class DemandeController {
                            @RequestParam(value = "typeDemande", required = false) String typeDemande,
                            @RequestParam(value = "commentaire", required = false) String commentaire,
                            @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
+                           @RequestParam(name = "ligneBudgetaire") String ligneBudgetaire,
                            RedirectAttributes redirectAttributes)  {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
@@ -850,6 +855,12 @@ public class DemandeController {
             }
 
             if (canDecisionControleur) {
+                try {
+                    demande.setCentreBudgetaire(centreBudgetaireService.getCentreBudgetaireById(Integer.parseInt(ligneBudgetaire)));
+                } catch (IllegalArgumentException ex) {
+                    redirectAttributes.addFlashAttribute("ko", "ligne budgetaire invalide : " + ligneBudgetaire);
+                    return "redirect:/demande/fiche/" + id;
+                }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
                 logValidation(demande, current, StatutDemande.VALIDATION_N3, cmt);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le contrôleur de gestion (N3).");
