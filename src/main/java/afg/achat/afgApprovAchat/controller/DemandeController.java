@@ -542,7 +542,7 @@ public class DemandeController {
         boolean isCodepWorkflow = Boolean.TRUE.equals(demande.getViaCodep());
         boolean canDecisionCodep = isMG && demande.getStatut() == StatutDemande.DECISION_CODEP;
 
-        boolean isValidatedCodep = demande.getStatut() == StatutDemande.VALIDE && demande.getDecisionViaCodep(isCodepWorkflow); // ajouter champ ou méthode
+        boolean isValidatedCodep = demande.getStatut() == StatutDemande.VALIDE && demande.getDecisionViaCodep(isCodepWorkflow);
 
         // Lignes
         List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
@@ -747,7 +747,7 @@ public class DemandeController {
                 .filter(x -> !x.equals(current.getId()))
                 .toList();
 
-        // ✅ Autorisations par niveau
+        // Autorisations par niveau
         boolean canDecisionN1 = demandeurId != null
                 && childrenIds.contains(demandeurId)
                 && demande.getStatut() == StatutDemande.CREE;

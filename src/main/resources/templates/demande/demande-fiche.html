@@ -173,6 +173,13 @@
                                 <!-- Lecture seule -->
                                 <div th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">-</div>
                             </div>
+
+                            <div>
+                                <strong>Ligne budgétaire :</strong>
+
+                                <!-- Lecture seule -->
+                                <div th:text="${demande.centreBudgetaire != null ? demande.centreBudgetaire.codeCentre +' - '+ demande.centreBudgetaire.description   : '-'}">-</div>
+                            </div>
                         </div>
 
                         <!-- MOTIF & DESCRIPTION -->
@@ -403,17 +410,20 @@
                                         <label class="form-label mb-1">
                                             Ligne budgétaire <span class="text-danger">*</span>
                                         </label>
-                                        <div class="input-group">
-                                            <input type="text"
-                                            class="form-control"
-                                            id="ligneBudgetaireInput"
-                                            placeholder="Rechercher la ligne budgétaire..."
-                                            autocomplete="off"
-                                            required>
-                                            <input type="hidden" name="ligneBudgetaire" id="ligneBudgetaireId">
-                                        </div>
-                                        <div id="ligneBudgetaireList"
-                                        class="list-group position-absolute w-100 shadow" style="z-index: 1000;">
+
+                                        <select class="form-select form-select-sm"
+                                                name="ligneBudgetaire"
+                                                required>
+                                            <option value="">-- Choisir --</option>
+                                            <option th:each="ligne : ${ligneBudgetaires}"
+                                                    th:value="${ligne.id}"
+                                                    th:text="${ligne.codeCentre + ' - ' + ligne.description}"
+                                                    >
+                                            </option>
+                                        </select>
+
+                                        <div class="text-muted small mt-1">
+                                            Ligne budgétarie obligatoire pour valider.
                                         </div>
                                     </div>
 
