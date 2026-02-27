@@ -173,6 +173,13 @@
                                 <!-- Lecture seule -->
                                 <div th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">-</div>
                             </div>
+
+                            <div>
+                                <strong>Ligne budgétaire :</strong>
+
+                                <!-- Lecture seule -->
+                                <div th:text="${demande.centreBudgetaire != null ? demande.centreBudgetaire.codeCentre +' - '+ demande.centreBudgetaire.description   : '-'}">-</div>
+                            </div>
                         </div>
 
                         <!-- MOTIF & DESCRIPTION -->
