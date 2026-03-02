@@ -286,7 +286,7 @@
                                 <tr th:each="l : ${lignes}"
                                     th:classappend="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? 'ligne-refusee'">
 
-                                <td th:text="${l.article != null ? l.article.designation : '-'}">-</td>
+                                <td th:text="${l.article != null ? l.article.codeArticle +' - '+ l.article.designation : '-'}">-</td>
 
                                     <td class="text-end" th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">0</td>
 
