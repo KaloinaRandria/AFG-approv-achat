@@ -569,7 +569,7 @@
 
                                                 <!-- Étape -->
                                                 <td>
-                                                    <span th:text="${stepLabels[h.etape]}">-</span>
+                                                    <span th:text="${histoLabels[h.etape] != null ? histoLabels[h.etape] : stepLabels[h.etape]}">-</span>
                                                 </td>
 
                                                 <!-- Décision -->

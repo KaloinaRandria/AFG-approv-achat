@@ -48,15 +48,15 @@ public class DemandeFilleService {
         ligne.setStatut(StatutDemande.REFUSE);
         demandeFilleRepo.save(ligne);
 
-        // 🔥 Recalcul total
+        // Recalcul total
         demandeMereService.recalculerTotal(ligne.getDemandeMere());
 
         DemandeMere demande = ligne.getDemandeMere();
 
-        // 🔥 étape réelle du workflow
+        // étape réelle du workflow
         int etapeCourante = demande.getStatut();
 
-        // 🔥 Historique propre
+        // Historique propre
         ValidationDemande historique = new ValidationDemande();
         historique.setDemandeMere(demande);
         historique.setValidateur(validateur);
