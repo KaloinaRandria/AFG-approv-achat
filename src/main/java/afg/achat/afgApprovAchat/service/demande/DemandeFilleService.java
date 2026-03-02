@@ -48,23 +48,32 @@ public class DemandeFilleService {
         ligne.setStatut(StatutDemande.REFUSE);
         demandeFilleRepo.save(ligne);
 
-        // 🔥 Recalcul total
+        // Recalcul total
         demandeMereService.recalculerTotal(ligne.getDemandeMere());
 
-        // 🔥 Historique
+        DemandeMere demande = ligne.getDemandeMere();
+
+        // étape réelle du workflow
+        int etapeCourante = demande.getStatut();
+
+        // Historique propre
         ValidationDemande historique = new ValidationDemande();
-        historique.setDemandeMere(ligne.getDemandeMere());
+        historique.setDemandeMere(demande);
         historique.setValidateur(validateur);
-        historique.setStatut(StatutDemande.REFUSE);
+
+        historique.setEtape(etapeCourante); // ✅ étape réelle
+        historique.setDecision(ValidationDemande.DecisionValidation.REFUSE); // ✅ décision
 
         String designation = ligne.getArticle() != null
                 ? ligne.getArticle().getDesignation()
                 : "Article inconnu";
-        String codeArticle = ligne.getArticle() != null ?
-                ligne.getArticle().getCodeArticle() : "N/A";
+
+        String codeArticle = ligne.getArticle() != null
+                ? ligne.getArticle().getCodeArticle()
+                : "N/A";
 
         historique.setCommentaire(
-                "Refus de l'article : " + codeArticle+"-"+ designation +
+                "Refus de l'article : " + codeArticle + " - " + designation +
                         (commentaire != null && !commentaire.isBlank()
                                 ? " | Motif : " + commentaire
                                 : "")
