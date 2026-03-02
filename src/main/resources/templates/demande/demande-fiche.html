@@ -551,66 +551,53 @@
 
                                             <tbody>
                                             <tr th:each="h : ${historiques}">
-
                                                 <!-- Date -->
-                                                <td th:text="${h.dateAction != null ?
-                                                    #temporals.format(h.dateAction,'dd/MM/yyyy HH:mm') : '-'}">
-                                                    -
-                                                </td>
+                                                <td th:text="${h.dateAction != null ? #temporals.format(h.dateAction,'dd/MM/yyyy HH:mm') : '-'}">-</td>
 
                                                 <!-- Validateur -->
                                                 <td>
                                                     <div th:if="${h.validateur != null}">
-                                                        <div class="fw-semibold"
-                                                             th:text="${h.validateur.nom + ' ' + h.validateur.prenom}">
-                                                        </div>
+                                                        <div class="fw-semibold" th:text="${h.validateur.nom + ' ' + h.validateur.prenom}"></div>
                                                         <small class="text-muted"
                                                                th:text="${
-                                                               (h.validateur.poste != null ? h.validateur.poste.poste : '') +
-                                                               (h.validateur.service != null ? ' - ' + h.validateur.service.acronyme : '')
-                                                           }">
+                                                                   (h.validateur.poste != null ? h.validateur.poste.poste : '') +
+                                                                   (h.validateur.service != null ? ' - ' + h.validateur.service.acronyme : '')
+                                                               }">
                                                         </small>
                                                     </div>
                                                 </td>
 
-                                                <!-- Étape (déduite du statut de la demande au moment de validation) -->
+                                                <!-- Étape -->
                                                 <td>
-                                                    <span th:text="${stepLabels[h.statut]}"></span>
+                                                    <span th:text="${stepLabels[h.etape]}">-</span>
                                                 </td>
-                                                <!--DECISION -->
+
+                                                <!-- Décision -->
                                                 <td>
                                                     <span class="badge"
                                                           th:classappend="${
-                                                              h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
+                                                              h.decision == T(afg.achat.afgApprovAchat.model.demande.ValidationDemande.DecisionValidation).REFUSE
                                                               ? ' bg-danger'
                                                               : ' bg-success'
                                                           }">
-
                                                         <i class="fas"
                                                            th:classappend="${
-                                                               h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
+                                                               h.decision == T(afg.achat.afgApprovAchat.model.demande.ValidationDemande.DecisionValidation).REFUSE
                                                                ? ' fa-times-circle'
                                                                : ' fa-check-circle'
                                                            }"></i>
-
                                                         <span th:text="${
-                                                            h.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
+                                                            h.decision == T(afg.achat.afgApprovAchat.model.demande.ValidationDemande.DecisionValidation).REFUSE
                                                             ? 'REFUSÉE'
                                                             : 'VALIDÉE'
                                                         }"></span>
                                                     </span>
                                                 </td>
 
-
-
                                                 <!-- Commentaire -->
-                                                <td th:text="${h.commentaire != null && !h.commentaire.isBlank() ? h.commentaire : '-'}">
-                                                    -
-                                                </td>
-
+                                                <td th:text="${h.commentaire != null && !h.commentaire.isBlank() ? h.commentaire : '-'}">-</td>
                                             </tr>
                                             </tbody>
-
                                         </table>
                                     </div>
                                 </div>
