@@ -23,6 +23,45 @@
         </div>
 
         <div class="container-fluid py-4">
+            <!-- ===== FILTRE DATE ===== -->
+            <form th:action="@{/dashboard}" method="get" class="mb-4" >
+                <div class="chart-card">
+                    <div class="card-body py-3">
+                        <div class="row g-2 align-items-end">
+
+                            <div class="col-auto">
+                                <label class="form-label fw-semibold mb-1" style="color:#001051; font-size:13px;">
+                                    <i class="fas fa-calendar-alt me-1"></i>Date début
+                                </label>
+                                <input type="date" name="dateFrom" class="form-control form-control-sm"
+                                       th:value="${dateFrom}">
+                            </div>
+
+                            <div class="col-auto">
+                                <label class="form-label fw-semibold mb-1" style="color:#001051; font-size:13px;">
+                                    <i class="fas fa-calendar-alt me-1"></i>Date fin
+                                </label>
+                                <input type="date" name="dateTo" class="form-control form-control-sm"
+                                       th:value="${dateTo}">
+                            </div>
+
+                            <div class="col-auto">
+                                <button type="submit" class="btn btn-sm btn-gradient-blue">
+                                    <i class="fas fa-filter me-1"></i>Filtrer
+                                </button>
+                            </div>
+
+                            <div class="col-auto" th:if="${dateFrom != null or dateTo != null}">
+                                <a th:href="@{/dashboard}" class="btn btn-sm btn-outline-gradient-blue">
+                                    <i class="fas fa-times me-1"></i>Réinitialiser
+                                </a>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </form>
+
 
             <!-- ===== 3 CARTES PRINCIPALES ===== -->
             <div class="row g-3 mb-2">
@@ -149,10 +188,6 @@
             const p1 = /*[[${p1}]]*/ 0;
             const p2 = /*[[${p2}]]*/ 0;
 
-            // ── Livraison
-            const nonLivree = /*[[${nonLivree}]]*/ 0;
-            const partielle = /*[[${partielle}]]*/ 0;
-            const livree    = /*[[${livree}]]*/ 0;
 
             /*]]>*/
         </script>
@@ -265,9 +300,7 @@
                     scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
                 }
             });
-
         </script>
-
     </section>
 </div>
 
