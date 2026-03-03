@@ -22,11 +22,21 @@ public class ValidationDemande {
     DemandeMere demandeMere;
     @ManyToOne @JoinColumn(name = "id_validateur" , referencedColumnName = "id_utilisateur")
     Utilisateur validateur;
-    int statut;
+    // étape réelle
+    private Integer etape;
+
+    // décision
+    @Enumerated(EnumType.STRING)
+    private DecisionValidation decision;
     @Column(name = "date_action")
     LocalDateTime dateAction;
     @Column(columnDefinition = "TEXT")
     String commentaire;
+
+    public enum DecisionValidation {
+        APPROUVE,
+        REFUSE
+    }
 
     public void setDateAction(String dateAction) {
         this.dateAction = LocalDateTime.parse(dateAction);

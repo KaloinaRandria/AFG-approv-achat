@@ -7,6 +7,7 @@ import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.stock.StockMere;
+import afg.achat.afgApprovAchat.model.utilisateur.Poste;
 import afg.achat.afgApprovAchat.repository.bonLivraison.BonLivraisonFilleRepo;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FamilleService;
@@ -14,6 +15,7 @@ import afg.achat.afgApprovAchat.service.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
+import afg.achat.afgApprovAchat.service.utilisateur.PosteService;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
@@ -53,6 +55,8 @@ public class ImportService {
     StockMereService stockMereService;
     @Autowired
     DemandeMereService demandeMereService;
+    @Autowired
+    PosteService posteService;
 
     public void importCSVFamille(MultipartFile familleFile) {
         try (InputStreamReader reader = new InputStreamReader(familleFile.getInputStream(), StandardCharsets.UTF_8);
@@ -74,7 +78,25 @@ public class ImportService {
             throw new RuntimeException("Erreur lors de l'importation du fichier CSV", e);
         }
     }
+    public void importCSVPoste(MultipartFile multipartFile) {
+        try (InputStreamReader reader = new InputStreamReader(multipartFile.getInputStream(), StandardCharsets.UTF_8);
+             CSVReader csvReader = new CSVReaderBuilder(reader)
+                     .withCSVParser(new CSVParserBuilder().withSeparator(',').build())
+                     .build()){
+            String[] column;
+            csvReader.readNext(); // Ignorer l'en-tête
 
+            while ((column = csvReader.readNext()) != null) {
+                Poste poste = new Poste();
+                poste.setPoste(column[1].trim());
+
+                posteService.insertPoste(poste);
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de l'importation du fichier CSV", e);
+        }
+    }
     public void importCSVFournisseur(MultipartFile fournisseurFile) {
         try (InputStreamReader reader = new InputStreamReader(fournisseurFile.getInputStream(), StandardCharsets.UTF_8);
         CSVReader csvReader = new CSVReaderBuilder(reader)
