@@ -271,5 +271,41 @@ CREATE INDEX IF NOT EXISTS idx_stock_mere_bl      ON stock_mere(id_bl_mere);
 CREATE INDEX IF NOT EXISTS idx_stock_mere_dem     ON stock_mere(id_demande_mere);
 
 select * from v_historique_mouvement_stock
-where code_article = 'ART-001' order by
+where code_article = 'ART002794' order by
                                 date_mouvement desc ;
+
+
+-- analyse
+
+SET enable_indexscan = off;
+SET enable_bitmapscan = off;
+SET enable_indexonlyscan = off;
+
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
+SELECT * FROM v_etat_stock;
+
+-- Puis tu réactives après
+SET enable_indexscan = on;
+SET enable_bitmapscan = on;
+SET enable_indexonlyscan = on;
+
+
+
+RESET enable_indexscan;
+RESET enable_bitmapscan;
+RESET enable_indexonlyscan;
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM v_historique_mouvement_stock;
+
+SELECT conname,
+       pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE conname = 'demande_mere_priorite_check';
+
+ALTER TABLE demande_mere
+    DROP CONSTRAINT demande_mere_priorite_check;
+
+ALTER TABLE demande_mere
+    ADD CONSTRAINT demande_mere_priorite_check
+        CHECK (priorite IN ('P0','P1','P2'));

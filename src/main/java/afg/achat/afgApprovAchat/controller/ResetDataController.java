@@ -17,11 +17,10 @@ public class ResetDataController {
         try {
             resetData.initBase();
             redirectAttributes.addFlashAttribute("ok", "Données réinitialisées avec succès.");
+            return "redirect:/";
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("ko", "Erreur lors de la réinitialisation des données : " + e.getMessage());
             return "redirect:/";
         }
-        
-        return "redirect:/";
     }
 }

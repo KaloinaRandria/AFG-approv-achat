@@ -1,40 +1,44 @@
 package afg.achat.afgApprovAchat.controller;
 
-import afg.achat.afgApprovAchat.model.demande.DemandeFille;
-import afg.achat.afgApprovAchat.model.demande.DemandeMere;
-import afg.achat.afgApprovAchat.model.util.Adresse;
-import afg.achat.afgApprovAchat.model.util.Departement;
+import afg.achat.afgApprovAchat.model.Article;
+import afg.achat.afgApprovAchat.model.CentreBudgetaire;
+import afg.achat.afgApprovAchat.model.demande.*;
+import afg.achat.afgApprovAchat.model.util.MontantCalculator;
+import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.ArticleService;
-import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
-import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
-import afg.achat.afgApprovAchat.service.util.AdresseService;
-import afg.achat.afgApprovAchat.service.util.DepartementService;
+import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
+import afg.achat.afgApprovAchat.service.demande.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
+import afg.achat.afgApprovAchat.upload.StorageService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
+@Slf4j
 @Controller
 @RequestMapping("/demande")
 public class DemandeController {
-    @Autowired
-    AdresseService adresseService;
-    @Autowired
-    DepartementService departementService;
     @Autowired
     DemandeMereService demandeMereService;
     @Autowired
@@ -45,99 +49,127 @@ public class DemandeController {
     UtilisateurService utilisateurService;
     @Autowired
     IdGenerator idGenerator;
+    @Autowired
+    CentreBudgetaireService centreBudgetaireService;
+    @Autowired
+    StorageService storageService;
+    @Autowired
+    DemandePieceJointeService demandePieceJointeService;
+    @Autowired
+    ValidationDemandeService validationDemandeService;
+    @Autowired
+    CodepPieceJointeService codepPieceJointeService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
         model.addAttribute("currentUri", request.getRequestURI());
-        model.addAttribute("natures", DemandeMere.NatureDemande.values());
-        Adresse[] adresses = adresseService.getAllAdresses();
-        model.addAttribute("adresses", adresses);
-        Departement[] departements = departementService.getAllDepartements();
-        model.addAttribute("departements", departements);
+        model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
+        model.addAttribute("ligneBudgetaires",centreBudgetaireService.getAllCentreBudgetaires() );
 
         return "demande/demande-saisie";
     }
 
     @PostMapping("/save")
-    public String insertDemande(@RequestParam(name = "dateDemande") String dateDemande,
-                                @RequestParam(name = "adresse") String adresse,
-                                @RequestParam(name = "departement") String departement,
+    public String insertDemande(@RequestParam(name = "dateSortie") String dateSortie,
+                                @RequestParam(name = "motif") String motif,
                                 @RequestParam(name = "description") String description,
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
                                 @RequestParam(name = "quantite[]") List<String> quantite,
+                                @RequestParam(name = "priorite") String priorite,
+                                @RequestParam(name = "piecesJointes") MultipartFile[] piecesJointes,
                                 RedirectAttributes redirectAttributes) {
 
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
-         
+
         try {
-            if (dateDemande == null || dateDemande.isEmpty()) {
-                redirectAttributes.addFlashAttribute("ko", "La date de la demande est obligatoire.");
+            if (dateSortie == null || dateSortie.isEmpty()) {
+                redirectAttributes.addFlashAttribute("ko", "La date prévue pour la livraison est obligatoire.");
                 return "redirect:/demande/add";
             }
-            if (adresse == null || adresse.isEmpty()) {
-                redirectAttributes.addFlashAttribute("ko", "L'adresse est obligatoire.");
+            if (motif == null || motif.isEmpty()) {
+                redirectAttributes.addFlashAttribute("ko", "Le motif evoqué est obligatoire.");
                 return "redirect:/demande/add";
             }
-            if (departement == null || departement.isEmpty()) {
-                redirectAttributes.addFlashAttribute("ko", "Le département est obligatoire.");
+
+            if (articleCodes == null || articleCodes.isEmpty()) {
+                redirectAttributes.addFlashAttribute("ko", "Impossible de valider la demande sans aucune ligne d’article.");
                 return "redirect:/demande/add";
             }
-            Adresse adresse1 = adresseService.getAdresseById(Integer.parseInt(adresse))
-                    .orElseThrow(() -> new IllegalArgumentException("Adresse introuvable"));
-            Departement departement1 = departementService.getDepartementById(Integer.parseInt(departement))
-                    .orElseThrow(() -> new IllegalArgumentException("Département introuvable"));
+
+            double totalGeneral = 0.0;
+
+            for (int i = 0; i < articleCodes.size(); i++) {
+
+                String code = articleCodes.get(i);
+
+                Article article = articleService.getArticleByCodeArticle(code)
+                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + code));
+
+                double qte = MontantCalculator.parseDoubleSafe(quantite.get(i));
+                if (qte <= 0) continue; // ou throw si tu veux obligatoire
+
+                double prix = (article.getPrixUnitaire() == null) ? 0.0 : article.getPrixUnitaire();
+
+                totalGeneral += (qte * prix);
+            }
+
+            // (ton contrôle quantité > 0 tu peux le garder ici avant save)
 
             DemandeMere demandeMere = new DemandeMere();
             demandeMere.setId(idGenerator);
-            demandeMere.setDateDemande(dateDemande);
-            demandeMere.setAdresse(adresse1);
+            demandeMere.setDateDemande(String.valueOf(LocalDateTime.now()));
+            demandeMere.setDateSortie(dateSortie);
+            demandeMere.setPriorite(DemandeMere.PrioriteDemande.valueOf(priorite.trim()));
+            demandeMere.setMotifEvoque(motif);
             demandeMere.setDemandeur(utilisateur);
             demandeMere.setDescription(description);
+            demandeMere.setStatut(1);
+            demandeMere.setTotalPrix(totalGeneral);
 
+            // 1) Save la demande (pour avoir la ref)
             this.demandeMereService.saveDemandeMere(demandeMere);
 
-            List<DemandeFille> demandeFilles = new ArrayList<>();
+            // 2) Save les lignes
             for (int i = 0; i < articleCodes.size(); i++) {
                 DemandeFille demandeFille = new DemandeFille();
                 demandeFille.setDemandeMere(demandeMere);
-                int finalI = i;
-                demandeFille.setArticle(articleService.getArticleByCodeArticle(articleCodes.get(i))
-                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + articleCodes.get(finalI))));
-                demandeFille.setQuantite(quantite.get(i));
-                demandeFilles.add(demandeFille);
 
+                String code = articleCodes.get(i);
+                demandeFille.setArticle(articleService.getArticleByCodeArticle(code)
+                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + code)));
+
+                demandeFille.setQuantite(quantite.get(i));
+                demandeFille.setStatut(1);
                 this.demandeFilleService.saveDemandeFille(demandeFille);
             }
 
-            if (articleCodes.isEmpty()) {
-                redirectAttributes.addFlashAttribute(
-                        "ko",
-                        "Impossible de valider la demande sans aucune ligne d’article."
-                );
-                return "redirect:/demande/add";
-            }
+            if (piecesJointes != null) {
+                for (MultipartFile f : piecesJointes) {
+                    if (f == null || f.isEmpty()) continue;
 
-            boolean hasValideLine = false;
-            for (int i = 0; i < articleCodes.size(); i++) {
-                if (quantite.get(i) != null && !quantite.get(i).isEmpty()) {
-                    try {
-                        double qte = Double.parseDouble(quantite.get(i));
-                        if (qte > 0) {
-                            hasValideLine = true;
-                            break;
-                        }
-                    } catch (NumberFormatException ignored) {}
+                    String safeDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                    String ref = demandeMere.getId()
+                            + "_" + demandeMere.getDemandeur().getNom()
+                            + "_" + demandeMere.getDemandeur().getPrenom()
+                            + "_" + safeDate;
+
+                    // 1) sauvegarde disque (retourne le nom stocké)
+                    String storedName = storageService.store(f, ref);
+
+                    // 2) sauvegarde DB
+                    DemandePieceJointe pj = new DemandePieceJointe();
+                    pj.setDemande(demandeMere);
+                    pj.setOriginalName(f.getOriginalFilename());
+                    pj.setStoredName(storedName);
+                    pj.setContentType(f.getContentType() != null ? f.getContentType() : "application/octet-stream");
+                    pj.setSize(f.getSize());
+                    pj.setUploadedAt(LocalDateTime.now());
+
+                    demandePieceJointeService.insert(pj);
                 }
             }
 
-            if (!hasValideLine) {
-                redirectAttributes.addFlashAttribute(
-                        "ko",
-                        "Veuillez saisir au moins une ligne avec une quantité reçue valide."
-                );
-                return "redirect:/demande/add";
-            }
 
             redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
             return "redirect:/demande/list";
@@ -146,11 +178,11 @@ public class DemandeController {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
             return "redirect:/demande/add";
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement de la demande : " + e.getMessage());
+            redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement : " + e.getMessage());
             return "redirect:/demande/add";
         }
-
     }
+
 
     @GetMapping("/list")
     public String listDemandePage(Model model,
@@ -159,27 +191,805 @@ public class DemandeController {
                                   @RequestParam(defaultValue = "10") int size,
                                   @RequestParam(defaultValue = "dateDemande") String sort,
                                   @RequestParam(defaultValue = "desc") String dir,
-                                  @RequestParam(required = false) String q,
-                                  @RequestParam(required = false)
-                                  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-                                  @RequestParam(required = false)
-                                  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+                                  @RequestParam(required = false) Integer statut,
+                                  @RequestParam(required = false) String num,
+                                  @RequestParam(required = false) String demandeur,
+                                  @RequestParam(required = false) String type,
+                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+                                  @RequestParam(required = false, defaultValue = "ALL") String scope) {
 
-        // ✅ Page + filtre
-        var demandesMeres = demandeMereService.searchDemandes(q, dateFrom, dateTo, page, size, sort, dir);
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
 
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        boolean isMG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+        boolean isControleur = auth.getAuthorities().stream().anyMatch(a -> "ROLE_CONTROLEUR".equals(a.getAuthority()));
+        boolean isDFC = auth.getAuthorities().stream().anyMatch(a -> "ROLE_DFC".equals(a.getAuthority()));
+
+
+        boolean isAdminOrMGOrControleur = isAdmin || isMG || isControleur;
+        boolean isBackofficeValidator = isAdmin || isMG || isControleur || isDFC;
+
+        // ✅ Labels (table)
+        Map<Integer, String> statutLabels = Map.of(
+                StatutDemande.CREE, "En attente N+1",
+                StatutDemande.VALIDATION_N1, "En attente M.G.",
+                StatutDemande.VALIDATION_N2, "En attente Contrôle de gestion",
+                StatutDemande.VALIDATION_N3, "En attente D.F.C.",
+                StatutDemande.DECISION_CODEP,"En attente CODEP",
+                StatutDemande.VALIDE, "VALIDÉE",
+                StatutDemande.REFUSE, "REFUSÉE"
+        );
+
+        // ✅ Filtre (select)
+        Map<Integer, String> statutFiltre = new LinkedHashMap<>();
+        statutFiltre.put(StatutDemande.CREE, "En attente N+1");
+        statutFiltre.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
+        statutFiltre.put(StatutDemande.VALIDATION_N2,"En attente Contrôle de gestion");
+        statutFiltre.put(StatutDemande.VALIDATION_N3, "En attente D.F.C.");
+        statutFiltre.put(StatutDemande.DECISION_CODEP,"En attente CODEP");
+        statutFiltre.put(StatutDemande.VALIDE, "VALIDÉE");
+        statutFiltre.put(StatutDemande.REFUSE, "REFUSÉE");
+        model.addAttribute("statutFiltre", statutFiltre);
+
+        // ✅ Normalisation (0/null => pas de filtre)
+        Integer statutFilter = (statut == null || statut == 0) ? null : statut;
+
+        // ✅ Visibilité (moi + enfants)
+        List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
+        boolean hasChildren = visibleIds.size() > 1;
+
+        boolean showDemandeurColumn = isBackofficeValidator || hasChildren;
+        model.addAttribute("showDemandeurColumn", showDemandeurColumn);
+
+        boolean showScopeFilter = hasChildren && !isBackofficeValidator;
+        model.addAttribute("showDemandeurScopeFilter", showScopeFilter);
+
+        List<Integer> idsToUse = visibleIds;
+        if (!isAdminOrMGOrControleur) {
+            if ("ME".equalsIgnoreCase(scope)) {
+                idsToUse = List.of(current.getId());
+            } else if ("CHILDREN".equalsIgnoreCase(scope)) {
+                idsToUse = visibleIds.stream()
+                        .filter(idU -> !idU.equals(current.getId()))
+                        .toList();
+            }
+        }
+
+        Page<DemandeMere> demandesMeres;
+
+// Cas MG : voit tout ce qui est déjà validé par N+1 (N1 -> VALIDE)
+        if (isMG && !isAdmin) {
+
+            List<Integer> mgStatuses = new ArrayList<>(List.of(
+                    StatutDemande.VALIDATION_N1,
+                    StatutDemande.VALIDATION_N2,
+                    StatutDemande.VALIDATION_N3,
+                    StatutDemande.DECISION_CODEP,
+                    StatutDemande.VALIDE,
+                    StatutDemande.REFUSE
+            ));
+
+            // appliquer le filtre statut AVANT la boucle
+            if (statutFilter != null) {
+                mgStatuses = mgStatuses.contains(statutFilter) ? List.of(statutFilter) : List.of();
+            }
+
+            List<DemandeMere> merged = new ArrayList<>();
+
+            for (Integer st : mgStatuses) {
+                Page<DemandeMere> p = demandeMereService.searchDemandes(
+                        num, demandeur, type,
+                        st,
+                        dateFrom, dateTo,
+                        0, Integer.MAX_VALUE,
+                        sort, dir
+                );
+                merged.addAll(p.getContent());
+            }
+
+            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
+
+            Pageable pageable = PageRequest.of(page, size);
+            int start = (int) pageable.getOffset();
+            int end = Math.min(start + pageable.getPageSize(), merged.size());
+
+            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
+            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
+
+            // pour que la valeur sélectionnée reste affichée dans le select
+            model.addAttribute("statut", (statut == null) ? 0 : statut);
+        }
+
+
+        else if (isControleur && !isAdmin) {
+
+            List<Integer> controleurStatuses = new ArrayList<>(List.of(
+                    StatutDemande.VALIDATION_N2,
+                    StatutDemande.VALIDATION_N3,
+                    StatutDemande.DECISION_CODEP,
+                    StatutDemande.VALIDE,
+                    StatutDemande.REFUSE
+            ));
+
+            if (statutFilter != null) {
+                controleurStatuses = controleurStatuses.contains(statutFilter) ? List.of(statutFilter) : List.of();
+            }
+
+            List<DemandeMere> merged = new ArrayList<>();
+
+            for (Integer st : controleurStatuses) {
+                Page<DemandeMere> p = demandeMereService.searchDemandes(
+                        num, demandeur, type,
+                        st,
+                        dateFrom, dateTo,
+                        0, Integer.MAX_VALUE,
+                        sort, dir
+                );
+                merged.addAll(p.getContent());
+            }
+
+            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
+
+            Pageable pageable = PageRequest.of(page, size);
+            int start = (int) pageable.getOffset();
+            int end = Math.min(start + pageable.getPageSize(), merged.size());
+
+            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
+            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
+
+            model.addAttribute("statut", (statut == null) ? 0 : statut);
+        }
+
+// Cas SG : voit uniquement N3 (En attente S.G.)
+        else if (isDFC && !isAdmin) {
+
+            List<Integer> dfcStatuses = new ArrayList<>(List.of(
+                    StatutDemande.VALIDATION_N3,
+                    StatutDemande.DECISION_CODEP,
+                    StatutDemande.VALIDE,
+                    StatutDemande.REFUSE
+            ));
+
+            if (statutFilter != null) {
+                dfcStatuses = dfcStatuses.contains(statutFilter) ? List.of(statutFilter) : List.of();
+            }
+
+            List<DemandeMere> merged = new ArrayList<>();
+
+            for (Integer st : dfcStatuses) {
+                Page<DemandeMere> p = demandeMereService.searchDemandes(
+                        num, demandeur, type,
+                        st,
+                        dateFrom, dateTo,
+                        0, Integer.MAX_VALUE,
+                        sort, dir
+                );
+                merged.addAll(p.getContent());
+            }
+
+            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
+
+            Pageable pageable = PageRequest.of(page, size);
+            int start = (int) pageable.getOffset();
+            int end = Math.min(start + pageable.getPageSize(), merged.size());
+
+            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
+            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
+
+            model.addAttribute("statut", (statut == null) ? 0 : statut);
+        }
+
+// Cas normal / admin
+        else {
+            if (isBackofficeValidator) {
+                demandesMeres = demandeMereService.searchDemandes(
+                        num, demandeur, type,
+                        statutFilter,
+                        dateFrom, dateTo,
+                        page, size,
+                        sort, dir
+                );
+            } else {
+                demandesMeres = idsToUse.isEmpty()
+                        ? demandeMereService.searchDemandesVisibleParUtilisateur(
+                        num, demandeur, type, statutFilter,
+                        dateFrom, dateTo,
+                        List.of(-1),
+                        page, size,
+                        sort, dir
+                )
+                        : demandeMereService.searchDemandesVisibleParUtilisateur(
+                        num, demandeur, type, statutFilter,
+                        dateFrom, dateTo,
+                        idsToUse,
+                        page, size,
+                        sort, dir
+                );
+            }
+        }
+
+        // ✅ Model commun
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demandesMeres", demandesMeres);
 
-        // ✅ garder l’état des filtres dans l’UI
         model.addAttribute("page", page);
         model.addAttribute("size", size);
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
-        model.addAttribute("q", q == null ? "" : q);
+
+        model.addAttribute("num", num == null ? "" : num);
+        model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
+        model.addAttribute("type", type == null ? "" : type);
         model.addAttribute("dateFrom", dateFrom);
         model.addAttribute("dateTo", dateTo);
+        model.addAttribute("scope", scope);
+
+        model.addAttribute("natures", DemandeMere.NatureDemande.values());
+        model.addAttribute("statutLabels", statutLabels);
+
+        // ✅ flags de vue
+        model.addAttribute("isMGOnly", isMG && !isAdmin);
+        model.addAttribute("isControleurOnly", isControleur && !isAdmin);
+        model.addAttribute("isDFCOnly", isDFC && !isAdmin);
 
         return "demande/demande-liste";
     }
+
+    @PostMapping("/fiche/{id}/type-demande")
+    public String updateTypeDemande(@PathVariable("id") String id,
+                                    @RequestParam(value = "typeDemande", required = false) String typeDemande,
+                                    RedirectAttributes redirectAttributes) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdminOrMG = auth.getAuthorities().stream().anyMatch(a ->
+                a.getAuthority().equals("ROLE_ADMIN") ||
+                        a.getAuthority().equals("ROLE_MOYENS_GENERAUX")
+        );
+
+        if (!isAdminOrMG) {
+            redirectAttributes.addFlashAttribute("ko", "Accès refusé.");
+            return "redirect:/demande/fiche/" + id;
+        }
+
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            redirectAttributes.addFlashAttribute("ko", "Demande introuvable.");
+            return "redirect:/demande/list";
+        }
+
+        // typeDemande = "OPEX" / "CAPEX" / "" (null)
+        if (typeDemande == null || typeDemande.isBlank()) {
+            demande.setNatureDemande(null);
+        } else {
+            demande.setNatureDemande(DemandeMere.NatureDemande.valueOf(typeDemande.trim().toUpperCase()));
+        }
+
+        demandeMereService.saveDemandeMere(demande);
+        redirectAttributes.addFlashAttribute("ok", "Type de demande enregistré.");
+
+        return "redirect:/demande/fiche/" + id;
+    }
+
+    @PostMapping("/ligne/{id}/refuser")
+    public String refuserLigne(@PathVariable int id,
+                               @RequestParam(value = "commentaire", required = false) String commentaire,
+                               RedirectAttributes redirectAttributes) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+        DemandeFille ligne = demandeFilleService.getDemandeFilleById(id);
+        try {
+            demandeFilleService.refuserLigne(ligne, current, commentaire);
+            redirectAttributes.addFlashAttribute("ok", "Ligne refusée avec succès.");
+            return "redirect:/demande/fiche/" + ligne.getDemandeMere().getId();
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("ko", "Erreur : " + e.getMessage());
+            return "redirect:/demande/fiche/" + ligne.getDemandeMere().getId();
+        }
+    }
+    @GetMapping("/fiche/{id}")
+    public String demandeFiche(@PathVariable("id") String id,
+                               Model model,
+                               HttpServletRequest request,
+                               RedirectAttributes redirectAttributes) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        boolean isMG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+
+        boolean isControleur = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_CONTROLEUR".equals(a.getAuthority()));
+
+        boolean isDFC = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_DFC".equals(a.getAuthority()));
+
+        boolean isAdminOrSpecial = isAdmin || isMG || isControleur || isDFC;
+
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            redirectAttributes.addFlashAttribute("ko", "Demande introuvable : " + id);
+            return "redirect:/demande/list";
+        }
+        Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
+
+        List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
+        if (!isAdminOrSpecial) {
+            if (demandeurId == null || !visibleIds.contains(demandeurId)) {
+                redirectAttributes.addFlashAttribute("ko", "Accès refusé à cette demande.");
+                return "redirect:/demande/list";
+            }
+        }
+
+        // Enfants directs (sans moi)
+        List<Integer> childrenIds = visibleIds.stream()
+                .filter(x -> !x.equals(current.getId()))
+                .toList();
+
+        // N+1 du demandeur = la demande appartient à un de mes enfants
+        boolean isViewerNplus1OfDemandeur = (demandeurId != null) && childrenIds.contains(demandeurId);
+
+        // Droits de décision par niveau
+        boolean canDecisionN1 = isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.CREE;
+        boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
+        boolean canDecisionControleur = isControleur && demande.getStatut() == StatutDemande.VALIDATION_N2;
+        boolean canDecisionDFC = isDFC && demande.getStatut() == StatutDemande.VALIDATION_N3;
+        boolean isCodepWorkflow = Boolean.TRUE.equals(demande.getViaCodep());
+        boolean canDecisionCodep = isMG && demande.getStatut() == StatutDemande.DECISION_CODEP;
+
+        boolean isValidatedCodep = demande.getStatut() == StatutDemande.VALIDE && demande.getDecisionViaCodep(isCodepWorkflow);
+
+        // Lignes
+        List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
+
+        // Labels
+        Map<Integer, String> statutLabels = new LinkedHashMap<>();
+        statutLabels.put(StatutDemande.CREE, "En attente N+1");
+        statutLabels.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
+        statutLabels.put(StatutDemande.VALIDATION_N2, "En attente Contrôleur");
+        statutLabels.put(StatutDemande.VALIDATION_N3, "En attente D.F.C.");
+        statutLabels.put(StatutDemande.DECISION_CODEP,"En attente CODEP");
+        statutLabels.put(StatutDemande.VALIDE, "VALIDÉE");
+        statutLabels.put(StatutDemande.REFUSE, "REFUSÉE");
+
+        String statutLabel = statutLabels.getOrDefault(demande.getStatut(), "INCONNU");
+
+        Map<Integer, String> stepLabels = new HashMap<>();
+
+        stepLabels.put(StatutDemande.CREE, "Création");
+        stepLabels.put(StatutDemande.VALIDATION_N1, "N+1");
+        stepLabels.put(StatutDemande.VALIDATION_N2, "Moyens Généraux");
+        stepLabels.put(StatutDemande.VALIDATION_N3, "Contrôleur de gestion");
+        stepLabels.put(StatutDemande.DECISION_CODEP, "Comité de dépense");
+        stepLabels.put(StatutDemande.REFUSE, "Refus");
+
+        Map<Integer, String> histoLabels = new HashMap<>();
+        histoLabels.put(StatutDemande.CREE,          "N+1");               // statut CREE = décision N+1 en attente → N+1 décide
+        histoLabels.put(StatutDemande.VALIDATION_N1, "Moyens Généraux");   // MG décide
+        histoLabels.put(StatutDemande.VALIDATION_N2, "Contrôleur de gestion"); // ← VOTRE BUG : c'est ici que le contrôleur agit
+        histoLabels.put(StatutDemande.VALIDATION_N3, "D.F.C.");
+        histoLabels.put(StatutDemande.DECISION_CODEP,"Comité de dépense");
+
+
+
+// Cas particulier : VALIDE dépend du workflow
+        if (isCodepWorkflow) {
+            stepLabels.put(StatutDemande.VALIDE, "Comité de dépense");
+        } else {
+            stepLabels.put(StatutDemande.VALIDE, "D.F.C.");
+        }
+
+
+        Map<Integer, String> badgeClasses = new HashMap<>();
+        Map<Integer, String> badgeIcons = new HashMap<>();
+
+        badgeClasses.put(StatutDemande.CREE, "badge-wait");
+        badgeClasses.put(StatutDemande.VALIDATION_N1, "badge-info");
+        badgeClasses.put(StatutDemande.VALIDATION_N2, "badge-purple");
+        badgeClasses.put(StatutDemande.VALIDATION_N3, "badge-purple");
+        badgeClasses.put(StatutDemande.VALIDE, "badge-success");
+        badgeClasses.put(StatutDemande.REFUSE, "badge-danger");
+
+        badgeIcons.put(StatutDemande.CREE, "fa-user-clock");
+        badgeIcons.put(StatutDemande.VALIDATION_N1, "fa-clipboard-check");
+        badgeIcons.put(StatutDemande.VALIDATION_N2, "fa-coins");
+        badgeIcons.put(StatutDemande.VALIDATION_N3, "fa-gavel");
+        badgeIcons.put(StatutDemande.VALIDE, "fa-check-circle");
+        badgeIcons.put(StatutDemande.REFUSE, "fa-times-circle");
+
+
+        List<String> steps;
+
+        if (isCodepWorkflow) {
+            steps = List.of(
+                    "Demande créée",
+                    "Supérieur hiérarchique (N+1)",
+                    "Moyens Généraux",
+                    "Comité de dépense"
+            );
+        } else {
+            steps = List.of(
+                    "Demande créée",
+                    "Supérieur hiérarchique (N+1)",
+                    "Moyens Généraux",
+                    "Contrôleur de gestion",
+                    "DFC"
+            );
+        }
+
+
+
+        // statutHint (UI) : message adapté au viewer
+        String statutHint = null;
+
+        // N+1 a validé (donc la demande est passée à N1)
+        if (isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.VALIDATION_N1) {
+            statutHint = "Vous avez validé — en attente de traitement par les Moyens Généraux.";
+        }
+
+        // MG : soit en attente de MG (N1), soit déjà traité par MG (N2)
+        if (isMG) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N1) {
+                statutHint = "Demande en attente de votre validation (Moyens Généraux).";
+            } else if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
+                statutHint = "Vous avez validé — en attente de traitement par le contrôleur de gestion.";
+            }
+        }
+
+
+        if (isControleur) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
+                statutHint = "Demande en attente de votre validation (contrôleur de gestion).";
+            } else if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
+                statutHint = "Vous avez validé — en attente de validation finale (D.F.C.).";
+            }
+        }
+
+        // SG : soit en attente SG (N3), soit finalisé
+        if (isDFC) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
+                statutHint = "Demande en attente de votre validation finale (D.F.C.).";
+            } else if (demande.getStatut() == StatutDemande.VALIDE) {
+                statutHint = "Demande finalisée.";
+            }
+        }
+
+        List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
+
+
+        int currentStep = switch (demande.getStatut()) {
+            case StatutDemande.CREE -> 1;
+            case StatutDemande.VALIDATION_N1 -> 2;
+            case StatutDemande.VALIDATION_N2 -> 3; // Controleur
+            case StatutDemande.VALIDATION_N3 -> 4; // DFC
+            case StatutDemande.DECISION_CODEP -> 3; // CODEP
+            case StatutDemande.VALIDE -> {
+                if (isCodepWorkflow) yield 4; // ou 5 selon ton stepper
+                else yield 5;
+            }
+            case StatutDemande.REFUSE -> -1;
+            default -> 1;
+        };
+
+        List<ValidationDemande> historiques = validationDemandeService.getHistorique(demande);
+        CentreBudgetaire[] ligneBudgetaires = centreBudgetaireService.getAllCentreBudgetaires();
+
+        model.addAttribute("steps", steps);
+        model.addAttribute("historiques", historiques);
+        model.addAttribute("piecesJointes", piecesJointes);
+        model.addAttribute("currentStep", currentStep);
+        model.addAttribute("isRefused", demande.getStatut() == StatutDemande.REFUSE);
+        model.addAttribute("isValidated", demande.getStatut() == StatutDemande.VALIDE);
+        model.addAttribute("isCodepWorkflow", isCodepWorkflow);
+        model.addAttribute("isValidatedCodep", isValidatedCodep);
+        model.addAttribute("histoLabels", histoLabels);
+
+        // Model (IMPORTANT : toujours envoyer les booléens)
+        model.addAttribute("currentUri", request.getRequestURI());
+        model.addAttribute("demande", demande);
+        model.addAttribute("lignes", lignes);
+
+        model.addAttribute("canDecisionN1", canDecisionN1);
+        model.addAttribute("canDecisionMG", canDecisionMG);
+        model.addAttribute("canDecisionControleur", canDecisionControleur);
+        model.addAttribute("canDecisionDFC", canDecisionDFC);
+        model.addAttribute("canDecisionCodep", canDecisionCodep);
+
+        model.addAttribute("statutLabels", statutLabels);
+        model.addAttribute("statutLabel", statutLabel);
+        model.addAttribute("statutHint", statutHint);
+        model.addAttribute("stepLabels", stepLabels);
+        model.addAttribute("badgeClasses", badgeClasses);
+        model.addAttribute("badgeIcons", badgeIcons);
+
+        model.addAttribute("natures", DemandeMere.NatureDemande.values());
+        model.addAttribute("ligneBudgetaires", ligneBudgetaires);
+
+        return "demande/demande-fiche";
+    }
+
+
+
+
+    @PostMapping("/fiche/{id}/decision")
+    public String decision(@PathVariable("id") String id,
+                           @RequestParam("decision") String decision,
+                           @RequestParam(value = "typeDemande", required = false) String typeDemande,
+                           @RequestParam(value = "commentaire", required = false) String commentaire,
+                           @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
+                           @RequestParam(name = "ligneBudgetaire", required = false) String ligneBudgetaire,
+                           RedirectAttributes redirectAttributes)  {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        boolean isMG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+
+        boolean isControleur = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_CONTROLEUR".equals(a.getAuthority()));
+
+        boolean isDFC = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_DFC".equals(a.getAuthority()));
+
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            redirectAttributes.addFlashAttribute("ko", "Demande introuvable.");
+            return "redirect:/demande/list";
+        }
+
+        String action = (decision == null) ? "" : decision.trim().toUpperCase();
+
+        Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
+
+        // Enfants directs du current
+        List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
+        List<Integer> childrenIds = visibleIds.stream()
+                .filter(x -> !x.equals(current.getId()))
+                .toList();
+
+        // Autorisations par niveau
+        boolean canDecisionN1 = demandeurId != null
+                && childrenIds.contains(demandeurId)
+                && demande.getStatut() == StatutDemande.CREE;
+
+        boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
+        boolean canDecisionControleur = isControleur && demande.getStatut() == StatutDemande.VALIDATION_N2;
+        boolean canDecisionDFC = isDFC && demande.getStatut() == StatutDemande.VALIDATION_N3;
+        boolean canDecisionCodep = isMG && demande.getStatut() == StatutDemande.DECISION_CODEP;
+        boolean allowed = isAdmin || canDecisionN1 || canDecisionMG || canDecisionControleur || canDecisionDFC || canDecisionCodep;
+
+        if (!allowed) {
+            redirectAttributes.addFlashAttribute("ko", "Cette demande ne peut pas être traitée par vous.");
+            return "redirect:/demande/fiche/" + id;
+        }
+
+        String cmt = (commentaire == null) ? "" : commentaire.trim();
+
+        // ----- REJECT : commentaire obligatoire -----
+        if ("REJECT".equals(action)) {
+
+            if (cmt.isBlank()) {
+                redirectAttributes.addFlashAttribute("ko",
+                        "Le commentaire est obligatoire pour rejeter une demande.");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+            //recharger la demande pour avoir le vrai statut DB
+            demande = demandeMereService
+                    .getDemandeMereById(id)
+                    .orElseThrow();
+
+            int etapeCourante = demande.getStatut();
+
+            ValidationDemande h = new ValidationDemande();
+            h.setDemandeMere(demande);
+            h.setValidateur(current);
+            h.setEtape(etapeCourante);     // étape
+            h.setDecision(ValidationDemande. DecisionValidation.REFUSE); // décision
+            h.setCommentaire(cmt);
+            h.setDateAction(String.valueOf(LocalDateTime.now()));
+
+            validationDemandeService.logAction(h);
+
+            // ensuite seulement changer statut
+            demandeMereService.appliquerDecisionGlobale(
+                    demande,
+                    StatutDemande.REFUSE
+            );
+
+            redirectAttributes.addFlashAttribute("ok", "Demande rejetée.");
+            return "redirect:/demande/fiche/" + id;
+        }
+
+
+        // ----- APPROVE : transition selon le niveau -----
+        if ("APPROVE".equals(action)) {
+
+            if (canDecisionN1) {
+                int etape = demande.getStatut();
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
+                logValidation(demande, current, cmt, etape);
+                redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
+                return "redirect:/demande/fiche/" + id;
+            }
+            if(canDecisionCodep) {
+
+                if (piecesJointes != null) {
+                    for (MultipartFile f : piecesJointes) {
+                        if (f == null || f.isEmpty()) continue;
+
+                        String safeDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                        String ref = "PV_CODEP_" + demande.getId()
+                                + "_" + demande.getDemandeur().getNom()
+                                + "_" + demande.getDemandeur().getPrenom()
+                                + "_" + safeDate;
+
+                        // 1) sauvegarde disque (retourne le nom stocké)
+                        String storedName = storageService.store(f, ref);
+
+                        // 2) sauvegarde DB
+                        CodepPieceJointe pj = new CodepPieceJointe();
+                        pj.setDemandeMere(demande);
+                        pj.setOriginalName(f.getOriginalFilename());
+                        pj.setStoredName(storedName);
+                        pj.setContentType(f.getContentType() != null ? f.getContentType() : "application/octet-stream");
+                        pj.setSize(f.getSize());
+                        pj.setUploadedAt(LocalDateTime.now());
+
+                        codepPieceJointeService.insert(pj);
+                    }
+                }
+                int etape = demande.getStatut();
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
+                logValidation(demande, current, cmt, etape);
+                redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le Comité de dépense.");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+            if (canDecisionMG) {
+                //MG doit obligatoirement choisir le type (OPEX/CAPEX)
+                String td = (typeDemande == null) ? "" : typeDemande.trim().toUpperCase();
+                if (td.isBlank()) {
+                    redirectAttributes.addFlashAttribute("ko", "Veuillez choisir le Type de demande (OPEX/CAPEX) avant de valider.");
+                    return "redirect:/demande/fiche/" + id;
+                }
+
+                try {
+                    demande.setNatureDemande(DemandeMere.NatureDemande.valueOf(td));
+                } catch (IllegalArgumentException ex) {
+                    redirectAttributes.addFlashAttribute("ko", "Type de demande invalide : " + typeDemande);
+                    return "redirect:/demande/fiche/" + id;
+                }
+
+                //On enregistre le type puis on passe au statut suivant
+                demandeMereService.saveDemandeMere(demande);
+                int etape = demande.getStatut();
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
+                logValidation(demande, current, cmt , etape);
+                redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+            if (canDecisionControleur) {
+                try {
+                    demande.setCentreBudgetaire(centreBudgetaireService.getCentreBudgetaireById(Integer.parseInt(ligneBudgetaire)));
+                } catch (IllegalArgumentException ex) {
+                    redirectAttributes.addFlashAttribute("ko", "ligne budgetaire invalide : " + ligneBudgetaire);
+                    return "redirect:/demande/fiche/" + id;
+                }
+                int etape = demande.getStatut();
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
+                logValidation(demande, current, cmt , etape);
+                redirectAttributes.addFlashAttribute("ok", "Demande validée par le contrôleur de gestion (N3).");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+            if (canDecisionDFC) {
+                int etape = demande.getStatut();
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
+                logValidation(demande, current, cmt, etape);
+                redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée (D.F.C.).");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+            // Admin : si tu veux le laisser forcer la suite même s'il n'est pas le bon rôle
+            if (isAdmin) {
+                int next = switch (demande.getStatut()) {
+                    case StatutDemande.CREE -> StatutDemande.VALIDATION_N1;
+                    case StatutDemande.VALIDATION_N1 -> StatutDemande.VALIDATION_N2;
+                    case StatutDemande.VALIDATION_N2 -> StatutDemande.VALIDATION_N3;
+                    case StatutDemande.VALIDATION_N3 -> StatutDemande.VALIDE;
+                    default -> demande.getStatut();
+                };
+                int etape = demande.getStatut();
+                demandeMereService.appliquerDecisionGlobale(demande, next);
+                logValidation(demande, current, cmt, etape);
+                redirectAttributes.addFlashAttribute("ok", "Statut mis à jour (ADMIN).");
+                return "redirect:/demande/fiche/" + id;
+            }
+        }
+        System.out.println(">>> decision reçue = [" + decision + "]");
+        redirectAttributes.addFlashAttribute("ko", "Décision invalide.");
+        return "redirect:/demande/fiche/" + id;
+    }
+
+    @PostMapping("/fiche/{id}/send-codep")
+    public String sendToCodep(@PathVariable("id") String id,
+                              RedirectAttributes redirectAttributes) {
+
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            redirectAttributes.addFlashAttribute("ko", "Demande introuvable.");
+            return "redirect:/demande/list";
+        }
+
+        // Vérification : seule la validation MG peut envoyer au CODEP
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+        boolean isMG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+
+        if (!isMG || demande.getStatut() != StatutDemande.VALIDATION_N1) {
+            redirectAttributes.addFlashAttribute("ko", "Vous ne pouvez pas envoyer cette demande au CODEP.");
+            return "redirect:/demande/fiche/" + id;
+        }
+
+//        if (demande.getNatureDemande() == null) {
+//            redirectAttributes.addFlashAttribute("ko", "Veuillez choisir le Type de demande (OPEX/CAPEX) avant de valider.");
+//            return "redirect:/demande/fiche/" + id;
+//        }
+        demande.setNatureDemande(DemandeMere.NatureDemande.CAPEX);
+        demande.setViaCodep(true);
+        // Passage au statut CODEP
+        int etape = demande.getStatut();
+        demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.DECISION_CODEP);
+        logValidation(demande, current, "Envoi au CODEP", etape);
+        redirectAttributes.addFlashAttribute("ok", "Demande envoyée au CODEP (action irréversible).");
+
+        return "redirect:/demande/fiche/" + id;
+    }
+
+    @GetMapping("/files/{id}/{filename:.+}")
+    public ResponseEntity<Resource> downloadDemandeFile(@PathVariable String id,
+                                                        @PathVariable String filename) {
+
+        Resource file = storageService.loadAsResource(filename);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFilename() + "\"")
+                .body(file);
+    }
+
+    private void logValidation(DemandeMere demande,
+                               Utilisateur user,
+                               String commentaire,
+                               int etape) {
+
+        ValidationDemande h = new ValidationDemande();
+        h.setDemandeMere(demande);
+        h.setValidateur(user);
+        h.setEtape(etape); // ← étape passée en paramètre, pas demande.getStatut()
+        h.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+        h.setDateAction(String.valueOf(LocalDateTime.now()));
+        h.setCommentaire(commentaire);
+
+        validationDemandeService.logAction(h);
+    }
+
+
 }

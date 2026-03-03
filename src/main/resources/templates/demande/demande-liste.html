@@ -7,6 +7,9 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <style>
+
+    </style>
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
@@ -27,29 +30,77 @@
             </div>
         </div>
 
-        <div class="card shadow-lg border-0">
+        <div class="card shadow-lg border-0 mb-3">
             <div class="card-body">
 
-                <!-- ✅ Barre filtre -->
-                <form method="get" th:action="@{/demande/list}" class="row g-2 align-items-end mb-3">
+                <form method="get" th:action="@{/demande/list}" class="row g-2 align-items-end">
                     <input type="hidden" name="sort" th:value="${sort}">
                     <input type="hidden" name="dir" th:value="${dir}">
 
-                    <!-- Recherche -->
-                    <div class="col-md-4">
+                    <!-- N° demande -->
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">N° demande</label>
                         <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input class="form-control" type="text" name="q"
-                                   th:value="${q}"
-                                   placeholder="N° demande, demandeur, type, statut..." />
+                            <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                            <input class="form-control" type="text" name="num"
+                                   th:value="${num}" placeholder="DM..." />
                         </div>
+                    </div>
+
+                    <!-- Demandeur -->
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Demandeur</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="far fa-user"></i></span>
+                            <input class="form-control" type="text" name="demandeur"
+                                   th:value="${demandeur}" placeholder="Nom / Prénom ..." />
+                        </div>
+                    </div>
+
+                    <!-- Type -->
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Type</label>
+                        <select class="form-select" name="type">
+                            <option value="" th:selected="${type == null || type == ''}">Tous</option>
+                            <option value="OPEX" th:selected="${type == 'OPEX'}">OPEX</option>
+                            <option value="CAPEX" th:selected="${type == 'CAPEX'}">CAPEX</option>
+                        </select>
+                    </div>
+
+
+                    <!-- Statut -->
+                    <div class="col-md-2">
+                    <label class="form-label mb-1">Statut</label>
+                        <select class="form-select" name="statut">
+                            <option value="0" th:selected="${statut == null || statut == 0}">Tous</option>
+
+                            <th:block th:if="${statutFiltre != null}">
+                                <option th:each="entry : ${statutFiltre.entrySet()}"
+                                        th:value="${entry.key}"
+                                        th:text="${entry.value}"
+                                        th:selected="${statut != null && statut == entry.key}">
+                                </option>
+                            </th:block>
+                        </select>
+                    </div>
+
+
+                    <!-- Taille (⚠️ pas d'auto-submit si tu veux appliquer avec Filtrer) -->
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">
+                            <i class="fas fa-list-ol me-1"></i> Taille
+                        </label>
+                        <select class="form-select" name="size">
+                            <option th:value="10" th:selected="${size == 10}">10</option>
+                            <option th:value="25" th:selected="${size == 25}">25</option>
+                            <option th:value="50" th:selected="${size == 50}">50</option>
+                            <option th:value="100" th:selected="${size == 100}">100</option>
+                        </select>
                     </div>
 
                     <!-- Date début -->
                     <div class="col-md-2">
-                        <label class="form-label mb-1">
-                           Date début
-                        </label>
+                        <label class="form-label mb-1">Date début</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="far fa-calendar"></i></span>
                             <input class="form-control" type="date" name="dateFrom" th:value="${dateFrom}">
@@ -58,49 +109,55 @@
 
                     <!-- Date fin -->
                     <div class="col-md-2">
-                        <label class="form-label mb-1">
-                            Date fin
-                        </label>
+                        <label class="form-label mb-1">Date fin</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="far fa-calendar-check"></i></span>
                             <input class="form-control" type="date" name="dateTo" th:value="${dateTo}">
                         </div>
                     </div>
 
-                    <!-- Taille -->
-                    <div class="col-md-2">
+                    <!-- Portée -->
+                    <div class="col-md-2" th:if="${showDemandeurScopeFilter}">
                         <label class="form-label mb-1">
-                            <i class="fas fa-list-ol me-1"></i> Taille
+                            <i class="fas fa-users me-1"></i> Portée
                         </label>
-                        <select class="form-select" name="size" onchange="this.form.submit()">
-                            <option th:value="10" th:selected="${size == 10}">10</option>
-                            <option th:value="25" th:selected="${size == 25}">25</option>
-                            <option th:value="50" th:selected="${size == 50}">50</option>
-                            <option th:value="100" th:selected="${size == 100}">100</option>
+                        <select class="form-select" name="scope">
+                            <option value="ALL" th:selected="${scope == 'ALL'}">Tous</option>
+                            <option value="ME" th:selected="${scope == 'ME'}">Mes demandes</option>
+                            <option value="CHILDREN" th:selected="${scope == 'CHILDREN'}">Mes enfants</option>
                         </select>
                     </div>
 
-                    <!-- Bouton filtrer -->
-                    <div class="col-md-1">
-                        <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>
-                        <button class="btn btn-gradient-blue w-100" type="submit" title="Filtrer">
-                            <i class="fas fa-filter"></i>
-                        </button>
-                    </div>
 
-                    <!-- Reset -->
-                    <div class="col-md-1">
-                        <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>
-                        <a class="btn btn-outline-secondary w-100" th:href="@{/demande/list}" title="Réinitialiser">
+
+                    <!-- Boutons -->
+                    <div class="col-md-12 d-flex gap-2 mt-2">
+<!--                        <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>-->
+                        <button class="btn btn-gradient-blue" type="submit" title="Filtrer">
+                            <i class="fas fa-filter me-1"></i>Filtrer
+                        </button>
+                        <a class="btn btn-outline-secondary" th:href="@{/demande/list}" title="Réinitialiser">
                             Réinitialiser
                         </a>
                     </div>
 
-                    <!-- total -->
-                    <div class="col-12 text-end text-muted small">
-                        <span th:text="${demandesMeres.totalElements}"></span> ligne(s)
-                    </div>
+<!--                    <div class="col-md-1">-->
+<!--                        <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>-->
+<!--                        -->
+<!--                    </div>-->
                 </form>
+
+            </div>
+        </div>
+
+        <!-- ✅ CARD TABLEAU -->
+        <div class="card shadow-lg border-0">
+            <div class="card-body">
+
+                <!-- total -->
+                <div class="text-end text-muted small mb-2">
+                    <span th:text="${demandesMeres.totalElements}"></span> ligne(s)
+                </div>
 
                 <!-- Tableau -->
                 <div class="table-responsive">
@@ -110,8 +167,11 @@
                             <!-- ✅ Tri ID -->
                             <th>
                                 <a class="text-decoration-none text-dark"
-                                   th:href="@{/demande/list(page=0,size=${size},q=${q},dateFrom=${dateFrom},dateTo=${dateTo},
-                                             sort='id',dir=${dir=='asc'?'desc':'asc'})}">
+                                   th:href="@{/demande/list(page=0,size=${size},
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort='id',dir=${dir=='asc'?'desc':'asc'})}"
+                                >
                                     <i class="fas fa-hashtag me-2 icon-gradient-light-blue"></i>
                                     N° de la demande
                                 </a>
@@ -120,40 +180,86 @@
                             <!-- ✅ Tri dateDemande -->
                             <th>
                                 <a class="text-decoration-none text-dark"
-                                   th:href="@{/demande/list(page=0,size=${size},q=${q},dateFrom=${dateFrom},dateTo=${dateTo},
-                                             sort='dateDemande',dir=${dir=='asc'?'desc':'asc'})}">
+                                   th:href="@{/demande/list(page=0,size=${size},
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort='dateDemande',dir=${dir=='asc'?'desc':'asc'})}"
+                                >
                                     <i class="far fa-clock me-2 icon-gradient-light-blue"></i>
                                     Date Demande
                                 </a>
                             </th>
 
-                            <th><i class="far fa-user me-2 icon-gradient-light-blue"></i>Consommateur</th>
-                            <th><i class="fas fa-tags me-2 icon-gradient-light-blue"></i>Type de demande</th>
+                            <th th:if="${showDemandeurColumn}">
+                                <i class="far fa-user me-2 icon-gradient-light-blue"></i>Demandeur
+                            </th>
+                            <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"><i class="fas fa-tags me-2 icon-gradient-light-blue"></i>Type de demande</th>
                             <th>Statut</th>
-                            <th class="text-center"><i class="fas fa-cogs me-2 icon-gradient-light-blue"></i>Action</th>
                         </tr>
                         </thead>
 
                         <tbody>
                         <!-- ✅ Pageable -->
-                        <tr th:each="demande : ${demandesMeres.content}">
+                        <tr th:each="demande : ${demandesMeres.content}"
+                            class="clickable-row"
+                            th:attr="data-href=@{/demande/fiche/{id}(id=${demande.id})}">
+
                             <td th:text="${demande.id}"></td>
                             <td th:text="${#temporals.format(demande.dateDemande, 'dd/MM/yyyy HH:mm')}"></td>
-                            <td th:text="${demande.demandeur.prenom + ' ' + demande.demandeur.departement.acronyme}"></td>
-                            <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')" th:text="${demande.natureDemande != null and !#strings.isEmpty(demande.natureDemande) ? demande.natureDemande : '-'}"></td>
-                            <td th:text="${demande.statutDemande}"></td>
-                            <td class="text-center">
-                                <button type="button"
-                                        class="btn btn-sm btn-view-demandeDetails"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#demandeDetailsModal">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+                            <td th:if="${showDemandeurColumn}">
+                                <div th:if="${demande.demandeur != null}">
+
+                                    <!-- Nom + prénom -->
+                                    <div class="fw-semibold"
+                                         th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom}">
+                                    </div>
+
+                                    <!-- Poste + Service -->
+                                    <small class="text-muted"
+                                           th:text="${
+                                           (demande.demandeur.poste != null ? demande.demandeur.poste.poste : '') +
+                                           (demande.demandeur.service != null ? ' - ' + demande.demandeur.service.acronyme : '')
+                                       }">
+                                    </small>
+
+                                </div>
+
+                                <span th:if="${demande.demandeur == null}">-</span>
+                            </td>
+
+
+                            <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
+                                class="td-nature-demande"
+                                th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">
+                            </td>
+                            <td>
+                              <span class="badge-status"
+                                    th:classappend="
+                                      ${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).CREE} ? ' badge-wait' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1} ? ' badge-info' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N2} ? ' badge-purple' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N3} ? ' badge-purple' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE} ? ' badge-success' :
+                                      (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' badge-danger' : ' badge-info')))))">
+
+                                <i class="fas"
+                                   th:classappend="
+                                     ${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).CREE} ? ' fa-user-clock' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1} ? ' fa-clipboard-check' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N2} ? ' fa-coins' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N3} ? ' fa-gavel' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE} ? ' fa-check-circle' :
+                                     (${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' fa-stop-circle-o' : ' fa-info-circle')))))">
+
+                                </i>
+                                <span th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></span>
+                              </span>
                             </td>
                         </tr>
 
                         <tr th:if="${demandesMeres.totalElements == 0}">
-                            <td colspan="6" class="text-center text-muted py-4">
+                            <td class="text-center text-muted py-4"
+                                th:colspan="${(showDemandeurColumn?1:0) + (#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'')')?1:0) + 3}">
                                 Aucune demande trouvée
                             </td>
                         </tr>
@@ -161,64 +267,87 @@
                     </table>
                 </div>
 
-                <!-- ✅ Pagination -->
-                <nav th:if="${demandesMeres.totalPages > 1}" aria-label="Pagination demandes" class="mt-3 dt-pagination stock-pagination">
-                    <ul class="pagination justify-content-center">
+                <nav th:if="${demandesMeres.totalPages > 1}" class="mt-3" aria-label="Pagination demandes">
+                    <ul class="pagination justify-content-center mb-0">
 
-                        <li class="page-item" th:classappend="${demandesMeres.first} ? ' disabled' : ''">
+                        <!-- Précédente -->
+                        <li class="page-item" th:classappend="${demandesMeres.first} ? 'disabled'">
                             <a class="page-link"
-                               th:href="@{/demande/list(page=${demandesMeres.number - 1},size=${size},q=${q},
-                                         dateFrom=${dateFrom},dateTo=${dateTo},sort=${sort},dir=${dir})}">
-                                &laquo;
+                               th:href="@{/demande/list(page=${demandesMeres.number - 1}, size=${size},
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort=${sort},dir=${dir})}"
+                            >
+                                Précédente
                             </a>
                         </li>
 
-                        <li class="page-item"
-                            th:each="p : ${#numbers.sequence(0, demandesMeres.totalPages - 1)}"
-                            th:if="${p >= demandesMeres.number - 2 and p <= demandesMeres.number + 2}"
-                            th:classappend="${p == demandesMeres.number} ? ' active' : ''">
-                            <a class="page-link"
-                               th:href="@{/demande/list(page=${p},size=${size},q=${q},
-                                         dateFrom=${dateFrom},dateTo=${dateTo},sort=${sort},dir=${dir})}"
-                               th:text="${p + 1}"></a>
-                        </li>
+                        <!-- Pages autour -->
+                        <th:block th:with="
+            start=${T(java.lang.Math).max(0, demandesMeres.number - 2)},
+            end=${T(java.lang.Math).min(demandesMeres.totalPages - 1, demandesMeres.number + 2)}
+        ">
+                            <li class="page-item"
+                                th:each="p : ${#numbers.sequence(start, end)}"
+                                th:classappend="${p == demandesMeres.number} ? 'active'">
+                                <a class="page-link"
+                                   th:href="@{/demande/list(page=${p}, size=${size},
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort=${sort},dir=${dir})}"
+                                   th:text="${p + 1}"
+                                >
+                                </a>
+                            </li>
+                        </th:block>
 
-                        <li class="page-item" th:classappend="${demandesMeres.last} ? ' disabled' : ''">
+                        <!-- Suivante -->
+                        <li class="page-item" th:classappend="${demandesMeres.last} ? 'disabled'">
                             <a class="page-link"
-                               th:href="@{/demande/list(page=${demandesMeres.number + 1},size=${size},q=${q},
-                                         dateFrom=${dateFrom},dateTo=${dateTo},sort=${sort},dir=${dir})}">
-                                &raquo;
+                               th:href="@{/demande/list(page=${demandesMeres.number + 1}, size=${size},
+    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
+    sort=${sort},dir=${dir})}"
+                            >
+                                Suivante
                             </a>
                         </li>
+
                     </ul>
 
-                    <div class="text-center text-muted small">
+                    <div class="text-center text-muted small mt-2">
                         Page <span th:text="${demandesMeres.number + 1}"></span> /
                         <span th:text="${demandesMeres.totalPages}"></span>
+                        — Total: <span th:text="${demandesMeres.totalElements}"></span>
                     </div>
                 </nav>
 
             </div>
         </div>
-
     </section>
 </div>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll("tr.clickable-row").forEach(row => {
+            row.addEventListener("click", (e) => {
+                // Si on clique sur un lien/bouton/input à l'intérieur, on laisse le comportement normal
+                if (e.target.closest("a, button, input, select, textarea, label")) return;
 
-<!-- Modal (inchangé) -->
-<div class="modal fade" id="demandeDetailsModal" tabindex="1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content bl-document">
-            <div class="bl-header">
-                <div class="bl-company">
-                    <img th:src="@{/img/logo_afg.png}" alt="Logo" height="60">
-                </div>
-                <div class="bl-title">
-                    <h3>DEMANDE DE MATERIEL</h3>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+                const href = row.getAttribute("data-href");
+                if (!href) return;
+
+                // Ctrl/Cmd click => nouvel onglet
+                if (e.ctrlKey || e.metaKey) {
+                    window.open(href, "_blank");
+                } else {
+                    window.location.href = href;
+                }
+            });
+        });
+    });
+    /*]]>*/
+</script>
 
 </body>
 </html>

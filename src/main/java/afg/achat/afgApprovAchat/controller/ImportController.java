@@ -25,15 +25,27 @@ public class ImportController {
     }
 
     @PostMapping("/import-data")
-    public String importData(@RequestParam(name = "file") MultipartFile file, RedirectAttributes redirectAttributes, HttpServletRequest request) {
-        if (file.isEmpty()) {
-            redirectAttributes.addFlashAttribute("ko",
-                    "Veuillez sélectionner un fichier");
-            return "redirect:/import/import-saisie-page";
-        }
-        importService.importCSVArticle(file);
-        redirectAttributes.addFlashAttribute("ok",
-                "Import effectué avec succès");
+    public String importData(
+//            @RequestParam(name = "file1") MultipartFile file1, // Articles
+//            @RequestParam(name = "file2") MultipartFile file2, // Familles
+//            @RequestParam(name = "file3") MultipartFile file3, // Fournisseurs
+//            @RequestParam(name = "file4") MultipartFile file4, // Achats / BL
+            @RequestParam(name = "file5") MultipartFile file5, // Achats / BL
+
+            RedirectAttributes redirectAttributes,
+            HttpServletRequest request
+    ) {
+        // 1) référentiels
+//        importService.importCSVFamille(file2);
+//        importService.importCSVFournisseur(file3);
+//        importService.importCSVArticle(file1);
+
+        importService.importCSVPoste(file5);
+
+        // 2) achats -> BL + stock
+//        importService.importCSVAchat(file4); // <= c’est ici qu’on crée BL_MERE + BL_FILLE + STOCK_MERE + STOCK_FILLE
+//        importService.importCSVSortieStock(file4);
+        redirectAttributes.addFlashAttribute("ok", "Import effectué avec succès");
         return "redirect:/import/import-saisie-page";
     }
 }

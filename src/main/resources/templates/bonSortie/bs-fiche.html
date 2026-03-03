@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Fiche bon de sortie</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+</head>
+
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <div class="doc-wrapper">
+
+            <div class="page-actions">
+                <div class="d-flex align-items-center gap-2">
+                    <h1 class="fw-bold text-gradient-blue mb-0">
+                        <i class="fas fa-truck-loading icon-gradient-blue me-2"></i> Fiche bon de sortie
+                    </h1>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a class="btn btn-outline-gradient-blue"
+                       th:if="${bs != null && bs.demandeMere != null}"
+                       th:href="@{/demande/fiche/{id}(id=${bs.demandeMere.id})}">
+                        <i class="fas fa-file-alt me-1"></i> Voir la demande
+                    </a>
+
+                    <a class="btn btn-outline-secondary" th:href="@{/demande/list}">
+                        <i class="fas fa-arrow-left me-1"></i> Retour
+                    </a>
+                </div>
+            </div>
+
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-0">
+
+                    <div class="bl-document">
+
+                        <!-- EN-TÊTE DOCUMENT -->
+                        <div class="bl-header">
+                            <div class="bl-company">
+                                <img th:src="@{/img/logo_afg.png}" alt="Logo" height="60">
+                            </div>
+                            <div class="bl-title">
+                                <h3>BON DE SORTIE</h3>
+                                <span>Référence : <strong th:text="${bs.id}">-</strong></span>
+                                <div class="text-muted small mt-1">
+                                    Demande : <strong
+                                        th:text="${bs.demandeMere != null ? bs.demandeMere.id : '-'}">-</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BADGE STATUT DYNAMIQUE -->
+                        <div class="px-3 pb-2 text-center">
+                            <span class="badge"
+                                  th:class="${isValidee ? 'bg-success' : (isPartielle ? 'bg-warning text-dark' : 'bg-secondary')}">
+                                <i class="fas"
+                                   th:class="${isValidee ? 'fa-check-circle' : (isPartielle ? 'fa-exclamation-triangle' : 'fa-clock')}"></i>
+                                <span th:text="${isValidee ? 'BS validé (stock mis à jour)'
+                                               : (isPartielle ? 'BS partiel (quantités disponibles)' : 'BS créé (en préparation)')}">
+                                </span>
+                            </span>
+                        </div>
+
+                        <!-- INFOS -->
+                        <div class="bl-infos">
+                            <div>
+                                <strong>Demandeur :</strong>
+
+                                <div th:if="${bs.demandeMere != null && bs.demandeMere.demandeur != null}">
+
+                                    <!-- Nom + prénom -->
+                                    <div class="fw-semibold"
+                                         th:text="${bs.demandeMere.demandeur.nom + ' ' + bs.demandeMere.demandeur.prenom}">
+                                    </div>
+
+                                    <!-- Poste + Service -->
+                                    <small class="text-muted"
+                                               th:text="${
+                                           (bs.demandeMere.demandeur.poste != null
+                                               ? bs.demandeMere.demandeur.poste.poste
+                                               : '') +
+                                           (bs.demandeMere.demandeur.service != null
+                                               ? ' - ' + bs.demandeMere.demandeur.service.acronyme
+                                               : '')
+                                       }">
+                                    </small>
+
+                                </div>
+
+                                <div th:if="${bs.demandeMere == null || bs.demandeMere.demandeur == null}">
+                                    -
+                                </div>
+                            </div>
+
+                            <div>
+                                <strong>Date demande :</strong>
+                                <div th:text="${bs.demandeMere != null && bs.demandeMere.dateDemande != null
+                                    ? #temporals.format(bs.demandeMere.dateDemande,'dd/MM/yyyy HH:mm') : '-'}">-
+                                </div>
+                            </div>
+
+                            <div>
+                                <strong>Date sortie :</strong>
+                                <div th:text="${bs.dateSortie != null
+                                    ? #temporals.format(bs.dateSortie,'dd/MM/yyyy HH:mm') : '-'}">-
+                                </div>
+                            </div>
+
+                            <div>
+                                <strong>Statut :</strong>
+                                <div th:text="${bs.statut != null ? bs.statut.name() : '-'}">-</div>
+                            </div>
+                        </div>
+
+                        <!-- FORM SAISIE -->
+                        <form th:if="${isCree}"
+                              th:action="@{/bon-sortie/fiche/{bsId}/save(bsId=${bs.id})}"
+                              method="post">
+
+                            <!-- TABLE ARTICLES -->
+                            <!-- TABLE ARTICLES : affichée si CREE ou PARTIELLE -->
+                            <div class="bl-body" th:if="${isCree or isPartielle}">
+                                <table class="bl-table">
+                                    <thead>
+                                    <tr>
+                                        <th style="width:55%">DÉSIGNATION</th>
+                                        <th class="text-end" style="width:15%">QTÉ DEMANDÉE</th>
+                                        <th class="text-end" style="width:15%">QTÉ SORTIE</th>
+                                        <th class="text-end" style="width:15%">STOCK DISPO</th>
+                                    </tr>
+                                    </thead>
+
+                                    <tbody>
+                                    <tr th:if="${lignes == null || lignes.isEmpty()}">
+                                        <td colspan="4" class="text-center text-muted">Aucun article</td>
+                                    </tr>
+
+                                    <!-- Lignes BS -->
+                                    <tr th:each="l : ${lignes}">
+                                        <!-- ID caché pour Spring -->
+                                        <input type="hidden" name="lineId[]" th:value="${l.id}" />
+
+                                        <!-- Désignation -->
+                                        <td th:text="${l.article != null ? l.article.designation : '-'}">-</td>
+
+                                        <!-- Quantité demandée -->
+                                        <td class="text-end"
+                                            th:text="${#numbers.formatDecimal(l.quantiteDemandee, 1, 'COMMA', 2, 'POINT')}">
+                                            0
+                                        </td>
+
+                                        <!-- Quantité sortie -->
+                                        <td class="text-end">
+                                            <!-- Saisie si CREE -->
+                                            <div th:if="${isCree}">
+                                                <input type="number"
+                                                       class="form-control form-control-sm text-end"
+                                                       name="qteSortie[]"
+                                                       min="0"
+                                                       step="1"
+                                                       th:attr="max=${l.maxSortie}"
+                                                       th:value="${l.quantiteSortie}"
+                                                       th:readonly="${dispoByArticleId[l.article.id] == 0}" />
+                                                <!-- Badge stock épuisé -->
+<!--                                                <span th:if="${dispoByArticleId[l.article.id] == 0}"-->
+<!--                                                      class="badge bg-danger text-white"-->
+<!--                                                      style="position:absolute; margin-left:5px;">-->
+<!--                                                    Stock épuisé-->
+<!--                                                </span>-->
+                                            </div>
+
+                                            <!-- Lecture seule si PARTIELLE ou VALIDÉE -->
+                                            <div th:if="${!isCree}">
+                                                <span th:classappend="
+                                                      ${l.quantiteSortie == 0} ? 'badge bg-danger text-white' :
+                                                      ${l.quantiteSortie < l.quantiteDemandee} ? 'badge bg-warning text-dark' :
+                                                      'badge bg-success text-white'"
+                                                      th:text="${#numbers.formatDecimal(l.quantiteSortie, 1, 'COMMA', 0, 'POINT')}">
+                                                </span>
+                                            </div>
+                                        </td>
+
+                                        <!-- Stock dispo -->
+                                        <td class="text-end">
+                                            <span th:classappend="${dispoByArticleId[l.article.id] <= 0} ? 'text-danger fw-bold' : ''"
+                                                  th:text="${dispoByArticleId[l.article.id] != null
+                                                      ? #numbers.formatDecimal(dispoByArticleId[l.article.id], 1, 'COMMA', 2, 'POINT')
+                                                      : '0,00'}">
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </form>
+                            <!-- FORM SAISIE : actif uniquement si CREE -->
+                            <form th:if="${isCree}"
+                                  th:action="@{/bon-sortie/fiche/{bsId}/save(bsId=${bs.id})}"
+                                  method="post">
+                                <div class="p-3 d-flex justify-content-between align-items-center">
+                                    <div class="text-muted small">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Enregistrez les quantités avant de confirmer la sortie.
+                                    </div>
+
+                                    <div class="d-flex gap-2" sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')">
+                                        <button type="submit" class="btn btn-outline-gradient-blue">
+                                            <i class="fas fa-save me-1"></i> Enregistrer
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <!-- CONFIRMATION SORTIE : actif uniquement si CREE -->
+                            <div class="p-3 d-flex justify-content-end" th:if="${isCree}" sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')">
+                                <form th:action="@{/bon-sortie/fiche/{bsId}/confirm(bsId=${bs.id})}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-gradient-green">
+                                        <i class="fas fa-check me-1"></i> Confirmer la sortie
+                                    </button>
+                                </form>
+                            </div>
+
+
+                    </div>
+
+
+                </div>
+            </div>
+
+        </div>
+    </section>
+</div>
+
+</body>
+</html>

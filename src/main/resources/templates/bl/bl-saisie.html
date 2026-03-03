@@ -44,32 +44,27 @@
 
                         <div class="row">
                             <!-- Fournisseur -->
-                            <div class="col-md-6 mb-3">
-                                <label for="fournisseurs" class="form-label fw-bold required-field">
-                                    Fournisseur
-                                </label>
+                            <div class="col-md-6 mb-3 position-relative">
+                                <label class="form-label fw-bold required-field">Fournisseur</label>
+
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">
-                                        <i class="fas fa-building icon-gradient-blue"></i>
+                                      <i class="fas fa-building icon-gradient-blue"></i>
                                     </span>
-                                    <select class="form-select select2-searchable"
-                                            id="fournisseurs"
-                                            name="fournisseurs"
-                                            data-placeholder="Recherchez ou sélectionnez un fournisseur..."
-                                            required>
-                                        <option value=""></option>
-                                        <option th:each="fournisseur : ${fournisseurs}"
-                                                th:value="${fournisseur.getId()}"
-                                                th:text="${fournisseur.getNom()}">
-                                        </option>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="fournisseurInput"
+                                           placeholder="Rechercher un fournisseur..."
+                                           autocomplete="off"
+                                           required>
 
-                                        </option>
-                                    </select>
+                                    <!-- IMPORTANT : c’est ce champ hidden qui sera envoyé -->
+                                    <input type="hidden" name="fournisseurs" id="fournisseurId">
                                 </div>
-                                <div class="form-text text-muted mt-1">
-                                    <i class="fas fa-info-circle me-1"></i> Sélectionnez le fournisseur pour ce bon de
-                                    livraison
-                                </div>
+
+                                <div id="fournisseurList"
+                                     class="list-group position-absolute w-100 shadow"
+                                     style="z-index: 1000;"></div>
                             </div>
 
                             <!-- Devise -->
@@ -173,7 +168,7 @@
                                                required>
                                         <input type="hidden"
                                                name="articleCodes[]">
-                                        <div class="autocomplete-list list-group position-absolute w-100"></div>
+<!--                                        <div class="autocomplete-list list-group position-absolute w-100"></div>-->
                                     </td>
 
 
@@ -252,8 +247,13 @@
 </div>
 
 <!-- Modal Aperçu avant enregistrement -->
-<div class="modal fade" id="previewBLModal" tabindex="-1"
-     aria-labelledby="previewBLModalLabel" aria-hidden="true">
+<div class="modal fade"
+     id="previewBLModal"
+     tabindex="-1"
+     aria-labelledby="previewBLModalLabel"
+     aria-hidden="true"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
 
@@ -261,8 +261,6 @@
                 <h5 class="modal-title" id="previewBLModalLabel">
                     <i class="fas fa-eye me-2 icon-gradient-blue"></i>Aperçu avant enregistrement
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
             </div>
 
             <div class="modal-body">
@@ -349,8 +347,16 @@
     </div>
 </div>
 
-<script th:inline="none">
+<script th:inline="javascript">
     /*<![CDATA[*/
+
+    //Global : accessible partout
+    const fournisseurs = [
+        /*[# th:each="f : ${fournisseurs}"]*/
+        { id: /*[[${f.id}]]*/, nom: /*[[${f.nom}]]*/ },
+        /*[/]*/
+    ];
+
     document.addEventListener("DOMContentLoaded", function () {
         updatePrixUnitaireState();
 
@@ -438,51 +444,162 @@
 
     });
 
-    document.addEventListener("input", function (e) {
-        if (!e.target.classList.contains("article-input")) return;
 
-        const input = e.target;
-        const list = input.closest("td").querySelector(".autocomplete-list");
-        const keyword = input.value.trim();
+    (function () {
+        // 1) Créer le dropdown global (portal) une seule fois
+        let portal = document.getElementById("articleAutocompletePortal");
+        if (!portal) {
+            portal = document.createElement("div");
+            portal.id = "articleAutocompletePortal";
+            portal.className = "list-group";
+            document.body.appendChild(portal);
+        }
 
-        list.innerHTML = "";
-        if (keyword.length < 2) return;
+        let activeInput = null;
+        let abortController = null;
 
-        // Récupérer tous les articles déjà sélectionnés
-        const selectedArticles = Array.from(document.querySelectorAll('input[name="articleCodes[]"]'))
-            .map(i => i.value)
-            .filter(v => v); // on ignore les vides
+        function hidePortal() {
+            portal.style.display = "none";
+            portal.innerHTML = "";
+            activeInput = null;
+            if (abortController) abortController.abort();
+            abortController = null;
+        }
 
-        fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`)
-            .then(res => res.json())
-            .then(data => {
-                // Filtrer les articles déjà sélectionnés
-                const filteredData = data.filter(article => !selectedArticles.includes(article.code));
+        function positionPortal(input) {
+            const r = input.getBoundingClientRect();
+            const gap = 2;
 
-                filteredData.forEach(article => {
+            portal.style.left = `${r.left}px`;
+            portal.style.top  = `${r.bottom + gap}px`;
+            portal.style.width = `${r.width}px`;
+        }
+
+        // Pour éviter trop d'appels API
+        function debounce(fn, delay = 250) {
+            let t;
+            return (...args) => {
+                clearTimeout(t);
+                t = setTimeout(() => fn(...args), delay);
+            };
+        }
+
+        const loadSuggestions = debounce(async (input, keyword) => {
+            // annuler requête précédente
+            if (abortController) abortController.abort();
+            abortController = new AbortController();
+
+            // Articles déjà sélectionnés
+            const selectedArticles = Array.from(document.querySelectorAll('input[name="articleCodes[]"]'))
+                .map(i => i.value)
+                .filter(Boolean);
+
+            try {
+                const res = await fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`, {
+                    signal: abortController.signal
+                });
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const data = await res.json();
+
+                // si l'utilisateur a changé de champ entre temps
+                if (activeInput !== input) return;
+
+                const filtered = (data || []).filter(a => !selectedArticles.includes(a.code));
+
+                portal.innerHTML = "";
+
+                if (filtered.length === 0) {
+                    const empty = document.createElement("div");
+                    empty.className = "list-group-item text-muted";
+                    empty.textContent = "Aucun résultat";
+                    portal.appendChild(empty);
+                    portal.style.display = "block";
+                    positionPortal(input);
+                    return;
+                }
+
+                filtered.slice(0, 10).forEach(article => {
                     const item = document.createElement("button");
                     item.type = "button";
                     item.className = "list-group-item list-group-item-action";
                     item.textContent = `${article.code} - ${article.designation}`;
 
-                    item.onclick = () => {
+                    item.addEventListener("mousedown", (e) => {
+                        // mousedown > évite que blur ferme avant le click
+                        e.preventDefault();
+
                         input.value = `${article.code} - ${article.designation}`;
-                        input.closest("td").querySelector('input[type="hidden"]').value = article.code;
-                        list.innerHTML = "";
-                    };
 
-                    list.appendChild(item);
+                        const td = input.closest("td");
+                        const hidden = td?.querySelector('input[name="articleCodes[]"]');
+                        if (hidden) hidden.value = article.code;
+
+                        hidePortal();
+                    });
+
+                    portal.appendChild(item);
                 });
-            });
-    });
 
+                portal.style.display = "block";
+                positionPortal(input);
 
-    document.addEventListener("click", function (e) {
-        if (!e.target.classList.contains("article-input")) {
-            document.querySelectorAll(".autocomplete-list")
-                .forEach(list => list.innerHTML = "");
-        }
-    });
+            } catch (err) {
+                // Abort = normal
+                if (err?.name === "AbortError") return;
+                console.error("Autocomplete error:", err);
+                hidePortal();
+            }
+        }, 250);
+
+        // 2) Ouvrir / mettre à jour le dropdown sur input
+        document.addEventListener("input", function (e) {
+            if (!e.target.classList.contains("article-input")) return;
+
+            const input = e.target;
+            const keyword = input.value.trim();
+
+            // si on retape, invalider code hidden
+            const td = input.closest("td");
+            const hidden = td?.querySelector('input[name="articleCodes[]"]');
+            if (hidden) hidden.value = "";
+
+            if (keyword.length < 2) {
+                hidePortal();
+                return;
+            }
+
+            activeInput = input;
+            portal.style.display = "block";
+            portal.innerHTML = `<div class="list-group-item text-muted">Recherche...</div>`;
+            positionPortal(input);
+
+            loadSuggestions(input, keyword);
+        });
+
+        // 3) Repositionner quand on scroll / resize
+        window.addEventListener("scroll", () => {
+            if (activeInput && portal.style.display === "block") positionPortal(activeInput);
+        }, true);
+
+        window.addEventListener("resize", () => {
+            if (activeInput && portal.style.display === "block") positionPortal(activeInput);
+        });
+
+        // 4) Fermer quand on clique ailleurs
+        document.addEventListener("mousedown", function (e) {
+            if (!portal.contains(e.target) && !e.target.classList.contains("article-input")) {
+                hidePortal();
+            }
+        });
+
+        // 5) Fermer au blur (mais laisse le mousedown des items fonctionner)
+        document.addEventListener("focusin", function (e) {
+            if (!e.target.classList.contains("article-input") && !portal.contains(e.target)) {
+                hidePortal();
+            }
+        });
+
+    })();
 
     document.addEventListener("input", function (e) {
         if (!e.target.classList.contains("prix-input")) return;
@@ -696,7 +813,18 @@
             }
 
             // ------- Remplir infos générales
-            document.getElementById("pvBLFournisseur").textContent = getSelectText("fournisseurs");
+            const fid = document.getElementById("fournisseurId")?.value;
+            if (!fid) {
+                const input = document.getElementById("fournisseurInput");
+                input?.classList.add("is-invalid");
+                input?.focus();
+                return;
+            }
+
+            const fname = fournisseurs.find(f => String(f.id) === String(fid))?.nom;
+
+            document.getElementById("pvBLFournisseur").textContent = fname || "---";
+
             document.getElementById("pvBLDevise").textContent = getSelectText("devises");
 
             const rawDate = document.getElementById("dateLivraison")?.value;
@@ -749,7 +877,48 @@
 
     })();
 
+    (function () {
+        const input  = document.getElementById("fournisseurInput");
+        const list   = document.getElementById("fournisseurList");
+        const hidden = document.getElementById("fournisseurId");
 
+        if (!input || !list || !hidden) return;
+
+
+
+        function clearList() { list.innerHTML = ""; }
+
+        input.addEventListener("input", function () {
+            const q = this.value.toLowerCase().trim();
+            clearList();
+            hidden.value = ""; // invalide tant qu’on n’a pas cliqué un item
+
+            if (q.length < 2) return;
+
+            fournisseurs
+                .filter(f => (f.nom || "").toLowerCase().includes(q))
+                .slice(0, 10)
+                .forEach(f => {
+                    const item = document.createElement("button");
+                    item.type = "button";
+                    item.className = "list-group-item list-group-item-action";
+                    item.textContent = f.nom;
+
+                    item.addEventListener("click", () => {
+                        input.value = f.nom;
+                        hidden.value = f.id;
+                        clearList();
+                    });
+
+                    list.appendChild(item);
+                });
+        });
+
+        // fermer la liste quand on clique ailleurs (mais pas quand on clique sur la liste)
+        document.addEventListener("click", (e) => {
+            if (!input.contains(e.target) && !list.contains(e.target)) clearList();
+        });
+    })();
     /*]]>*/
 </script>
 

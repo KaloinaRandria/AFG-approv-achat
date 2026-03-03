@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Tableau de bord</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <!-- En-tête avec icônes en dégradé bleu -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-laptop me-2"></i>Tableau de bord – Demandes de matériels
+            </h1>
+        </div>
+
+        <div class="container-fluid py-4">
+            <!-- ===== FILTRE DATE ===== -->
+            <form th:action="@{/dashboard}" method="get" class="mb-4" >
+                <div class="chart-card">
+                    <div class="card-body py-3">
+                        <div class="row g-2 align-items-end">
+
+                            <div class="col-auto">
+                                <label class="form-label fw-semibold mb-1" style="color:#001051; font-size:13px;">
+                                    <i class="fas fa-calendar-alt me-1"></i>Date début
+                                </label>
+                                <input type="date" name="dateFrom" class="form-control form-control-sm"
+                                       th:value="${dateFrom}">
+                            </div>
+
+                            <div class="col-auto">
+                                <label class="form-label fw-semibold mb-1" style="color:#001051; font-size:13px;">
+                                    <i class="fas fa-calendar-alt me-1"></i>Date fin
+                                </label>
+                                <input type="date" name="dateTo" class="form-control form-control-sm"
+                                       th:value="${dateTo}">
+                            </div>
+
+                            <div class="col-auto">
+                                <button type="submit" class="btn btn-sm btn-gradient-blue">
+                                    <i class="fas fa-filter me-1"></i>Filtrer
+                                </button>
+                            </div>
+
+                            <div class="col-auto" th:if="${dateFrom != null or dateTo != null}">
+                                <a th:href="@{/dashboard}" class="btn btn-sm btn-outline-gradient-blue">
+                                    <i class="fas fa-times me-1"></i>Réinitialiser
+                                </a>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+
+            <!-- ===== 3 CARTES PRINCIPALES ===== -->
+            <div class="row g-3 mb-2">
+
+                <!-- En cours de traitement — bleu (charte principale) -->
+                <div class="col-xl-4 col-md-6">
+                    <div class="stat-card grad-blue">
+                        <div class="card-body">
+                            <i class="fas fa-spinner card-icon"></i>
+                            <div class="stat-label">En cours de traitement</div>
+                            <div class="stat-value" th:text="${enCours}">0</div>
+                            <div class="stat-sub">
+                                <i class="fas fa-clock me-1"></i>Demandes en attente de validation
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Refusées — rouge (charte) -->
+                <div class="col-xl-4 col-md-6">
+                    <div class="stat-card grad-red">
+                        <div class="card-body">
+                            <i class="fas fa-times-circle card-icon"></i>
+                            <div class="stat-label">Demandes refusées</div>
+                            <div class="stat-value" th:text="${refusees}">0</div>
+                            <div class="stat-sub">
+                                <i class="fas fa-ban me-1"></i>Total des demandes refusées
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terminées — vert (charte) -->
+                <div class="col-xl-4 col-md-6">
+                    <div class="stat-card grad-green">
+                        <div class="card-body">
+                            <i class="fas fa-check-circle card-icon"></i>
+                            <div class="stat-label">Demandes terminées</div>
+                            <div class="stat-value" th:text="${terminees}">0</div>
+                            <div class="stat-sub">
+                                <i class="fas fa-check me-1"></i>Total des demandes validées
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ===== GRAPHIQUES ===== -->
+            <div class="row g-3">
+
+                <!-- Répartition statuts (Donut) -->
+                <div class="col-xl-4 col-md-6">
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <i class="fas fa-chart-pie"></i>Répartition des statuts
+                        </div>
+                        <div class="card-body d-flex justify-content-center">
+                            <canvas id="statutDonutChart" style="max-height:260px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Évolution mensuelle (Bar groupé) -->
+                <div class="col-xl-8 col-md-6">
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <i class="fas fa-chart-bar"></i>Évolution mensuelle des demandes
+                        </div>
+                        <div class="card-body">
+                            <canvas id="demandesParMoisChart" style="max-height:260px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nature OPEX / CAPEX (Donut) -->
+                <div class="col-xl-6 col-md-6">
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <i class="fas fa-layer-group"></i>Répartition par nature (OPEX / CAPEX)
+                        </div>
+                        <div class="card-body d-flex justify-content-center">
+                            <canvas id="natureChart" style="max-height:260px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Priorité (Bar) -->
+                <div class="col-xl-6 col-md-6">
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <i class="fas fa-flag"></i>Demandes par priorité
+                        </div>
+                        <div class="card-body">
+                            <canvas id="prioriteChart" style="max-height:260px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Injection Thymeleaf → variables JS ===== -->
+        <script th:inline="javascript">
+            /*<![CDATA[*/
+
+            // ── Compteurs 3 cartes
+            const enCours   = /*[[${enCours}]]*/ 0;
+            const refusees  = /*[[${refusees}]]*/ 0;
+            const terminees = /*[[${terminees}]]*/ 0;
+
+            // ── Données mensuelles
+            const enCoursMois   = /*[[${enCoursMois}]]*/ '[0,0,0,0,0,0,0,0,0,0,0,0]';
+            const refuseesMois  = /*[[${refuseesMois}]]*/ '[0,0,0,0,0,0,0,0,0,0,0,0]';
+            const termineesMois = /*[[${termineesMois}]]*/ '[0,0,0,0,0,0,0,0,0,0,0,0]';
+
+            const parseMois = s => JSON.parse(String(s).trim());
+
+            // ── Nature
+            const opex  = /*[[${opex}]]*/ 0;
+            const capex = /*[[${capex}]]*/ 0;
+
+            // ── Priorité
+            const p0 = /*[[${p0}]]*/ 0;
+            const p1 = /*[[${p1}]]*/ 0;
+            const p2 = /*[[${p2}]]*/ 0;
+
+
+            /*]]>*/
+        </script>
+
+        <!-- Chart.js -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            // Palette charte
+            const BLEU_FONCE  = '#001051';
+            const BLEU_VIF    = '#00129f';
+            const BLEU_CLAIR  = '#4cc9f0';
+            const VERT        = '#28a745';
+            const VERT_CLAIR  = '#20c997';
+            const ROUGE       = '#dc2626';
+            const ROUGE_CLAIR = '#f87171';
+            const GRIS        = '#6c757d';
+            const ORANGE      = '#fd7e14';
+
+            // ── 1. Donut – répartition des statuts ────────────────────
+            new Chart(document.getElementById('statutDonutChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['En cours', 'Refusées', 'Terminées'],
+                    datasets: [{
+                        data: [enCours, refusees, terminees],
+                        backgroundColor: [BLEU_VIF, ROUGE, VERT],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '65%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14 } }
+                    }
+                }
+            });
+
+            // ── 2. Bar groupé – évolution mensuelle ──────────────────
+            new Chart(document.getElementById('demandesParMoisChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'],
+                    datasets: [
+                        {
+                            label: 'En cours',
+                            data: parseMois(enCoursMois),
+                            backgroundColor: BLEU_VIF
+                        },
+                        {
+                            label: 'Refusées',
+                            data: parseMois(refuseesMois),
+                            backgroundColor: ROUGE
+                        },
+                        {
+                            label: 'Terminées',
+                            data: parseMois(termineesMois),
+                            backgroundColor: VERT
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 12 } }
+                    },
+                    scales: {
+                        x: { stacked: false },
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+
+            // ── 3. Donut – nature OPEX / CAPEX ────────────────────────
+            new Chart(document.getElementById('natureChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['OPEX', 'CAPEX'],
+                    datasets: [{
+                        data: [opex, capex],
+                        backgroundColor: [BLEU_FONCE, BLEU_CLAIR],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '60%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14 } }
+                    }
+                }
+            });
+
+            // ── 4. Bar – priorité ─────────────────────────────────────
+            new Chart(document.getElementById('prioriteChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['P0 — Urgent', 'P1 — Normal', 'P2 — Faible'],
+                    datasets: [{
+                        label: 'Nombre de demandes',
+                        data: [p0, p1, p2],
+                        backgroundColor: [ROUGE, ORANGE, BLEU_CLAIR]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+        </script>
+    </section>
+</div>
+
+</body>
+</html>

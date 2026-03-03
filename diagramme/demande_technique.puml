@@ -1,0 +1,82 @@
+@startuml
+
+actor Utilisateur
+actor Superieur
+actor MoyensGeneraux as MG
+actor ControleurGestion as CG
+actor DirectionFinance as DF
+actor ComiteDepense as CD
+
+participant DemandeController
+participant WorkflowService
+participant DemandeRepository
+database DB
+
+== Création de la demande ==
+Utilisateur -> DemandeController : creerDemande()
+DemandeController -> WorkflowService : initWorkflow()
+WorkflowService -> DemandeRepository : save(demande)
+DemandeRepository -> DB : INSERT
+DB --> DemandeRepository : OK
+
+== Validation Supérieur ==
+Superieur -> DemandeController : decision()
+DemandeController -> WorkflowService : validerSuperieur()
+
+alt Refusé
+    WorkflowService -> DemandeRepository : updateStatut(REJETE)
+    DemandeRepository -> DB : UPDATE
+else Validé
+    WorkflowService -> DemandeRepository : updateStatut(VALIDE_SUP)
+    DemandeRepository -> DB : UPDATE
+end
+
+== Décision Moyens Généraux ==
+MG -> DemandeController : decision(CAPEX/OPEX)
+DemandeController -> WorkflowService : validerMG()
+alt Refusé
+     WorkflowService -> DemandeRepository : updateStatut(REJETE)
+        DemandeRepository -> DB : UPDATE
+else Validé
+        WorkflowService -> DemandeRepository : updateStatut(VALIDE_MG)
+        DemandeRepository -> DB : UPDATE
+end
+
+
+alt Envoi au Comité de Dépense - CODEP
+    MG -> CD : transmettreDemande()
+    CD -> DemandeController : decision()
+
+    alt Refus Comité
+        DemandeController -> WorkflowService : updateStatut(REJETE_CODEP)
+        WorkflowService -> DemandeRepository : UPDATE
+    else Validé Comité
+        DemandeController -> WorkflowService : updateStatut(VALIDE_CODEP)
+    end
+
+else Validation MG
+    DemandeController -> WorkflowService : updateStatut(VALIDE_MG)
+end
+
+== Contrôleur de gestion ==
+CG -> DemandeController : choisirLigneBudgetaire()
+
+alt Refusé CG
+    DemandeController -> WorkflowService : updateStatut(REJETE_CG)
+else Validé CG
+    DemandeController -> WorkflowService : updateStatut(VALIDE_CG)
+end
+
+== Validation Direction Finance ==
+DF -> DemandeController : decision()
+
+alt Refus DF
+    DemandeController -> WorkflowService : updateStatut(REJETE_DF)
+else Validation finale
+    DemandeController -> WorkflowService : updateStatut(VALIDE_FINAL)
+end
+
+WorkflowService -> DemandeRepository : UPDATE
+DemandeRepository -> DB : UPDATE
+
+@enduml

@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.Optional;
 
 @Service
@@ -26,7 +25,9 @@ public class BonLivraisonMereService {
         return bonLivraisonMereRepo.findAll(pageable);
     }
 
-    public Page<BonLivraisonMere> searchBonLivraisonMeres(String q,
+    public Page<BonLivraisonMere> searchBonLivraisonMeres(String num,
+                                                          String fournisseur,
+                                                          String devise,
                                                           LocalDate dateFrom,
                                                           LocalDate dateTo,
                                                           int page, int size, String sort, String dir) {
@@ -34,12 +35,20 @@ public class BonLivraisonMereService {
         Sort.Direction direction = "desc".equalsIgnoreCase(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sort));
 
-        String keyword = (q == null) ? "" : q.trim();
+        String n = (num == null) ? "" : num.trim();
+        String f = (fournisseur == null) ? "" : fournisseur.trim();
+        String d = (devise == null) ? "" : devise.trim();
 
-        LocalDateTime from = (dateFrom != null) ? dateFrom.atStartOfDay() : null;
-        LocalDateTime to   = (dateTo != null) ? dateTo.atTime(LocalTime.MAX) : null;
+        // ✅ bornes non-null (évite soucis + logique claire)
+        LocalDateTime from = (dateFrom == null)
+                ? LocalDate.of(1900, 1, 1).atStartOfDay()
+                : dateFrom.atStartOfDay();
 
-        return bonLivraisonMereRepo.search(keyword, from, to, pageable);
+        LocalDateTime to = (dateTo == null)
+                ? LocalDate.of(2999, 12, 31).atTime(23, 59, 59)
+                : dateTo.atTime(23, 59, 59);
+
+        return bonLivraisonMereRepo.searchMulti(n, f, d, from, to, pageable);
     }
 
 
@@ -49,5 +58,13 @@ public class BonLivraisonMereService {
 
     public Optional<BonLivraisonMere> getBonLivraisonMereById(String id) {
         return this.bonLivraisonMereRepo.findById(id);
+    }
+
+    public BonLivraisonMere getBonLivraisonMereByIdFacture(String idFacture) {
+        return bonLivraisonMereRepo.findByIdFacture(idFacture);
+    }
+
+    public boolean existsByIdFacture(String idFacture) {
+        return bonLivraisonMereRepo.existsByIdFacture(idFacture);
     }
 }

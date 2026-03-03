@@ -3,6 +3,7 @@ package afg.achat.afgApprovAchat.repository;
 import afg.achat.afgApprovAchat.model.Famille;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -12,4 +13,7 @@ public interface FamilleRepo extends JpaRepository<Famille, Integer> {
     @Query("SELECT f FROM Famille f WHERE f.description = :designation")
     Famille findFamilleByDescription(String designation);
     Boolean existsFamilleByDescriptionIgnoreCase(String designation);
+
+    @Query("SELECT f FROM Famille f WHERE LOWER(TRIM(f.description)) = LOWER(TRIM(:desc))")
+    Famille findByDescriptionIgnoreCaseTrim(@Param("desc") String desc);
 }

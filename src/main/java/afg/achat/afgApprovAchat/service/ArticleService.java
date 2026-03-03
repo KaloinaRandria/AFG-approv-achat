@@ -3,6 +3,7 @@ package afg.achat.afgApprovAchat.service;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.Famille;
 import afg.achat.afgApprovAchat.model.util.ArticleHistorique;
+import afg.achat.afgApprovAchat.model.util.MontantCalculator;
 import afg.achat.afgApprovAchat.model.util.Udm;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.ArticleRepo;
@@ -10,6 +11,8 @@ import afg.achat.afgApprovAchat.service.util.ArticleHistoriqueService;
 import afg.achat.afgApprovAchat.service.util.UdmService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -152,4 +155,36 @@ public class ArticleService {
     public List<Article> search(String q) {
         return articleRepo.findByCodeArticleContainingIgnoreCaseOrDesignationContainingIgnoreCase(q, q);
     }
+
+    public Page<Article> searchArticlesMulti(
+            String code,
+            String designation,
+            String famille,
+            String udm,
+            Pageable pageable
+    ) {
+        String c = (code == null) ? "" : code.trim();
+        String d = (designation == null) ? "" : designation.trim();
+        String f = (famille == null) ? "" : famille.trim();
+        String u = (udm == null) ? "" : udm.trim();
+
+        return articleRepo.searchMulti(c, d, f, u, pageable);
+    }
+
+
+    @Transactional
+    public void updatePrixUnitaire(String codeArticle, String prixUnitaireStr) {
+        if (prixUnitaireStr == null || prixUnitaireStr.isBlank()) return;
+
+        Article a = this.getArticleByCodeArticle(codeArticle)
+                .orElseThrow(() -> new IllegalArgumentException("Article introuvable: " + codeArticle));
+
+        a.setPrixUnitaire(prixUnitaireStr);
+        articleRepo.save(a);
+    }
+
+    public Article getArticleByCodeProvisoire(String codeProvisoire) {
+        return articleRepo.findArticlesByCodeProvisoire(codeProvisoire);
+    }
+
 }

@@ -25,4 +25,19 @@ public class VEtatStockService {
     public VEtatStock getEtatStockByCode(String codeArticle) {
         return vEtatStockRepo.findByCodeArticle(codeArticle);
     }
+
+    public Page<VEtatStock> searchEtatStockMulti(
+            String code,
+            String designation,
+            String udm,
+            String etat,
+            Pageable pageable
+    ) {
+        String c = (code == null) ? "" : code.trim();
+        String d = (designation == null) ? "" : designation.trim();
+        String u = (udm == null) ? "" : udm.trim();
+        String e = (etat == null) ? "" : etat.trim().toUpperCase(); // RUPTURE/SEUIL/NORMAL
+
+        return vEtatStockRepo.searchMulti(c, d, u, e, pageable);
+    }
 }
