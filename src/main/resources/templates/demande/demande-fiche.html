@@ -72,7 +72,7 @@
                                             (${currentStep == iStat.index} ? 'is-current' : ''))">
 
                                         <div class="dot">
-<!--                                            <span th:text="${iStat.index}"></span>-->
+                                            <span th:text="${iStat.index}"></span>
                                         </div>
 
                                         <div class="label" th:text="${step}"></div>
@@ -776,6 +776,7 @@
             <form th:action="@{/demande/fiche/{id}/send-codep(id=${demande.id})}" method="post">
 
                 <div class="modal-body">
+                    <input type="hidden" name="typeDemande" id="codepTypeDemande">
 
                     <!-- Message informatif -->
                     <div class="alert alert-warning mb-0">
@@ -1102,6 +1103,15 @@
             renderFiles();
         });
     }
+
+    document.getElementById('codepModal').addEventListener('show.bs.modal', function () {
+        const typeDemandeSelect = document.querySelector('select[name="typeDemande"]');
+        const codepTypeDemandeInput = document.getElementById('codepTypeDemande');
+
+        if (typeDemandeSelect && codepTypeDemandeInput) {
+            codepTypeDemandeInput.value = typeDemandeSelect.value;
+        }
+    });
     /*]]>*/
 </script>
 </body>
