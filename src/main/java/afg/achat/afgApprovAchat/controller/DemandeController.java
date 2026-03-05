@@ -3,12 +3,14 @@ package afg.achat.afgApprovAchat.controller;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.demande.*;
+import afg.achat.afgApprovAchat.model.util.CommentaireFinance;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
+import afg.achat.afgApprovAchat.service.util.CommentaireFinanceService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
@@ -59,6 +61,8 @@ public class DemandeController {
     ValidationDemandeService validationDemandeService;
     @Autowired
     CodepPieceJointeService codepPieceJointeService;
+    @Autowired
+    private CommentaireFinanceService commentaireFinanceService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -608,13 +612,14 @@ public class DemandeController {
 
 
         List<String> steps;
-
         if (isCodepWorkflow) {
             steps = List.of(
                     "Demande créée",
                     "Supérieur hiérarchique (N+1)",
                     "Moyens Généraux",
-                    "Comité de dépense"
+                    "Comité de dépense",
+                    "Contrôleur de gestion",
+                    "DFC"
             );
         } else {
             steps = List.of(
@@ -666,19 +671,30 @@ public class DemandeController {
         List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
 
 
-        int currentStep = switch (demande.getStatut()) {
-            case StatutDemande.CREE -> 1;
-            case StatutDemande.VALIDATION_N1 -> 2;
-            case StatutDemande.VALIDATION_N2 -> 3; // Controleur
-            case StatutDemande.VALIDATION_N3 -> 4; // DFC
-            case StatutDemande.DECISION_CODEP -> 3; // CODEP
-            case StatutDemande.VALIDE -> {
-                if (isCodepWorkflow) yield 4; // ou 5 selon ton stepper
-                else yield 5;
-            }
-            case StatutDemande.REFUSE -> -1;
-            default -> 1;
-        };
+        int currentStep;
+        if (isCodepWorkflow) {
+            currentStep = switch (demande.getStatut()) {
+                case StatutDemande.CREE           -> 0;
+                case StatutDemande.VALIDATION_N1  -> 1;  // N+1
+                case StatutDemande.DECISION_CODEP -> 2;  // MG (en attente CODEP)  -- à revoir selon votre logique
+                // Après CODEP approuvé
+                case StatutDemande.VALIDATION_N2  -> 4;  // Contrôleur
+                case StatutDemande.VALIDATION_N3  -> 5;  // DFC
+                case StatutDemande.VALIDE         -> 6;
+                case StatutDemande.REFUSE         -> -1;
+                default -> 0;
+            };
+        }  else {
+            currentStep = switch (demande.getStatut()) {
+                case StatutDemande.CREE          -> 0;
+                case StatutDemande.VALIDATION_N1 -> 1;
+                case StatutDemande.VALIDATION_N2 -> 2;
+                case StatutDemande.VALIDATION_N3 -> 3;
+                case StatutDemande.VALIDE        -> 4;
+                case StatutDemande.REFUSE        -> -1;
+                default -> 0;
+            };
+        }
 
         List<ValidationDemande> historiques = validationDemandeService.getHistorique(demande);
         CentreBudgetaire[] ligneBudgetaires = centreBudgetaireService.getAllCentreBudgetaires();
@@ -727,6 +743,7 @@ public class DemandeController {
                            @RequestParam(value = "commentaire", required = false) String commentaire,
                            @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                            @RequestParam(name = "ligneBudgetaire", required = false) String ligneBudgetaire,
+                           @RequestParam(name = "commentaireControleur" , required = false) String commentaireControleur,
                            RedirectAttributes redirectAttributes)  {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
@@ -854,9 +871,9 @@ public class DemandeController {
                     }
                 }
                 int etape = demande.getStatut();
-                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 logValidation(demande, current, cmt, etape);
-                redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le Comité de dépense.");
+                redirectAttributes.addFlashAttribute("ok", "Demande validée par le Comité de dépense.");
                 return "redirect:/demande/fiche/" + id;
             }
 
@@ -887,8 +904,20 @@ public class DemandeController {
             if (canDecisionControleur) {
                 try {
                     demande.setCentreBudgetaire(centreBudgetaireService.getCentreBudgetaireById(Integer.parseInt(ligneBudgetaire)));
+
+                    CommentaireFinance commentaireFinance = new CommentaireFinance();
+                    commentaireFinance.setCommentateur(current);
+                    commentaireFinance.setDemandeMere(demande);
+                    commentaireFinance.setCommentaire(commentaireControleur);
+
+                    commentaireFinanceService.insertCommentaireFinance(commentaireFinance);
                 } catch (IllegalArgumentException ex) {
-                    redirectAttributes.addFlashAttribute("ko", "ligne budgetaire invalide : " + ligneBudgetaire);
+                    if (ligneBudgetaire.isEmpty() || ligneBudgetaire.isBlank()) {
+                        redirectAttributes.addFlashAttribute("ko", "ligne budgetaire obligatoire pour le contrôleur de gestion.");
+                    }
+                    if (commentaireControleur.isEmpty() || commentaireControleur.isBlank()) {
+                        redirectAttributes.addFlashAttribute("ko", "Le commentaire du contrôleur de gestion est obligatoire.");
+                    }
                     return "redirect:/demande/fiche/" + id;
                 }
                 int etape = demande.getStatut();
@@ -929,6 +958,7 @@ public class DemandeController {
 
     @PostMapping("/fiche/{id}/send-codep")
     public String sendToCodep(@PathVariable("id") String id,
+                              @RequestParam(value = "typeDemande", required = false) String typeDemande,
                               RedirectAttributes redirectAttributes) {
 
         DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
@@ -949,12 +979,21 @@ public class DemandeController {
             return "redirect:/demande/fiche/" + id;
         }
 
-//        if (demande.getNatureDemande() == null) {
-//            redirectAttributes.addFlashAttribute("ko", "Veuillez choisir le Type de demande (OPEX/CAPEX) avant de valider.");
-//            return "redirect:/demande/fiche/" + id;
-//        }
-        demande.setNatureDemande(DemandeMere.NatureDemande.CAPEX);
+        //MG doit obligatoirement choisir le type (OPEX/CAPEX)
+        String td = (typeDemande == null) ? "" : typeDemande.trim().toUpperCase();
+        if (td.isBlank()) {
+            redirectAttributes.addFlashAttribute("ko", "Veuillez choisir le Type de demande (OPEX/CAPEX) avant de valider.");
+            return "redirect:/demande/fiche/" + id;
+        }
+
+        try {
+            demande.setNatureDemande(DemandeMere.NatureDemande.valueOf(td));
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("ko", "Type de demande invalide : " + typeDemande);
+            return "redirect:/demande/fiche/" + id;
+        }
         demande.setViaCodep(true);
+
         // Passage au statut CODEP
         int etape = demande.getStatut();
         demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.DECISION_CODEP);

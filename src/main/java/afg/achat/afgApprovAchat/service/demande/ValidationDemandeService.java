@@ -20,6 +20,6 @@ public class ValidationDemandeService {
 
     public List<ValidationDemande> getHistorique(DemandeMere demande) {
         return validationDemandeRepo
-                .findByDemandeMereOrderByDateActionDesc(demande);
+                .findByDemandeMereOrderByDateActionAsc(demande);
     }
 }
