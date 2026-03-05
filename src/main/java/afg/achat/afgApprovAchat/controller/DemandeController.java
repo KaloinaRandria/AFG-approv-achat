@@ -3,12 +3,14 @@ package afg.achat.afgApprovAchat.controller;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.demande.*;
+import afg.achat.afgApprovAchat.model.util.CommentaireFinance;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
+import afg.achat.afgApprovAchat.service.util.CommentaireFinanceService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
@@ -59,6 +61,8 @@ public class DemandeController {
     ValidationDemandeService validationDemandeService;
     @Autowired
     CodepPieceJointeService codepPieceJointeService;
+    @Autowired
+    private CommentaireFinanceService commentaireFinanceService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -739,6 +743,7 @@ public class DemandeController {
                            @RequestParam(value = "commentaire", required = false) String commentaire,
                            @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                            @RequestParam(name = "ligneBudgetaire", required = false) String ligneBudgetaire,
+                           @RequestParam(name = "commentaireControleur" , required = false) String commentaireControleur,
                            RedirectAttributes redirectAttributes)  {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
@@ -899,8 +904,20 @@ public class DemandeController {
             if (canDecisionControleur) {
                 try {
                     demande.setCentreBudgetaire(centreBudgetaireService.getCentreBudgetaireById(Integer.parseInt(ligneBudgetaire)));
+
+                    CommentaireFinance commentaireFinance = new CommentaireFinance();
+                    commentaireFinance.setCommentateur(current);
+                    commentaireFinance.setDemandeMere(demande);
+                    commentaireFinance.setCommentaire(commentaireControleur);
+
+                    commentaireFinanceService.insertCommentaireFinance(commentaireFinance);
                 } catch (IllegalArgumentException ex) {
-                    redirectAttributes.addFlashAttribute("ko", "ligne budgetaire invalide : " + ligneBudgetaire);
+                    if (ligneBudgetaire.isEmpty() || ligneBudgetaire.isBlank()) {
+                        redirectAttributes.addFlashAttribute("ko", "ligne budgetaire obligatoire pour le contrôleur de gestion.");
+                    }
+                    if (commentaireControleur.isEmpty() || commentaireControleur.isBlank()) {
+                        redirectAttributes.addFlashAttribute("ko", "Le commentaire du contrôleur de gestion est obligatoire.");
+                    }
                     return "redirect:/demande/fiche/" + id;
                 }
                 int etape = demande.getStatut();
