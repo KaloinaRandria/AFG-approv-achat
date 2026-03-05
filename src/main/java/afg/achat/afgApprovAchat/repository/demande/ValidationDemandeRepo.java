@@ -9,5 +9,5 @@ import java.util.List;
 
 @Repository
 public interface ValidationDemandeRepo extends JpaRepository<ValidationDemande, Integer> {
-    List<ValidationDemande> findByDemandeMereOrderByDateActionDesc(DemandeMere demandeMere);
+    List<ValidationDemande> findByDemandeMereOrderByDateActionAsc(DemandeMere demandeMere);
 }
