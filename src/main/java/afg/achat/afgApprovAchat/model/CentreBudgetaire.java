@@ -19,6 +19,9 @@ public class CentreBudgetaire {
     String description;
     @ManyToOne @JoinColumn(name = "code_parent", referencedColumnName = "id_centre_budgetaire")
     CentreBudgetaire codeParent;
+    Integer niveau;
+    @ManyToOne @JoinColumn(name = "id_agence", referencedColumnName = "id_agence")
+    Agence agence;
     public CentreBudgetaire(String codeCentre){
         this.setCodeCentre(codeCentre);
     }
