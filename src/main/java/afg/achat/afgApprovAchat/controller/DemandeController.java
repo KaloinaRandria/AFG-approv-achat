@@ -152,21 +152,27 @@ public class DemandeController {
                 for (MultipartFile f : piecesJointes) {
                     if (f == null || f.isEmpty()) continue;
 
+                    // Vérification avant stockage
+                    String contentType = f.getContentType();
+                    if (contentType == null || (!contentType.startsWith("image/") && !contentType.equals("application/pdf"))) {
+                        redirectAttributes.addFlashAttribute("ko",
+                                "Fichier refusé : '" + f.getOriginalFilename() + "'. Seuls les images et PDF sont autorisés.");
+                        return "redirect:/demande/add";
+                    }
+
                     String safeDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
                     String ref = demandeMere.getId()
                             + "_" + demandeMere.getDemandeur().getNom()
                             + "_" + demandeMere.getDemandeur().getPrenom()
                             + "_" + safeDate;
 
-                    // 1) sauvegarde disque (retourne le nom stocké)
                     String storedName = storageService.store(f, ref);
 
-                    // 2) sauvegarde DB
                     DemandePieceJointe pj = new DemandePieceJointe();
                     pj.setDemande(demandeMere);
                     pj.setOriginalName(f.getOriginalFilename());
                     pj.setStoredName(storedName);
-                    pj.setContentType(f.getContentType() != null ? f.getContentType() : "application/octet-stream");
+                    pj.setContentType(contentType);
                     pj.setSize(f.getSize());
                     pj.setUploadedAt(LocalDateTime.now());
 
@@ -216,7 +222,7 @@ public class DemandeController {
         boolean isAdminOrMGOrControleur = isAdmin || isMG || isControleur;
         boolean isBackofficeValidator = isAdmin || isMG || isControleur || isDFC;
 
-        // ✅ Labels (table)
+        //Labels (table)
         Map<Integer, String> statutLabels = Map.of(
                 StatutDemande.CREE, "En attente N+1",
                 StatutDemande.VALIDATION_N1, "En attente M.G.",
@@ -227,7 +233,7 @@ public class DemandeController {
                 StatutDemande.REFUSE, "REFUSÉE"
         );
 
-        // ✅ Filtre (select)
+        //Filtre (select)
         Map<Integer, String> statutFiltre = new LinkedHashMap<>();
         statutFiltre.put(StatutDemande.CREE, "En attente N+1");
         statutFiltre.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
@@ -238,10 +244,10 @@ public class DemandeController {
         statutFiltre.put(StatutDemande.REFUSE, "REFUSÉE");
         model.addAttribute("statutFiltre", statutFiltre);
 
-        // ✅ Normalisation (0/null => pas de filtre)
+        //Normalisation (0/null => pas de filtre)
         Integer statutFilter = (statut == null || statut == 0) ? null : statut;
 
-        // ✅ Visibilité (moi + enfants)
+        //Visibilité (moi + enfants)
         List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
         boolean hasChildren = visibleIds.size() > 1;
 
@@ -415,7 +421,7 @@ public class DemandeController {
             }
         }
 
-        // ✅ Model commun
+        // Model commun
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demandesMeres", demandesMeres);
 
@@ -434,7 +440,7 @@ public class DemandeController {
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
         model.addAttribute("statutLabels", statutLabels);
 
-        // ✅ flags de vue
+        // flags de vue
         model.addAttribute("isMGOnly", isMG && !isAdmin);
         model.addAttribute("isControleurOnly", isControleur && !isAdmin);
         model.addAttribute("isDFCOnly", isDFC && !isAdmin);

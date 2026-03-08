@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.stream.Stream;
 
 @Service
@@ -38,21 +39,47 @@ public class FileSystemStorageService implements StorageService {
 		}
 	}
 
+	private static final List<String> ALLOWED_TYPES = List.of(
+			"image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"
+	);
+
+	private static final List<String> ALLOWED_EXTENSIONS = List.of(
+			".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf"
+	);
+
 	@Override
-	public String store(MultipartFile file,String ref) {
-		String filename = StringUtils.cleanPath(ref+"_"+file.getOriginalFilename());
+	public String store(MultipartFile file, String ref) {
+		String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
+		String filename = StringUtils.cleanPath(ref + "_" + originalFilename);
+
 		try {
 			if (file.isEmpty()) {
 				throw new StorageException("Failed to store empty file " + filename);
 			}
 			if (filename.contains("..")) {
-				// This is a security check
 				throw new StorageException(
 						"Cannot store file with relative path outside current directory " + filename);
 			}
-			try (InputStream inputStream = file.getInputStream()) {
-				Files.copy(inputStream, this.rootLocation.resolve(filename), StandardCopyOption.REPLACE_EXISTING);
+
+			// ✅ Validation de l'extension
+			String ext = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
+			if (!ALLOWED_EXTENSIONS.contains(ext)) {
+				throw new StorageException("Format de fichier non autorisé : " + ext +
+						". Seuls les images et PDF sont acceptés.");
 			}
+
+			// ✅ Validation du Content-Type
+			String contentType = file.getContentType();
+			if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
+				throw new StorageException("Type de fichier non autorisé : " + contentType +
+						". Seuls les images et PDF sont acceptés.");
+			}
+
+			try (InputStream inputStream = file.getInputStream()) {
+				Files.copy(inputStream, this.rootLocation.resolve(filename),
+						StandardCopyOption.REPLACE_EXISTING);
+			}
+
 		} catch (IOException e) {
 			throw new StorageException("Failed to store file " + filename, e);
 		}

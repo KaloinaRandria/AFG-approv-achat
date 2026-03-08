@@ -136,7 +136,7 @@
                                            id="piecesJointes"
                                            name="piecesJointes"
                                            multiple
-                                           accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+                                           accept="image/jpeg,image/png,image/gif,image/webp,application/pdf">
 
                                     <div class="file-upload-content">
                                         <div class="mb-2">
@@ -149,14 +149,20 @@
                                             ou cliquez pour sélectionner
                                         </p>
                                         <span class="badge bg-light text-dark border">
-                                            PDF · Word · Excel · Images
+                                            PDF · Images (JPG, PNG, GIF, WEBP)
                                         </span>
                                     </div>
                                 </div>
 
                                 <div class="form-text text-muted mt-2">
                                     <i class="fas fa-info-circle me-1"></i>
-                                    Plusieurs fichiers peuvent être joints (taille raisonnable recommandée).
+                                    Formats acceptés : PDF et images uniquement (taille raisonnable recommandée).
+                                </div>
+
+                                <!-- Alerte format invalide -->
+                                <div id="fileTypeAlert" class="alert alert-danger mt-2 d-none" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <span id="fileTypeAlertMsg"></span>
                                 </div>
 
                                 <!-- Liste des fichiers sélectionnés -->
@@ -729,10 +735,43 @@
         }
 
         // =========================
-        // 7) Gestion pièces jointes (liste + suppression)
+        // 7) Gestion pièces jointes (liste + suppression + validation type)
         // =========================
         if (fileInput && fileList) {
             let selectedFiles = [];
+
+            const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+            const TYPE_ICONS = {
+                'application/pdf': 'fa-file-pdf text-danger',
+                'image/jpeg':      'fa-file-image text-primary',
+                'image/png':       'fa-file-image text-primary',
+                'image/gif':       'fa-file-image text-primary',
+                'image/webp':      'fa-file-image text-primary',
+            };
+            const TYPE_LABELS = {
+                'application/pdf': 'PDF',
+                'image/jpeg':      'JPG',
+                'image/png':       'PNG',
+                'image/gif':       'GIF',
+                'image/webp':      'WEBP',
+            };
+
+            // Alerte format — à ajouter dans ton HTML juste après #fileList :
+            // <div id="fileTypeAlert" class="alert alert-danger mt-2 d-none"></div>
+            const fileTypeAlert   = document.getElementById("fileTypeAlert");
+            const fileTypeAlertMsg = document.getElementById("fileTypeAlertMsg"); // le <span>
+
+            function showAlert(msg) {
+                if (!fileTypeAlert || !fileTypeAlertMsg) return;
+                fileTypeAlertMsg.textContent = msg;
+                fileTypeAlert.classList.remove("d-none");
+            }
+
+            function hideAlert() {
+                if (!fileTypeAlert || !fileTypeAlertMsg) return;
+                fileTypeAlert.classList.add("d-none");
+                fileTypeAlertMsg.textContent = "";
+            }
 
             function renderFiles() {
                 fileList.innerHTML = "";
@@ -746,18 +785,24 @@
                 }
 
                 selectedFiles.forEach((file, idx) => {
+                    const icon  = TYPE_ICONS[file.type]  || 'fa-file text-secondary';
+                    const label = TYPE_LABELS[file.type] || file.type;
+                    const sizeKb = (file.size / 1024).toFixed(1);
+
                     const li = document.createElement("li");
                     li.className = "list-group-item d-flex align-items-center gap-2";
                     li.innerHTML = `
-          <i class="fas fa-file-alt text-gradient-blue"></i>
-          <div class="flex-grow-1">
-            <div class="fw-semibold">${escapeHtml(file.name)}</div>
-            <small class="text-muted">${(file.size / 1024).toFixed(1)} KB</small>
-          </div>
-          <button type="button" class="btn btn-outline-danger btn-sm" data-remove-index="${idx}">
-            <i class="fas fa-trash"></i>
-          </button>
-        `;
+                <i class="fas ${icon}"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">${escapeHtml(file.name)}
+                        <span class="badge bg-light text-dark border ms-1">${label}</span>
+                    </div>
+                    <small class="text-muted">${sizeKb} KB</small>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-remove-index="${idx}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
                     fileList.appendChild(li);
                 });
             }
@@ -769,7 +814,31 @@
             }
 
             fileInput.addEventListener("change", () => {
-                selectedFiles = Array.from(fileInput.files || []);
+                hideAlert();
+
+                const incoming = Array.from(fileInput.files || []);
+                const rejected = incoming.filter(f => !ALLOWED_TYPES.includes(f.type));
+                const accepted  = incoming.filter(f =>  ALLOWED_TYPES.includes(f.type));
+
+                if (rejected.length > 0) {
+                    const names = rejected.map(f => escapeHtml(f.name)).join(", ");
+                    showAlert(`⚠️ Fichier(s) refusé(s) — formats non autorisés (PDF et images uniquement) : ${names}`);
+
+                    // Si tous rejetés → reset complet
+                    if (accepted.length === 0) {
+                        fileInput.value = "";
+                        selectedFiles = [];
+                        renderFiles();
+                        return;
+                    }
+                }
+
+                // Éviter les doublons (par nom + taille)
+                const existingKeys = new Set(selectedFiles.map(f => `${f.name}_${f.size}`));
+                const newFiles = accepted.filter(f => !existingKeys.has(`${f.name}_${f.size}`));
+
+                selectedFiles = [...selectedFiles, ...newFiles];
+                syncInputFiles();
                 renderFiles();
             });
 
@@ -783,11 +852,13 @@
                 selectedFiles.splice(index, 1);
                 syncInputFiles();
                 renderFiles();
+                if (selectedFiles.length === 0) hideAlert();
             });
 
             btnClearFiles?.addEventListener("click", () => {
                 selectedFiles = [];
                 fileInput.value = "";
+                hideAlert();
                 renderFiles();
             });
 
