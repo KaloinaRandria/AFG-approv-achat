@@ -149,8 +149,8 @@
                                             ou cliquez pour sélectionner
                                         </p>
                                         <span class="badge bg-light text-dark border">
-                                            PDF · Images (JPG, PNG, GIF, WEBP)
-                                        </span>
+                PDF · Images (JPG, PNG, GIF, WEBP)
+            </span>
                                     </div>
                                 </div>
 
@@ -168,19 +168,19 @@
                                 <!-- Liste des fichiers sélectionnés -->
                                 <ul id="fileList" class="list-group list-group-flush mt-3"></ul>
 
-                                <!-- Modal aperçu pièce jointe -->
-                                <div class="modal fade" id="previewFileModal" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog modal-lg modal-dialog-centered">
-                                        <div class="modal-content rounded-4">
-                                            <div class="modal-header border-0">
-                                                <h6 class="modal-title fw-bold" id="previewFileName"></h6>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                            </div>
-                                            <div class="modal-body text-center p-3" id="previewFileBody"></div>
+                            </div>
+
+                            <div class="modal fade" id="previewFileModal" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-lg-down">
+                                    <div class="modal-content rounded-4">
+                                        <div class="modal-header border-0">
+                                            <h6 class="modal-title fw-bold" id="previewFileName"></h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
+                                        <div class="modal-body text-center p-3" id="previewFileBody"></div>
                                     </div>
                                 </div>
-
+                            </div>
 
                         </div>
                     </div>
@@ -771,6 +771,9 @@
             const fileTypeAlert    = document.getElementById("fileTypeAlert");
             const fileTypeAlertMsg = document.getElementById("fileTypeAlertMsg");
             const previewModal     = document.getElementById("previewFileModal");
+            if (previewModal && previewModal.parentElement !== document.body) {
+                document.body.appendChild(previewModal);
+            }
             const previewFileName  = document.getElementById("previewFileName");
             const previewFileBody  = document.getElementById("previewFileBody");
 
@@ -902,23 +905,23 @@
                     if (file.type.startsWith("image/")) {
                         reader.onload = (ev) => {
                             previewFileBody.innerHTML = `
-                        <img src="${ev.target.result}"
-                             class="img-fluid rounded-3"
-                             style="max-height: 70vh; object-fit: contain;"
-                             alt="${escapeHtml(file.name)}">
-                    `;
+                                <img src="${ev.target.result}"
+                                     class="img-fluid rounded-3"
+                                     style="max-height: 80vh; width: 100%; object-fit: contain;"
+                                     alt="${escapeHtml(file.name)}">
+                            `;
                         };
                         reader.readAsDataURL(file);
 
                     } else if (file.type === "application/pdf") {
                         reader.onload = (ev) => {
                             previewFileBody.innerHTML = `
-                        <iframe src="${ev.target.result}"
-                                width="100%"
-                                height="500px"
-                                style="border: none; border-radius: 8px;">
-                        </iframe>
-                    `;
+                                <iframe src="${ev.target.result}"
+                                        width="100%"
+                                        height="750px"
+                                        style="border: none; border-radius: 8px; min-height: 75vh;">
+                                </iframe>
+                            `;
                         };
                         reader.readAsDataURL(file);
                     }

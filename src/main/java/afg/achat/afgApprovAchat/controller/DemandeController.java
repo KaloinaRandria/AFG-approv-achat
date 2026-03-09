@@ -24,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -32,6 +33,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -1011,12 +1014,27 @@ public class DemandeController {
 
     @GetMapping("/files/{id}/{filename:.+}")
     public ResponseEntity<Resource> downloadDemandeFile(@PathVariable String id,
-                                                        @PathVariable String filename) {
+                                                        @PathVariable String filename) throws IOException {
 
         Resource file = storageService.loadAsResource(filename);
 
+        // Détecter le content type réel du fichier
+        String contentType = Files.probeContentType(file.getFile().toPath());
+        if (contentType == null) {
+            contentType = "application/octet-stream";
+        }
+
+        // inline pour images et PDF, attachment pour le reste
+        boolean isPreviewable = contentType.startsWith("image/")
+                || contentType.equals("application/pdf");
+
+        String disposition = isPreviewable
+                ? "inline; filename=\"" + file.getFilename() + "\""
+                : "attachment; filename=\"" + file.getFilename() + "\"";
+
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFilename() + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                .contentType(MediaType.parseMediaType(contentType))
                 .body(file);
     }
 

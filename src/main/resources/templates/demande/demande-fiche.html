@@ -226,16 +226,52 @@
                                         <li class="list-group-item d-flex justify-content-between align-items-center"
                                             th:each="pj : ${piecesJointes}">
                                             <div class="d-flex align-items-center gap-2">
-                                                <i class="fas fa-file-alt text-gradient-blue"></i>
+
+                                                <!-- Icône selon type -->
+                                                <i class="fas"
+                                                   th:classappend="${#strings.startsWith(pj.contentType, 'image/') ? 'fa-file-image text-primary' : 'fa-file-pdf text-danger'}">
+                                                </i>
+
                                                 <span th:text="${pj.originalName}">fichier.pdf</span>
+
+                                                <!-- Badge type -->
+                                                <span class="badge bg-light text-dark border"
+                                                      th:text="${#strings.startsWith(pj.contentType, 'image/') ? 'IMAGE' : 'PDF'}">
+                        </span>
                                             </div>
 
-                                            <a class="btn btn-sm btn-outline-gradient-blue "
-                                               th:href="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}">
-                                                <i class="fas fa-download me-1"></i> Télécharger
-                                            </a>
+                                            <div class="d-flex gap-2">
+                                                <!-- Aperçu (images + PDF uniquement) -->
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-primary btn-preview-pj"
+                                                        th:data-url="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}"
+                                                        th:data-name="${pj.originalName}"
+                                                        th:data-type="${pj.contentType}"
+                                                        title="Aperçu">
+                                                    <i class="fas fa-eye me-1"></i> Aperçu
+                                                </button>
+
+                                                <!-- Téléchargement -->
+                                                <a class="btn btn-sm btn-outline-gradient-blue"
+                                                   th:href="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}">
+                                                    <i class="fas fa-download me-1"></i> Télécharger
+                                                </a>
+                                            </div>
                                         </li>
                                     </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal aperçu pièce jointe — à placer avant </body> -->
+                        <div class="modal fade" id="previewPjModal" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-lg-down">
+                                <div class="modal-content rounded-4">
+                                    <div class="modal-header border-0">
+                                        <h6 class="modal-title fw-bold" id="previewPjFileName"></h6>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body text-center p-3" id="previewPjBody"></div>
                                 </div>
                             </div>
                         </div>
@@ -1131,6 +1167,93 @@
             codepTypeDemandeInput.value = typeDemandeSelect.value;
         }
     });
+
+    // ========= Aperçu pièces jointes (fiche demande) =========
+    (function () {
+        const previewPjModal    = document.getElementById("previewPjModal");
+        const previewPjFileName = document.getElementById("previewPjFileName");
+        const previewPjBody     = document.getElementById("previewPjBody");
+
+        if (!previewPjModal) return;
+
+        // Rattacher au body pour éviter conflits z-index
+        if (previewPjModal.parentElement !== document.body) {
+            document.body.appendChild(previewPjModal);
+        }
+
+        document.querySelectorAll(".btn-preview-pj").forEach(btn => {
+            btn.addEventListener("click", function () {
+                const url         = this.dataset.url;
+                const name        = this.dataset.name;
+                const contentType = this.dataset.type;
+
+                previewPjFileName.textContent = name;
+                previewPjBody.innerHTML = `
+                <div class="text-muted py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                </div>`;
+
+                if (contentType.startsWith("image/")) {
+                    previewPjBody.innerHTML = `
+                    <img src="${url}"
+                         class="img-fluid rounded-3"
+                         style="max-height: 80vh; width: 100%; object-fit: contain;"
+                         alt="${name}">
+                `;
+                } else if (contentType === "application/pdf") {
+                    previewPjBody.innerHTML = `
+                    <div class="text-muted py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    </div>`;
+
+                    fetch(url)
+                        .then(res => res.blob())
+                        .then(blob => {
+                            const blobUrl = URL.createObjectURL(blob);
+                            previewPjBody.innerHTML = `
+                    <iframe src="${blobUrl}"
+                            width="100%"
+                            height="750px"
+                            style="border: none; border-radius: 8px; min-height: 75vh;">
+                    </iframe>
+                    `;
+                        })
+                        .catch(() => {
+                            previewPjBody.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Impossible d'afficher ce fichier.
+                    </div>`;
+                        });
+                }
+
+                // Détruire l'ancienne instance si elle existe
+                const existing = window.bootstrap.Modal.getInstance(previewPjModal);
+                if (existing) existing.dispose();
+
+                const bsModal = new window.bootstrap.Modal(previewPjModal, {
+                    backdrop: true,
+                    keyboard: true,
+                    focus: true
+                });
+
+                bsModal.show();
+
+                previewPjModal.addEventListener("hidden.bs.modal", () => {
+                    // Libérer le blob URL si existant
+                    const iframe = previewPjBody.querySelector("iframe");
+                    if (iframe && iframe.src.startsWith("blob:")) {
+                        URL.revokeObjectURL(iframe.src);
+                    }
+                    previewPjBody.innerHTML = "";
+                    document.querySelectorAll(".modal-backdrop").forEach(el => el.remove());
+                    document.body.classList.remove("modal-open");
+                    document.body.style.removeProperty("overflow");
+                    document.body.style.removeProperty("padding-right");
+                }, { once: true });
+            });
+        });
+    })();
     /*]]>*/
 </script>
 </body>
