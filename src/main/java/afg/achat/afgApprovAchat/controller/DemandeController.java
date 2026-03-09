@@ -24,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -503,6 +504,70 @@ public class DemandeController {
             redirectAttributes.addFlashAttribute("ko", "Erreur : " + e.getMessage());
             return "redirect:/demande/fiche/" + ligne.getDemandeMere().getId();
         }
+    }
+
+    @PostMapping("/ligne/{ligneId}/quantite")
+    public ResponseEntity<?> updateQuantiteLigne(@PathVariable Integer ligneId,
+                                                 @RequestParam("quantite") double quantite) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        DemandeFille ligne = demandeFilleService.getDemandeFilleById(ligneId);
+        if (ligne == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Ligne introuvable"));
+        }
+
+        if (quantite <= 0) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "La quantité doit être supérieure à 0"));
+        }
+
+        // Garder l'ancienne quantité pour l'historique
+        double ancienneQuantite = ligne.getQuantite();
+
+        // Mettre à jour la quantité
+        ligne.setQuantite(String.valueOf(quantite));
+        demandeFilleService.saveDemandeFille(ligne);
+
+        // Recalculer le total de la demande mère
+        DemandeMere demande = ligne.getDemandeMere();
+        List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
+        double newTotal = lignes.stream()
+                .mapToDouble(l -> {
+                    double qte = 0;
+                    try { qte = l.getQuantite(); } catch (Exception ignored) {}
+                    double prix = (l.getArticle().getPrixUnitaire() == null) ? 0 : l.getArticle().getPrixUnitaire();
+                    return qte * prix;
+                })
+                .sum();
+
+        demande.setTotalPrix(newTotal);
+        demandeMereService.saveDemandeMere(demande);
+
+        //Historique de la modification
+        String designation  = ligne.getArticle() != null ? ligne.getArticle().getDesignation()  : "Article inconnu";
+        String codeArticle  = ligne.getArticle() != null ? ligne.getArticle().getCodeArticle()  : "N/A";
+
+        ValidationDemande historique = new ValidationDemande();
+        historique.setDemandeMere(demande);
+        historique.setValidateur(current);
+        historique.setEtape(demande.getStatut());
+        historique.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+        historique.setCommentaire(
+                "Modification de quantité — " + codeArticle + " - " + designation
+                        + " | Ancienne quantité : " + ancienneQuantite
+                        + " → Nouvelle quantité : " + quantite
+        );
+        historique.setDateAction(String.valueOf(LocalDateTime.now()));
+
+        validationDemandeService.logAction(historique);
+
+        return ResponseEntity.ok(Map.of(
+                "quantite", quantite,
+                "newTotal", newTotal
+        ));
     }
     @GetMapping("/fiche/{id}")
     public String demandeFiche(@PathVariable("id") String id,

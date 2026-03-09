@@ -311,29 +311,72 @@
 
                                 <td th:text="${l.article != null ? l.article.codeArticle +' - '+ l.article.designation : '-'}">-</td>
 
-                                    <td class="text-end" th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">0</td>
+                                    <td class="text-end" th:data-ligne-id="${l.id}">
+                                        <!-- Mode lecture -->
+                                        <span class="qte-display"
+                                              th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                                            0
+                                        </span>
 
+                                        <!-- Mode édition (caché par défaut) -->
+                                        <input type="number"
+                                               class="form-control form-control-sm qte-input d-none text-end"
+                                               th:value="${l.quantite}"
+                                               min="0.01"
+                                               step="0.01"
+                                               style="width: 100px; display: inline-block;">
+                                    </td>
                                     <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_CONTROLEUR','ROLE_DFC')"
                                         class="text-end"
                                         th:text="${#numbers.formatDecimal(l.article.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')}">
                                         0
                                     </td>
 
+                                    <!-- Colonne action : ajouter le bouton édition à côté du bouton refus -->
                                     <td th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE and
                                     l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP
                                     and (canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionCodep)}"
                                         class="text-center">
-                                        <button type="button"
-                                                class="btn-refus-article btnRefuserArticle"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#refusArticleModal"
-                                                th:data-id="${l.id}"
-                                                th:data-designation="${l.article.designation}"
-                                                th:data-codearticle="${l.article.codeArticle}"
-                                                th:disabled="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
-                                                or !(canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionCodep)}">
-                                            <i class="fas fa-times-circle"></i>
-                                        </button>
+
+                                        <div class="d-flex gap-1 justify-content-center">
+
+                                            <!-- Bouton éditer quantité -->
+                                            <button type="button"
+                                                    class="btn-edit-qte"
+                                                    th:data-id="${l.id}"
+                                                    title="Modifier la quantité">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+
+                                            <!-- Bouton confirmer (caché par défaut) -->
+                                            <button type="button"
+                                                    class="btn-save-qte d-none"
+                                                    th:data-id="${l.id}"
+                                                    title="Confirmer">
+                                                <i class="fas fa-check text-success"></i>
+                                            </button>
+
+                                            <!-- Bouton annuler (caché par défaut) -->
+                                            <button type="button"
+                                                    class="btn-cancel-qte d-none"
+                                                    th:data-id="${l.id}"
+                                                    title="Annuler">
+                                                <i class="fas fa-times text-danger"></i>
+                                            </button>
+
+                                            <!-- Bouton refus existant -->
+                                            <button type="button"
+                                                    class="btn-refus-article btnRefuserArticle"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#refusArticleModal"
+                                                    th:data-id="${l.id}"
+                                                    th:data-designation="${l.article.designation}"
+                                                    th:data-codearticle="${l.article.codeArticle}"
+                                                    th:disabled="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
+                or !(canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionCodep)}">
+                                                <i class="fas fa-times-circle"></i>
+                                            </button>
+                                        </div>
                                     </td>
 
                                 </tr>
@@ -1252,6 +1295,86 @@
             });
         });
     })();
+
+    // ========= Édition quantité inline =========
+    document.addEventListener("click", function (e) {
+
+        // --- Clic sur crayon : passer en mode édition ---
+        const btnEdit = e.target.closest(".btn-edit-qte");
+        if (btnEdit) {
+            const ligneId = btnEdit.dataset.id;
+            const td = document.querySelector(`td[data-ligne-id="${ligneId}"]`);
+            if (!td) return;
+
+            td.querySelector(".qte-display").classList.add("d-none");
+            td.querySelector(".qte-input").classList.remove("d-none");
+            td.querySelector(".qte-input").focus();
+
+            btnEdit.classList.add("d-none");
+            document.querySelector(`.btn-save-qte[data-id="${ligneId}"]`).classList.remove("d-none");
+            document.querySelector(`.btn-cancel-qte[data-id="${ligneId}"]`).classList.remove("d-none");
+            return;
+        }
+
+        // --- Clic sur annuler ---
+        const btnCancel = e.target.closest(".btn-cancel-qte");
+        if (btnCancel) {
+            const ligneId = btnCancel.dataset.id;
+            resetLigne(ligneId);
+            return;
+        }
+
+        // --- Clic sur confirmer ---
+        const btnSave = e.target.closest(".btn-save-qte");
+        if (btnSave) {
+            const ligneId = btnSave.dataset.id;
+            const td = document.querySelector(`td[data-ligne-id="${ligneId}"]`);
+            if (!td) return;
+
+            const input = td.querySelector(".qte-input");
+            const newQte = parseFloat(input.value);
+
+            if (isNaN(newQte) || newQte <= 0) {
+                input.classList.add("is-invalid");
+                return;
+            }
+
+            // Appel AJAX
+            const formData = new FormData();
+            formData.append("quantite", newQte);
+
+            fetch(`/demande/ligne/${ligneId}/quantite`, {
+                method: "POST",
+                body: formData
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+
+                    //Recharger la page pour afficher l'historique mis à jour
+                    window.location.reload();
+                })
+                .catch(() => {
+                    alert("Erreur lors de la mise à jour de la quantité.");
+                });
+        }
+    });
+
+    function resetLigne(ligneId) {
+        const td = document.querySelector(`td[data-ligne-id="${ligneId}"]`);
+        if (!td) return;
+
+        td.querySelector(".qte-display").classList.remove("d-none");
+        td.querySelector(".qte-input").classList.add("d-none");
+        td.querySelector(".qte-input").classList.remove("is-invalid");
+
+        document.querySelector(`.btn-edit-qte[data-id="${ligneId}"]`).classList.remove("d-none");
+        document.querySelector(`.btn-save-qte[data-id="${ligneId}"]`).classList.add("d-none");
+        document.querySelector(`.btn-cancel-qte[data-id="${ligneId}"]`).classList.add("d-none");
+    }
     /*]]>*/
 </script>
 </body>
