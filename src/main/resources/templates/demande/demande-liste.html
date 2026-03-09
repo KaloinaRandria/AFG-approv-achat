@@ -150,7 +150,7 @@
             </div>
         </div>
 
-        <!-- ✅ CARD TABLEAU -->
+        <!-- CARD TABLEAU -->
         <div class="card shadow-lg border-0">
             <div class="card-body">
 
@@ -164,7 +164,7 @@
                     <table id="demandeTable" class="table table-striped table-hover table-bordered dt-head-gradient">
                         <thead>
                         <tr>
-                            <!-- ✅ Tri ID -->
+                            <!-- Tri ID -->
                             <th>
                                 <a class="text-decoration-none text-dark"
                                    th:href="@{/demande/list(page=0,size=${size},
@@ -177,7 +177,7 @@
                                 </a>
                             </th>
 
-                            <!-- ✅ Tri dateDemande -->
+                            <!-- Tri dateDemande -->
                             <th>
                                 <a class="text-decoration-none text-dark"
                                    th:href="@{/demande/list(page=0,size=${size},
@@ -194,12 +194,13 @@
                                 <i class="far fa-user me-2 icon-gradient-light-blue"></i>Demandeur
                             </th>
                             <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"><i class="fas fa-tags me-2 icon-gradient-light-blue"></i>Type de demande</th>
+                            <th>Priorité</th>
                             <th>Statut</th>
                         </tr>
                         </thead>
 
                         <tbody>
-                        <!-- ✅ Pageable -->
+                        <!-- Pageable -->
                         <tr th:each="demande : ${demandesMeres.content}"
                             class="clickable-row"
                             th:attr="data-href=@{/demande/fiche/{id}(id=${demande.id})}">
@@ -232,6 +233,7 @@
                                 class="td-nature-demande"
                                 th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">
                             </td>
+                            <td th:text="${demande.priorite != null ? demande.priorite : '-'}"></td>
                             <td>
                               <span class="badge-status"
                                     th:classappend="

@@ -136,7 +136,7 @@
                                            id="piecesJointes"
                                            name="piecesJointes"
                                            multiple
-                                           accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+                                           accept="image/jpeg,image/png,image/gif,image/webp,application/pdf">
 
                                     <div class="file-upload-content">
                                         <div class="mb-2">
@@ -149,20 +149,38 @@
                                             ou cliquez pour sélectionner
                                         </p>
                                         <span class="badge bg-light text-dark border">
-                                            PDF · Word · Excel · Images
-                                        </span>
+                PDF · Images (JPG, PNG, GIF, WEBP)
+            </span>
                                     </div>
                                 </div>
 
                                 <div class="form-text text-muted mt-2">
                                     <i class="fas fa-info-circle me-1"></i>
-                                    Plusieurs fichiers peuvent être joints (taille raisonnable recommandée).
+                                    Formats acceptés : PDF et images uniquement (taille raisonnable recommandée).
+                                </div>
+
+                                <!-- Alerte format invalide -->
+                                <div id="fileTypeAlert" class="alert alert-danger mt-2 d-none" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <span id="fileTypeAlertMsg"></span>
                                 </div>
 
                                 <!-- Liste des fichiers sélectionnés -->
                                 <ul id="fileList" class="list-group list-group-flush mt-3"></ul>
+
                             </div>
 
+                            <div class="modal fade" id="previewFileModal" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-lg-down">
+                                    <div class="modal-content rounded-4">
+                                        <div class="modal-header border-0">
+                                            <h6 class="modal-title fw-bold" id="previewFileName"></h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body text-center p-3" id="previewFileBody"></div>
+                                    </div>
+                                </div>
+                            </div>
 
                         </div>
                     </div>
@@ -729,10 +747,47 @@
         }
 
         // =========================
-        // 7) Gestion pièces jointes (liste + suppression)
+        // 7) Gestion pièces jointes (liste + suppression + validation type)
         // =========================
         if (fileInput && fileList) {
             let selectedFiles = [];
+
+            const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+            const TYPE_ICONS = {
+                'application/pdf': 'fa-file-pdf text-danger',
+                'image/jpeg':      'fa-file-image text-primary',
+                'image/png':       'fa-file-image text-primary',
+                'image/gif':       'fa-file-image text-primary',
+                'image/webp':      'fa-file-image text-primary',
+            };
+            const TYPE_LABELS = {
+                'application/pdf': 'PDF',
+                'image/jpeg':      'JPG',
+                'image/png':       'PNG',
+                'image/gif':       'GIF',
+                'image/webp':      'WEBP',
+            };
+
+            const fileTypeAlert    = document.getElementById("fileTypeAlert");
+            const fileTypeAlertMsg = document.getElementById("fileTypeAlertMsg");
+            const previewModal     = document.getElementById("previewFileModal");
+            if (previewModal && previewModal.parentElement !== document.body) {
+                document.body.appendChild(previewModal);
+            }
+            const previewFileName  = document.getElementById("previewFileName");
+            const previewFileBody  = document.getElementById("previewFileBody");
+
+            function showAlert(msg) {
+                if (!fileTypeAlert || !fileTypeAlertMsg) return;
+                fileTypeAlertMsg.textContent = msg;
+                fileTypeAlert.classList.remove("d-none");
+            }
+
+            function hideAlert() {
+                if (!fileTypeAlert || !fileTypeAlertMsg) return;
+                fileTypeAlert.classList.add("d-none");
+                fileTypeAlertMsg.textContent = "";
+            }
 
             function renderFiles() {
                 fileList.innerHTML = "";
@@ -746,18 +801,38 @@
                 }
 
                 selectedFiles.forEach((file, idx) => {
+                    const icon    = TYPE_ICONS[file.type]  || 'fa-file text-secondary';
+                    const label   = TYPE_LABELS[file.type] || file.type;
+                    const sizeKb  = (file.size / 1024).toFixed(1);
+                    const isImage = file.type.startsWith("image/");
+                    const isPdf   = file.type === "application/pdf";
+
                     const li = document.createElement("li");
                     li.className = "list-group-item d-flex align-items-center gap-2";
                     li.innerHTML = `
-          <i class="fas fa-file-alt text-gradient-blue"></i>
-          <div class="flex-grow-1">
-            <div class="fw-semibold">${escapeHtml(file.name)}</div>
-            <small class="text-muted">${(file.size / 1024).toFixed(1)} KB</small>
-          </div>
-          <button type="button" class="btn btn-outline-danger btn-sm" data-remove-index="${idx}">
-            <i class="fas fa-trash"></i>
-          </button>
-        `;
+                <i class="fas ${icon}"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">${escapeHtml(file.name)}
+                        <span class="badge bg-light text-dark border ms-1">${label}</span>
+                    </div>
+                    <small class="text-muted">${sizeKb} KB</small>
+                </div>
+                <div class="d-flex gap-2">
+                    ${(isImage || isPdf) ? `
+                    <button type="button"
+                            class="btn btn-outline-gradient-blue btn-sm"
+                            data-preview-index="${idx}"
+                            title="Aperçu">
+                        <i class="fas fa-eye"></i>
+                    </button>` : ''}
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            data-remove-index="${idx}"
+                            title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
                     fileList.appendChild(li);
                 });
             }
@@ -769,25 +844,118 @@
             }
 
             fileInput.addEventListener("change", () => {
-                selectedFiles = Array.from(fileInput.files || []);
+                hideAlert();
+
+                const incoming = Array.from(fileInput.files || []);
+                const rejected = incoming.filter(f => !ALLOWED_TYPES.includes(f.type));
+                const accepted = incoming.filter(f =>  ALLOWED_TYPES.includes(f.type));
+
+                if (rejected.length > 0) {
+                    const names = rejected.map(f => escapeHtml(f.name)).join(", ");
+                    showAlert(`Fichier(s) refusé(s) — formats non autorisés (PDF et images uniquement) : ${names}`);
+
+                    if (accepted.length === 0) {
+                        fileInput.value = "";
+                        selectedFiles = [];
+                        renderFiles();
+                        return;
+                    }
+                }
+
+                // Éviter les doublons (par nom + taille)
+                const existingKeys = new Set(selectedFiles.map(f => `${f.name}_${f.size}`));
+                const newFiles = accepted.filter(f => !existingKeys.has(`${f.name}_${f.size}`));
+
+                selectedFiles = [...selectedFiles, ...newFiles];
+                syncInputFiles();
                 renderFiles();
             });
 
+            // Suppression
             fileList.addEventListener("click", (e) => {
-                const btn = e.target.closest("[data-remove-index]");
-                if (!btn) return;
+                const btnRemove = e.target.closest("[data-remove-index]");
+                if (btnRemove) {
+                    const index = parseInt(btnRemove.getAttribute("data-remove-index"), 10);
+                    if (!Number.isNaN(index)) {
+                        selectedFiles.splice(index, 1);
+                        syncInputFiles();
+                        renderFiles();
+                        if (selectedFiles.length === 0) hideAlert();
+                    }
+                    return;
+                }
 
-                const index = parseInt(btn.getAttribute("data-remove-index"), 10);
-                if (Number.isNaN(index)) return;
+                // Aperçu
+                const btnPreviewFile = e.target.closest("[data-preview-index]");
+                if (btnPreviewFile) {
+                    const index = parseInt(btnPreviewFile.getAttribute("data-preview-index"), 10);
+                    if (Number.isNaN(index)) return;
 
-                selectedFiles.splice(index, 1);
-                syncInputFiles();
-                renderFiles();
+                    const file = selectedFiles[index];
+                    if (!file || !previewModal) return;
+
+                    previewFileBody.innerHTML = `
+                <div class="text-muted py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                </div>`;
+                    previewFileName.textContent = file.name;
+
+                    const reader = new FileReader();
+
+                    if (file.type.startsWith("image/")) {
+                        reader.onload = (ev) => {
+                            previewFileBody.innerHTML = `
+                                <img src="${ev.target.result}"
+                                     class="img-fluid rounded-3"
+                                     style="max-height: 80vh; width: 100%; object-fit: contain;"
+                                     alt="${escapeHtml(file.name)}">
+                            `;
+                        };
+                        reader.readAsDataURL(file);
+
+                    } else if (file.type === "application/pdf") {
+                        reader.onload = (ev) => {
+                            previewFileBody.innerHTML = `
+                                <iframe src="${ev.target.result}"
+                                        width="100%"
+                                        height="750px"
+                                        style="border: none; border-radius: 8px; min-height: 75vh;">
+                                </iframe>
+                            `;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+
+                    // Détruire l'ancienne instance si elle existe
+                    const existingModal = window.bootstrap.Modal.getInstance(previewModal);
+                    if (existingModal) {
+                        existingModal.dispose();
+                    }
+
+// Créer une nouvelle instance propre
+                    const bsModal = new window.bootstrap.Modal(previewModal, {
+                        backdrop: true,
+                        keyboard: true,
+                        focus: true
+                    });
+
+                    bsModal.show();
+
+                    previewModal.addEventListener("hidden.bs.modal", () => {
+                        previewFileBody.innerHTML = "";
+                        // Nettoyer les backdrops résiduels
+                        document.querySelectorAll(".modal-backdrop").forEach(el => el.remove());
+                        document.body.classList.remove("modal-open");
+                        document.body.style.removeProperty("overflow");
+                        document.body.style.removeProperty("padding-right");
+                    }, { once: true });
+                }
             });
 
             btnClearFiles?.addEventListener("click", () => {
                 selectedFiles = [];
                 fileInput.value = "";
+                hideAlert();
                 renderFiles();
             });
 

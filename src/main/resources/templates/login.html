@@ -27,11 +27,22 @@
 										type="text" class="form-control" name="email"
 										placeholder="xxxxxxxx@afgbank.mg" value="kaloina.randriambololona@afgbank.mg" required>
 								</div>
-								<div class="mb-3">
-									<label class="form-label" style="color:white"><strong>Mot de passe</strong></label> <input
-										type="password" class="form-control" name="password"
-										placeholder="*******" value="mdp" required>
-								</div>
+                                <div class="mb-3">
+                                    <label class="form-label" style="color:white"><strong>Mot de passe</strong></label>
+                                    <div class="input-group">
+                                        <input
+                                                type="password" class="form-control" name="password"
+                                                placeholder="*******"
+                                                id="password"
+                                                value="mdp"
+                                                required>
+
+                                        <span class="input-group-text" style="cursor:pointer"
+                                              onclick="togglePassword()">
+                                            <i class="fa fa-eye" id="toggleIcon"></i>
+                                        </span>
+                                    </div>
+                                </div>
 								<br>
 								<div class="col-md-4" style="margin-left: auto;margin-right: auto;display: block;">
 									<div class="d-grid">
@@ -46,6 +57,24 @@
 			</div>
 		</div>
 	</div>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    function togglePassword() {
+        const input = document.getElementById("password");
+        const icon = document.getElementById("toggleIcon");
+
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.remove("fa-eye");
+            icon.classList.add("fa-eye-slash");
+        } else {
+            input.type = "password";
+            icon.classList.remove("fa-eye-slash");
+            icon.classList.add("fa-eye");
+        }
+    }
+    /*]]>*/
+</script>
 </body>
 
 </html>

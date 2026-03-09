@@ -24,6 +24,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -32,6 +34,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -152,21 +156,27 @@ public class DemandeController {
                 for (MultipartFile f : piecesJointes) {
                     if (f == null || f.isEmpty()) continue;
 
+                    // Vérification avant stockage
+                    String contentType = f.getContentType();
+                    if (contentType == null || (!contentType.startsWith("image/") && !contentType.equals("application/pdf"))) {
+                        redirectAttributes.addFlashAttribute("ko",
+                                "Fichier refusé : '" + f.getOriginalFilename() + "'. Seuls les images et PDF sont autorisés.");
+                        return "redirect:/demande/add";
+                    }
+
                     String safeDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
                     String ref = demandeMere.getId()
                             + "_" + demandeMere.getDemandeur().getNom()
                             + "_" + demandeMere.getDemandeur().getPrenom()
                             + "_" + safeDate;
 
-                    // 1) sauvegarde disque (retourne le nom stocké)
                     String storedName = storageService.store(f, ref);
 
-                    // 2) sauvegarde DB
                     DemandePieceJointe pj = new DemandePieceJointe();
                     pj.setDemande(demandeMere);
                     pj.setOriginalName(f.getOriginalFilename());
                     pj.setStoredName(storedName);
-                    pj.setContentType(f.getContentType() != null ? f.getContentType() : "application/octet-stream");
+                    pj.setContentType(contentType);
                     pj.setSize(f.getSize());
                     pj.setUploadedAt(LocalDateTime.now());
 
@@ -216,7 +226,7 @@ public class DemandeController {
         boolean isAdminOrMGOrControleur = isAdmin || isMG || isControleur;
         boolean isBackofficeValidator = isAdmin || isMG || isControleur || isDFC;
 
-        // ✅ Labels (table)
+        //Labels (table)
         Map<Integer, String> statutLabels = Map.of(
                 StatutDemande.CREE, "En attente N+1",
                 StatutDemande.VALIDATION_N1, "En attente M.G.",
@@ -227,7 +237,7 @@ public class DemandeController {
                 StatutDemande.REFUSE, "REFUSÉE"
         );
 
-        // ✅ Filtre (select)
+        //Filtre (select)
         Map<Integer, String> statutFiltre = new LinkedHashMap<>();
         statutFiltre.put(StatutDemande.CREE, "En attente N+1");
         statutFiltre.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
@@ -238,10 +248,10 @@ public class DemandeController {
         statutFiltre.put(StatutDemande.REFUSE, "REFUSÉE");
         model.addAttribute("statutFiltre", statutFiltre);
 
-        // ✅ Normalisation (0/null => pas de filtre)
+        //Normalisation (0/null => pas de filtre)
         Integer statutFilter = (statut == null || statut == 0) ? null : statut;
 
-        // ✅ Visibilité (moi + enfants)
+        //Visibilité (moi + enfants)
         List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
         boolean hasChildren = visibleIds.size() > 1;
 
@@ -415,7 +425,7 @@ public class DemandeController {
             }
         }
 
-        // ✅ Model commun
+        // Model commun
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demandesMeres", demandesMeres);
 
@@ -434,7 +444,7 @@ public class DemandeController {
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
         model.addAttribute("statutLabels", statutLabels);
 
-        // ✅ flags de vue
+        // flags de vue
         model.addAttribute("isMGOnly", isMG && !isAdmin);
         model.addAttribute("isControleurOnly", isControleur && !isAdmin);
         model.addAttribute("isDFCOnly", isDFC && !isAdmin);
@@ -494,6 +504,70 @@ public class DemandeController {
             redirectAttributes.addFlashAttribute("ko", "Erreur : " + e.getMessage());
             return "redirect:/demande/fiche/" + ligne.getDemandeMere().getId();
         }
+    }
+
+    @PostMapping("/ligne/{ligneId}/quantite")
+    public ResponseEntity<?> updateQuantiteLigne(@PathVariable Integer ligneId,
+                                                 @RequestParam("quantite") double quantite) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        DemandeFille ligne = demandeFilleService.getDemandeFilleById(ligneId);
+        if (ligne == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Ligne introuvable"));
+        }
+
+        if (quantite <= 0) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "La quantité doit être supérieure à 0"));
+        }
+
+        // Garder l'ancienne quantité pour l'historique
+        double ancienneQuantite = ligne.getQuantite();
+
+        // Mettre à jour la quantité
+        ligne.setQuantite(String.valueOf(quantite));
+        demandeFilleService.saveDemandeFille(ligne);
+
+        // Recalculer le total de la demande mère
+        DemandeMere demande = ligne.getDemandeMere();
+        List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
+        double newTotal = lignes.stream()
+                .mapToDouble(l -> {
+                    double qte = 0;
+                    try { qte = l.getQuantite(); } catch (Exception ignored) {}
+                    double prix = (l.getArticle().getPrixUnitaire() == null) ? 0 : l.getArticle().getPrixUnitaire();
+                    return qte * prix;
+                })
+                .sum();
+
+        demande.setTotalPrix(newTotal);
+        demandeMereService.saveDemandeMere(demande);
+
+        //Historique de la modification
+        String designation  = ligne.getArticle() != null ? ligne.getArticle().getDesignation()  : "Article inconnu";
+        String codeArticle  = ligne.getArticle() != null ? ligne.getArticle().getCodeArticle()  : "N/A";
+
+        ValidationDemande historique = new ValidationDemande();
+        historique.setDemandeMere(demande);
+        historique.setValidateur(current);
+        historique.setEtape(demande.getStatut());
+        historique.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+        historique.setCommentaire(
+                "Modification de quantité — " + codeArticle + " - " + designation
+                        + " | Ancienne quantité : " + ancienneQuantite
+                        + " → Nouvelle quantité : " + quantite
+        );
+        historique.setDateAction(String.valueOf(LocalDateTime.now()));
+
+        validationDemandeService.logAction(historique);
+
+        return ResponseEntity.ok(Map.of(
+                "quantite", quantite,
+                "newTotal", newTotal
+        ));
     }
     @GetMapping("/fiche/{id}")
     public String demandeFiche(@PathVariable("id") String id,
@@ -728,6 +802,7 @@ public class DemandeController {
         model.addAttribute("badgeIcons", badgeIcons);
 
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
+        model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("ligneBudgetaires", ligneBudgetaires);
 
         return "demande/demande-fiche";
@@ -744,7 +819,7 @@ public class DemandeController {
                            @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                            @RequestParam(name = "ligneBudgetaire", required = false) String ligneBudgetaire,
                            @RequestParam(name = "commentaireControleur" , required = false) String commentaireControleur,
-                           RedirectAttributes redirectAttributes)  {
+                           RedirectAttributes redirectAttributes, HttpServletRequest request)  {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
@@ -892,6 +967,39 @@ public class DemandeController {
                     return "redirect:/demande/fiche/" + id;
                 }
 
+                String prioriteParam = request.getParameter("priorite");
+                String anciennePriorite = demande.getPriorite() != null
+                        ? demande.getPriorite().name() : "N/A";
+
+                if (prioriteParam != null && !prioriteParam.isBlank()) {
+                    try {
+                        DemandeMere.PrioriteDemande nouvellePriorite =
+                                DemandeMere.PrioriteDemande.valueOf(prioriteParam.trim().toUpperCase());
+
+                        // Historique seulement si la priorité a changé
+                        if (!prioriteParam.trim().toUpperCase().equals(anciennePriorite)) {
+                            demande.setPriorite(nouvellePriorite);
+
+                            ValidationDemande histoPriorite = new ValidationDemande();
+                            histoPriorite.setDemandeMere(demande);
+                            histoPriorite.setValidateur(current);
+                            histoPriorite.setEtape(demande.getStatut());
+                            histoPriorite.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                            histoPriorite.setCommentaire(
+                                    "Modification de priorité : " + anciennePriorite
+                                            + " → " + nouvellePriorite.name()
+                            );
+                            histoPriorite.setDateAction(String.valueOf(LocalDateTime.now()));
+                            validationDemandeService.logAction(histoPriorite);
+                        }
+
+                    } catch (IllegalArgumentException ex) {
+                        redirectAttributes.addFlashAttribute("ko",
+                                "Priorité invalide : " + prioriteParam);
+                        return "redirect:/demande/fiche/" + id;
+                    }
+                }
+
                 //On enregistre le type puis on passe au statut suivant
                 demandeMereService.saveDemandeMere(demande);
                 int etape = demande.getStatut();
@@ -1005,12 +1113,27 @@ public class DemandeController {
 
     @GetMapping("/files/{id}/{filename:.+}")
     public ResponseEntity<Resource> downloadDemandeFile(@PathVariable String id,
-                                                        @PathVariable String filename) {
+                                                        @PathVariable String filename) throws IOException {
 
         Resource file = storageService.loadAsResource(filename);
 
+        // Détecter le content type réel du fichier
+        String contentType = Files.probeContentType(file.getFile().toPath());
+        if (contentType == null) {
+            contentType = "application/octet-stream";
+        }
+
+        // inline pour images et PDF, attachment pour le reste
+        boolean isPreviewable = contentType.startsWith("image/")
+                || contentType.equals("application/pdf");
+
+        String disposition = isPreviewable
+                ? "inline; filename=\"" + file.getFilename() + "\""
+                : "attachment; filename=\"" + file.getFilename() + "\"";
+
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFilename() + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                .contentType(MediaType.parseMediaType(contentType))
                 .body(file);
     }
 

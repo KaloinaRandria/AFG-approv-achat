@@ -180,6 +180,12 @@
                                 <!-- Lecture seule -->
                                 <div th:text="${demande.centreBudgetaire != null ? demande.centreBudgetaire.codeCentre +' - '+ demande.centreBudgetaire.description   : '-'}">-</div>
                             </div>
+                            <div>
+                                <strong>Priorité:</strong>
+
+                                <!-- Lecture seule -->
+                                <div th:text="${demande.priorite != null ? demande.priorite : '-'}">-</div>
+                            </div>
                         </div>
 
                         <!-- MOTIF & DESCRIPTION -->
@@ -226,14 +232,37 @@
                                         <li class="list-group-item d-flex justify-content-between align-items-center"
                                             th:each="pj : ${piecesJointes}">
                                             <div class="d-flex align-items-center gap-2">
-                                                <i class="fas fa-file-alt text-gradient-blue"></i>
+
+                                                <!-- Icône selon type -->
+                                                <i class="fas"
+                                                   th:classappend="${#strings.startsWith(pj.contentType, 'image/') ? 'fa-file-image text-primary' : 'fa-file-pdf text-danger'}">
+                                                </i>
+
                                                 <span th:text="${pj.originalName}">fichier.pdf</span>
+
+                                                <!-- Badge type -->
+                                                <span class="badge bg-light text-dark border"
+                                                      th:text="${#strings.startsWith(pj.contentType, 'image/') ? 'IMAGE' : 'PDF'}">
+                        </span>
                                             </div>
 
-                                            <a class="btn btn-sm btn-outline-gradient-blue "
-                                               th:href="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}">
-                                                <i class="fas fa-download me-1"></i> Télécharger
-                                            </a>
+                                            <div class="d-flex gap-2">
+                                                <!-- Aperçu (images + PDF uniquement) -->
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-gradient-blue btn-preview-pj"
+                                                        th:data-url="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}"
+                                                        th:data-name="${pj.originalName}"
+                                                        th:data-type="${pj.contentType}"
+                                                        title="Aperçu">
+                                                    <i class="fas fa-eye me-1"></i> Aperçu
+                                                </button>
+
+                                                <!-- Téléchargement -->
+                                                <a class="btn btn-sm btn-outline-gradient-blue"
+                                                   th:href="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}">
+                                                    <i class="fas fa-download me-1"></i> Télécharger
+                                                </a>
+                                            </div>
                                         </li>
                                     </ul>
                                 </div>
@@ -288,29 +317,73 @@
 
                                 <td th:text="${l.article != null ? l.article.codeArticle +' - '+ l.article.designation : '-'}">-</td>
 
-                                    <td class="text-end" th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">0</td>
+                                    <td class="text-end" th:data-ligne-id="${l.id}">
+                                        <!-- Mode lecture -->
+                                        <span class="qte-display"
+                                              th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                                            0
+                                        </span>
 
+                                        <!-- Mode édition (caché par défaut) -->
+                                        <input type="number"
+                                               class="form-control form-control-sm qte-input d-none text-end"
+                                               th:value="${l.quantite}"
+                                               min="0.01"
+                                               step="0.01"
+                                               style="width: 100px; display: inline-block;">
+                                    </td>
                                     <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_CONTROLEUR','ROLE_DFC')"
                                         class="text-end"
                                         th:text="${#numbers.formatDecimal(l.article.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')}">
                                         0
                                     </td>
 
+                                    <!-- Colonne action : ajouter le bouton édition à côté du bouton refus -->
                                     <td th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE and
-                                    l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP
-                                    and (canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionCodep)}"
+                                        l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP
+                                        and (canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionCodep)}"
                                         class="text-center">
-                                        <button type="button"
-                                                class="btn-refus-article btnRefuserArticle"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#refusArticleModal"
-                                                th:data-id="${l.id}"
-                                                th:data-designation="${l.article.designation}"
-                                                th:data-codearticle="${l.article.codeArticle}"
-                                                th:disabled="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
-                                                or !(canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionCodep)}">
-                                            <i class="fas fa-times-circle"></i>
-                                        </button>
+
+                                        <div class="d-flex gap-2 justify-content-center">
+
+                                            <!-- Bouton éditer quantité -->
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-gradient-blue btn-edit-qte"
+                                                    th:data-id="${l.id}"
+                                                    title="Modifier la quantité">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+
+                                            <!-- Bouton confirmer (caché par défaut) -->
+                                            <button type="button"
+                                                    class="btn btn-sm btn-gradient-green btn-save-qte d-none"
+                                                    th:data-id="${l.id}"
+                                                    title="Confirmer la modification">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+
+                                            <!-- Bouton annuler (caché par défaut) -->
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger btn-cancel-qte d-none"
+                                                    th:data-id="${l.id}"
+                                                    title="Annuler la modification">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+
+                                            <!-- Bouton refus -->
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger btnRefuserArticle btn-refus-article"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#refusArticleModal"
+                                                    th:data-id="${l.id}"
+                                                    th:data-designation="${l.article.designation}"
+                                                    th:data-codearticle="${l.article.codeArticle}"
+                                                    th:disabled="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
+                                                    or !(canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionCodep)}"
+                                                    title="Refuser cet article">
+                                                <i class="fas fa-times-circle"></i>
+                                            </button>
+                                        </div>
                                     </td>
 
                                 </tr>
@@ -376,6 +449,24 @@
 
                                     <div class="text-muted small mb-2" th:if="${canDecisionDFC}">
                                         <i class="fas fa-gavel me-1"></i> Validation D.F.C.
+                                    </div>
+
+                                    <!-- ================= PRIORITE (MG seulement) ================= -->
+                                    <div class="mb-2"
+                                         th:if="${canDecisionMG and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
+
+                                        <label class="form-label mb-1">
+                                            Priorité
+                                            <span class="text-muted small fw-normal">(optionnel — laisser vide pour conserver)</span>
+                                        </label>
+
+                                        <select class="form-select form-select-sm" name="priorite">
+                                            <option value="">-- Conserver la priorité actuelle --</option>
+                                            <option th:each="p : ${priorites}"
+                                                    th:value="${p.name()}"
+                                                    th:text="${p.name()}">
+                                            </option>
+                                        </select>
                                     </div>
 
 
@@ -630,6 +721,17 @@
 
         </div>
     </section>
+</div>
+<div class="modal fade" id="previewPjModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-lg-down">
+        <div class="modal-content rounded-4">
+            <div class="modal-header border-0">
+                <h6 class="modal-title fw-bold" id="previewPjFileName"></h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-3" id="previewPjBody"></div>
+        </div>
+    </div>
 </div>
 <div class="modal fade" id="decisionModal" tabindex="-1"
      aria-labelledby="decisionModalLabel" aria-hidden="true"
@@ -1131,6 +1233,173 @@
             codepTypeDemandeInput.value = typeDemandeSelect.value;
         }
     });
+
+    // ========= Aperçu pièces jointes (fiche demande) =========
+    (function () {
+        const previewPjModal    = document.getElementById("previewPjModal");
+        const previewPjFileName = document.getElementById("previewPjFileName");
+        const previewPjBody     = document.getElementById("previewPjBody");
+
+        if (!previewPjModal) return;
+
+        // Rattacher au body pour éviter conflits z-index
+        if (previewPjModal.parentElement !== document.body) {
+            document.body.appendChild(previewPjModal);
+        }
+
+        document.querySelectorAll(".btn-preview-pj").forEach(btn => {
+            btn.addEventListener("click", function () {
+                const url         = this.dataset.url;
+                const name        = this.dataset.name;
+                const contentType = this.dataset.type;
+
+                previewPjFileName.textContent = name;
+                previewPjBody.innerHTML = `
+                <div class="text-muted py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                </div>`;
+
+                if (contentType.startsWith("image/")) {
+                    previewPjBody.innerHTML = `
+                    <img src="${url}"
+                         class="img-fluid rounded-3"
+                         style="max-height: 80vh; width: 100%; object-fit: contain;"
+                         alt="${name}">
+                `;
+                } else if (contentType === "application/pdf") {
+                    previewPjBody.innerHTML = `
+                    <div class="text-muted py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    </div>`;
+
+                    fetch(url)
+                        .then(res => res.blob())
+                        .then(blob => {
+                            const blobUrl = URL.createObjectURL(blob);
+                            previewPjBody.innerHTML = `
+                    <iframe src="${blobUrl}"
+                            width="100%"
+                            height="750px"
+                            style="border: none; border-radius: 8px; min-height: 75vh;">
+                    </iframe>
+                    `;
+                        })
+                        .catch(() => {
+                            previewPjBody.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Impossible d'afficher ce fichier.
+                    </div>`;
+                        });
+                }
+
+                // Détruire l'ancienne instance si elle existe
+                const existing = window.bootstrap.Modal.getInstance(previewPjModal);
+                if (existing) existing.dispose();
+
+                const bsModal = new window.bootstrap.Modal(previewPjModal, {
+                    backdrop: true,
+                    keyboard: true,
+                    focus: true
+                });
+
+                bsModal.show();
+
+                previewPjModal.addEventListener("hidden.bs.modal", () => {
+                    // Libérer le blob URL si existant
+                    const iframe = previewPjBody.querySelector("iframe");
+                    if (iframe && iframe.src.startsWith("blob:")) {
+                        URL.revokeObjectURL(iframe.src);
+                    }
+                    previewPjBody.innerHTML = "";
+                    document.querySelectorAll(".modal-backdrop").forEach(el => el.remove());
+                    document.body.classList.remove("modal-open");
+                    document.body.style.removeProperty("overflow");
+                    document.body.style.removeProperty("padding-right");
+                }, { once: true });
+            });
+        });
+    })();
+
+    // ========= Édition quantité inline =========
+    document.addEventListener("click", function (e) {
+
+        // --- Clic sur crayon : passer en mode édition ---
+        const btnEdit = e.target.closest(".btn-edit-qte");
+        if (btnEdit) {
+            const ligneId = btnEdit.dataset.id;
+            const td = document.querySelector(`td[data-ligne-id="${ligneId}"]`);
+            if (!td) return;
+
+            td.querySelector(".qte-display").classList.add("d-none");
+            td.querySelector(".qte-input").classList.remove("d-none");
+            td.querySelector(".qte-input").focus();
+
+            btnEdit.classList.add("d-none");
+            document.querySelector(`.btn-save-qte[data-id="${ligneId}"]`).classList.remove("d-none");
+            document.querySelector(`.btn-cancel-qte[data-id="${ligneId}"]`).classList.remove("d-none");
+            return;
+        }
+
+        // --- Clic sur annuler ---
+        const btnCancel = e.target.closest(".btn-cancel-qte");
+        if (btnCancel) {
+            const ligneId = btnCancel.dataset.id;
+            resetLigne(ligneId);
+            return;
+        }
+
+        // --- Clic sur confirmer ---
+        const btnSave = e.target.closest(".btn-save-qte");
+        if (btnSave) {
+            const ligneId = btnSave.dataset.id;
+            const td = document.querySelector(`td[data-ligne-id="${ligneId}"]`);
+            if (!td) return;
+
+            const input = td.querySelector(".qte-input");
+            const newQte = parseFloat(input.value);
+
+            if (isNaN(newQte) || newQte <= 0) {
+                input.classList.add("is-invalid");
+                return;
+            }
+
+            // Appel AJAX
+            const formData = new FormData();
+            formData.append("quantite", newQte);
+
+            fetch(`/demande/ligne/${ligneId}/quantite`, {
+                method: "POST",
+                body: formData
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+
+                    //Recharger la page pour afficher l'historique mis à jour
+                    window.location.reload();
+                })
+                .catch(() => {
+                    alert("Erreur lors de la mise à jour de la quantité.");
+                });
+        }
+    });
+
+    function resetLigne(ligneId) {
+        const td = document.querySelector(`td[data-ligne-id="${ligneId}"]`);
+        if (!td) return;
+
+        td.querySelector(".qte-display").classList.remove("d-none");
+        td.querySelector(".qte-input").classList.add("d-none");
+        td.querySelector(".qte-input").classList.remove("is-invalid");
+
+        document.querySelector(`.btn-edit-qte[data-id="${ligneId}"]`).classList.remove("d-none");
+        document.querySelector(`.btn-save-qte[data-id="${ligneId}"]`).classList.add("d-none");
+        document.querySelector(`.btn-cancel-qte[data-id="${ligneId}"]`).classList.add("d-none");
+    }
     /*]]>*/
 </script>
 </body>
