@@ -802,6 +802,7 @@ public class DemandeController {
         model.addAttribute("badgeIcons", badgeIcons);
 
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
+        model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("ligneBudgetaires", ligneBudgetaires);
 
         return "demande/demande-fiche";
@@ -818,7 +819,7 @@ public class DemandeController {
                            @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                            @RequestParam(name = "ligneBudgetaire", required = false) String ligneBudgetaire,
                            @RequestParam(name = "commentaireControleur" , required = false) String commentaireControleur,
-                           RedirectAttributes redirectAttributes)  {
+                           RedirectAttributes redirectAttributes, HttpServletRequest request)  {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
@@ -964,6 +965,39 @@ public class DemandeController {
                 } catch (IllegalArgumentException ex) {
                     redirectAttributes.addFlashAttribute("ko", "Type de demande invalide : " + typeDemande);
                     return "redirect:/demande/fiche/" + id;
+                }
+
+                String prioriteParam = request.getParameter("priorite");
+                String anciennePriorite = demande.getPriorite() != null
+                        ? demande.getPriorite().name() : "N/A";
+
+                if (prioriteParam != null && !prioriteParam.isBlank()) {
+                    try {
+                        DemandeMere.PrioriteDemande nouvellePriorite =
+                                DemandeMere.PrioriteDemande.valueOf(prioriteParam.trim().toUpperCase());
+
+                        // Historique seulement si la priorité a changé
+                        if (!prioriteParam.trim().toUpperCase().equals(anciennePriorite)) {
+                            demande.setPriorite(nouvellePriorite);
+
+                            ValidationDemande histoPriorite = new ValidationDemande();
+                            histoPriorite.setDemandeMere(demande);
+                            histoPriorite.setValidateur(current);
+                            histoPriorite.setEtape(demande.getStatut());
+                            histoPriorite.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                            histoPriorite.setCommentaire(
+                                    "Modification de priorité : " + anciennePriorite
+                                            + " → " + nouvellePriorite.name()
+                            );
+                            histoPriorite.setDateAction(String.valueOf(LocalDateTime.now()));
+                            validationDemandeService.logAction(histoPriorite);
+                        }
+
+                    } catch (IllegalArgumentException ex) {
+                        redirectAttributes.addFlashAttribute("ko",
+                                "Priorité invalide : " + prioriteParam);
+                        return "redirect:/demande/fiche/" + id;
+                    }
                 }
 
                 //On enregistre le type puis on passe au statut suivant

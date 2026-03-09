@@ -180,6 +180,12 @@
                                 <!-- Lecture seule -->
                                 <div th:text="${demande.centreBudgetaire != null ? demande.centreBudgetaire.codeCentre +' - '+ demande.centreBudgetaire.description   : '-'}">-</div>
                             </div>
+                            <div>
+                                <strong>Priorité:</strong>
+
+                                <!-- Lecture seule -->
+                                <div th:text="${demande.priorite != null ? demande.priorite : '-'}">-</div>
+                            </div>
                         </div>
 
                         <!-- MOTIF & DESCRIPTION -->
@@ -443,6 +449,24 @@
 
                                     <div class="text-muted small mb-2" th:if="${canDecisionDFC}">
                                         <i class="fas fa-gavel me-1"></i> Validation D.F.C.
+                                    </div>
+
+                                    <!-- ================= PRIORITE (MG seulement) ================= -->
+                                    <div class="mb-2"
+                                         th:if="${canDecisionMG and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
+
+                                        <label class="form-label mb-1">
+                                            Priorité
+                                            <span class="text-muted small fw-normal">(optionnel — laisser vide pour conserver)</span>
+                                        </label>
+
+                                        <select class="form-select form-select-sm" name="priorite">
+                                            <option value="">-- Conserver la priorité actuelle --</option>
+                                            <option th:each="p : ${priorites}"
+                                                    th:value="${p.name()}"
+                                                    th:text="${p.name()}">
+                                            </option>
+                                        </select>
                                     </div>
 
 
