@@ -944,6 +944,28 @@ table.dataTable tbody tr:hover {
     color: white !important;
 }
 
+/* Rouge outline — cohérent avec btn-outline-gradient-blue et btn-outline-gradient-green */
+.btn-outline-danger {
+    background-color: transparent !important;
+    border: 2px solid #dc3545 !important;
+    color: #dc3545 !important;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-danger:hover {
+    background: linear-gradient(45deg, #b02a37 0%, #dc3545 80%) !important;
+    border-color: transparent !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(220, 53, 69, 0.35);
+}
+
+.btn-outline-danger:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(220, 53, 69, 0.25);
+}
+
 /* Violet */
 .btn-gradient-purple {
     background: linear-gradient(45deg, #7c3aed, #8b5cf6, #a78bfa) !important;

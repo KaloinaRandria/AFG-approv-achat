@@ -243,7 +243,7 @@
                                             <div class="d-flex gap-2">
                                                 <!-- Aperçu (images + PDF uniquement) -->
                                                 <button type="button"
-                                                        class="btn btn-sm btn-outline-primary btn-preview-pj"
+                                                        class="btn btn-sm btn-outline-gradient-blue btn-preview-pj"
                                                         th:data-url="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}"
                                                         th:data-name="${pj.originalName}"
                                                         th:data-type="${pj.contentType}"
@@ -334,15 +334,15 @@
 
                                     <!-- Colonne action : ajouter le bouton édition à côté du bouton refus -->
                                     <td th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE and
-                                    l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP
-                                    and (canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionCodep)}"
+                                        l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP
+                                        and (canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionCodep)}"
                                         class="text-center">
 
-                                        <div class="d-flex gap-1 justify-content-center">
+                                        <div class="d-flex gap-2 justify-content-center">
 
                                             <!-- Bouton éditer quantité -->
                                             <button type="button"
-                                                    class="btn-edit-qte"
+                                                    class="btn btn-sm btn-outline-gradient-blue btn-edit-qte"
                                                     th:data-id="${l.id}"
                                                     title="Modifier la quantité">
                                                 <i class="fas fa-pen"></i>
@@ -350,30 +350,31 @@
 
                                             <!-- Bouton confirmer (caché par défaut) -->
                                             <button type="button"
-                                                    class="btn-save-qte d-none"
+                                                    class="btn btn-sm btn-gradient-green btn-save-qte d-none"
                                                     th:data-id="${l.id}"
-                                                    title="Confirmer">
-                                                <i class="fas fa-check text-success"></i>
+                                                    title="Confirmer la modification">
+                                                <i class="fas fa-check"></i>
                                             </button>
 
                                             <!-- Bouton annuler (caché par défaut) -->
                                             <button type="button"
-                                                    class="btn-cancel-qte d-none"
+                                                    class="btn btn-sm btn-outline-danger btn-cancel-qte d-none"
                                                     th:data-id="${l.id}"
-                                                    title="Annuler">
-                                                <i class="fas fa-times text-danger"></i>
+                                                    title="Annuler la modification">
+                                                <i class="fas fa-times"></i>
                                             </button>
 
-                                            <!-- Bouton refus existant -->
+                                            <!-- Bouton refus -->
                                             <button type="button"
-                                                    class="btn-refus-article btnRefuserArticle"
+                                                    class="btn btn-sm btn-outline-danger btnRefuserArticle btn-refus-article"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#refusArticleModal"
                                                     th:data-id="${l.id}"
                                                     th:data-designation="${l.article.designation}"
                                                     th:data-codearticle="${l.article.codeArticle}"
                                                     th:disabled="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
-                or !(canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionCodep)}">
+                                                    or !(canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionCodep)}"
+                                                    title="Refuser cet article">
                                                 <i class="fas fa-times-circle"></i>
                                             </button>
                                         </div>
