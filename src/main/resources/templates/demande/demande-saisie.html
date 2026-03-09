@@ -852,7 +852,7 @@
 
                 if (rejected.length > 0) {
                     const names = rejected.map(f => escapeHtml(f.name)).join(", ");
-                    showAlert(`⚠️ Fichier(s) refusé(s) — formats non autorisés (PDF et images uniquement) : ${names}`);
+                    showAlert(`Fichier(s) refusé(s) — formats non autorisés (PDF et images uniquement) : ${names}`);
 
                     if (accepted.length === 0) {
                         fileInput.value = "";
