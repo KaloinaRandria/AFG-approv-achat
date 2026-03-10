@@ -926,7 +926,7 @@ public class DemandeController {
             if (canDecisionN1) {
                 int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
-                logValidation(demande, current, cmt, etape);
+                validationDemandeService.logValidation(demande, current, cmt, etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -959,7 +959,7 @@ public class DemandeController {
                 }
                 int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
-                logValidation(demande, current, cmt, etape);
+                validationDemandeService.logValidation(demande, current, cmt, etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le Comité de dépense.");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1016,7 +1016,7 @@ public class DemandeController {
                 demandeMereService.saveDemandeMere(demande);
                 int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
-                logValidation(demande, current, cmt , etape);
+                validationDemandeService.logValidation(demande, current, cmt , etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1042,7 +1042,7 @@ public class DemandeController {
                 }
                 int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
-                logValidation(demande, current, cmt , etape);
+                validationDemandeService.logValidation(demande, current, cmt , etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le contrôleur de gestion (N3).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1050,7 +1050,7 @@ public class DemandeController {
             if (canDecisionDFC) {
                 int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
-                logValidation(demande, current, cmt, etape);
+                validationDemandeService.logValidation(demande, current, cmt, etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée (D.F.C.).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1066,7 +1066,7 @@ public class DemandeController {
                 };
                 int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, next);
-                logValidation(demande, current, cmt, etape);
+                validationDemandeService.logValidation(demande, current, cmt, etape);
                 redirectAttributes.addFlashAttribute("ok", "Statut mis à jour (ADMIN).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1117,7 +1117,7 @@ public class DemandeController {
         // Passage au statut CODEP
         int etape = demande.getStatut();
         demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.DECISION_CODEP);
-        logValidation(demande, current, "Envoi au CODEP", etape);
+        validationDemandeService.logValidation(demande, current, "Envoi au CODEP", etape);
         redirectAttributes.addFlashAttribute("ok", "Demande envoyée au CODEP (action irréversible).");
 
         return "redirect:/demande/fiche/" + id;
@@ -1149,21 +1149,7 @@ public class DemandeController {
                 .body(file);
     }
 
-    private void logValidation(DemandeMere demande,
-                               Utilisateur user,
-                               String commentaire,
-                               int etape) {
 
-        ValidationDemande h = new ValidationDemande();
-        h.setDemandeMere(demande);
-        h.setValidateur(user);
-        h.setEtape(etape); // ← étape passée en paramètre, pas demande.getStatut()
-        h.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
-        h.setDateAction(String.valueOf(LocalDateTime.now()));
-        h.setCommentaire(commentaire);
-
-        validationDemandeService.logAction(h);
-    }
 
 
 }
