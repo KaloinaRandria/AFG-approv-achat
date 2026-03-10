@@ -40,6 +40,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Controller
@@ -925,8 +926,22 @@ public class DemandeController {
         if ("APPROVE".equals(action)) {
 
             if (canDecisionN1) {
-                sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_N1", redirectAttributes);
                 int etape = demande.getStatut();
+                List<String> pjAjoutees = sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_N1", redirectAttributes);
+                if (!pjAjoutees.isEmpty()) {
+                    String listePj = pjAjoutees.stream()
+                            .map(nom -> "• " + nom)
+                            .collect(Collectors.joining("\n"));
+
+                    ValidationDemande histoPj = new ValidationDemande();
+                    histoPj.setDemandeMere(demande);
+                    histoPj.setValidateur(current);
+                    histoPj.setEtape(etape);
+                    histoPj.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                    histoPj.setCommentaire(pjAjoutees.size() + " pièce(s) jointe(s) ajoutée(s) :\n" + listePj);
+                    histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
+                    validationDemandeService.logAction(histoPj);
+                }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
@@ -967,7 +982,22 @@ public class DemandeController {
             }
 
             if (canDecisionMG) {
-                sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_MG", redirectAttributes);
+                int etape = demande.getStatut();
+                List<String> pjAjoutees = sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_MG", redirectAttributes);
+                if (!pjAjoutees.isEmpty()) {
+                    String listePj = pjAjoutees.stream()
+                            .map(nom -> "• " + nom)
+                            .collect(Collectors.joining("\n"));
+
+                    ValidationDemande histoPj = new ValidationDemande();
+                    histoPj.setDemandeMere(demande);
+                    histoPj.setValidateur(current);
+                    histoPj.setEtape(etape);
+                    histoPj.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                    histoPj.setCommentaire(pjAjoutees.size() + " pièce(s) jointe(s) ajoutée(s) :\n" + listePj);
+                    histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
+                    validationDemandeService.logAction(histoPj);
+                }
                 //MG doit obligatoirement choisir le type (OPEX/CAPEX)
                 String td = (typeDemande == null) ? "" : typeDemande.trim().toUpperCase();
                 if (td.isBlank()) {
@@ -1017,7 +1047,7 @@ public class DemandeController {
 
                 //On enregistre le type puis on passe au statut suivant
                 demandeMereService.saveDemandeMere(demande);
-                int etape = demande.getStatut();
+
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
@@ -1025,8 +1055,24 @@ public class DemandeController {
             }
 
             if (canDecisionControleur) {
+                int etape = demande.getStatut();
+
                 try {
-                    sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_CONTROLEUR", redirectAttributes);
+                    List<String> pjAjoutees = sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_CONTROLEUR", redirectAttributes);
+                    if (!pjAjoutees.isEmpty()) {
+                        String listePj = pjAjoutees.stream()
+                                .map(nom -> "• " + nom)
+                                .collect(Collectors.joining("\n"));
+
+                        ValidationDemande histoPj = new ValidationDemande();
+                        histoPj.setDemandeMere(demande);
+                        histoPj.setValidateur(current);
+                        histoPj.setEtape(etape);
+                        histoPj.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                        histoPj.setCommentaire(pjAjoutees.size() + " pièce(s) jointe(s) ajoutée(s) :\n" + listePj);
+                        histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
+                        validationDemandeService.logAction(histoPj);
+                    }
                     demande.setCentreBudgetaire(centreBudgetaireService.getCentreBudgetaireById(Integer.parseInt(ligneBudgetaire)));
 
                     CommentaireFinance commentaireFinance = new CommentaireFinance();
@@ -1044,7 +1090,6 @@ public class DemandeController {
                     }
                     return "redirect:/demande/fiche/" + id;
                 }
-                int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le contrôleur de gestion (N3).");
@@ -1052,8 +1097,22 @@ public class DemandeController {
             }
 
             if (canDecisionDFC) {
-                sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_DFC", redirectAttributes);
                 int etape = demande.getStatut();
+                List<String> pjAjoutees = sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_DFC", redirectAttributes);
+                if (!pjAjoutees.isEmpty()) {
+                    String listePj = pjAjoutees.stream()
+                            .map(nom -> "• " + nom)
+                            .collect(Collectors.joining("\n"));
+
+                    ValidationDemande histoPj = new ValidationDemande();
+                    histoPj.setDemandeMere(demande);
+                    histoPj.setValidateur(current);
+                    histoPj.setEtape(etape);
+                    histoPj.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                    histoPj.setCommentaire(pjAjoutees.size() + " pièce(s) jointe(s) ajoutée(s) :\n" + listePj);
+                    histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
+                    validationDemandeService.logAction(histoPj);
+                }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée (D.F.C.).");
@@ -1158,21 +1217,22 @@ public class DemandeController {
                 .body(file);
     }
 
-    private void sauvegarderPiecesJointesDecision(MultipartFile[] piecesJointes,
-                                                  DemandeMere demande,
-                                                  String prefixRef,
-                                                  RedirectAttributes redirectAttributes) {
-        if (piecesJointes == null) return;
+    private List<String> sauvegarderPiecesJointesDecision(MultipartFile[] piecesJointes,
+                                                          DemandeMere demande,
+                                                          String prefixRef,
+                                                          RedirectAttributes redirectAttributes) {
+        if (piecesJointes == null) return List.of();
+
+        List<String> nomsAjoutes = new ArrayList<>();
 
         for (MultipartFile f : piecesJointes) {
             if (f == null || f.isEmpty()) continue;
 
-            // Vérification du type
             String contentType = f.getContentType();
             if (contentType == null || (!contentType.startsWith("image/") && !contentType.equals("application/pdf"))) {
                 redirectAttributes.addFlashAttribute("ko",
                         "Fichier refusé : '" + f.getOriginalFilename() + "'. Seuls les images et PDF sont autorisés.");
-                return;
+                return nomsAjoutes;
             }
 
             String safeDate = LocalDateTime.now()
@@ -1194,7 +1254,9 @@ public class DemandeController {
             pj.setUploadedAt(LocalDateTime.now());
 
             demandePieceJointeService.insert(pj);
+            nomsAjoutes.add(f.getOriginalFilename()); // ← collecte le nom original
         }
+        return nomsAjoutes;
     }
 
 
