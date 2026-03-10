@@ -891,6 +891,7 @@ public class DemandeController {
                         "Le commentaire est obligatoire pour rejeter une demande.");
                 return "redirect:/demande/fiche/" + id;
             }
+            sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_REFUS", redirectAttributes);
 
             //recharger la demande pour avoir le vrai statut DB
             demande = demandeMereService
@@ -924,6 +925,7 @@ public class DemandeController {
         if ("APPROVE".equals(action)) {
 
             if (canDecisionN1) {
+                sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_N1", redirectAttributes);
                 int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
@@ -965,6 +967,7 @@ public class DemandeController {
             }
 
             if (canDecisionMG) {
+                sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_MG", redirectAttributes);
                 //MG doit obligatoirement choisir le type (OPEX/CAPEX)
                 String td = (typeDemande == null) ? "" : typeDemande.trim().toUpperCase();
                 if (td.isBlank()) {
@@ -1023,6 +1026,7 @@ public class DemandeController {
 
             if (canDecisionControleur) {
                 try {
+                    sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_CONTROLEUR", redirectAttributes);
                     demande.setCentreBudgetaire(centreBudgetaireService.getCentreBudgetaireById(Integer.parseInt(ligneBudgetaire)));
 
                     CommentaireFinance commentaireFinance = new CommentaireFinance();
@@ -1048,6 +1052,7 @@ public class DemandeController {
             }
 
             if (canDecisionDFC) {
+                sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_DFC", redirectAttributes);
                 int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
@@ -1149,7 +1154,44 @@ public class DemandeController {
                 .body(file);
     }
 
+    private void sauvegarderPiecesJointesDecision(MultipartFile[] piecesJointes,
+                                                  DemandeMere demande,
+                                                  String prefixRef,
+                                                  RedirectAttributes redirectAttributes) {
+        if (piecesJointes == null) return;
 
+        for (MultipartFile f : piecesJointes) {
+            if (f == null || f.isEmpty()) continue;
+
+            // Vérification du type
+            String contentType = f.getContentType();
+            if (contentType == null || (!contentType.startsWith("image/") && !contentType.equals("application/pdf"))) {
+                redirectAttributes.addFlashAttribute("ko",
+                        "Fichier refusé : '" + f.getOriginalFilename() + "'. Seuls les images et PDF sont autorisés.");
+                return;
+            }
+
+            String safeDate = LocalDateTime.now()
+                    .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String ref = prefixRef
+                    + "_" + demande.getId()
+                    + "_" + demande.getDemandeur().getNom()
+                    + "_" + demande.getDemandeur().getPrenom()
+                    + "_" + safeDate;
+
+            String storedName = storageService.store(f, ref);
+
+            DemandePieceJointe pj = new DemandePieceJointe();
+            pj.setDemande(demande);
+            pj.setOriginalName(f.getOriginalFilename());
+            pj.setStoredName(storedName);
+            pj.setContentType(contentType);
+            pj.setSize(f.getSize());
+            pj.setUploadedAt(LocalDateTime.now());
+
+            demandePieceJointeService.insert(pj);
+        }
+    }
 
 
 }
