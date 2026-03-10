@@ -1128,28 +1128,32 @@ public class DemandeController {
         return "redirect:/demande/fiche/" + id;
     }
 
+    // Aperçu — inline (images + PDF)
     @GetMapping("/files/{id}/{filename:.+}")
-    public ResponseEntity<Resource> downloadDemandeFile(@PathVariable String id,
-                                                        @PathVariable String filename) throws IOException {
-
+    public ResponseEntity<Resource> previewDemandeFile(@PathVariable String id,
+                                                       @PathVariable String filename) throws IOException {
         Resource file = storageService.loadAsResource(filename);
 
-        // Détecter le content type réel du fichier
         String contentType = Files.probeContentType(file.getFile().toPath());
-        if (contentType == null) {
-            contentType = "application/octet-stream";
-        }
-
-        // inline pour images et PDF, attachment pour le reste
-        boolean isPreviewable = contentType.startsWith("image/")
-                || contentType.equals("application/pdf");
-
-        String disposition = isPreviewable
-                ? "inline; filename=\"" + file.getFilename() + "\""
-                : "attachment; filename=\"" + file.getFilename() + "\"";
+        if (contentType == null) contentType = "application/octet-stream";
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
+                .contentType(MediaType.parseMediaType(contentType))
+                .body(file);
+    }
+
+    // Téléchargement — attachment forcé
+    @GetMapping("/files/{id}/{filename:.+}/download")
+    public ResponseEntity<Resource> downloadDemandeFile(@PathVariable String id,
+                                                        @PathVariable String filename) throws IOException {
+        Resource file = storageService.loadAsResource(filename);
+
+        String contentType = Files.probeContentType(file.getFile().toPath());
+        if (contentType == null) contentType = "application/octet-stream";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFilename() + "\"")
                 .contentType(MediaType.parseMediaType(contentType))
                 .body(file);
     }

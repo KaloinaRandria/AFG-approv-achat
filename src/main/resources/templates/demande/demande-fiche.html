@@ -243,11 +243,11 @@
                                                 <!-- Badge type -->
                                                 <span class="badge bg-light text-dark border"
                                                       th:text="${#strings.startsWith(pj.contentType, 'image/') ? 'IMAGE' : 'PDF'}">
-                        </span>
+                                                </span>
                                             </div>
 
                                             <div class="d-flex gap-2">
-                                                <!-- Aperçu (images + PDF uniquement) -->
+                                                <!-- Aperçu -->
                                                 <button type="button"
                                                         class="btn btn-sm btn-outline-gradient-blue btn-preview-pj"
                                                         th:data-url="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}"
@@ -259,7 +259,8 @@
 
                                                 <!-- Téléchargement -->
                                                 <a class="btn btn-sm btn-outline-gradient-blue"
-                                                   th:href="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}">
+                                                   th:href="@{/demande/files/{id}/{filename}/download(id=${demande.id}, filename=${pj.storedName})}"
+                                                   title="Télécharger">
                                                     <i class="fas fa-download me-1"></i>
                                                 </a>
                                             </div>
