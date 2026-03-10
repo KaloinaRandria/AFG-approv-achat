@@ -206,6 +206,7 @@ public class DemandeController {
                                   @RequestParam(defaultValue = "dateDemande") String sort,
                                   @RequestParam(defaultValue = "desc") String dir,
                                   @RequestParam(required = false) Integer statut,
+                                  @RequestParam(required = false) String priorite,
                                   @RequestParam(required = false) String num,
                                   @RequestParam(required = false) String demandeur,
                                   @RequestParam(required = false) String type,
@@ -297,6 +298,7 @@ public class DemandeController {
                 Page<DemandeMere> p = demandeMereService.searchDemandes(
                         num, demandeur, type,
                         st,
+                        priorite,
                         dateFrom, dateTo,
                         0, Integer.MAX_VALUE,
                         sort, dir
@@ -338,6 +340,7 @@ public class DemandeController {
                 Page<DemandeMere> p = demandeMereService.searchDemandes(
                         num, demandeur, type,
                         st,
+                        priorite,
                         dateFrom, dateTo,
                         0, Integer.MAX_VALUE,
                         sort, dir
@@ -377,6 +380,7 @@ public class DemandeController {
                 Page<DemandeMere> p = demandeMereService.searchDemandes(
                         num, demandeur, type,
                         st,
+                        priorite,
                         dateFrom, dateTo,
                         0, Integer.MAX_VALUE,
                         sort, dir
@@ -402,6 +406,7 @@ public class DemandeController {
                 demandesMeres = demandeMereService.searchDemandes(
                         num, demandeur, type,
                         statutFilter,
+                        priorite,
                         dateFrom, dateTo,
                         page, size,
                         sort, dir
@@ -409,14 +414,14 @@ public class DemandeController {
             } else {
                 demandesMeres = idsToUse.isEmpty()
                         ? demandeMereService.searchDemandesVisibleParUtilisateur(
-                        num, demandeur, type, statutFilter,
+                        num, demandeur, type, statutFilter, priorite,
                         dateFrom, dateTo,
                         List.of(-1),
                         page, size,
                         sort, dir
                 )
                         : demandeMereService.searchDemandesVisibleParUtilisateur(
-                        num, demandeur, type, statutFilter,
+                        num, demandeur, type, statutFilter, priorite,
                         dateFrom, dateTo,
                         idsToUse,
                         page, size,
@@ -424,6 +429,11 @@ public class DemandeController {
                 );
             }
         }
+        Map<String, String> prioriteFiltre = new LinkedHashMap<>();
+        prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P2), "P2");
+        prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P1), "P1");
+        prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P0), "P0");
+        model.addAttribute("prioriteFiltre", prioriteFiltre);
 
         // Model commun
         model.addAttribute("currentUri", request.getRequestURI());
@@ -433,6 +443,7 @@ public class DemandeController {
         model.addAttribute("size", size);
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
+        model.addAttribute("priorite", priorite == null ? "" : priorite);
 
         model.addAttribute("num", num == null ? "" : num);
         model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
@@ -442,6 +453,7 @@ public class DemandeController {
         model.addAttribute("scope", scope);
 
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
+        model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("statutLabels", statutLabels);
 
         // flags de vue

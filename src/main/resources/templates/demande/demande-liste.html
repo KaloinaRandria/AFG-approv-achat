@@ -84,6 +84,24 @@
                         </select>
                     </div>
 
+                    <!-- Priorité -->
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Priorité</label>
+                        <select class="form-select" name="priorite">
+                            <option value="" th:selected="${priorite == null || priorite == ''}">Toutes</option>
+
+                            <th:block th:if="${prioriteFiltre != null}">
+                                <option th:each="entry : ${prioriteFiltre.entrySet()}"
+                                        th:value="${entry.key}"
+                                        th:text="${entry.value}"
+                                        th:selected="${priorite != null && priorite == entry.key}">
+                                </option>
+                            </th:block>
+                        </select>
+                    </div>
+
+
+
 
                     <!-- Taille (⚠️ pas d'auto-submit si tu veux appliquer avec Filtrer) -->
                     <div class="col-md-2">
