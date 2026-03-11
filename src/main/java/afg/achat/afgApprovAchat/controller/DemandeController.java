@@ -40,6 +40,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Controller
@@ -206,6 +207,7 @@ public class DemandeController {
                                   @RequestParam(defaultValue = "dateDemande") String sort,
                                   @RequestParam(defaultValue = "desc") String dir,
                                   @RequestParam(required = false) Integer statut,
+                                  @RequestParam(required = false) String priorite,
                                   @RequestParam(required = false) String num,
                                   @RequestParam(required = false) String demandeur,
                                   @RequestParam(required = false) String type,
@@ -297,6 +299,7 @@ public class DemandeController {
                 Page<DemandeMere> p = demandeMereService.searchDemandes(
                         num, demandeur, type,
                         st,
+                        priorite,
                         dateFrom, dateTo,
                         0, Integer.MAX_VALUE,
                         sort, dir
@@ -338,6 +341,7 @@ public class DemandeController {
                 Page<DemandeMere> p = demandeMereService.searchDemandes(
                         num, demandeur, type,
                         st,
+                        priorite,
                         dateFrom, dateTo,
                         0, Integer.MAX_VALUE,
                         sort, dir
@@ -377,6 +381,7 @@ public class DemandeController {
                 Page<DemandeMere> p = demandeMereService.searchDemandes(
                         num, demandeur, type,
                         st,
+                        priorite,
                         dateFrom, dateTo,
                         0, Integer.MAX_VALUE,
                         sort, dir
@@ -402,6 +407,7 @@ public class DemandeController {
                 demandesMeres = demandeMereService.searchDemandes(
                         num, demandeur, type,
                         statutFilter,
+                        priorite,
                         dateFrom, dateTo,
                         page, size,
                         sort, dir
@@ -409,14 +415,14 @@ public class DemandeController {
             } else {
                 demandesMeres = idsToUse.isEmpty()
                         ? demandeMereService.searchDemandesVisibleParUtilisateur(
-                        num, demandeur, type, statutFilter,
+                        num, demandeur, type, statutFilter, priorite,
                         dateFrom, dateTo,
                         List.of(-1),
                         page, size,
                         sort, dir
                 )
                         : demandeMereService.searchDemandesVisibleParUtilisateur(
-                        num, demandeur, type, statutFilter,
+                        num, demandeur, type, statutFilter, priorite,
                         dateFrom, dateTo,
                         idsToUse,
                         page, size,
@@ -424,6 +430,11 @@ public class DemandeController {
                 );
             }
         }
+        Map<String, String> prioriteFiltre = new LinkedHashMap<>();
+        prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P2), "P2");
+        prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P1), "P1");
+        prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P0), "P0");
+        model.addAttribute("prioriteFiltre", prioriteFiltre);
 
         // Model commun
         model.addAttribute("currentUri", request.getRequestURI());
@@ -433,6 +444,7 @@ public class DemandeController {
         model.addAttribute("size", size);
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
+        model.addAttribute("priorite", priorite == null ? "" : priorite);
 
         model.addAttribute("num", num == null ? "" : num);
         model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
@@ -442,6 +454,7 @@ public class DemandeController {
         model.addAttribute("scope", scope);
 
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
+        model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("statutLabels", statutLabels);
 
         // flags de vue
@@ -743,30 +756,31 @@ public class DemandeController {
         }
 
         List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
+        List<CodepPieceJointe> codepPiecesJointes = codepPieceJointeService.listByDemandeId(demande.getId());
+        CommentaireFinance commentaireFinance = commentaireFinanceService.getCommentaireFinanceByIdDemande(demande); // ← AJOUTER
 
 
         int currentStep;
         if (isCodepWorkflow) {
             currentStep = switch (demande.getStatut()) {
-                case StatutDemande.CREE           -> 0;
-                case StatutDemande.VALIDATION_N1  -> 1;  // N+1
-                case StatutDemande.DECISION_CODEP -> 2;  // MG (en attente CODEP)  -- à revoir selon votre logique
-                // Après CODEP approuvé
+                case StatutDemande.CREE           -> 1;
+                case StatutDemande.VALIDATION_N1  -> 2;  // MG
+                case StatutDemande.DECISION_CODEP -> 3;  // CODEP
                 case StatutDemande.VALIDATION_N2  -> 4;  // Contrôleur
                 case StatutDemande.VALIDATION_N3  -> 5;  // DFC
                 case StatutDemande.VALIDE         -> 6;
                 case StatutDemande.REFUSE         -> -1;
-                default -> 0;
+                default -> 1;
             };
-        }  else {
+        } else {
             currentStep = switch (demande.getStatut()) {
-                case StatutDemande.CREE          -> 0;
-                case StatutDemande.VALIDATION_N1 -> 1;
-                case StatutDemande.VALIDATION_N2 -> 2;
-                case StatutDemande.VALIDATION_N3 -> 3;
-                case StatutDemande.VALIDE        -> 4;
+                case StatutDemande.CREE          -> 1;
+                case StatutDemande.VALIDATION_N1 -> 2;  // ← MG
+                case StatutDemande.VALIDATION_N2 -> 3;  // ← Contrôleur
+                case StatutDemande.VALIDATION_N3 -> 4;  // ← DFC
+                case StatutDemande.VALIDE        -> 5;  // ← après le dernier step = tout validé
                 case StatutDemande.REFUSE        -> -1;
-                default -> 0;
+                default -> 1;
             };
         }
 
@@ -776,6 +790,7 @@ public class DemandeController {
         model.addAttribute("steps", steps);
         model.addAttribute("historiques", historiques);
         model.addAttribute("piecesJointes", piecesJointes);
+        model.addAttribute("codepPiecesJointes", codepPiecesJointes);
         model.addAttribute("currentStep", currentStep);
         model.addAttribute("isRefused", demande.getStatut() == StatutDemande.REFUSE);
         model.addAttribute("isValidated", demande.getStatut() == StatutDemande.VALIDE);
@@ -804,6 +819,7 @@ public class DemandeController {
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("ligneBudgetaires", ligneBudgetaires);
+        model.addAttribute("commentaireFinance", commentaireFinance);
 
         return "demande/demande-fiche";
     }
@@ -879,6 +895,7 @@ public class DemandeController {
                         "Le commentaire est obligatoire pour rejeter une demande.");
                 return "redirect:/demande/fiche/" + id;
             }
+            sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_REFUS", redirectAttributes);
 
             //recharger la demande pour avoir le vrai statut DB
             demande = demandeMereService
@@ -913,16 +930,44 @@ public class DemandeController {
 
             if (canDecisionN1) {
                 int etape = demande.getStatut();
+                List<String> pjAjoutees = sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_N1", redirectAttributes);
+                if (!pjAjoutees.isEmpty()) {
+                    String listePj = pjAjoutees.stream()
+                            .map(nom -> "• " + nom)
+                            .collect(Collectors.joining("\n"));
+
+                    ValidationDemande histoPj = new ValidationDemande();
+                    histoPj.setDemandeMere(demande);
+                    histoPj.setValidateur(current);
+                    histoPj.setEtape(etape);
+                    histoPj.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                    histoPj.setCommentaire(pjAjoutees.size() + " pièce(s) jointe(s) ajoutée(s) :\n" + listePj);
+                    histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
+                    validationDemandeService.logAction(histoPj);
+                }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
-                logValidation(demande, current, cmt, etape);
+                validationDemandeService.logValidation(demande, current, cmt, etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
                 return "redirect:/demande/fiche/" + id;
             }
             if(canDecisionCodep) {
+                final List<String> ALLOWED_MIME = List.of(
+                        "image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"
+                );
+                List<String> pjAjoutees = new ArrayList<>();
 
                 if (piecesJointes != null) {
                     for (MultipartFile f : piecesJointes) {
                         if (f == null || f.isEmpty()) continue;
+
+                        String contentType = f.getContentType() != null ? f.getContentType() : "";
+
+                        // ← Vérification côté serveur
+                        if (!ALLOWED_MIME.contains(contentType)) {
+                            redirectAttributes.addFlashAttribute("ko",
+                                    "Format non autorisé : " + f.getOriginalFilename() + " (PDF et images uniquement).");
+                            return "redirect:/demande/fiche/" + id;
+                        }
 
                         String safeDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
                         String ref = "PV_CODEP_" + demande.getId()
@@ -930,29 +975,60 @@ public class DemandeController {
                                 + "_" + demande.getDemandeur().getPrenom()
                                 + "_" + safeDate;
 
-                        // 1) sauvegarde disque (retourne le nom stocké)
                         String storedName = storageService.store(f, ref);
 
-                        // 2) sauvegarde DB
                         CodepPieceJointe pj = new CodepPieceJointe();
                         pj.setDemandeMere(demande);
                         pj.setOriginalName(f.getOriginalFilename());
                         pj.setStoredName(storedName);
-                        pj.setContentType(f.getContentType() != null ? f.getContentType() : "application/octet-stream");
+                        pj.setContentType(contentType);
                         pj.setSize(f.getSize());
                         pj.setUploadedAt(LocalDateTime.now());
 
                         codepPieceJointeService.insert(pj);
+                        pjAjoutees.add(f.getOriginalFilename());
                     }
                 }
+
+
                 int etape = demande.getStatut();
+                if (!pjAjoutees.isEmpty()) {
+                    String listePj = pjAjoutees.stream()
+                            .map(nom -> "• " + nom)
+                            .collect(Collectors.joining("\n"));
+
+                    ValidationDemande histoPj = new ValidationDemande();
+                    histoPj.setDemandeMere(demande);
+                    histoPj.setValidateur(current);
+                    histoPj.setEtape(etape);
+                    histoPj.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                    histoPj.setCommentaire(pjAjoutees.size() + " pièce(s) jointe(s) CODEP ajoutée(s) :\n" + listePj);
+                    histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
+                    validationDemandeService.logAction(histoPj);
+                }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
-                logValidation(demande, current, cmt, etape);
+                validationDemandeService.logValidation(demande, current, cmt, etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le Comité de dépense.");
                 return "redirect:/demande/fiche/" + id;
             }
 
             if (canDecisionMG) {
+                int etape = demande.getStatut();
+                List<String> pjAjoutees = sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_MG", redirectAttributes);
+                if (!pjAjoutees.isEmpty()) {
+                    String listePj = pjAjoutees.stream()
+                            .map(nom -> "• " + nom)
+                            .collect(Collectors.joining("\n"));
+
+                    ValidationDemande histoPj = new ValidationDemande();
+                    histoPj.setDemandeMere(demande);
+                    histoPj.setValidateur(current);
+                    histoPj.setEtape(etape);
+                    histoPj.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                    histoPj.setCommentaire(pjAjoutees.size() + " pièce(s) jointe(s) ajoutée(s) :\n" + listePj);
+                    histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
+                    validationDemandeService.logAction(histoPj);
+                }
                 //MG doit obligatoirement choisir le type (OPEX/CAPEX)
                 String td = (typeDemande == null) ? "" : typeDemande.trim().toUpperCase();
                 if (td.isBlank()) {
@@ -1000,17 +1076,32 @@ public class DemandeController {
                     }
                 }
 
-                //On enregistre le type puis on passe au statut suivant
-                demandeMereService.saveDemandeMere(demande);
-                int etape = demande.getStatut();
+
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
-                logValidation(demande, current, cmt , etape);
+                validationDemandeService.logValidation(demande, current, cmt , etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
                 return "redirect:/demande/fiche/" + id;
             }
 
             if (canDecisionControleur) {
+                int etape = demande.getStatut();
+
                 try {
+                    List<String> pjAjoutees = sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_CONTROLEUR", redirectAttributes);
+                    if (!pjAjoutees.isEmpty()) {
+                        String listePj = pjAjoutees.stream()
+                                .map(nom -> "• " + nom)
+                                .collect(Collectors.joining("\n"));
+
+                        ValidationDemande histoPj = new ValidationDemande();
+                        histoPj.setDemandeMere(demande);
+                        histoPj.setValidateur(current);
+                        histoPj.setEtape(etape);
+                        histoPj.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                        histoPj.setCommentaire(pjAjoutees.size() + " pièce(s) jointe(s) ajoutée(s) :\n" + listePj);
+                        histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
+                        validationDemandeService.logAction(histoPj);
+                    }
                     demande.setCentreBudgetaire(centreBudgetaireService.getCentreBudgetaireById(Integer.parseInt(ligneBudgetaire)));
 
                     CommentaireFinance commentaireFinance = new CommentaireFinance();
@@ -1028,17 +1119,31 @@ public class DemandeController {
                     }
                     return "redirect:/demande/fiche/" + id;
                 }
-                int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
-                logValidation(demande, current, cmt , etape);
+                validationDemandeService.logValidation(demande, current, cmt , etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le contrôleur de gestion (N3).");
                 return "redirect:/demande/fiche/" + id;
             }
 
             if (canDecisionDFC) {
                 int etape = demande.getStatut();
+                List<String> pjAjoutees = sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_DFC", redirectAttributes);
+                if (!pjAjoutees.isEmpty()) {
+                    String listePj = pjAjoutees.stream()
+                            .map(nom -> "• " + nom)
+                            .collect(Collectors.joining("\n"));
+
+                    ValidationDemande histoPj = new ValidationDemande();
+                    histoPj.setDemandeMere(demande);
+                    histoPj.setValidateur(current);
+                    histoPj.setEtape(etape);
+                    histoPj.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                    histoPj.setCommentaire(pjAjoutees.size() + " pièce(s) jointe(s) ajoutée(s) :\n" + listePj);
+                    histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
+                    validationDemandeService.logAction(histoPj);
+                }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
-                logValidation(demande, current, cmt, etape);
+                validationDemandeService.logValidation(demande, current, cmt, etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée (D.F.C.).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1054,7 +1159,7 @@ public class DemandeController {
                 };
                 int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, next);
-                logValidation(demande, current, cmt, etape);
+                validationDemandeService.logValidation(demande, current, cmt, etape);
                 redirectAttributes.addFlashAttribute("ok", "Statut mis à jour (ADMIN).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1067,6 +1172,8 @@ public class DemandeController {
     @PostMapping("/fiche/{id}/send-codep")
     public String sendToCodep(@PathVariable("id") String id,
                               @RequestParam(value = "typeDemande", required = false) String typeDemande,
+                              @RequestParam(value = "priorite", required = false) String prioriteParam,
+                              @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                               RedirectAttributes redirectAttributes) {
 
         DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
@@ -1100,57 +1207,152 @@ public class DemandeController {
             redirectAttributes.addFlashAttribute("ko", "Type de demande invalide : " + typeDemande);
             return "redirect:/demande/fiche/" + id;
         }
-        demande.setViaCodep(true);
 
+        if (prioriteParam != null && !prioriteParam.isBlank()) {
+            String anciennePriorite = demande.getPriorite() != null
+                    ? demande.getPriorite().name() : "N/A";
+            try {
+                DemandeMere.PrioriteDemande nouvellePriorite =
+                        DemandeMere.PrioriteDemande.valueOf(prioriteParam.trim().toUpperCase());
+
+                if (!prioriteParam.trim().toUpperCase().equals(anciennePriorite)) {
+                    demande.setPriorite(nouvellePriorite);
+
+                    ValidationDemande histoPriorite = new ValidationDemande();
+                    histoPriorite.setDemandeMere(demande);
+                    histoPriorite.setValidateur(current);
+                    histoPriorite.setEtape(demande.getStatut());
+                    histoPriorite.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                    histoPriorite.setCommentaire("Modification de priorité : " + anciennePriorite
+                            + " → " + nouvellePriorite.name());
+                    histoPriorite.setDateAction(String.valueOf(LocalDateTime.now()));
+                    validationDemandeService.logAction(histoPriorite);
+                }
+            } catch (IllegalArgumentException ex) {
+                redirectAttributes.addFlashAttribute("ko", "Priorité invalide : " + prioriteParam);
+                return "redirect:/demande/fiche/" + id;
+            }
+        }
+
+        demande.setViaCodep(true);
+        List<String> pjAjoutees = new ArrayList<>();
+        if (piecesJointes != null) {
+            for (MultipartFile f : piecesJointes) {
+                if (f == null || f.isEmpty()) continue;
+
+                String safeDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                String ref = "PJ_CODEP_" + demande.getId()
+                        + "_" + demande.getDemandeur().getNom()
+                        + "_" + demande.getDemandeur().getPrenom()
+                        + "_" + safeDate;
+
+                String storedName = storageService.store(f, ref);
+
+                CodepPieceJointe pj = new CodepPieceJointe();
+                pj.setDemandeMere(demande);
+                pj.setOriginalName(f.getOriginalFilename());
+                pj.setStoredName(storedName);
+                pj.setContentType(f.getContentType() != null ? f.getContentType() : "application/octet-stream");
+                pj.setSize(f.getSize());
+                pj.setUploadedAt(LocalDateTime.now());
+
+                codepPieceJointeService.insert(pj);
+                pjAjoutees.add(f.getOriginalFilename());
+            }
+        }
         // Passage au statut CODEP
         int etape = demande.getStatut();
+        if (!pjAjoutees.isEmpty()) {
+            String listePj = pjAjoutees.stream()
+                    .map(nom -> "• " + nom)
+                    .collect(Collectors.joining("\n"));
+
+            ValidationDemande histoPj = new ValidationDemande();
+            histoPj.setDemandeMere(demande);
+            histoPj.setValidateur(current);
+            histoPj.setEtape(etape);
+            histoPj.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+            histoPj.setCommentaire(pjAjoutees.size() + " pièce(s) jointe(s) ajoutée(s) :\n" + listePj);
+            histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
+            validationDemandeService.logAction(histoPj);
+        }
         demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.DECISION_CODEP);
-        logValidation(demande, current, "Envoi au CODEP", etape);
+        validationDemandeService.logValidation(demande, current, "Envoi au CODEP", etape);
         redirectAttributes.addFlashAttribute("ok", "Demande envoyée au CODEP (action irréversible).");
 
         return "redirect:/demande/fiche/" + id;
     }
 
+    // Aperçu — inline (images + PDF)
     @GetMapping("/files/{id}/{filename:.+}")
-    public ResponseEntity<Resource> downloadDemandeFile(@PathVariable String id,
-                                                        @PathVariable String filename) throws IOException {
-
+    public ResponseEntity<Resource> previewDemandeFile(@PathVariable String id,
+                                                       @PathVariable String filename) throws IOException {
         Resource file = storageService.loadAsResource(filename);
 
-        // Détecter le content type réel du fichier
         String contentType = Files.probeContentType(file.getFile().toPath());
-        if (contentType == null) {
-            contentType = "application/octet-stream";
-        }
-
-        // inline pour images et PDF, attachment pour le reste
-        boolean isPreviewable = contentType.startsWith("image/")
-                || contentType.equals("application/pdf");
-
-        String disposition = isPreviewable
-                ? "inline; filename=\"" + file.getFilename() + "\""
-                : "attachment; filename=\"" + file.getFilename() + "\"";
+        if (contentType == null) contentType = "application/octet-stream";
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
                 .contentType(MediaType.parseMediaType(contentType))
                 .body(file);
     }
 
-    private void logValidation(DemandeMere demande,
-                               Utilisateur user,
-                               String commentaire,
-                               int etape) {
+    // Téléchargement — attachment forcé
+    @GetMapping("/files/{id}/{filename:.+}/download")
+    public ResponseEntity<Resource> downloadDemandeFile(@PathVariable String id,
+                                                        @PathVariable String filename) throws IOException {
+        Resource file = storageService.loadAsResource(filename);
 
-        ValidationDemande h = new ValidationDemande();
-        h.setDemandeMere(demande);
-        h.setValidateur(user);
-        h.setEtape(etape); // ← étape passée en paramètre, pas demande.getStatut()
-        h.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
-        h.setDateAction(String.valueOf(LocalDateTime.now()));
-        h.setCommentaire(commentaire);
+        String contentType = Files.probeContentType(file.getFile().toPath());
+        if (contentType == null) contentType = "application/octet-stream";
 
-        validationDemandeService.logAction(h);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFilename() + "\"")
+                .contentType(MediaType.parseMediaType(contentType))
+                .body(file);
+    }
+
+    private List<String> sauvegarderPiecesJointesDecision(MultipartFile[] piecesJointes,
+                                                          DemandeMere demande,
+                                                          String prefixRef,
+                                                          RedirectAttributes redirectAttributes) {
+        if (piecesJointes == null) return List.of();
+
+        List<String> nomsAjoutes = new ArrayList<>();
+
+        for (MultipartFile f : piecesJointes) {
+            if (f == null || f.isEmpty()) continue;
+
+            String contentType = f.getContentType();
+            if (contentType == null || (!contentType.startsWith("image/") && !contentType.equals("application/pdf"))) {
+                redirectAttributes.addFlashAttribute("ko",
+                        "Fichier refusé : '" + f.getOriginalFilename() + "'. Seuls les images et PDF sont autorisés.");
+                return nomsAjoutes;
+            }
+
+            String safeDate = LocalDateTime.now()
+                    .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String ref = prefixRef
+                    + "_" + demande.getId()
+                    + "_" + demande.getDemandeur().getNom()
+                    + "_" + demande.getDemandeur().getPrenom()
+                    + "_" + safeDate;
+
+            String storedName = storageService.store(f, ref);
+
+            DemandePieceJointe pj = new DemandePieceJointe();
+            pj.setDemande(demande);
+            pj.setOriginalName(f.getOriginalFilename());
+            pj.setStoredName(storedName);
+            pj.setContentType(contentType);
+            pj.setSize(f.getSize());
+            pj.setUploadedAt(LocalDateTime.now());
+
+            demandePieceJointeService.insert(pj);
+            nomsAjoutes.add(f.getOriginalFilename()); // ← collecte le nom original
+        }
+        return nomsAjoutes;
     }
 
 

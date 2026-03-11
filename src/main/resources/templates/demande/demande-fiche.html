@@ -243,29 +243,73 @@
                                                 <!-- Badge type -->
                                                 <span class="badge bg-light text-dark border"
                                                       th:text="${#strings.startsWith(pj.contentType, 'image/') ? 'IMAGE' : 'PDF'}">
-                        </span>
+                                                </span>
                                             </div>
 
                                             <div class="d-flex gap-2">
-                                                <!-- Aperçu (images + PDF uniquement) -->
+                                                <!-- Aperçu -->
                                                 <button type="button"
                                                         class="btn btn-sm btn-outline-gradient-blue btn-preview-pj"
                                                         th:data-url="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}"
                                                         th:data-name="${pj.originalName}"
                                                         th:data-type="${pj.contentType}"
                                                         title="Aperçu">
-                                                    <i class="fas fa-eye me-1"></i> Aperçu
+                                                    <i class="fas fa-eye me-1"></i>
                                                 </button>
 
                                                 <!-- Téléchargement -->
                                                 <a class="btn btn-sm btn-outline-gradient-blue"
-                                                   th:href="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}">
-                                                    <i class="fas fa-download me-1"></i> Télécharger
+                                                   th:href="@{/demande/files/{id}/{filename}/download(id=${demande.id}, filename=${pj.storedName})}"
+                                                   title="Télécharger">
+                                                    <i class="fas fa-download me-1"></i>
                                                 </a>
                                             </div>
                                         </li>
                                     </ul>
                                 </div>
+                            </div>
+                        </div>
+                        <!-- PIECES JOINTES CODEP -->
+                        <div class="px-3 pb-2"
+                             th:if="${isCodepWorkflow and (codepPiecesJointes != null and !codepPiecesJointes.isEmpty())}">
+                            <div class="p-3 border rounded bg-light">
+                                <div class="fw-bold mb-2">
+                                    <i class="fas fa-landmark me-2"></i> Pièces jointes CODEP
+                                </div>
+
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center"
+                                        th:each="pj : ${codepPiecesJointes}">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas"
+                                               th:classappend="${#strings.startsWith(pj.contentType, 'image/') ? 'fa-file-image text-primary' : 'fa-file-pdf text-danger'}">
+                                            </i>
+                                            <span th:text="${pj.originalName}">fichier.pdf</span>
+                                            <span class="badge bg-light text-dark border"
+                                                  th:text="${#strings.startsWith(pj.contentType, 'image/') ? 'IMAGE' : 'PDF'}">
+                                            </span>
+                                        </div>
+
+                                        <div class="d-flex gap-2">
+                                            <!-- Aperçu -->
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-gradient-blue btn-preview-pj"
+                                                    th:data-url="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}"
+                                                    th:data-name="${pj.originalName}"
+                                                    th:data-type="${pj.contentType}"
+                                                    title="Aperçu">
+                                                <i class="fas fa-eye me-1"></i>
+                                            </button>
+
+                                            <!-- Téléchargement -->
+                                            <a class="btn btn-sm btn-outline-gradient-blue"
+                                               th:href="@{/demande/files/{id}/{filename}/download(id=${demande.id}, filename=${pj.storedName})}"
+                                               title="Télécharger">
+                                                <i class="fas fa-download me-1"></i>
+                                            </a>
+                                        </div>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
 
@@ -391,28 +435,49 @@
                                 </tbody>
                             </table>
                         </div>
-                        <!-- TOTAL (style document formel) -->
-                        <div class="px-3 pb-3 mt-2"
+                        <!-- TOTAL -->
+                        <div class="px-3 pb-3 mt-3"
                              sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_CONTROLEUR','ROLE_DFC')">
+                            <table class="bl-table">
+                                <tfoot>
+                                <tr class="fw-bold" style="border-top: 2px solid #dee2e6;">
+                                    <!-- DESIGNATION : 55% — vide -->
+                                    <td style="width:55%"></td>
 
-                            <div class="d-flex justify-content-end">
+                                    <!-- QUANTITE : 20% — label "Total" aligné comme la colonne QUANTITÉ -->
+                                    <td style="width:20%" class="text-end py-2 text-muted small text-uppercase">
+                                        Total
+                                    </td>
 
-                                <table style="min-width: 320px; border-collapse: collapse;">
-                                    <tr style="border-top: 2px solid #000;">
-                                        <td class="text-end fw-bold" style="padding: 8px 12px;">
-                                            TOTAL
-                                        </td>
+                                    <!-- PRIX : 25% — valeur alignée comme la colonne PRIX UNITAIRE -->
+                                    <td style="width:25%" class="text-end py-2"
+                                        th:text="${demande.totalPrix != null
+                        ? #numbers.formatDecimal(demande.totalPrix, 1, 'DEFAULT', 2, 'DEFAULT')
+                        : '0,00'}">
+                                    </td>
+                                </tr>
+                                </tfoot>
+                            </table>
+                        </div>
 
-                                        <td class="text-end fw-bold"
-                                            style="padding: 8px 12px; font-size: 1.15rem; min-width: 140px;">
-                                            <span th:text="${demande.totalPrix != null
-                                                ? #numbers.formatDecimal(demande.totalPrix, 1, 'DEFAULT', 2, 'DEFAULT')
-                                                : '0,00'}">
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </table>
 
+                        <!-- COMMENTAIRE CONTROLEUR DE GESTION -->
+                        <div class="px-3 pb-2"
+                             th:if="${commentaireFinance != null and commentaireFinance.commentaire != null and !#strings.isEmpty(commentaireFinance.commentaire)}">
+                            <div class="p-3 border rounded bg-light">
+                                <div class="fw-bold mb-2">
+                                    <i class="fas fa-coins me-2"></i> Commentaire du contrôleur de gestion
+                                </div>
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="fas fa-user-circle text-muted mt-1"></i>
+                                    <div>
+                                        <div class="small text-muted mb-1"
+                                             th:if="${commentaireFinance.commentateur != null}"
+                                             th:text="${commentaireFinance.commentateur.prenom + ' ' + commentaireFinance.commentateur.nom}">
+                                        </div>
+                                        <div th:text="${commentaireFinance.commentaire}"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -428,6 +493,7 @@
                                 <form id="decisionForm"
                                       th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}"
                                       method="post"
+                                      enctype="multipart/form-data"
                                       class="d-inline">
 
                                     <input type="hidden" name="commentaire" id="decisionCommentaire">
@@ -535,6 +601,60 @@
 
                                         <div class="text-muted small mt-1">
                                             Commentaire obligatoire pour valider.
+                                        </div>
+                                    </div>
+
+                                    <!-- ================= PIECES JOINTES ================= -->
+                                    <div class="mb-3" th:if="${!canDecisionCodep}">
+                                        <label class="form-label mb-1">
+                                            <i class="fas fa-paperclip me-1"></i>
+                                            Pièces jointes
+                                            <span class="text-muted small fw-normal">(optionnel)</span>
+                                        </label>
+
+                                        <div class="file-upload-card border rounded-4 p-3 text-center position-relative">
+                                            <input type="file"
+                                                   class="file-upload-input"
+                                                   id="piecesJointesDecision"
+                                                   name="piecesJointes"
+                                                   multiple
+                                                   accept="image/jpeg,image/png,image/gif,image/webp,application/pdf">
+
+                                            <div class="file-upload-content">
+                                                <div class="mb-1">
+                                                    <i class="fas fa-paperclip fa-xl text-gradient-blue"></i>
+                                                </div>
+                                                <p class="mb-1 fw-semibold small">Glissez-déposez vos fichiers ici</p>
+                                                <p class="text-muted mb-2 small">ou cliquez pour sélectionner</p>
+                                                <span class="badge bg-light text-dark border">PDF · Images (JPG, PNG, GIF, WEBP)</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-text text-muted mt-1">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Formats acceptés : PDF et images uniquement.
+                                        </div>
+
+                                        <!-- Alerte format invalide -->
+                                        <div id="fileTypeAlertDecision" class="alert alert-danger mt-2 d-none" role="alert">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            <span id="fileTypeAlertMsgDecision"></span>
+                                        </div>
+
+                                        <!-- Liste des fichiers -->
+                                        <ul id="fileListDecision" class="list-group list-group-flush mt-2"></ul>
+                                    </div>
+
+                                    <!-- Modal aperçu — décision -->
+                                    <div class="modal fade" id="previewFileDecisionModal" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-lg-down">
+                                            <div class="modal-content rounded-4">
+                                                <div class="modal-header border-0">
+                                                    <h6 class="modal-title fw-bold" id="previewFileDecisionName"></h6>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body text-center p-3" id="previewFileDecisionBody"></div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -829,7 +949,7 @@
                                id="piecesJointes"
                                name="piecesJointes"
                                multiple
-                               accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+                               accept="image/jpeg,image/png,image/gif,image/webp,application/pdf">
 
                         <div class="file-upload-content">
                             <div class="mb-2">
@@ -842,7 +962,7 @@
                                 ou cliquez pour sélectionner
                             </p>
                             <span class="badge bg-light text-dark border">
-                    PDF · Word · Excel · Images
+                    PDF · Images (JPG, PNG, GIF, WEBP)
                 </span>
                         </div>
                     </div>
@@ -894,16 +1014,49 @@
                 </h5>
             </div>
 
-            <form th:action="@{/demande/fiche/{id}/send-codep(id=${demande.id})}" method="post">
+            <form th:action="@{/demande/fiche/{id}/send-codep(id=${demande.id})}"
+                  method="post"
+                  enctype="multipart/form-data">
 
                 <div class="modal-body">
                     <input type="hidden" name="typeDemande" id="codepTypeDemande">
+                    <input type="hidden" name="priorite" id="codepPriorite">
 
                     <!-- Message informatif -->
-                    <div class="alert alert-warning mb-0">
+                    <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         Cette action est <strong>irréversible</strong> : une fois la demande envoyée au CODEP,
                         vous ne pourrez plus la modifier ni la valider vous-même.
+                    </div>
+
+                    <!-- INPUT FILE PROPRE AU MODAL -->
+                    <div class="mb-2">
+                        <label class="form-label mb-1">
+                            <i class="fas fa-paperclip me-1"></i>
+                            Pièces jointes
+                            <span class="text-muted small fw-normal">(optionnel)</span>
+                        </label>
+                        <div class="file-upload-card border rounded-4 p-3 text-center position-relative">
+                            <input type="file"
+                                   class="file-upload-input"
+                                   id="piecesJointesCodep"
+                                   name="piecesJointes"
+                                   multiple
+                                   accept="image/jpeg,image/png,image/gif,image/webp,application/pdf">
+                            <div class="file-upload-content">
+                                <div class="mb-1">
+                                    <i class="fas fa-paperclip fa-xl text-gradient-blue"></i>
+                                </div>
+                                <p class="mb-1 fw-semibold small">Glissez-déposez vos fichiers ici</p>
+                                <p class="text-muted mb-2 small">ou cliquez pour sélectionner</p>
+                                <span class="badge bg-light text-dark border">PDF · Images (JPG, PNG, GIF, WEBP)</span>
+                            </div>
+                        </div>
+                        <div class="form-text text-muted mt-1">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Formats acceptés : PDF et images uniquement.
+                        </div>
+                        <ul id="fileListCodep" class="list-group list-group-flush mt-2"></ul>
                     </div>
 
                 </div>
@@ -1226,11 +1379,18 @@
     }
 
     document.getElementById('codepModal').addEventListener('show.bs.modal', function () {
+        // typeDemande
         const typeDemandeSelect = document.querySelector('select[name="typeDemande"]');
         const codepTypeDemandeInput = document.getElementById('codepTypeDemande');
-
         if (typeDemandeSelect && codepTypeDemandeInput) {
             codepTypeDemandeInput.value = typeDemandeSelect.value;
+        }
+
+
+        const prioriteSelect = document.querySelector('select[name="priorite"]');
+        const codepPrioriteInput = document.getElementById('codepPriorite');
+        if (prioriteSelect && codepPrioriteInput) {
+            codepPrioriteInput.value = prioriteSelect.value;
         }
     });
 
@@ -1400,6 +1560,319 @@
         document.querySelector(`.btn-save-qte[data-id="${ligneId}"]`).classList.add("d-none");
         document.querySelector(`.btn-cancel-qte[data-id="${ligneId}"]`).classList.add("d-none");
     }
+
+    // =========================
+    // Pièces jointes — formulaire décision
+    // =========================
+    (function () {
+        const fileInput  = document.getElementById("piecesJointesDecision");
+        const fileList   = document.getElementById("fileListDecision");
+        const alertBox   = document.getElementById("fileTypeAlertDecision");
+        const alertMsg   = document.getElementById("fileTypeAlertMsgDecision");
+        const previewModal     = document.getElementById("previewFileDecisionModal");
+        const previewFileName  = document.getElementById("previewFileDecisionName");
+        const previewFileBody  = document.getElementById("previewFileDecisionBody");
+
+        if (!fileInput || !fileList) return;
+
+        // Déplacer le modal dans <body> pour éviter les conflits z-index
+        if (previewModal && previewModal.parentElement !== document.body) {
+            document.body.appendChild(previewModal);
+        }
+
+        const ALLOWED_TYPES = [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'
+        ];
+        const TYPE_ICONS = {
+            'application/pdf': 'fa-file-pdf text-danger',
+            'image/jpeg':      'fa-file-image text-primary',
+            'image/png':       'fa-file-image text-primary',
+            'image/gif':       'fa-file-image text-primary',
+            'image/webp':      'fa-file-image text-primary',
+        };
+        const TYPE_LABELS = {
+            'application/pdf': 'PDF',
+            'image/jpeg':      'JPG',
+            'image/png':       'PNG',
+            'image/gif':       'GIF',
+            'image/webp':      'WEBP',
+        };
+
+        let selectedFiles = [];
+
+        function escapeHtmlLocal(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        function showAlert(msg) {
+            if (!alertBox || !alertMsg) return;
+            alertMsg.textContent = msg;
+            alertBox.classList.remove("d-none");
+        }
+
+        function hideAlert() {
+            if (!alertBox || !alertMsg) return;
+            alertBox.classList.add("d-none");
+            alertMsg.textContent = "";
+        }
+
+        function syncInputFiles() {
+            const dt = new DataTransfer();
+            selectedFiles.forEach(f => dt.items.add(f));
+            fileInput.files = dt.files;
+        }
+
+        function renderFiles() {
+            fileList.innerHTML = "";
+
+            if (selectedFiles.length === 0) {
+                const empty = document.createElement("li");
+                empty.className = "list-group-item text-muted small";
+                empty.innerHTML = `<i class="fas fa-circle-info me-2"></i>Aucun fichier sélectionné`;
+                fileList.appendChild(empty);
+                return;
+            }
+
+            selectedFiles.forEach((file, idx) => {
+                const icon   = TYPE_ICONS[file.type]  || 'fa-file text-secondary';
+                const label  = TYPE_LABELS[file.type] || file.type;
+                const sizeKb = (file.size / 1024).toFixed(1);
+                const isImage = file.type.startsWith("image/");
+                const isPdf   = file.type === "application/pdf";
+
+                const li = document.createElement("li");
+                li.className = "list-group-item d-flex align-items-center gap-2 px-0";
+                li.innerHTML = `
+                <i class="fas ${icon}"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold small">${escapeHtmlLocal(file.name)}
+                        <span class="badge bg-light text-dark border ms-1">${label}</span>
+                    </div>
+                    <small class="text-muted">${sizeKb} KB</small>
+                </div>
+                <div class="d-flex gap-1">
+                    ${(isImage || isPdf) ? `
+                    <button type="button"
+                            class="btn btn-outline-gradient-blue btn-sm"
+                            data-decision-preview-index="${idx}"
+                            title="Aperçu">
+                        <i class="fas fa-eye"></i>
+                    </button>` : ''}
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            data-decision-remove-index="${idx}"
+                            title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+                fileList.appendChild(li);
+            });
+        }
+
+        // Ajout de fichiers
+        fileInput.addEventListener("change", () => {
+            hideAlert();
+            const incoming = Array.from(fileInput.files || []);
+            const rejected = incoming.filter(f => !ALLOWED_TYPES.includes(f.type));
+            const accepted  = incoming.filter(f =>  ALLOWED_TYPES.includes(f.type));
+
+            if (rejected.length > 0) {
+                const names = rejected.map(f => escapeHtmlLocal(f.name)).join(", ");
+                showAlert(`Fichier(s) refusé(s) — formats non autorisés (PDF et images uniquement) : ${names}`);
+                if (accepted.length === 0) {
+                    fileInput.value = "";
+                    selectedFiles = [];
+                    renderFiles();
+                    return;
+                }
+            }
+
+            // Dédoublonnage par nom + taille
+            const existingKeys = new Set(selectedFiles.map(f => `${f.name}_${f.size}`));
+            const newFiles = accepted.filter(f => !existingKeys.has(`${f.name}_${f.size}`));
+            selectedFiles = [...selectedFiles, ...newFiles];
+            syncInputFiles();
+            renderFiles();
+        });
+
+        // Suppression + Aperçu
+        fileList.addEventListener("click", (e) => {
+
+            // Suppression
+            const btnRemove = e.target.closest("[data-decision-remove-index]");
+            if (btnRemove) {
+                const idx = parseInt(btnRemove.getAttribute("data-decision-remove-index"), 10);
+                if (!Number.isNaN(idx)) {
+                    selectedFiles.splice(idx, 1);
+                    syncInputFiles();
+                    renderFiles();
+                    if (selectedFiles.length === 0) hideAlert();
+                }
+                return;
+            }
+
+            // Aperçu
+            const btnPreview = e.target.closest("[data-decision-preview-index]");
+            if (btnPreview && previewModal) {
+                const idx = parseInt(btnPreview.getAttribute("data-decision-preview-index"), 10);
+                if (Number.isNaN(idx)) return;
+
+                const file = selectedFiles[idx];
+                if (!file) return;
+
+                previewFileBody.innerHTML = `<div class="text-muted py-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>`;
+                previewFileName.textContent = file.name;
+
+                const reader = new FileReader();
+
+                if (file.type.startsWith("image/")) {
+                    reader.onload = (ev) => {
+                        previewFileBody.innerHTML = `
+                        <img src="${ev.target.result}"
+                             class="img-fluid rounded-3"
+                             style="max-height:80vh;width:100%;object-fit:contain;"
+                             alt="${escapeHtmlLocal(file.name)}">`;
+                    };
+                    reader.readAsDataURL(file);
+                } else if (file.type === "application/pdf") {
+                    reader.onload = (ev) => {
+                        previewFileBody.innerHTML = `
+                        <iframe src="${ev.target.result}"
+                                width="100%" height="750px"
+                                style="border:none;border-radius:8px;min-height:75vh;">
+                        </iframe>`;
+                    };
+                    reader.readAsDataURL(file);
+                }
+
+                const existing = window.bootstrap.Modal.getInstance(previewModal);
+                if (existing) existing.dispose();
+
+                const bsModal = new window.bootstrap.Modal(previewModal, {
+                    backdrop: true, keyboard: true, focus: true
+                });
+                bsModal.show();
+
+                previewModal.addEventListener("hidden.bs.modal", () => {
+                    previewFileBody.innerHTML = "";
+                    document.querySelectorAll(".modal-backdrop").forEach(el => el.remove());
+                    document.body.classList.remove("modal-open");
+                    document.body.style.removeProperty("overflow");
+                    document.body.style.removeProperty("padding-right");
+                }, { once: true });
+            }
+        });
+
+        renderFiles();
+    })();
+
+    // =========================
+    // Pièces jointes — formulaire CODEP
+    // =========================
+    (function () {
+        const fileInput  = document.getElementById("piecesJointesCodep");
+        const fileList   = document.getElementById("fileListCodep");
+
+        if (!fileInput || !fileList) return;
+
+        const ALLOWED_TYPES = [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'
+        ];
+        const TYPE_ICONS = {
+            'application/pdf': 'fa-file-pdf text-danger',
+            'image/jpeg':      'fa-file-image text-primary',
+            'image/png':       'fa-file-image text-primary',
+            'image/gif':       'fa-file-image text-primary',
+            'image/webp':      'fa-file-image text-primary',
+        };
+        const TYPE_LABELS = {
+            'application/pdf': 'PDF',
+            'image/jpeg':      'JPG',
+            'image/png':       'PNG',
+            'image/gif':       'GIF',
+            'image/webp':      'WEBP',
+        };
+
+        let selectedFiles = [];
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        function syncInputFiles() {
+            const dt = new DataTransfer();
+            selectedFiles.forEach(f => dt.items.add(f));
+            fileInput.files = dt.files;
+        }
+
+        function renderFiles() {
+            fileList.innerHTML = "";
+
+            if (selectedFiles.length === 0) {
+                const empty = document.createElement("li");
+                empty.className = "list-group-item text-muted small";
+                empty.innerHTML = `<i class="fas fa-circle-info me-2"></i>Aucun fichier sélectionné`;
+                fileList.appendChild(empty);
+                return;
+            }
+
+            selectedFiles.forEach((file, idx) => {
+                const icon   = TYPE_ICONS[file.type]  || 'fa-file text-secondary';
+                const label  = TYPE_LABELS[file.type] || file.type;
+                const sizeKb = (file.size / 1024).toFixed(1);
+
+                const li = document.createElement("li");
+                li.className = "list-group-item d-flex align-items-center gap-2 px-0";
+                li.innerHTML = `
+                <i class="fas ${icon}"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold small">${escapeHtml(file.name)}
+                        <span class="badge bg-light text-dark border ms-1">${label}</span>
+                    </div>
+                    <small class="text-muted">${sizeKb} KB</small>
+                </div>
+                <button type="button"
+                        class="btn btn-outline-danger btn-sm"
+                        data-codep-remove-index="${idx}"
+                        title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+                fileList.appendChild(li);
+            });
+        }
+
+        fileInput.addEventListener("change", () => {
+            const incoming = Array.from(fileInput.files || []);
+            const accepted = incoming.filter(f => ALLOWED_TYPES.includes(f.type));
+            const existingKeys = new Set(selectedFiles.map(f => `${f.name}_${f.size}`));
+            const newFiles = accepted.filter(f => !existingKeys.has(`${f.name}_${f.size}`));
+            selectedFiles = [...selectedFiles, ...newFiles];
+            syncInputFiles();
+            renderFiles();
+        });
+
+        fileList.addEventListener("click", (e) => {
+            const btnRemove = e.target.closest("[data-codep-remove-index]");
+            if (btnRemove) {
+                const idx = parseInt(btnRemove.getAttribute("data-codep-remove-index"), 10);
+                if (!Number.isNaN(idx)) {
+                    selectedFiles.splice(idx, 1);
+                    syncInputFiles();
+                    renderFiles();
+                }
+            }
+        });
+
+        renderFiles();
+    })();
     /*]]>*/
 </script>
 </body>
