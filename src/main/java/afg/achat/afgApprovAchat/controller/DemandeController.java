@@ -761,25 +761,24 @@ public class DemandeController {
         int currentStep;
         if (isCodepWorkflow) {
             currentStep = switch (demande.getStatut()) {
-                case StatutDemande.CREE           -> 0;
-                case StatutDemande.VALIDATION_N1  -> 1;  // N+1
-                case StatutDemande.DECISION_CODEP -> 2;  // MG (en attente CODEP)  -- à revoir selon votre logique
-                // Après CODEP approuvé
+                case StatutDemande.CREE           -> 1;
+                case StatutDemande.VALIDATION_N1  -> 2;  // MG
+                case StatutDemande.DECISION_CODEP -> 3;  // CODEP
                 case StatutDemande.VALIDATION_N2  -> 4;  // Contrôleur
                 case StatutDemande.VALIDATION_N3  -> 5;  // DFC
                 case StatutDemande.VALIDE         -> 6;
                 case StatutDemande.REFUSE         -> -1;
-                default -> 0;
+                default -> 1;
             };
-        }  else {
+        } else {
             currentStep = switch (demande.getStatut()) {
-                case StatutDemande.CREE          -> 0;
-                case StatutDemande.VALIDATION_N1 -> 1;
-                case StatutDemande.VALIDATION_N2 -> 2;
-                case StatutDemande.VALIDATION_N3 -> 3;
-                case StatutDemande.VALIDE        -> 4;
+                case StatutDemande.CREE          -> 1;
+                case StatutDemande.VALIDATION_N1 -> 2;  // ← MG
+                case StatutDemande.VALIDATION_N2 -> 3;  // ← Contrôleur
+                case StatutDemande.VALIDATION_N3 -> 4;  // ← DFC
+                case StatutDemande.VALIDE        -> 5;  // ← après le dernier step = tout validé
                 case StatutDemande.REFUSE        -> -1;
-                default -> 0;
+                default -> 1;
             };
         }
 
