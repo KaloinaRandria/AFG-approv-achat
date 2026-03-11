@@ -33,6 +33,6 @@ build/
 .vscode/
 
 ### propreties ###
-src/main/resources/application.properties
-pieces/*
+#src/main/resources/application.properties
+#pieces/*
 
