@@ -93,12 +93,15 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
       and (:type = '' or lower(coalesce(dm.natureDemande, '')) = lower(:type))
 
       and (:statut is null or dm.statut = :statut)
+      
+      and (:priorite = '' or lower(coalesce(dm.priorite, '')) = lower(:priorite))
 """)
     Page<DemandeMere> searchMulti(
             @Param("num") String num,
             @Param("demandeur") String demandeur,
             @Param("type") String type,
             @Param("statut") Integer statut,
+            @Param("priorite") String priorite,
             @Param("dateFrom") LocalDateTime dateFrom,
             @Param("dateTo") LocalDateTime dateTo,
             Pageable pageable
@@ -123,12 +126,14 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
       and (:type = '' or lower(coalesce(dm.natureDemande, '')) = lower(:type))
 
       and (:statut is null or dm.statut = :statut)
+      and (:priorite = '' or lower(coalesce(dm.priorite, '')) = lower(:priorite))
 """)
     Page<DemandeMere> searchMultiByDemandeurIds(
             @Param("num") String num,
             @Param("demandeur") String demandeur,
             @Param("type") String type,
             @Param("statut") Integer statut,
+            @Param("priorite") String priorite,
             @Param("dateFrom") LocalDateTime dateFrom,
             @Param("dateTo") LocalDateTime dateTo,
             @Param("demandeurIds") List<Integer> demandeurIds,

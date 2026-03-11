@@ -61,8 +61,8 @@ public class DemandeFilleService {
         historique.setDemandeMere(demande);
         historique.setValidateur(validateur);
 
-        historique.setEtape(etapeCourante); // ✅ étape réelle
-        historique.setDecision(ValidationDemande.DecisionValidation.REFUSE); // ✅ décision
+        historique.setEtape(etapeCourante); // étape réelle
+        historique.setDecision(ValidationDemande.DecisionValidation.APPROUVE); // décision
 
         String designation = ligne.getArticle() != null
                 ? ligne.getArticle().getDesignation()
