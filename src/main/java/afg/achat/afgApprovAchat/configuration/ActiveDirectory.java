@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.configuration;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.naming.CommunicationException;
@@ -17,30 +18,39 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
+
 //******************************************************************************
 //**  ActiveDirectory
 //*****************************************************************************/
-
 /**
- *   Provides static methods to authenticate users, change passwords, etc. 
+ *   Provides static methods to authenticate users, change passwords, etc.
  *
  ******************************************************************************/
 @Service
 public class ActiveDirectory {
- 
+
+    @Value("${ldap.username}")
+    private String ldap_username;
+    @Value("${ldap.password}")
+    private String ldap_password;
+    @Value("${ldap.domainName}")
+    private String ldap_domainName;
+    @Value("${ldap.serverName}")
+    private String ldap_serverName;
+
     private static String[] userAttributes = {
-        "distinguishedName","cn","name","uid",
-        "sn","givenname","memberOf","samaccountname",
-        "userPrincipalName","mail","password"
+            "distinguishedName","cn","name","uid",
+            "sn","givenname","memberOf","samaccountname",
+            "userPrincipalName","mail","password"
     };
- 
-    private final LdapConfProperties ldapConfProperties ; 
-    
+
+    private final LdapConfProperties ldapConfProperties ;
+
     @Autowired
     public ActiveDirectory(LdapConfProperties ldapConfProperties){
-    	this.ldapConfProperties = ldapConfProperties ;
+        this.ldapConfProperties = ldapConfProperties ;
     }
- 
+
     public boolean authentify(String userName, String password) throws NamingException {
         boolean isAuthenticated = false;
         LdapContext ctx = null;
@@ -49,9 +59,9 @@ public class ActiveDirectory {
             // Configuration pour l'utilisateur technique (comme dans getUser)
             Hashtable<String, String> env = new Hashtable<>();
             env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-            env.put(Context.PROVIDER_URL, "ldap://10.25.10.10");
-            env.put(Context.SECURITY_PRINCIPAL, "CN=glpi mada,OU=Service,OU=User Accounts,OU=Madagascar,DC=afgbank,DC=com");
-            env.put(Context.SECURITY_CREDENTIALS, "Services!2024");
+            env.put(Context.PROVIDER_URL, "ldap://"+ldap_serverName);
+            env.put(Context.SECURITY_PRINCIPAL, "CN="+ldap_username.split("\\.")[0]+" "+ldap_username.split("\\.")[1]+",OU=Service,OU=User Accounts,OU=Madagascar,DC=afgbank,DC=com");
+            env.put(Context.SECURITY_CREDENTIALS, ldap_password);
             env.put(Context.SECURITY_AUTHENTICATION, "simple");
 
             // Connexion avec l'utilisateur technique
@@ -71,7 +81,7 @@ public class ActiveDirectory {
                 // Tentative de connexion avec le DN de l'utilisateur et son mot de passe
                 Hashtable<String, String> userEnv = new Hashtable<>();
                 userEnv.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-                userEnv.put(Context.PROVIDER_URL, "ldap://10.25.10.10");
+                userEnv.put(Context.PROVIDER_URL, "ldap://"+ldap_serverName);
                 userEnv.put(Context.SECURITY_PRINCIPAL, userDN);
                 userEnv.put(Context.SECURITY_CREDENTIALS, password);
                 userEnv.put(Context.SECURITY_AUTHENTICATION, "simple");
@@ -89,6 +99,7 @@ public class ActiveDirectory {
             e.printStackTrace();
         } catch (NamingException e) {
             System.err.println("Échec d'authentification pour l'utilisateur : " + userName);
+            //e.printStackTrace();
         } finally {
             if (ctx != null) {
                 ctx.close();
@@ -99,15 +110,14 @@ public class ActiveDirectory {
     }
 
 
-
     public User getUser(String username) throws NamingException {
         LdapContext context = null;
         try {
             Hashtable<String, String> env = new Hashtable<>();
             env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-            env.put(Context.PROVIDER_URL, "ldap://10.25.10.10");
-            env.put(Context.SECURITY_PRINCIPAL, "CN=glpi mada,OU=Service,OU=User Accounts,OU=Madagascar,DC=afgbank,DC=com");
-            env.put(Context.SECURITY_CREDENTIALS, "Services!2024");
+            env.put(Context.PROVIDER_URL, "ldap://"+ldap_serverName);
+            env.put(Context.SECURITY_PRINCIPAL, "CN="+ldap_username.split("\\.")[0]+" "+ldap_username.split("\\.")[1]+",OU=Service,OU=User Accounts,OU=Madagascar,DC=afgbank,DC=com");
+            env.put(Context.SECURITY_CREDENTIALS, ldap_password);
             env.put(Context.SECURITY_AUTHENTICATION, "simple");
 
             context = new InitialLdapContext(env, null);
@@ -150,8 +160,8 @@ public class ActiveDirectory {
             }
         }
     }
- 
-    public static User[] getUsers() throws NamingException {
+
+   /* public static User[] getUsers() throws NamingException {
         List<User> users = new ArrayList<>();
 
         String ldapURL = "ldap://10.25.10.10";
@@ -201,9 +211,9 @@ public class ActiveDirectory {
         }
 
         return users.toArray(new User[0]);
-    }
- 
- 
+    }*/
+
+
     private static String toDC(String domainName) {
         StringBuilder buf = new StringBuilder();
         for (String token : domainName.split("\\.")) {
@@ -213,128 +223,128 @@ public class ActiveDirectory {
         }
         return buf.toString();
     }
- 
- 
-  //**************************************************************************
-  //** User Class
-  //*************************************************************************/
-  /** Used to represent a User in Active Directory
-   */
+
+
+    //**************************************************************************
+    //** User Class
+    //*************************************************************************/
+    /** Used to represent a User in Active Directory
+     */
     public static class User {
-        
-    	 private String distinguishedName;
-    	    private String userPrincipal;
-    	    private String commonName;
-    	    private String mail;
-    	    private String surname;
-    	    private String firstName;
-    	    private String samAccountName;
-    	    private String username;
 
-    	    public User() {
-				super();
-			}
+        private String distinguishedName;
+        private String userPrincipal;
+        private String commonName;
+        private String mail;
+        private String surname;
+        private String firstName;
+        private String samAccountName;
+        private String username;
 
-			public User(Attributes attr) throws NamingException {
-    	        this.distinguishedName = getAttribute(attr, "distinguishedName");
-    	        this.userPrincipal = getAttribute(attr, "userPrincipalName");
-    	        this.commonName = getAttribute(attr, "cn");
-    	        this.mail = getAttribute(attr, "mail");
-    	        this.surname = getAttribute(attr, "sn");
-    	        this.firstName = getAttribute(attr, "givenName");
-    	        this.samAccountName = getAttribute(attr, "samaccountname");
-    	        this.username = getAttribute(attr, "uid");
-    	    }
+        public User() {
+            super();
+        }
 
-    	    // Getter pour les attributs
-    	    public String getDistinguishedName() {
-    	        return distinguishedName;
-    	    }
+        public User(Attributes attr) throws NamingException {
+            this.distinguishedName = getAttribute(attr, "distinguishedName");
+            this.userPrincipal = getAttribute(attr, "userPrincipalName");
+            this.commonName = getAttribute(attr, "cn");
+            this.mail = getAttribute(attr, "mail");
+            this.surname = getAttribute(attr, "sn");
+            this.firstName = getAttribute(attr, "givenName");
+            this.samAccountName = getAttribute(attr, "samaccountname");
+            this.username = getAttribute(attr, "uid");
+        }
 
-    	    public String getUserPrincipal() {
-    	        return userPrincipal;
-    	    }
+        // Getter pour les attributs
+        public String getDistinguishedName() {
+            return distinguishedName;
+        }
 
-    	    public String getCommonName() {
-    	        return commonName;
-    	    }
+        public String getUserPrincipal() {
+            return userPrincipal;
+        }
 
-    	    public String getMail() {
-    	        return mail;
-    	    }
+        public String getCommonName() {
+            return commonName;
+        }
 
-    	    public String getSurname() {
-    	        return surname;
-    	    }
+        public String getMail() {
+            return mail;
+        }
 
-    	    public String getFirstName() {
-    	        return firstName;
-    	    }
+        public String getSurname() {
+            return surname;
+        }
 
-    	    public String getSamAccountName() {
-    	        return samAccountName;
-    	    }
+        public String getFirstName() {
+            return firstName;
+        }
 
-    	    public String getUsername() {
-    	        return username;
-    	    }
+        public String getSamAccountName() {
+            return samAccountName;
+        }
 
-    	    public void setDistinguishedName(String distinguishedName) {
-				this.distinguishedName = distinguishedName;
-			}
+        public String getUsername() {
+            return username;
+        }
 
-			public void setUserPrincipal(String userPrincipal) {
-				this.userPrincipal = userPrincipal;
-			}
+        public void setDistinguishedName(String distinguishedName) {
+            this.distinguishedName = distinguishedName;
+        }
 
-			public void setCommonName(String commonName) {
-				this.commonName = commonName;
-			}
+        public void setUserPrincipal(String userPrincipal) {
+            this.userPrincipal = userPrincipal;
+        }
 
-			public void setMail(String mail) {
-				this.mail = mail;
-			}
+        public void setCommonName(String commonName) {
+            this.commonName = commonName;
+        }
 
-			public void setSurname(String surname) {
-				this.surname = surname;
-			}
+        public void setMail(String mail) {
+            this.mail = mail;
+        }
 
-			public void setFirstName(String firstName) {
-				this.firstName = firstName;
-			}
+        public void setSurname(String surname) {
+            this.surname = surname;
+        }
 
-			public void setSamAccountName(String samAccountName) {
-				this.samAccountName = samAccountName;
-			}
+        public void setFirstName(String firstName) {
+            this.firstName = firstName;
+        }
 
-			public void setUsername(String username) {
-				this.username = username;
-			}
+        public void setSamAccountName(String samAccountName) {
+            this.samAccountName = samAccountName;
+        }
 
-    	    private String getAttribute(Attributes attr, String attributeName) {
-    	        try {
-    	            Attribute attribute = attr.get(attributeName);
-    	            if (attribute != null) {
-    	                return (String) attribute.get();
-    	            }
-    	        } catch (NamingException e) {
-    	            System.out.println("Erreur lors de la récupération de l'attribut : " + attributeName);
-    	        }
-    	        return null; 
-    	    }
+        public void setUsername(String username) {
+            this.username = username;
+        }
 
-    	    @Override
-    	    public String toString() {
-    	        return "User{" +
-    	                "distinguishedName='" + distinguishedName + '\'' +
-    	                ", userPrincipal='" + userPrincipal + '\'' +
-    	                ", commonName='" + commonName + '\'' +
-    	                ", mail='" + mail + '\'' +
-    	                ", surname='" + surname + '\'' +
-    	                ", firstName='" + firstName + '\'' +
-    	                ", samAccountName='" + samAccountName + '\'' +
-    	                ", username='" + username + '\'' +
-    	                '}';
-    	    }
+        private String getAttribute(Attributes attr, String attributeName) {
+            try {
+                Attribute attribute = attr.get(attributeName);
+                if (attribute != null) {
+                    return (String) attribute.get();
+                }
+            } catch (NamingException e) {
+                System.out.println("Erreur lors de la récupération de l'attribut : " + attributeName);
+            }
+            return null;
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                    "distinguishedName='" + distinguishedName + '\'' +
+                    ", userPrincipal='" + userPrincipal + '\'' +
+                    ", commonName='" + commonName + '\'' +
+                    ", mail='" + mail + '\'' +
+                    ", surname='" + surname + '\'' +
+                    ", firstName='" + firstName + '\'' +
+                    ", samAccountName='" + samAccountName + '\'' +
+                    ", username='" + username + '\'' +
+                    '}';
+        }
     }
 }
