@@ -24,7 +24,10 @@ import javax.naming.NamingException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/")
@@ -122,29 +125,41 @@ public class HomeController {
         model.addAttribute("terminees", terminees);
 
         // ── 5. Données mensuelles ────────────────────────────────────────
-        // Si filtre date actif → année dynamique, sinon année courante
-        int currentYear = (dateFrom != null) ? dateFrom.getYear() : LocalDate.now().getYear();
+        record MoisData(int annee, int mois, long enCours, long refusees, long terminees) {}
 
-        long[] enCoursMois   = new long[12];
-        long[] refuseesMois  = new long[12];
-        long[] termineesMois = new long[12];
+        Map<String, long[]> parMois = new LinkedHashMap<>();
 
         for (DemandeMere d : toutes) {
             if (d.getDateDemande() == null) continue;
-            int mois = d.getDateDemande().getMonthValue() - 1; // 0-based
+            int annee = d.getDateDemande().getYear();
+            int mois  = d.getDateDemande().getMonthValue(); // 1-based
+            String key = annee + "-" + String.format("%02d", mois);
+            parMois.computeIfAbsent(key, k -> new long[3]);
 
             if (d.getStatut() == StatutDemande.REFUSE) {
-                refuseesMois[mois]++;
+                parMois.get(key)[1]++;
             } else if (d.getStatut() == StatutDemande.VALIDE) {
-                termineesMois[mois]++;
+                parMois.get(key)[2]++;
             } else {
-                enCoursMois[mois]++;
+                parMois.get(key)[0]++;
             }
         }
 
-        model.addAttribute("enCoursMois",   Arrays.toString(enCoursMois));
-        model.addAttribute("refuseesMois",  Arrays.toString(refuseesMois));
-        model.addAttribute("termineesMois", Arrays.toString(termineesMois));
+// Construire la liste triée
+        List<Map<String, Object>> moisData = parMois.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(e -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("mois",      e.getKey());          // "2025-01"
+                    m.put("enCours",   e.getValue()[0]);
+                    m.put("refusees",  e.getValue()[1]);
+                    m.put("terminees", e.getValue()[2]);
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+        model.addAttribute("moisData", moisData);
+
 
         // ── 6. Nature OPEX / CAPEX ───────────────────────────────────────
         long opex = Arrays.stream(toutes)
@@ -167,17 +182,6 @@ public class HomeController {
         model.addAttribute("p1", p1);
         model.addAttribute("p2", p2);
 
-        // ── 8. État de livraison ─────────────────────────────────────────
-        long nonLivree = Arrays.stream(toutes)
-                .filter(d -> DemandeMere.EtatLivraison.NON_LIVREE == d.getEtatLivraison()).count();
-        long partielle = Arrays.stream(toutes)
-                .filter(d -> DemandeMere.EtatLivraison.PARTIELLE == d.getEtatLivraison()).count();
-        long livree = Arrays.stream(toutes)
-                .filter(d -> DemandeMere.EtatLivraison.LIVREE == d.getEtatLivraison()).count();
-
-        model.addAttribute("nonLivree", nonLivree);
-        model.addAttribute("partielle", partielle);
-        model.addAttribute("livree",    livree);
 
         // ── 9. Infos contextuelles ───────────────────────────────────────
         model.addAttribute("dateFrom",        dateFrom);
@@ -185,7 +189,6 @@ public class HomeController {
         model.addAttribute("currentUri",      request.getRequestURI());
         model.addAttribute("currentUser",     current);
         model.addAttribute("isAdminOrSpecial", isAdminOrSpecial);
-        model.addAttribute("annee",           currentYear);
 
         return "dashboard";
     }

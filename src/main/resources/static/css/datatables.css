@@ -57,13 +57,13 @@
 
 /* ===== GRADIENTS (charte) ===== */
 .grad-blue {
-    background: linear-gradient(45deg, #001051, #00129f) !important;
+    background: linear-gradient(45deg, #001051, #001173) !important;
 }
 .grad-red {
-    background: linear-gradient(45deg, #dc2626, #ef4444, #f87171) !important;
+    background: linear-gradient(45deg, #E20000, #E20000 80%, #df3333) !important;
 }
 .grad-green {
-    background: linear-gradient(45deg, #28a745, #28a745 80%, #20c997) !important;
+    background: linear-gradient(45deg, #00AD00, #00AD00 80%, #4fd84f) !important;
 }
 
 /* ===== CHARTS CARD ===== */
@@ -88,7 +88,7 @@
     gap: 8px;
 }
 .chart-card .card-header i {
-    background: linear-gradient(45deg, #001051, #00129f);
+    background: linear-gradient(45deg, #001051, #001173);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -99,7 +99,7 @@
 
 /* ===== TITRE ===== */
 .dashboard-title {
-    background: linear-gradient(45deg, #001051, #00129f);
+    background: linear-gradient(45deg, #001051, #001173);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -107,7 +107,7 @@
     font-size: 1.3rem;
 }
 .title-badge {
-    background: linear-gradient(45deg, #001051, #00129f) !important;
+    background: linear-gradient(45deg, #001051, #001173) !important;
     color: #fff !important;
     font-size: 1rem !important;
 }
@@ -249,12 +249,12 @@
     opacity:1;
 }
 .approval-stepper .step.is-done .dot{
-    border-color:#16a34a;
-    background:#16a34a;
+    border-color:#00AD00;
+    background:#00AD00;
     color:#fff;
 }
 .approval-stepper .line.is-done{
-    background:#16a34a;
+    background:#00AD00;
 }
 
 /* CURRENT */
@@ -262,8 +262,8 @@
     opacity:1;
 }
 .approval-stepper .step.is-current .dot{
-    border-color:#2563eb;
-    background:#2563eb;
+    border-color:#001051;
+    background: #001051;
     color:#fff;
     box-shadow:0 0 0 4px rgba(37,99,235,.15);
 }
@@ -942,6 +942,28 @@ table.dataTable tbody tr:hover {
     background: linear-gradient(45deg, #dc2626, #ef4444, #f87171) !important;
     border: none !important;
     color: white !important;
+}
+
+/* Rouge outline — cohérent avec btn-outline-gradient-blue et btn-outline-gradient-green */
+.btn-outline-danger {
+    background-color: transparent !important;
+    border: 2px solid #dc3545 !important;
+    color: #dc3545 !important;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-danger:hover {
+    background: linear-gradient(45deg, #b02a37 0%, #dc3545 80%) !important;
+    border-color: transparent !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(220, 53, 69, 0.35);
+}
+
+.btn-outline-danger:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(220, 53, 69, 0.25);
 }
 
 /* Violet */

@@ -39,6 +39,7 @@ public class DemandeMereService {
                                             String demandeur,
                                             String type,
                                             Integer statut,
+                                            String priorite,
                                             LocalDate dateFrom,
                                             LocalDate dateTo,
                                             int page,
@@ -59,8 +60,9 @@ public class DemandeMereService {
 
         // null = tous
         Integer st = (statut == null || statut == 0) ? null : statut;
+        String p = (priorite == null) ? "" : priorite.trim();
 
-        return demandeMereRepo.searchMulti(n, d, t, st, from, to, pageable);
+        return demandeMereRepo.searchMulti(n, d, t, st ,p ,from, to, pageable);
     }
 
 
@@ -98,6 +100,7 @@ public class DemandeMereService {
                                                                  String demandeur,
                                                                  String type,
                                                                  Integer statut,
+                                                                 String priorite,
                                                                  LocalDate dateFrom,
                                                                  LocalDate dateTo,
                                                                  List<Integer> demandeurIds,
@@ -118,8 +121,9 @@ public class DemandeMereService {
         String t = (type == null) ? "" : type.trim();
 
         Integer st = (statut == null || statut == 0) ? null : statut;
+        String p = (priorite == null) ? "" : priorite.trim();
 
-        return demandeMereRepo.searchMultiByDemandeurIds(n, d, t, st, from, to, demandeurIds, pageable);
+        return demandeMereRepo.searchMultiByDemandeurIds(n, d, t, st, p, from, to, demandeurIds, pageable);
     }
 
     @Transactional
