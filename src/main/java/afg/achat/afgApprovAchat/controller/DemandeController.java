@@ -757,6 +757,7 @@ public class DemandeController {
 
         List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
         List<CodepPieceJointe> codepPiecesJointes = codepPieceJointeService.listByDemandeId(demande.getId());
+        CommentaireFinance commentaireFinance = commentaireFinanceService.getCommentaireFinanceByIdDemande(demande); // ← AJOUTER
 
 
         int currentStep;
@@ -818,6 +819,7 @@ public class DemandeController {
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("ligneBudgetaires", ligneBudgetaires);
+        model.addAttribute("commentaireFinance", commentaireFinance);
 
         return "demande/demande-fiche";
     }
