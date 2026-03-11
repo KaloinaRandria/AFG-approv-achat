@@ -756,6 +756,7 @@ public class DemandeController {
         }
 
         List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
+        List<CodepPieceJointe> codepPiecesJointes = codepPieceJointeService.listByDemandeId(demande.getId());
 
 
         int currentStep;
@@ -788,6 +789,7 @@ public class DemandeController {
         model.addAttribute("steps", steps);
         model.addAttribute("historiques", historiques);
         model.addAttribute("piecesJointes", piecesJointes);
+        model.addAttribute("codepPiecesJointes", codepPiecesJointes);
         model.addAttribute("currentStep", currentStep);
         model.addAttribute("isRefused", demande.getStatut() == StatutDemande.REFUSE);
         model.addAttribute("isValidated", demande.getStatut() == StatutDemande.VALIDE);
@@ -947,10 +949,23 @@ public class DemandeController {
                 return "redirect:/demande/fiche/" + id;
             }
             if(canDecisionCodep) {
+                final List<String> ALLOWED_MIME = List.of(
+                        "image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"
+                );
+                List<String> pjAjoutees = new ArrayList<>();
 
                 if (piecesJointes != null) {
                     for (MultipartFile f : piecesJointes) {
                         if (f == null || f.isEmpty()) continue;
+
+                        String contentType = f.getContentType() != null ? f.getContentType() : "";
+
+                        // ← Vérification côté serveur
+                        if (!ALLOWED_MIME.contains(contentType)) {
+                            redirectAttributes.addFlashAttribute("ko",
+                                    "Format non autorisé : " + f.getOriginalFilename() + " (PDF et images uniquement).");
+                            return "redirect:/demande/fiche/" + id;
+                        }
 
                         String safeDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
                         String ref = "PV_CODEP_" + demande.getId()
@@ -958,22 +973,37 @@ public class DemandeController {
                                 + "_" + demande.getDemandeur().getPrenom()
                                 + "_" + safeDate;
 
-                        // 1) sauvegarde disque (retourne le nom stocké)
                         String storedName = storageService.store(f, ref);
 
-                        // 2) sauvegarde DB
                         CodepPieceJointe pj = new CodepPieceJointe();
                         pj.setDemandeMere(demande);
                         pj.setOriginalName(f.getOriginalFilename());
                         pj.setStoredName(storedName);
-                        pj.setContentType(f.getContentType() != null ? f.getContentType() : "application/octet-stream");
+                        pj.setContentType(contentType);
                         pj.setSize(f.getSize());
                         pj.setUploadedAt(LocalDateTime.now());
 
                         codepPieceJointeService.insert(pj);
+                        pjAjoutees.add(f.getOriginalFilename());
                     }
                 }
+
+
                 int etape = demande.getStatut();
+                if (!pjAjoutees.isEmpty()) {
+                    String listePj = pjAjoutees.stream()
+                            .map(nom -> "• " + nom)
+                            .collect(Collectors.joining("\n"));
+
+                    ValidationDemande histoPj = new ValidationDemande();
+                    histoPj.setDemandeMere(demande);
+                    histoPj.setValidateur(current);
+                    histoPj.setEtape(etape);
+                    histoPj.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                    histoPj.setCommentaire(pjAjoutees.size() + " pièce(s) jointe(s) CODEP ajoutée(s) :\n" + listePj);
+                    histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
+                    validationDemandeService.logAction(histoPj);
+                }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le Comité de dépense.");
@@ -1044,8 +1074,6 @@ public class DemandeController {
                     }
                 }
 
-                //On enregistre le type puis on passe au statut suivant
-                demandeMereService.saveDemandeMere(demande);
 
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
@@ -1142,6 +1170,8 @@ public class DemandeController {
     @PostMapping("/fiche/{id}/send-codep")
     public String sendToCodep(@PathVariable("id") String id,
                               @RequestParam(value = "typeDemande", required = false) String typeDemande,
+                              @RequestParam(value = "priorite", required = false) String prioriteParam,
+                              @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                               RedirectAttributes redirectAttributes) {
 
         DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
@@ -1175,10 +1205,75 @@ public class DemandeController {
             redirectAttributes.addFlashAttribute("ko", "Type de demande invalide : " + typeDemande);
             return "redirect:/demande/fiche/" + id;
         }
-        demande.setViaCodep(true);
 
+        if (prioriteParam != null && !prioriteParam.isBlank()) {
+            String anciennePriorite = demande.getPriorite() != null
+                    ? demande.getPriorite().name() : "N/A";
+            try {
+                DemandeMere.PrioriteDemande nouvellePriorite =
+                        DemandeMere.PrioriteDemande.valueOf(prioriteParam.trim().toUpperCase());
+
+                if (!prioriteParam.trim().toUpperCase().equals(anciennePriorite)) {
+                    demande.setPriorite(nouvellePriorite);
+
+                    ValidationDemande histoPriorite = new ValidationDemande();
+                    histoPriorite.setDemandeMere(demande);
+                    histoPriorite.setValidateur(current);
+                    histoPriorite.setEtape(demande.getStatut());
+                    histoPriorite.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                    histoPriorite.setCommentaire("Modification de priorité : " + anciennePriorite
+                            + " → " + nouvellePriorite.name());
+                    histoPriorite.setDateAction(String.valueOf(LocalDateTime.now()));
+                    validationDemandeService.logAction(histoPriorite);
+                }
+            } catch (IllegalArgumentException ex) {
+                redirectAttributes.addFlashAttribute("ko", "Priorité invalide : " + prioriteParam);
+                return "redirect:/demande/fiche/" + id;
+            }
+        }
+
+        demande.setViaCodep(true);
+        List<String> pjAjoutees = new ArrayList<>();
+        if (piecesJointes != null) {
+            for (MultipartFile f : piecesJointes) {
+                if (f == null || f.isEmpty()) continue;
+
+                String safeDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                String ref = "PJ_CODEP_" + demande.getId()
+                        + "_" + demande.getDemandeur().getNom()
+                        + "_" + demande.getDemandeur().getPrenom()
+                        + "_" + safeDate;
+
+                String storedName = storageService.store(f, ref);
+
+                CodepPieceJointe pj = new CodepPieceJointe();
+                pj.setDemandeMere(demande);
+                pj.setOriginalName(f.getOriginalFilename());
+                pj.setStoredName(storedName);
+                pj.setContentType(f.getContentType() != null ? f.getContentType() : "application/octet-stream");
+                pj.setSize(f.getSize());
+                pj.setUploadedAt(LocalDateTime.now());
+
+                codepPieceJointeService.insert(pj);
+                pjAjoutees.add(f.getOriginalFilename());
+            }
+        }
         // Passage au statut CODEP
         int etape = demande.getStatut();
+        if (!pjAjoutees.isEmpty()) {
+            String listePj = pjAjoutees.stream()
+                    .map(nom -> "• " + nom)
+                    .collect(Collectors.joining("\n"));
+
+            ValidationDemande histoPj = new ValidationDemande();
+            histoPj.setDemandeMere(demande);
+            histoPj.setValidateur(current);
+            histoPj.setEtape(etape);
+            histoPj.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+            histoPj.setCommentaire(pjAjoutees.size() + " pièce(s) jointe(s) ajoutée(s) :\n" + listePj);
+            histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
+            validationDemandeService.logAction(histoPj);
+        }
         demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.DECISION_CODEP);
         validationDemandeService.logValidation(demande, current, "Envoi au CODEP", etape);
         redirectAttributes.addFlashAttribute("ok", "Demande envoyée au CODEP (action irréversible).");
