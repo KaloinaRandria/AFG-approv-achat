@@ -1,5 +1,7 @@
 package afg.achat.afgApprovAchat.controller;
 
+import afg.achat.afgApprovAchat.email.EmailSenderService;
+import afg.achat.afgApprovAchat.email.Mail;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.demande.*;
@@ -68,6 +70,8 @@ public class DemandeController {
     CodepPieceJointeService codepPieceJointeService;
     @Autowired
     private CommentaireFinanceService commentaireFinanceService;
+    @Autowired
+    private EmailSenderService ess;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -184,6 +188,14 @@ public class DemandeController {
                     demandePieceJointeService.insert(pj);
                 }
             }
+
+            Map<String,Object> props = new HashMap<>();
+            props.put("id",demandeMere.getId());
+            Mail mail = new Mail("demandeSaved", demandeMere.getDemandeur().getMail(),"[AFG/MADA]- Demande enregistrée", props);
+            ess.sendEmail(mail);
+
+            Mail mailSup = new Mail("validationDemande", demandeMere.getDemandeur().getSuperieurHierarchique().getMail(),"[AFG/MADA]- Demande d'achat en attente de validation", props);
+            ess.sendEmail(mailSup);
 
 
             redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
