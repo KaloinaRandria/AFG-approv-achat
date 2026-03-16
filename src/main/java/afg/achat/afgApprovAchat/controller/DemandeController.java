@@ -189,13 +189,13 @@ public class DemandeController {
                 }
             }
 
-            Map<String,Object> props = new HashMap<>();
-            props.put("id",demandeMere.getId());
-            Mail mail = new Mail("demandeSaved", demandeMere.getDemandeur().getMail(),"[AFG/MADA]- Demande enregistrée", props);
-            ess.sendEmail(mail);
-
-            Mail mailSup = new Mail("validationDemande", demandeMere.getDemandeur().getSuperieurHierarchique().getMail(),"[AFG/MADA]- Demande d'achat en attente de validation", props);
-            ess.sendEmail(mailSup);
+//            Map<String,Object> props = new HashMap<>();
+//            props.put("id",demandeMere.getId());
+//            Mail mail = new Mail("demandeSaved", demandeMere.getDemandeur().getMail(),"[AFG/MADA]- Demande enregistrée", props);
+//            ess.sendEmail(mail);
+//
+//            Mail mailSup = new Mail("validationDemande", demandeMere.getDemandeur().getSuperieurHierarchique().getMail(),"[AFG/MADA]- Demande d'achat en attente de validation", props);
+//            ess.sendEmail(mailSup);
 
 
             redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
