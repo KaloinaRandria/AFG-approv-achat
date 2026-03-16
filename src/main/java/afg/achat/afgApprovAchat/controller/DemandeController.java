@@ -482,6 +482,30 @@ public class DemandeController {
             }
             model.addAttribute("statut", (statut == null) ? 0 : statut);
         }
+
+        // À ajouter dans listDemandePage, avant le return
+        Map<Integer, String> badgeClasses = new HashMap<>();
+        badgeClasses.put(StatutDemande.CREE,           "badge-wait");
+        badgeClasses.put(StatutDemande.VALIDATION_N1,  "badge-info");
+        badgeClasses.put(StatutDemande.VALIDATION_N2,  "badge-purple");
+        badgeClasses.put(StatutDemande.VALIDATION_N3,  "badge-warning");
+        badgeClasses.put(StatutDemande.VALIDATION_N4,  "badge-teal");
+        badgeClasses.put(StatutDemande.DECISION_CODEP, "badge-codep");
+        badgeClasses.put(StatutDemande.VALIDE,         "badge-success");
+        badgeClasses.put(StatutDemande.REFUSE,         "badge-danger");
+
+        Map<Integer, String> badgeIcons = new HashMap<>();
+        badgeIcons.put(StatutDemande.CREE,           "fa-user-clock");
+        badgeIcons.put(StatutDemande.VALIDATION_N1,  "fa-clipboard-check");
+        badgeIcons.put(StatutDemande.VALIDATION_N2,  "fa-coins");
+        badgeIcons.put(StatutDemande.VALIDATION_N3,  "fa-gavel");
+        badgeIcons.put(StatutDemande.VALIDATION_N4,  "fa-stamp");
+        badgeIcons.put(StatutDemande.DECISION_CODEP, "fa-landmark");
+        badgeIcons.put(StatutDemande.VALIDE,         "fa-check-circle");
+        badgeIcons.put(StatutDemande.REFUSE,         "fa-times-circle");
+
+        model.addAttribute("badgeClasses", badgeClasses);
+        model.addAttribute("badgeIcons", badgeIcons);
         Map<String, String> prioriteFiltre = new LinkedHashMap<>();
         prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P2), "P2");
         prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P1), "P1");
@@ -743,13 +767,14 @@ public class DemandeController {
         Map<Integer, String> badgeClasses = new HashMap<>();
         Map<Integer, String> badgeIcons = new HashMap<>();
 
-        badgeClasses.put(StatutDemande.CREE, "badge-wait");
-        badgeClasses.put(StatutDemande.VALIDATION_N1, "badge-info");
-        badgeClasses.put(StatutDemande.VALIDATION_N2, "badge-purple");
-        badgeClasses.put(StatutDemande.VALIDATION_N3, "badge-purple");
-        badgeClasses.put(StatutDemande.VALIDATION_N4, "badge-purple");
-        badgeClasses.put(StatutDemande.VALIDE, "badge-success");
-        badgeClasses.put(StatutDemande.REFUSE, "badge-danger");
+        badgeClasses.put(StatutDemande.CREE,           "badge-wait");    // gris/orange — en attente
+        badgeClasses.put(StatutDemande.VALIDATION_N1,  "badge-info");    // bleu — MG
+        badgeClasses.put(StatutDemande.VALIDATION_N2,  "badge-purple");  // violet — Contrôleur
+        badgeClasses.put(StatutDemande.VALIDATION_N3,  "badge-warning"); // jaune/orange — DFC
+        badgeClasses.put(StatutDemande.VALIDATION_N4,  "badge-teal");    // teal — SG
+        badgeClasses.put(StatutDemande.DECISION_CODEP, "badge-codep");   // couleur dédiée CODEP
+        badgeClasses.put(StatutDemande.VALIDE,         "badge-success"); // vert — validé
+        badgeClasses.put(StatutDemande.REFUSE,         "badge-danger");  // rouge — refusé
 
         badgeIcons.put(StatutDemande.CREE, "fa-user-clock");
         badgeIcons.put(StatutDemande.VALIDATION_N1, "fa-clipboard-check");

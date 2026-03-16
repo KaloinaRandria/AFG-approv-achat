@@ -855,6 +855,18 @@ table.dataTable tbody tr:hover {
     font-weight: bold;
 }
 
+.badge-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+.badge-teal {
+    background-color: #d2f4ea;
+    color: #0d6e4f;
+    border: 1px solid #20c997;
+}
+
 
 /* Palette de boutons dégradés */
 
