@@ -7,6 +7,11 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+    <!-- Select2 JS (après jQuery) -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 </head>
 
@@ -571,8 +576,9 @@
                                             Ligne budgétaire <span class="text-danger">*</span>
                                         </label>
 
-                                        <select class="form-select form-select-sm"
+                                        <select class="select2 w-100"
                                                 name="ligneBudgetaire"
+                                                id="ligneBudgetaire"
                                                 required>
                                             <option value="">-- Choisir --</option>
                                             <option th:each="ligne : ${ligneBudgetaires}"
@@ -1867,6 +1873,15 @@
 
         renderFiles();
     })();
+
+    $(document).ready(function () {
+        $('select[name="ligneBudgetaire"]').select2({
+            placeholder: "-- Rechercher une ligne budgétaire --",
+            allowClear: true,
+            width: '100%',
+            language: "fr"
+        });
+    });
     /*]]>*/
 </script>
 </body>
