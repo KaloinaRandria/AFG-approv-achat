@@ -75,8 +75,10 @@ public class HomeController {
                 .anyMatch(a -> "ROLE_CONTROLEUR".equals(a.getAuthority()));
         boolean isDFC = auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_DFC".equals(a.getAuthority()));
+        boolean isSG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
 
-        boolean isAdminOrSpecial = isAdmin || isMG || isControleur || isDFC;
+        boolean isAdminOrSpecial = isAdmin || isMG || isControleur || isDFC || isSG;
 
         // ── 1. Récupération du périmètre visible ────────────────────────
         List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
