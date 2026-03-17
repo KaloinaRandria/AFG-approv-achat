@@ -19,6 +19,19 @@ public final class StatutDemande {
 
     // ----- Etat final négatif -----
     public static final int REFUSE = -1;
+
+    public static String getLibelle(int statut) {
+        return switch (statut) {
+            case CREE          -> "Validation N+1";
+            case VALIDATION_N1 -> "Validation Moyens Généraux";
+            case VALIDATION_N2 -> "Validation Contrôleur";
+            case VALIDATION_N3 -> "Validation DFC";
+            case VALIDATION_N4 -> "Validation SG";
+            case DECISION_CODEP -> "Décision CODEP";
+            case REFUSE        -> "Refusée";
+            default            -> "Étape inconnue";
+        };
+    }
 }
 
  

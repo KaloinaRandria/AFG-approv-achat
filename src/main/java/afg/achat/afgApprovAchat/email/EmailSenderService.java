@@ -1,5 +1,7 @@
 package afg.achat.afgApprovAchat.email;
 
+import afg.achat.afgApprovAchat.model.util.StatutDemande;
+import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.core.io.ByteArrayResource;
@@ -12,9 +14,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -77,5 +84,29 @@ public class EmailSenderService {
                 e.printStackTrace();
             }
         });
+    }
+
+    public void envoyerMailValidation(DemandeMere demande,
+                                       Utilisateur validateur,
+                                       String commentaire,
+                                       int etapeCourante,
+                                       int prochaineEtape) {
+        Map<String, Object> props = new HashMap<>();
+        props.put("id",            demande.getId());
+        props.put("demandeur",     demande.getDemandeur());
+        props.put("validateur",    validateur);
+        props.put("commentaire",   commentaire);
+        props.put("dateDecision",  LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+        props.put("etape",         StatutDemande.getLibelle(etapeCourante));
+        props.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
+
+        Mail mail = new Mail(
+                "validationDemande",
+                demande.getDemandeur().getMail(),
+                "[AFG/MADA] - Votre demande a été validée",
+                props
+        );
+        this.sendEmail(mail);
     }
 }

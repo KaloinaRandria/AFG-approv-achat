@@ -1016,8 +1016,8 @@ public class DemandeController {
             ValidationDemande h = new ValidationDemande();
             h.setDemandeMere(demande);
             h.setValidateur(current);
-            h.setEtape(etapeCourante);     // étape
-            h.setDecision(ValidationDemande. DecisionValidation.REFUSE); // décision
+            h.setEtape(etapeCourante);
+            h.setDecision(ValidationDemande. DecisionValidation.REFUSE);
             h.setCommentaire(cmt);
             h.setDateAction(String.valueOf(LocalDateTime.now()));
 
@@ -1028,6 +1028,24 @@ public class DemandeController {
                     demande,
                     StatutDemande.REFUSE
             );
+
+            Map<String, Object> props = new HashMap<>();
+            props.put("id",            demande.getId());
+            props.put("demandeur",     demande.getDemandeur());
+            props.put("validateur",    current);
+            props.put("commentaire",   cmt);
+            props.put("dateDecision",  LocalDateTime.now()
+                    .format(DateTimeFormatter
+                            .ofPattern("dd/MM/yyyy HH:mm")));
+            props.put("etape",        StatutDemande.getLibelle(etapeCourante));
+
+            Mail mail = new Mail(
+                    "refusDemande",
+                    demande.getDemandeur().getMail(),
+                    "[AFG/MADA] - Votre demande a été refusée",
+                    props
+            );
+            ess.sendEmail(mail);
 
             redirectAttributes.addFlashAttribute("ok", "Demande rejetée.");
             return "redirect:/demande/fiche/" + id;
@@ -1056,6 +1074,7 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
+                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N1);
                 redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1188,6 +1207,7 @@ public class DemandeController {
 
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
+                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N2);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1230,6 +1250,7 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
+                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N3);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le contrôleur de gestion (N3).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1253,6 +1274,7 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N4);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
+                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N4);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par la D.F.C., transmise au S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1274,6 +1296,7 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
+                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDE);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
