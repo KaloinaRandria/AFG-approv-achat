@@ -1,5 +1,7 @@
 package afg.achat.afgApprovAchat.controller;
 
+import afg.achat.afgApprovAchat.email.EmailSenderService;
+import afg.achat.afgApprovAchat.email.Mail;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.demande.*;
@@ -68,6 +70,8 @@ public class DemandeController {
     CodepPieceJointeService codepPieceJointeService;
     @Autowired
     private CommentaireFinanceService commentaireFinanceService;
+    @Autowired
+    private EmailSenderService ess;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -185,6 +189,17 @@ public class DemandeController {
                 }
             }
 
+            Map<String,Object> props = new HashMap<>();
+            props.put("id",demandeMere.getId());
+            props.put("demandeur", demandeMere.getDemandeur());
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            props.put("dateDemande", demandeMere.getDateDemande().format(formatter));
+            Mail mail = new Mail("demandeSaved", demandeMere.getDemandeur().getMail(),"[AFG/MADA]- Demande enregistrée", props);
+            ess.sendEmail(mail);
+
+            Mail mailSup = new Mail("validSup", demandeMere.getDemandeur().getSuperieurHierarchique().getMail(),"[AFG/MADA]- Demande d'achat en attente de validation", props);
+            ess.sendEmail(mailSup);
+
 
             redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
             return "redirect:/demande/list";
@@ -223,6 +238,7 @@ public class DemandeController {
         boolean isMG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
         boolean isControleur = auth.getAuthorities().stream().anyMatch(a -> "ROLE_CONTROLEUR".equals(a.getAuthority()));
         boolean isDFC = auth.getAuthorities().stream().anyMatch(a -> "ROLE_DFC".equals(a.getAuthority()));
+        boolean isSG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
 
 
         boolean isAdminOrMGOrControleur = isAdmin || isMG || isControleur;
@@ -234,6 +250,7 @@ public class DemandeController {
                 StatutDemande.VALIDATION_N1, "En attente M.G.",
                 StatutDemande.VALIDATION_N2, "En attente Contrôle de gestion",
                 StatutDemande.VALIDATION_N3, "En attente D.F.C.",
+                StatutDemande.VALIDATION_N4,  "En attente S.G.",
                 StatutDemande.DECISION_CODEP,"En attente CODEP",
                 StatutDemande.VALIDE, "VALIDÉE",
                 StatutDemande.REFUSE, "REFUSÉE"
@@ -245,6 +262,7 @@ public class DemandeController {
         statutFiltre.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
         statutFiltre.put(StatutDemande.VALIDATION_N2,"En attente Contrôle de gestion");
         statutFiltre.put(StatutDemande.VALIDATION_N3, "En attente D.F.C.");
+        statutFiltre.put(StatutDemande.VALIDATION_N4,  "En attente S.G.");
         statutFiltre.put(StatutDemande.DECISION_CODEP,"En attente CODEP");
         statutFiltre.put(StatutDemande.VALIDE, "VALIDÉE");
         statutFiltre.put(StatutDemande.REFUSE, "REFUSÉE");
@@ -283,6 +301,7 @@ public class DemandeController {
                     StatutDemande.VALIDATION_N1,
                     StatutDemande.VALIDATION_N2,
                     StatutDemande.VALIDATION_N3,
+                    StatutDemande.VALIDATION_N4,
                     StatutDemande.DECISION_CODEP,
                     StatutDemande.VALIDE,
                     StatutDemande.REFUSE
@@ -327,6 +346,7 @@ public class DemandeController {
                     StatutDemande.VALIDATION_N2,
                     StatutDemande.VALIDATION_N3,
                     StatutDemande.DECISION_CODEP,
+                    StatutDemande.VALIDATION_N4,
                     StatutDemande.VALIDE,
                     StatutDemande.REFUSE
             ));
@@ -366,6 +386,7 @@ public class DemandeController {
 
             List<Integer> dfcStatuses = new ArrayList<>(List.of(
                     StatutDemande.VALIDATION_N3,
+                    StatutDemande.VALIDATION_N4,
                     StatutDemande.DECISION_CODEP,
                     StatutDemande.VALIDE,
                     StatutDemande.REFUSE
@@ -401,6 +422,39 @@ public class DemandeController {
             model.addAttribute("statut", (statut == null) ? 0 : statut);
         }
 
+        else if (isSG && !isAdmin) {
+
+            List<Integer> sgStatuses = new ArrayList<>(List.of(
+                    StatutDemande.VALIDATION_N4,
+                    StatutDemande.DECISION_CODEP,
+                    StatutDemande.VALIDE,
+                    StatutDemande.REFUSE
+            ));
+
+            if (statutFilter != null) {
+                sgStatuses = sgStatuses.contains(statutFilter) ? List.of(statutFilter) : List.of();
+            }
+
+            List<DemandeMere> merged = new ArrayList<>();
+            for (Integer st : sgStatuses) {
+                Page<DemandeMere> p = demandeMereService.searchDemandes(
+                        num, demandeur, type, st, priorite,
+                        dateFrom, dateTo, 0, Integer.MAX_VALUE, sort, dir
+                );
+                merged.addAll(p.getContent());
+            }
+
+            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
+
+            Pageable pageable = PageRequest.of(page, size);
+            int start = (int) pageable.getOffset();
+            int end = Math.min(start + pageable.getPageSize(), merged.size());
+            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
+            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
+
+            model.addAttribute("statut", (statut == null) ? 0 : statut);
+        }
+
 // Cas normal / admin
         else {
             if (isBackofficeValidator) {
@@ -429,7 +483,32 @@ public class DemandeController {
                         sort, dir
                 );
             }
+            model.addAttribute("statut", (statut == null) ? 0 : statut);
         }
+
+        // À ajouter dans listDemandePage, avant le return
+        Map<Integer, String> badgeClasses = new HashMap<>();
+        badgeClasses.put(StatutDemande.CREE,           "badge-wait");
+        badgeClasses.put(StatutDemande.VALIDATION_N1,  "badge-info");
+        badgeClasses.put(StatutDemande.VALIDATION_N2,  "badge-purple");
+        badgeClasses.put(StatutDemande.VALIDATION_N3,  "badge-warning");
+        badgeClasses.put(StatutDemande.VALIDATION_N4,  "badge-teal");
+        badgeClasses.put(StatutDemande.DECISION_CODEP, "badge-codep");
+        badgeClasses.put(StatutDemande.VALIDE,         "badge-success");
+        badgeClasses.put(StatutDemande.REFUSE,         "badge-danger");
+
+        Map<Integer, String> badgeIcons = new HashMap<>();
+        badgeIcons.put(StatutDemande.CREE,           "fa-user-clock");
+        badgeIcons.put(StatutDemande.VALIDATION_N1,  "fa-clipboard-check");
+        badgeIcons.put(StatutDemande.VALIDATION_N2,  "fa-coins");
+        badgeIcons.put(StatutDemande.VALIDATION_N3,  "fa-gavel");
+        badgeIcons.put(StatutDemande.VALIDATION_N4,  "fa-stamp");
+        badgeIcons.put(StatutDemande.DECISION_CODEP, "fa-landmark");
+        badgeIcons.put(StatutDemande.VALIDE,         "fa-check-circle");
+        badgeIcons.put(StatutDemande.REFUSE,         "fa-times-circle");
+
+        model.addAttribute("badgeClasses", badgeClasses);
+        model.addAttribute("badgeIcons", badgeIcons);
         Map<String, String> prioriteFiltre = new LinkedHashMap<>();
         prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P2), "P2");
         prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P1), "P1");
@@ -461,6 +540,7 @@ public class DemandeController {
         model.addAttribute("isMGOnly", isMG && !isAdmin);
         model.addAttribute("isControleurOnly", isControleur && !isAdmin);
         model.addAttribute("isDFCOnly", isDFC && !isAdmin);
+        model.addAttribute("isSGOnly", isSG && !isAdmin);
 
         return "demande/demande-liste";
     }
@@ -604,7 +684,10 @@ public class DemandeController {
         boolean isDFC = auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_DFC".equals(a.getAuthority()));
 
-        boolean isAdminOrSpecial = isAdmin || isMG || isControleur || isDFC;
+        boolean isSG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
+
+        boolean isAdminOrSpecial = isAdmin || isMG || isControleur || isDFC || isSG;
 
         DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
         if (demande == null) {
@@ -634,6 +717,7 @@ public class DemandeController {
         boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
         boolean canDecisionControleur = isControleur && demande.getStatut() == StatutDemande.VALIDATION_N2;
         boolean canDecisionDFC = isDFC && demande.getStatut() == StatutDemande.VALIDATION_N3;
+        boolean canDecisionSG   = isSG  && demande.getStatut() == StatutDemande.VALIDATION_N4;
         boolean isCodepWorkflow = Boolean.TRUE.equals(demande.getViaCodep());
         boolean canDecisionCodep = isMG && demande.getStatut() == StatutDemande.DECISION_CODEP;
 
@@ -648,6 +732,7 @@ public class DemandeController {
         statutLabels.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
         statutLabels.put(StatutDemande.VALIDATION_N2, "En attente Contrôleur");
         statutLabels.put(StatutDemande.VALIDATION_N3, "En attente D.F.C.");
+        statutLabels.put(StatutDemande.VALIDATION_N4,  "En attente S.G.");
         statutLabels.put(StatutDemande.DECISION_CODEP,"En attente CODEP");
         statutLabels.put(StatutDemande.VALIDE, "VALIDÉE");
         statutLabels.put(StatutDemande.REFUSE, "REFUSÉE");
@@ -660,14 +745,16 @@ public class DemandeController {
         stepLabels.put(StatutDemande.VALIDATION_N1, "N+1");
         stepLabels.put(StatutDemande.VALIDATION_N2, "Moyens Généraux");
         stepLabels.put(StatutDemande.VALIDATION_N3, "Contrôleur de gestion");
+        stepLabels.put(StatutDemande.VALIDATION_N4,  "D.F.C.");
         stepLabels.put(StatutDemande.DECISION_CODEP, "Comité de dépense");
         stepLabels.put(StatutDemande.REFUSE, "Refus");
 
         Map<Integer, String> histoLabels = new HashMap<>();
-        histoLabels.put(StatutDemande.CREE,          "N+1");               // statut CREE = décision N+1 en attente → N+1 décide
-        histoLabels.put(StatutDemande.VALIDATION_N1, "Moyens Généraux");   // MG décide
-        histoLabels.put(StatutDemande.VALIDATION_N2, "Contrôleur de gestion"); // ← VOTRE BUG : c'est ici que le contrôleur agit
+        histoLabels.put(StatutDemande.CREE,          "N+1");
+        histoLabels.put(StatutDemande.VALIDATION_N1, "Moyens Généraux");
+        histoLabels.put(StatutDemande.VALIDATION_N2, "Contrôleur de gestion");
         histoLabels.put(StatutDemande.VALIDATION_N3, "D.F.C.");
+        histoLabels.put(StatutDemande.VALIDATION_N4,  "S.G.");
         histoLabels.put(StatutDemande.DECISION_CODEP,"Comité de dépense");
 
 
@@ -676,24 +763,27 @@ public class DemandeController {
         if (isCodepWorkflow) {
             stepLabels.put(StatutDemande.VALIDE, "Comité de dépense");
         } else {
-            stepLabels.put(StatutDemande.VALIDE, "D.F.C.");
+            stepLabels.put(StatutDemande.VALIDE, "S.G.");
         }
 
 
         Map<Integer, String> badgeClasses = new HashMap<>();
         Map<Integer, String> badgeIcons = new HashMap<>();
 
-        badgeClasses.put(StatutDemande.CREE, "badge-wait");
-        badgeClasses.put(StatutDemande.VALIDATION_N1, "badge-info");
-        badgeClasses.put(StatutDemande.VALIDATION_N2, "badge-purple");
-        badgeClasses.put(StatutDemande.VALIDATION_N3, "badge-purple");
-        badgeClasses.put(StatutDemande.VALIDE, "badge-success");
-        badgeClasses.put(StatutDemande.REFUSE, "badge-danger");
+        badgeClasses.put(StatutDemande.CREE,           "badge-wait");    // gris/orange — en attente
+        badgeClasses.put(StatutDemande.VALIDATION_N1,  "badge-info");    // bleu — MG
+        badgeClasses.put(StatutDemande.VALIDATION_N2,  "badge-purple");  // violet — Contrôleur
+        badgeClasses.put(StatutDemande.VALIDATION_N3,  "badge-warning"); // jaune/orange — DFC
+        badgeClasses.put(StatutDemande.VALIDATION_N4,  "badge-teal");    // teal — SG
+        badgeClasses.put(StatutDemande.DECISION_CODEP, "badge-codep");   // couleur dédiée CODEP
+        badgeClasses.put(StatutDemande.VALIDE,         "badge-success"); // vert — validé
+        badgeClasses.put(StatutDemande.REFUSE,         "badge-danger");  // rouge — refusé
 
         badgeIcons.put(StatutDemande.CREE, "fa-user-clock");
         badgeIcons.put(StatutDemande.VALIDATION_N1, "fa-clipboard-check");
         badgeIcons.put(StatutDemande.VALIDATION_N2, "fa-coins");
         badgeIcons.put(StatutDemande.VALIDATION_N3, "fa-gavel");
+        badgeIcons.put(StatutDemande.VALIDATION_N4,   "fa-stamp");
         badgeIcons.put(StatutDemande.VALIDE, "fa-check-circle");
         badgeIcons.put(StatutDemande.REFUSE, "fa-times-circle");
 
@@ -706,7 +796,8 @@ public class DemandeController {
                     "Moyens Généraux",
                     "Comité de dépense",
                     "Contrôleur de gestion",
-                    "DFC"
+                    "D.F.C.",
+                    "S.G."
             );
         } else {
             steps = List.of(
@@ -714,7 +805,8 @@ public class DemandeController {
                     "Supérieur hiérarchique (N+1)",
                     "Moyens Généraux",
                     "Contrôleur de gestion",
-                    "DFC"
+                    "D.F.C.",
+                    "S.G."
             );
         }
 
@@ -746,10 +838,19 @@ public class DemandeController {
             }
         }
 
-        // SG : soit en attente SG (N3), soit finalisé
+
         if (isDFC) {
             if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
-                statutHint = "Demande en attente de votre validation finale (D.F.C.).";
+                statutHint = "Demande en attente de votre validation (D.F.C.).";
+            } else if (demande.getStatut() == StatutDemande.VALIDATION_N4) {
+                statutHint = "Vous avez validé — en attente de validation finale (S.G.).";
+            }
+        }
+
+
+        if (isSG) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N4) {
+                statutHint = "Demande en attente de votre validation finale (S.G.).";
             } else if (demande.getStatut() == StatutDemande.VALIDE) {
                 statutHint = "Demande finalisée.";
             }
@@ -768,17 +869,19 @@ public class DemandeController {
                 case StatutDemande.DECISION_CODEP -> 3;  // CODEP
                 case StatutDemande.VALIDATION_N2  -> 4;  // Contrôleur
                 case StatutDemande.VALIDATION_N3  -> 5;  // DFC
-                case StatutDemande.VALIDE         -> 6;
+                case StatutDemande.VALIDATION_N4  -> 6;  // SG
+                case StatutDemande.VALIDE         -> 7;
                 case StatutDemande.REFUSE         -> -1;
                 default -> 1;
             };
         } else {
             currentStep = switch (demande.getStatut()) {
                 case StatutDemande.CREE          -> 1;
-                case StatutDemande.VALIDATION_N1 -> 2;  // ← MG
-                case StatutDemande.VALIDATION_N2 -> 3;  // ← Contrôleur
-                case StatutDemande.VALIDATION_N3 -> 4;  // ← DFC
-                case StatutDemande.VALIDE        -> 5;  // ← après le dernier step = tout validé
+                case StatutDemande.VALIDATION_N1 -> 2;
+                case StatutDemande.VALIDATION_N2 -> 3;
+                case StatutDemande.VALIDATION_N3 -> 4;
+                case StatutDemande.VALIDATION_N4 -> 5;
+                case StatutDemande.VALIDE        -> 6;
                 case StatutDemande.REFUSE        -> -1;
                 default -> 1;
             };
@@ -808,6 +911,7 @@ public class DemandeController {
         model.addAttribute("canDecisionControleur", canDecisionControleur);
         model.addAttribute("canDecisionDFC", canDecisionDFC);
         model.addAttribute("canDecisionCodep", canDecisionCodep);
+        model.addAttribute("canDecisionSG",  canDecisionSG);
 
         model.addAttribute("statutLabels", statutLabels);
         model.addAttribute("statutLabel", statutLabel);
@@ -853,6 +957,9 @@ public class DemandeController {
         boolean isDFC = auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_DFC".equals(a.getAuthority()));
 
+        boolean isSG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
+
         DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
         if (demande == null) {
             redirectAttributes.addFlashAttribute("ko", "Demande introuvable.");
@@ -877,8 +984,10 @@ public class DemandeController {
         boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
         boolean canDecisionControleur = isControleur && demande.getStatut() == StatutDemande.VALIDATION_N2;
         boolean canDecisionDFC = isDFC && demande.getStatut() == StatutDemande.VALIDATION_N3;
+        boolean canDecisionSG = isSG && demande.getStatut() == StatutDemande.VALIDATION_N4;
         boolean canDecisionCodep = isMG && demande.getStatut() == StatutDemande.DECISION_CODEP;
-        boolean allowed = isAdmin || canDecisionN1 || canDecisionMG || canDecisionControleur || canDecisionDFC || canDecisionCodep;
+        boolean allowed = isAdmin || canDecisionN1 || canDecisionMG || canDecisionControleur
+                || canDecisionDFC || canDecisionSG || canDecisionCodep;
 
         if (!allowed) {
             redirectAttributes.addFlashAttribute("ko", "Cette demande ne peut pas être traitée par vous.");
@@ -907,8 +1016,8 @@ public class DemandeController {
             ValidationDemande h = new ValidationDemande();
             h.setDemandeMere(demande);
             h.setValidateur(current);
-            h.setEtape(etapeCourante);     // étape
-            h.setDecision(ValidationDemande. DecisionValidation.REFUSE); // décision
+            h.setEtape(etapeCourante);
+            h.setDecision(ValidationDemande. DecisionValidation.REFUSE);
             h.setCommentaire(cmt);
             h.setDateAction(String.valueOf(LocalDateTime.now()));
 
@@ -919,6 +1028,24 @@ public class DemandeController {
                     demande,
                     StatutDemande.REFUSE
             );
+
+            Map<String, Object> props = new HashMap<>();
+            props.put("id",            demande.getId());
+            props.put("demandeur",     demande.getDemandeur());
+            props.put("validateur",    current);
+            props.put("commentaire",   cmt);
+            props.put("dateDecision",  LocalDateTime.now()
+                    .format(DateTimeFormatter
+                            .ofPattern("dd/MM/yyyy HH:mm")));
+            props.put("etape",        StatutDemande.getLibelle(etapeCourante));
+
+            Mail mail = new Mail(
+                    "refusDemande",
+                    demande.getDemandeur().getMail(),
+                    "[AFG/MADA] - Votre demande a été refusée",
+                    props
+            );
+            ess.sendEmail(mail);
 
             redirectAttributes.addFlashAttribute("ok", "Demande rejetée.");
             return "redirect:/demande/fiche/" + id;
@@ -947,6 +1074,7 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
+                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N1);
                 redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1079,6 +1207,7 @@ public class DemandeController {
 
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
+                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N2);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1121,6 +1250,7 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
+                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N3);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le contrôleur de gestion (N3).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1142,20 +1272,44 @@ public class DemandeController {
                     histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
                     validationDemandeService.logAction(histoPj);
                 }
+                demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N4);
+                validationDemandeService.logValidation(demande, current, cmt, etape);
+                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N4);
+                redirectAttributes.addFlashAttribute("ok", "Demande validée par la D.F.C., transmise au S.G.");
+                return "redirect:/demande/fiche/" + id;
+            }
+
+            if (canDecisionSG) {
+                int etape = demande.getStatut();
+                List<String> pjAjoutees = sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_SG", redirectAttributes);
+                if (!pjAjoutees.isEmpty()) {
+                    String listePj = pjAjoutees.stream()
+                            .map(nom -> "• " + nom).collect(Collectors.joining("\n"));
+                    ValidationDemande histoPj = new ValidationDemande();
+                    histoPj.setDemandeMere(demande);
+                    histoPj.setValidateur(current);
+                    histoPj.setEtape(etape);
+                    histoPj.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                    histoPj.setCommentaire(pjAjoutees.size() + " pièce(s) jointe(s) ajoutée(s) :\n" + listePj);
+                    histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
+                    validationDemandeService.logAction(histoPj);
+                }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
-                redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée (D.F.C.).");
+                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDE);
+                redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
 
             // Admin : si tu veux le laisser forcer la suite même s'il n'est pas le bon rôle
             if (isAdmin) {
                 int next = switch (demande.getStatut()) {
-                    case StatutDemande.CREE -> StatutDemande.VALIDATION_N1;
-                    case StatutDemande.VALIDATION_N1 -> StatutDemande.VALIDATION_N2;
-                    case StatutDemande.VALIDATION_N2 -> StatutDemande.VALIDATION_N3;
-                    case StatutDemande.VALIDATION_N3 -> StatutDemande.VALIDE;
-                    default -> demande.getStatut();
+                        case StatutDemande.CREE          -> StatutDemande.VALIDATION_N1;
+                        case StatutDemande.VALIDATION_N1 -> StatutDemande.VALIDATION_N2;
+                        case StatutDemande.VALIDATION_N2 -> StatutDemande.VALIDATION_N3;
+                        case StatutDemande.VALIDATION_N3 -> StatutDemande.VALIDATION_N4;
+                        case StatutDemande.VALIDATION_N4 -> StatutDemande.VALIDE;
+                        default -> demande.getStatut();
                 };
                 int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, next);

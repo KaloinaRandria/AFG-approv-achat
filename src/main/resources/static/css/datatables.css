@@ -311,7 +311,10 @@
 }
 
 .page-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;}
-.doc-wrapper{max-width:1100px;margin:0 auto;}
+.doc-wrapper {
+    max-width: 100%;
+    margin: 0 auto;
+}
 
 
 .file-upload-card {
@@ -850,6 +853,18 @@ table.dataTable tbody tr:hover {
     background: linear-gradient(45deg, #001051, #00129f) !important;
     color: white !important;
     font-weight: bold;
+}
+
+.badge-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+.badge-teal {
+    background-color: #d2f4ea;
+    color: #0d6e4f;
+    border: 1px solid #20c997;
 }
 
 
@@ -1404,6 +1419,8 @@ table.dataTable tbody tr:hover {
     font-family: 'Mark Pro', sans-serif;
     background: #fff;
     padding: 30px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* HEADER */
