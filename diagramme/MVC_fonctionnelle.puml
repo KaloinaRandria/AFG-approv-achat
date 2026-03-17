@@ -1,0 +1,31 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+actor Utilisateur as U2
+participant "View\n(Interface / Page Web)" as Page
+participant "Controller\n(Chef d'Orchestre)" as Orchestrateur
+participant "Model\n(Gestionnaire de Données)" as Gestionnaire
+database "Base de Données\n(Stockage Persistant)" as Stockage
+
+== 1. L'utilisateur interagit ==
+
+U2 -> Page : remplit un formulaire / clique un bouton
+Page -> Orchestrateur : envoie l'intention de l'utilisateur
+
+== 2. L'application traite la demande ==
+
+Orchestrateur -> Gestionnaire : récupérer ou enregistrer les informations
+Gestionnaire -> Stockage : lire / écrire les données
+Stockage --> Gestionnaire : données disponibles
+Gestionnaire --> Orchestrateur : informations prêtes
+
+== 3. La réponse est préparée ==
+
+Orchestrateur -> Page : choisit ce que l'utilisateur doit voir
+Page -> Page : assemble la page avec les informations
+
+== 4. L'utilisateur voit le résultat ==
+
+Page --> U2 : affiche la page mise à jour
+
+@enduml

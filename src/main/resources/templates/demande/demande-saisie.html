@@ -571,7 +571,7 @@
 
                             input.value = `${article.code} - ${article.designation}`;
 
-                            // ⚠️ Dans ta ligne demande: hidden est input[name="articleCodes[]"] dans le même td
+                            //Dans ta ligne demande: hidden est input[name="articleCodes[]"] dans le même td
                             const td = input.closest("td");
                             const hidden = td?.querySelector('input[name="articleCodes[]"]');
                             if (hidden) hidden.value = article.code;
