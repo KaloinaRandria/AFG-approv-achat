@@ -1,19 +1,16 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style th:inline="text">
-        *{
-            font-family: 'Tilt Neon', cursive;
-        }
-    </style>
 </head>
 <body>
 <div class="container">
-    <p>Bonjour,</p>
-    <p> Votre demande d'achat a ete enregistrer et en cours de traitement
+    <p>Bonjour <span th:text="${demandeur.prenom} +' '+ ${demandeur.nom}"></span>,</p>
+    <p> Votre demande <span th:text="${id}"></span> du <span th:text="${dateDemande}"></span> a bien été reçue. Statut actuel : en attente de validation de votre n+1.”
     <br>
     <p>Cordialement,</p>
     <br>
