@@ -204,6 +204,7 @@
                                 <tr>
                                     <th style="width: 45%">Article</th>
                                     <th style="width: 45%">Quantité</th>
+                                    <th style="width: 10%" class="text-center">UDM</th>
                                     <th style="width: 10%" class="text-center">Action</th>
                                 </tr>
                                 </thead>
@@ -229,6 +230,9 @@
 
                                             <input type="hidden"
                                                    name="quantite[]">
+                                        </td>
+                                        <td class="text-center align-middle">
+                                            <span class="udm-label">—</span>
                                         </td>
                                         <td class="text-center">
                                             <button type="button" class="btn btn-outline-danger btn-sm">
@@ -467,6 +471,9 @@
                required>
         <input type="hidden" name="quantite[]">
       </td>
+      <td class="text-center align-middle">
+        <span class="udm-label">—</span>
+      </td>
 
       <td class="text-center">
         <button type="button" class="btn btn-outline-danger btn-sm btn-remove">
@@ -576,6 +583,16 @@
                             const hidden = td?.querySelector('input[name="articleCodes[]"]');
                             if (hidden) hidden.value = article.code;
 
+                            const row = input.closest("tr");
+                            const udmLabel = row?.querySelector(".udm-label");
+                            if (udmLabel) {
+                                const udmText = article.udm || "—";
+                                udmLabel.textContent = udmText;
+                                // // Changer la couleur si UDM trouvée
+                                // udmLabel.classList.remove("bg-secondary");
+                                // udmLabel.classList.add("bg-primary");
+                            }
+
                             hidePortal();
                         });
 
@@ -603,6 +620,14 @@
                 const td = input.closest("td");
                 const hidden = td?.querySelector('input[name="articleCodes[]"]');
                 if (hidden) hidden.value = "";
+
+                const row = input.closest("tr");
+                const udmLabel = row?.querySelector(".udm-label");
+                if (udmLabel) {
+                    udmLabel.textContent = "—";
+                    // udmLabel.classList.remove("bg-primary");
+                    // udmLabel.classList.add("bg-secondary");
+                }
 
                 if (keyword.length < 2) {
                     hidePortal();

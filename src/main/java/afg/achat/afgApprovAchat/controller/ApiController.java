@@ -49,6 +49,7 @@ public class ApiController {
                     Map<String, String> map = new HashMap<>();
                     map.put("code", a.getCodeArticle());
                     map.put("designation", a.getDesignation());
+                    map.put("udm", a.getUdm() != null ? a.getUdm().getDescription() : "—");
                     return map;
                 })
                 .toList();
