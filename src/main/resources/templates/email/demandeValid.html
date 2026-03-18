@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body>
+<div class="container">
+    <p>Bonjour <span th:text="${demandeur.prenom + ' ' + demandeur.nom}"></span>,</p>
+    <p>
+        Votre demande <strong th:text="${id}"></strong> a été validée
+        lors de l'étape <strong th:text="${etape}"></strong> par
+        <span th:text="${validateur.prenom + ' ' + validateur.nom}"></span>
+        le <span th:text="${dateDecision}"></span>.
+        <br/>
+        Elle passe désormais à l'étape : <strong th:text="${prochaineEtape}"></strong>.
+    </p>
+    <p th:if="${commentaire != null and !#strings.isEmpty(commentaire)}">
+        Commentaire : <em th:text="${commentaire}"></em>
+    </p>
+    <br/>
+    <p>Cordialement,</p>
+    <br/>
+    <p><img src="cid:signature-image" /></p>
+</div>
+</body>
+</html>

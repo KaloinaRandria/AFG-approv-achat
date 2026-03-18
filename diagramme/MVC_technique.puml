@@ -1,0 +1,32 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+actor Utilisateur
+participant View
+participant Controller
+participant Model
+database DB
+
+== 1. Interaction Utilisateur ==
+
+Utilisateur -> View : Action (clic, formulaire, etc.)
+View -> Controller : transmettre la requête HTTP
+
+== 2. Traitement Métier ==
+
+Controller -> Model : demander / modifier les données
+Model -> DB : requête SQL
+DB --> Model : résultat brut
+Model --> Controller : données métier traitées
+
+== 3. Mise à jour de la Vue ==
+
+Controller -> View : sélectionner la Vue + passer les données
+View -> View : rendre le template avec les données
+Controller --> Utilisateur : réponse HTTP (HTML / JSON)
+
+== 4. Affichage Final ==
+
+View --> Utilisateur : page rendue / interface mise à jour
+
+@enduml
