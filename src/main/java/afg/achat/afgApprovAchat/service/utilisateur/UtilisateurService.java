@@ -27,4 +27,8 @@ public class UtilisateurService {
 
         return ids;
     }
+
+    public List<Utilisateur> getUtilisateursByRole(String roleLibelle) {
+        return utilisateurRepo.findByRoleLibelle(roleLibelle);
+    }
 }

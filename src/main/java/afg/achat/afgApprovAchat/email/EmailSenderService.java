@@ -87,26 +87,49 @@ public class EmailSenderService {
     }
 
     public void envoyerMailValidation(DemandeMere demande,
-                                       Utilisateur validateur,
-                                       String commentaire,
-                                       int etapeCourante,
-                                       int prochaineEtape) {
-        Map<String, Object> props = new HashMap<>();
-        props.put("id",            demande.getId());
-        props.put("demandeur",     demande.getDemandeur());
-        props.put("validateur",    validateur);
-        props.put("commentaire",   commentaire);
-        props.put("dateDecision",  LocalDateTime.now()
-                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
-        props.put("etape",         StatutDemande.getLibelle(etapeCourante));
-        props.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
+                                      Utilisateur validateur,
+                                      String commentaire,
+                                      int etapeCourante,
+                                      int prochaineEtape,
+                                      Utilisateur prochainValidateur) {
 
-        Mail mail = new Mail(
-                "validationDemande",
+        String dateDecision = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+
+        // ── Mail 1 : demandeur informé de la validation ──────────────────────
+        Map<String, Object> propsDemandeur = new HashMap<>();
+        propsDemandeur.put("id",             demande.getId());
+        propsDemandeur.put("demandeur",      demande.getDemandeur());
+        propsDemandeur.put("validateur",     validateur);
+        propsDemandeur.put("commentaire",    commentaire);
+        propsDemandeur.put("dateDecision",   dateDecision);
+        propsDemandeur.put("etape",          StatutDemande.getLibelle(etapeCourante));
+        propsDemandeur.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
+
+        sendEmail(new Mail(
+                "demandeValid",
                 demande.getDemandeur().getMail(),
                 "[AFG/MADA] - Votre demande a été validée",
-                props
-        );
-        this.sendEmail(mail);
+                propsDemandeur
+        ));
+
+        // ── Mail 2 : prochain validateur notifié ─────────────────────────────
+        if (prochainValidateur != null && prochainValidateur.getMail() != null) {
+            Map<String, Object> propsValidateur = new HashMap<>();
+            propsValidateur.put("id",             demande.getId());
+            propsValidateur.put("demandeur",      demande.getDemandeur());
+            propsValidateur.put("validateur",     validateur);
+            propsValidateur.put("destinataire",   prochainValidateur);
+            propsValidateur.put("dateDecision",   dateDecision);
+            propsValidateur.put("etape",          StatutDemande.getLibelle(etapeCourante));
+            propsValidateur.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
+
+            sendEmail(new Mail(
+                    "notificationValidateur",
+                    prochainValidateur.getMail(),
+                    "[AFG/MADA] - Demande en attente de votre validation",
+                    propsValidateur
+            ));
+        }
     }
 }
