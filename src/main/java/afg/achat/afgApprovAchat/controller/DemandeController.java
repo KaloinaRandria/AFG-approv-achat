@@ -193,7 +193,7 @@ public class DemandeController {
             Map<String, Object> propsDemandeur = new HashMap<>();
             propsDemandeur.put("id",          demandeMere.getId());
             propsDemandeur.put("demandeur",   demandeMere.getDemandeur());
-            propsDemandeur.put("dateDecision", LocalDateTime.now()
+            propsDemandeur.put("dateDemande", LocalDateTime.now()
                     .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
 
             Mail mail = new Mail(
@@ -1100,8 +1100,10 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
-                List<Utilisateur> mgs = utilisateurService.getUtilisateursByRole("ROLE_MOYENS_GENERAUX");
+                List<Utilisateur> mgs = utilisateurService.getUtilisateursByRole("MOYENS_GENERAUX");
+                System.out.println("Nombre de MG trouvés : " + mgs.size());
                 for (Utilisateur mg : mgs) {
+                    System.out.println("Envoi mail à MG : " + mg.getMail());
                     ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N1, mg);
                 }
 
@@ -1237,7 +1239,7 @@ public class DemandeController {
 
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
-                List<Utilisateur> controleurs = utilisateurService.getUtilisateursByRole("ROLE_CONTROLEUR");
+                List<Utilisateur> controleurs = utilisateurService.getUtilisateursByRole("CONTROLEUR");
                 for (Utilisateur controleur : controleurs) {
                     ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N2, controleur);
                 }
@@ -1283,7 +1285,7 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
-                List<Utilisateur> dfcs = utilisateurService.getUtilisateursByRole("ROLE_DFC");
+                List<Utilisateur> dfcs = utilisateurService.getUtilisateursByRole("DFC");
                 for (Utilisateur dfc : dfcs) {
                     ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N3, dfc);
                 }
@@ -1310,7 +1312,7 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N4);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
-                List<Utilisateur> sgs = utilisateurService.getUtilisateursByRole("ROLE_SG");
+                List<Utilisateur> sgs = utilisateurService.getUtilisateursByRole("SG");
                 for (Utilisateur sg : sgs) {
                     ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N4, sg);
                 }

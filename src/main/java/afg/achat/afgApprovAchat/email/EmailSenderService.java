@@ -92,6 +92,11 @@ public class EmailSenderService {
                                       int etapeCourante,
                                       int prochaineEtape,
                                       Utilisateur prochainValidateur) {
+        System.out.println(">>> Mail demandeur");
+        System.out.println("    to            : " + demande.getDemandeur().getMail());
+        System.out.println("    etape         : " + StatutDemande.getLibelle(etapeCourante));
+        System.out.println("    prochaineEtape: " + StatutDemande.getLibelle(prochaineEtape));
+        System.out.println("    validateur    : " + validateur.getNom());
 
         String dateDecision = LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
@@ -106,7 +111,7 @@ public class EmailSenderService {
         propsDemandeur.put("etape",          StatutDemande.getLibelle(etapeCourante));
         propsDemandeur.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
 
-        sendEmail(new Mail(
+        this.sendEmail(new Mail(
                 "demandeValid",
                 demande.getDemandeur().getMail(),
                 "[AFG/MADA] - Votre demande a été validée",
@@ -124,7 +129,7 @@ public class EmailSenderService {
             propsValidateur.put("etape",          StatutDemande.getLibelle(etapeCourante));
             propsValidateur.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
 
-            sendEmail(new Mail(
+            this.sendEmail(new Mail(
                     "notificationValidateur",
                     prochainValidateur.getMail(),
                     "[AFG/MADA] - Demande en attente de votre validation",
