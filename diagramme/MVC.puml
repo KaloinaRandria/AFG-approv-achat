@@ -1,0 +1,13 @@
+@startuml
+
+participant Utilisateur
+participant Controleur
+participant Modele
+participant Vue
+
+Utilisateur -> Controleur : Utilise
+Controleur -> Modele : Manipule
+Modele -> Vue : Met à jour
+Vue -> Utilisateur : Voit
+
+@enduml
