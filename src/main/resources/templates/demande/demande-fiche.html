@@ -377,8 +377,11 @@
                                         <input type="number"
                                                class="form-control form-control-sm qte-input d-none text-end"
                                                th:value="${l.quantite}"
-                                               min="0.01"
-                                               step="0.01"
+                                               th:data-initial="${l.quantite}"
+                                               min="1"
+                                               step="1"
+                                               pattern="\d*"
+                                               oninput="this.value = Math.floor(this.value)"
                                                style="width: 100px; display: inline-block;">
                                     </td>
                                     <td th:text="${l.article.udm.description}">
@@ -1491,13 +1494,28 @@
             const td = document.querySelector(`td[data-ligne-id="${ligneId}"]`);
             if (!td) return;
 
+            const input = td.querySelector(".qte-input");
+            const btnSave = document.querySelector(`.btn-save-qte[data-id="${ligneId}"]`);
+
             td.querySelector(".qte-display").classList.add("d-none");
-            td.querySelector(".qte-input").classList.remove("d-none");
-            td.querySelector(".qte-input").focus();
+            input.classList.remove("d-none");
+            input.focus();
 
             btnEdit.classList.add("d-none");
-            document.querySelector(`.btn-save-qte[data-id="${ligneId}"]`).classList.remove("d-none");
+            btnSave.classList.remove("d-none");
             document.querySelector(`.btn-cancel-qte[data-id="${ligneId}"]`).classList.remove("d-none");
+
+            // Griser le bouton save au départ
+            btnSave.disabled = true;
+
+            // Surveiller les changements
+            input.oninput = function () {
+                this.value = Math.floor(this.value); // forcer entier
+                const initial = parseFloat(this.dataset.initial);
+                const current = parseFloat(this.value);
+                btnSave.disabled = isNaN(current) || current <= 0 || current === initial;
+            };
+
             return;
         }
 
@@ -1552,12 +1570,19 @@
         const td = document.querySelector(`td[data-ligne-id="${ligneId}"]`);
         if (!td) return;
 
+        const input = td.querySelector(".qte-input");
+        input.classList.add("d-none");
+        input.classList.remove("is-invalid");
+        input.oninput = null; // nettoyer le listener
+
         td.querySelector(".qte-display").classList.remove("d-none");
-        td.querySelector(".qte-input").classList.add("d-none");
-        td.querySelector(".qte-input").classList.remove("is-invalid");
 
         document.querySelector(`.btn-edit-qte[data-id="${ligneId}"]`).classList.remove("d-none");
-        document.querySelector(`.btn-save-qte[data-id="${ligneId}"]`).classList.add("d-none");
+
+        const btnSave = document.querySelector(`.btn-save-qte[data-id="${ligneId}"]`);
+        btnSave.classList.add("d-none");
+        btnSave.disabled = false; // reset pour la prochaine fois
+
         document.querySelector(`.btn-cancel-qte[data-id="${ligneId}"]`).classList.add("d-none");
     }
 
