@@ -189,16 +189,42 @@ public class DemandeController {
                 }
             }
 
-            Map<String,Object> props = new HashMap<>();
-            props.put("id",demandeMere.getId());
-            props.put("demandeur", demandeMere.getDemandeur());
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-            props.put("dateDemande", demandeMere.getDateDemande().format(formatter));
-            Mail mail = new Mail("demandeSaved", demandeMere.getDemandeur().getMail(),"[AFG/MADA]- Demande enregistrée", props);
+            // ── Mail 1 : confirmation au demandeur ──────────────────────────────────
+            Map<String, Object> propsDemandeur = new HashMap<>();
+            propsDemandeur.put("id",          demandeMere.getId());
+            propsDemandeur.put("demandeur",   demandeMere.getDemandeur());
+            propsDemandeur.put("dateDemande", LocalDateTime.now()
+                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+
+            Mail mail = new Mail(
+                    "demandeSaved",
+                    demandeMere.getDemandeur().getMail(),
+                    "[AFG/MADA] - Demande enregistrée",
+                    propsDemandeur
+            );
             ess.sendEmail(mail);
 
-            Mail mailSup = new Mail("validSup", demandeMere.getDemandeur().getSuperieurHierarchique().getMail(),"[AFG/MADA]- Demande d'achat en attente de validation", props);
-            ess.sendEmail(mailSup);
+// ── Mail 2 : notification au N+1 pour validation ────────────────────────
+            Utilisateur superieur = demandeMere.getDemandeur().getSuperieurHierarchique();
+
+            if (superieur != null && superieur.getMail() != null) {
+                Map<String, Object> propsSup = new HashMap<>();
+                propsSup.put("id",           demandeMere.getId());
+                propsSup.put("demandeur",    demandeMere.getDemandeur());
+                propsSup.put("destinataire", superieur);                  // ← le N+1
+                propsSup.put("validateur",   demandeMere.getDemandeur()); // ← le créateur = "validateur" initial
+                propsSup.put("etape",        StatutDemande.getLibelle(StatutDemande.CREE));
+                propsSup.put("dateDecision", LocalDateTime.now()
+                        .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+
+                Mail mailSup = new Mail(
+                        "validSup",
+                        superieur.getMail(),
+                        "[AFG/MADA] - Demande d'achat en attente de votre validation",
+                        propsSup
+                );
+                ess.sendEmail(mailSup);
+            }
 
 
             redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
@@ -1074,7 +1100,13 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
-                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N1);
+                List<Utilisateur> mgs = utilisateurService.getUtilisateursByRole("MOYENS_GENERAUX");
+                System.out.println("Nombre de MG trouvés : " + mgs.size());
+                for (Utilisateur mg : mgs) {
+                    System.out.println("Envoi mail à MG : " + mg.getMail());
+                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N1, mg);
+                }
+
                 redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1207,7 +1239,10 @@ public class DemandeController {
 
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
-                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N2);
+                List<Utilisateur> controleurs = utilisateurService.getUtilisateursByRole("CONTROLEUR");
+                for (Utilisateur controleur : controleurs) {
+                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N2, controleur);
+                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1250,7 +1285,10 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
-                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N3);
+                List<Utilisateur> dfcs = utilisateurService.getUtilisateursByRole("DFC");
+                for (Utilisateur dfc : dfcs) {
+                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N3, dfc);
+                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le contrôleur de gestion (N3).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1274,7 +1312,10 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N4);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
-                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N4);
+                List<Utilisateur> sgs = utilisateurService.getUtilisateursByRole("SG");
+                for (Utilisateur sg : sgs) {
+                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N4, sg);
+                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par la D.F.C., transmise au S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1296,7 +1337,7 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
-                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDE);
+                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDE, null);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1304,12 +1345,12 @@ public class DemandeController {
             // Admin : si tu veux le laisser forcer la suite même s'il n'est pas le bon rôle
             if (isAdmin) {
                 int next = switch (demande.getStatut()) {
-                        case StatutDemande.CREE          -> StatutDemande.VALIDATION_N1;
-                        case StatutDemande.VALIDATION_N1 -> StatutDemande.VALIDATION_N2;
-                        case StatutDemande.VALIDATION_N2 -> StatutDemande.VALIDATION_N3;
-                        case StatutDemande.VALIDATION_N3 -> StatutDemande.VALIDATION_N4;
-                        case StatutDemande.VALIDATION_N4 -> StatutDemande.VALIDE;
-                        default -> demande.getStatut();
+                    case StatutDemande.CREE          -> StatutDemande.VALIDATION_N1;
+                    case StatutDemande.VALIDATION_N1 -> StatutDemande.VALIDATION_N2;
+                    case StatutDemande.VALIDATION_N2 -> StatutDemande.VALIDATION_N3;
+                    case StatutDemande.VALIDATION_N3 -> StatutDemande.VALIDATION_N4;
+                    case StatutDemande.VALIDATION_N4 -> StatutDemande.VALIDE;
+                    default -> demande.getStatut();
                 };
                 int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, next);
