@@ -31,26 +31,20 @@ public class BonSortieController {
     @Autowired DemandeMereService demandeMereService;
     @Autowired DemandeFilleService demandeFilleService;
     @Autowired UtilisateurService utilisateurService;
-
     @Autowired BonSortieMereRepo bsMereRepo;
     @Autowired BonSortieFilleRepo bsFilleRepo;
-
     @Autowired BonSortieFilleService bonSortieService;
     @Autowired StockFilleService stockFilleService;
-
     @Autowired IdGenerator idGenerator;
 
-    // Création automatique depuis une demande validée (SG)
+    // ─── Création depuis demande validée ────────────────────────────────────
     @GetMapping("/create-from-demande/{demandeId}")
-    public String createFromDemande(@PathVariable("demandeId") String demandeId,
+    public String createFromDemande(@PathVariable String demandeId,
                                     RedirectAttributes redirectAttributes) {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        Utilisateur principal = (Utilisateur) auth.getPrincipal();
-        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
-
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        boolean isMG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+        boolean isAdmin = hasRole(auth, "ROLE_ADMIN");
+        boolean isMG    = hasRole(auth, "ROLE_MOYENS_GENERAUX");
 
         if (!isAdmin && !isMG) {
             redirectAttributes.addFlashAttribute("ko", "Accès refusé.");
@@ -62,43 +56,55 @@ public class BonSortieController {
             redirectAttributes.addFlashAttribute("ko", "Demande introuvable.");
             return "redirect:/demande/list";
         }
-
         if (demande.getStatut() != StatutDemande.VALIDE) {
-            redirectAttributes.addFlashAttribute("ko", "La demande n'est pas encore validée par le SG.");
+            redirectAttributes.addFlashAttribute("ko", "La demande n'est pas validée par le SG.");
             return "redirect:/demande/fiche/" + demandeId;
         }
 
-        //éviter doublon: si un BS existe déjà pour cette demande et est CREE, on le réutilise
-        BonSortieMere existing = bsMereRepo.findFirstByDemandeMereOrderByIdDesc(demande).orElse(null);
-        if (existing != null && existing.getStatut() == BonSortieMere.Statut.CREE) {
-            return "redirect:/bon-sortie/fiche/" + existing.getId();
+        // ✅ Anti-doublon : bloquer si BS déjà existant (peu importe le statut)
+        BonSortieMere existing = bsMereRepo
+                .findFirstByDemandeMereOrderByIdDesc(demande).orElse(null);
+
+        if (existing != null) {
+            if (existing.getStatut() == BonSortieMere.Statut.CREE
+                    || existing.getStatut() == BonSortieMere.Statut.PARTIELLE) {
+                // Réouvrir le BS en cours
+                return "redirect:/bon-sortie/fiche/" + existing.getId();
+            }
+            if (existing.getStatut() == BonSortieMere.Statut.VALIDEE) {
+                redirectAttributes.addFlashAttribute("ko",
+                        "Un bon de sortie a déjà été confirmé pour cette demande.");
+                return "redirect:/demande/fiche/" + demandeId;
+            }
         }
 
-        // 1) créer BS mère
+        // Lignes validées de la demande
+        List<DemandeFille> lignesValidees =
+                demandeFilleService.getDemandeFilleValideeByDemandeMere(demande);
+
+        if (lignesValidees == null || lignesValidees.isEmpty()) {
+            redirectAttributes.addFlashAttribute("ko",
+                    "Aucune ligne d'article dans la demande.");
+            return "redirect:/demande/fiche/" + demandeId;
+        }
+
+        // Créer BS mère
         BonSortieMere bs = new BonSortieMere();
-        bs.setId(idGenerator);
+        bs.setId(idGenerator);   // ✅ appelle idGenerator.generateId("BS", "...")
         bs.setDemandeMere(demande);
         bs.setStatut(BonSortieMere.Statut.CREE);
         bs = bsMereRepo.save(bs);
 
-        // 2) créer lignes BS depuis demandeFille
-        List<DemandeFille> ligneValidee = demandeFilleService.getDemandeFilleValideeByDemandeMere(demande);
-        if (ligneValidee == null || ligneValidee.isEmpty()) {
-            redirectAttributes.addFlashAttribute("ko", "Aucune ligne d'article dans la demande.");
-            return "redirect:/demande/fiche/" + demandeId;
-        }
-
-        for (DemandeFille l : ligneValidee) {
-
-            if (l.getArticle() == null) continue;
-            if (l.getQuantite() <= 0) continue;
+        // Créer lignes BS
+        for (DemandeFille l : lignesValidees) {
+            if (l.getArticle() == null || l.getQuantite() <= 0) continue;
 
             BonSortieFille bsf = new BonSortieFille();
             bsf.setBonSortieMere(bs);
             bsf.setArticle(l.getArticle());
             bsf.setQuantiteDemandee(l.getQuantite());
             bsf.setQuantiteSortie(0);
-
+            bsf.setStatut(BonSortieFille.Statut.EN_ATTENTE);
             bsFilleRepo.save(bsf);
         }
 
@@ -106,18 +112,15 @@ public class BonSortieController {
         return "redirect:/bon-sortie/fiche/" + bs.getId();
     }
 
-    //Fiche BS
+    // ─── Fiche BS ────────────────────────────────────────────────────────────
     @GetMapping("/fiche/{bsId}")
-    public String fiche(@PathVariable("bsId") String bsId,
+    public String fiche(@PathVariable String bsId,
                         Model model,
                         HttpServletRequest request,
                         RedirectAttributes redirectAttributes) {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        boolean isMG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
-
-        if (!isAdmin && !isMG) {
+        if (!hasRole(auth, "ROLE_ADMIN") && !hasRole(auth, "ROLE_MOYENS_GENERAUX")) {
             redirectAttributes.addFlashAttribute("ko", "Accès refusé.");
             return "redirect:/demande/list";
         }
@@ -130,39 +133,37 @@ public class BonSortieController {
 
         List<BonSortieFille> lignes = bsFilleRepo.findByBonSortieMere(bs);
 
-        // Stock dispo par article (pour l’affichage)
+        // Stock dispo + maxSortie par ligne (transient, pas persisté)
+        for (BonSortieFille l : lignes) {
+            double dispo = stockFilleService
+                    .getStockDisponible(l.getArticle().getCodeArticle());
+            l.setMaxSortie(Math.min(dispo, l.getQuantiteDemandee()));
+        }
+
+        // Map stock dispo pour l'affichage Thymeleaf
         Map<Integer, Double> dispoByArticleId = new HashMap<>();
         for (BonSortieFille l : lignes) {
-            String code = l.getArticle().getCodeArticle();
-            double dispo = stockFilleService.getStockDisponible(code);
+            double dispo = stockFilleService
+                    .getStockDisponible(l.getArticle().getCodeArticle());
             dispoByArticleId.put(l.getArticle().getId(), dispo);
         }
 
-        boolean isPartielle = lignes.stream()
-                .anyMatch(l -> l.getQuantiteSortie() > 0 && l.getQuantiteSortie() < l.getQuantiteDemandee());
+        BonSortieMere.Statut statut = bs.getStatut();
 
-
-        for (BonSortieFille l : lignes) {
-            Double dispo = dispoByArticleId.getOrDefault(l.getArticle().getId(),0.0);
-            l.setMaxSortie(Math.min(dispo, l.getQuantiteDemandee()));
-        }
         model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("bs", bs);
         model.addAttribute("lignes", lignes);
         model.addAttribute("dispoByArticleId", dispoByArticleId);
-
-        model.addAttribute("isCree", bs.getStatut() == BonSortieMere.Statut.CREE);
-        model.addAttribute("isValidee", bs.getStatut() == BonSortieMere.Statut.VALIDEE);
-
-
-        model.addAttribute("isPartielle", isPartielle);
+        model.addAttribute("isCree",      statut == BonSortieMere.Statut.CREE);
+        model.addAttribute("isPartielle", statut == BonSortieMere.Statut.PARTIELLE);
+        model.addAttribute("isValidee",   statut == BonSortieMere.Statut.VALIDEE);
 
         return "bonSortie/bs-fiche";
     }
 
-    // Sauvegarder les quantités saisies (sans impact stock)
+    // ─── Sauvegarder les quantités (sans impact stock) ───────────────────────
     @PostMapping("/fiche/{bsId}/save")
-    public String saveQuantites(@PathVariable("bsId") String bsId,
+    public String saveQuantites(@PathVariable String bsId,
                                 @RequestParam("lineId[]") List<Integer> lineIds,
                                 @RequestParam("qteSortie[]") List<String> qtesSortie,
                                 RedirectAttributes redirectAttributes) {
@@ -170,8 +171,9 @@ public class BonSortieController {
         BonSortieMere bs = bsMereRepo.findById(bsId)
                 .orElseThrow(() -> new IllegalArgumentException("BS introuvable"));
 
-        if (bs.getStatut() != BonSortieMere.Statut.CREE) {
-            redirectAttributes.addFlashAttribute("ko", "BS déjà validé.");
+        // ✅ Accepter aussi PARTIELLE (re-saisie possible)
+        if (bs.getStatut() == BonSortieMere.Statut.VALIDEE) {
+            redirectAttributes.addFlashAttribute("ko", "Ce BS est déjà validé.");
             return "redirect:/bon-sortie/fiche/" + bsId;
         }
 
@@ -181,18 +183,34 @@ public class BonSortieController {
         }
 
         for (int i = 0; i < lineIds.size(); i++) {
-            Integer lineId = lineIds.get(i);
+            int lineId = lineIds.get(i);
             double qte = parseDoubleSafe(qtesSortie.get(i));
 
             BonSortieFille line = bsFilleRepo.findById(lineId)
-                    .orElseThrow(() -> new IllegalArgumentException("Ligne BS introuvable: " + lineId));
+                    .orElseThrow(() -> new IllegalArgumentException("Ligne BS introuvable"));
 
             if (!line.getBonSortieMere().getId().equals(bsId)) {
-                throw new IllegalArgumentException("Ligne ne correspond pas à ce BS.");
+                redirectAttributes.addFlashAttribute("ko", "Ligne invalide.");
+                return "redirect:/bon-sortie/fiche/" + bsId;
             }
 
-            if (qte < 0) throw new IllegalArgumentException("Quantité négative interdite");
-            if (qte > line.getQuantiteDemandee()) throw new IllegalArgumentException("Quantité > demandée");
+            if (qte < 0) {
+                redirectAttributes.addFlashAttribute("ko", "Quantité négative interdite.");
+                return "redirect:/bon-sortie/fiche/" + bsId;
+            }
+
+            // ✅ Validation stock côté serveur
+            double dispo = stockFilleService
+                    .getStockDisponible(line.getArticle().getCodeArticle());
+            double maxSortie = Math.min(dispo, line.getQuantiteDemandee());
+
+            if (qte > maxSortie) {
+                redirectAttributes.addFlashAttribute("ko",
+                        "Quantité saisie dépasse le disponible pour : "
+                                + line.getArticle().getDesignation()
+                                + " (max: " + maxSortie + ")");
+                return "redirect:/bon-sortie/fiche/" + bsId;
+            }
 
             line.setQuantiteSortie(qte);
             bsFilleRepo.save(line);
@@ -202,17 +220,25 @@ public class BonSortieController {
         return "redirect:/bon-sortie/fiche/" + bsId;
     }
 
-    // Confirmer (écrit en stock + passe BS à VALIDEE)
+    // ─── Confirmer la sortie ─────────────────────────────────────────────────
     @PostMapping("/fiche/{bsId}/confirm")
-    public String confirm(@PathVariable("bsId") String bsId,
+    public String confirm(@PathVariable String bsId,
                           RedirectAttributes redirectAttributes) {
         try {
             bonSortieService.confirmerSortie(bsId);
-            redirectAttributes.addFlashAttribute("ok", "Sortie confirmée. Stock mis à jour.");
+            redirectAttributes.addFlashAttribute("ok",
+                    "Sortie confirmée. Stock mis à jour.");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
         }
         return "redirect:/bon-sortie/fiche/" + bsId;
+    }
+
+    // ─── Helper ──────────────────────────────────────────────────────────────
+    private boolean hasRole(
+            org.springframework.security.core.Authentication auth, String role) {
+        return auth.getAuthorities().stream()
+                .anyMatch(a -> role.equals(a.getAuthority()));
     }
 
     private double parseDoubleSafe(String s) {

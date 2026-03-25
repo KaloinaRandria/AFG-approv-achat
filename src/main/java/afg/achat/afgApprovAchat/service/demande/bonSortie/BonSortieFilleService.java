@@ -17,82 +17,101 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class BonSortieFilleService {
-    @Autowired
-    BonSortieMereRepo bsMereRepo;
-    @Autowired
-    BonSortieFilleRepo bsFilleRepo;
-    @Autowired
-    StockFilleService stockFilleService;
-    @Autowired
-    StockMereService stockMereService;
-    @Autowired
-    DemandeFilleService demandeFilleService;
-    @Autowired
-    DemandeMereService demandeMereService;
+
+    @Autowired BonSortieMereRepo bsMereRepo;
+    @Autowired BonSortieFilleRepo bsFilleRepo;
+    @Autowired StockFilleService stockFilleService;
+    @Autowired StockMereService stockMereService;
+    @Autowired DemandeFilleService demandeFilleService;
+    @Autowired DemandeMereService demandeMereService;
 
     @Transactional
     public void confirmerSortie(String bsId) {
 
         BonSortieMere bs = bsMereRepo.findById(bsId)
-                .orElseThrow(() -> new IllegalArgumentException("BS introuvable"));
+                .orElseThrow(() -> new IllegalArgumentException("BS introuvable : " + bsId));
 
-        if (bs.getStatut() != BonSortieMere.Statut.CREE) {
-            throw new IllegalStateException("BS déjà validé ou invalide");
+        if (bs.getStatut() == BonSortieMere.Statut.VALIDEE) {
+            throw new IllegalStateException("Ce bon de sortie est déjà entièrement validé.");
         }
-
-        if (bs.getDemandeMere() == null || bs.getDemandeMere().getStatut() != StatutDemande.VALIDE) {
-            throw new IllegalStateException("La demande n'est pas encore validée par le SG");
+        if (bs.getDemandeMere() == null
+                || bs.getDemandeMere().getStatut() != StatutDemande.VALIDE) {
+            throw new IllegalStateException("La demande n'est pas validée par le SG.");
         }
 
         List<BonSortieFille> lignes = bsFilleRepo.findByBonSortieMere(bs);
-        if (lignes.isEmpty()) throw new IllegalArgumentException("Aucune ligne à sortir");
+        if (lignes == null || lignes.isEmpty()) {
+            throw new IllegalArgumentException("Aucune ligne dans ce bon de sortie.");
+        }
 
-        boolean partiel = false;
-
-        // 1) Vérif et ajustement des quantités selon le stock dispo
+        // ── Map dispo : une seule lecture BDD par article ────────────────────
+        Map<String, Double> dispoMap = new HashMap<>();
         for (BonSortieFille l : lignes) {
+            String code = l.getArticle().getCodeArticle();
+            dispoMap.computeIfAbsent(code,
+                    c -> stockFilleService.getStockDisponible(c));
+        }
 
+        // ── Étape 1 : validation ─────────────────────────────────────────────
+        for (BonSortieFille l : lignes) {
             if (l.getQuantiteSortie() < 0)
-                throw new IllegalArgumentException("Quantité sortie négative interdite");
-
+                throw new IllegalArgumentException(
+                        "Quantité négative pour : " + l.getArticle().getDesignation());
             if (l.getQuantiteSortie() > l.getQuantiteDemandee())
-                throw new IllegalArgumentException("Quantité sortie > quantité demandée");
+                throw new IllegalArgumentException(
+                        "Quantité sortie > demandée pour : " + l.getArticle().getDesignation());
+            if (l.getQuantiteSortie() == 0) continue;
 
-            String codeArticle = l.getArticle().getCodeArticle();
-            double dispo = stockFilleService.getStockDisponible(codeArticle);
-
-            if (dispo <= 0) {
-                // Stock épuisé → mettre à 0 et ligne en attente
-                l.setQuantiteSortie(0);
-                l.setStatut(BonSortieFille.Statut.EN_ATTENTE);
-                bsFilleRepo.save(l);
-                partiel = true;
-            } else if (l.getQuantiteSortie() > dispo) {
-                // Sortie partielle possible
-                l.setQuantiteSortie(dispo);
-                l.setStatut(BonSortieFille.Statut.SORTIE);
-                bsFilleRepo.save(l);
-                partiel = true;
-            } else {
-                l.setStatut(BonSortieFille.Statut.SORTIE);
-                bsFilleRepo.save(l);
+            double dispo = dispoMap.get(l.getArticle().getCodeArticle());
+            if (l.getQuantiteSortie() > dispo) {
+                throw new IllegalStateException(
+                        "Stock insuffisant pour « " + l.getArticle().getDesignation()
+                                + " » (disponible : " + dispo
+                                + ", saisi : " + l.getQuantiteSortie() + "). "
+                                + "Veuillez re-enregistrer les quantités.");
             }
         }
 
-        // 2) Créer StockMere
+        // ── Étape 2 : statuts lignes (pas de save() — géré par Hibernate) ───
+        boolean partiel = false;
+        for (BonSortieFille l : lignes) {
+            double dispo = dispoMap.get(l.getArticle().getCodeArticle());
+            if (dispo <= 0 || l.getQuantiteSortie() == 0) {
+                l.setQuantiteSortie(0);
+                l.setStatut(BonSortieFille.Statut.EN_ATTENTE);
+                partiel = true;
+            } else {
+                l.setStatut(BonSortieFille.Statut.SORTIE);
+            }
+        }
+
+        // ── Étape 3 : guard — aucune sortie effective ────────────────────────
+        long nbSortiesEffectives = lignes.stream()
+                .filter(l -> l.getQuantiteSortie() > 0).count();
+
+        if (nbSortiesEffectives == 0) {
+            bs.setStatut(BonSortieMere.Statut.PARTIELLE);
+            bs.setDateSortie(LocalDateTime.now());
+            // save explicite nécessaire ici car on return avant le flush naturel
+            bsMereRepo.save(bs);
+            updateLivraisonDemande(bs.getDemandeMere());
+            return;
+        }
+
+        // ── Étape 4 : StockMere + StockFille ────────────────────────────────
         StockMere sm = new StockMere();
         sm.setDemandeMere(bs.getDemandeMere());
         sm.setBonLivraisonMere(null);
         stockMereService.insertStockMere(sm);
 
-        // 3) Écrire sorties effectives
         for (BonSortieFille l : lignes) {
             if (l.getQuantiteSortie() == 0) continue;
-
             StockFille sf = new StockFille();
             sf.setStockMere(sm);
             sf.setArticle(l.getArticle());
@@ -101,22 +120,19 @@ public class BonSortieFilleService {
             stockFilleService.insertStockFille(sf);
         }
 
-        // 4) Valider BS
-        if (partiel) {
-            bs.setStatut(BonSortieMere.Statut.PARTIELLE);
-        } else {
-            bs.setStatut(BonSortieMere.Statut.VALIDEE);
-        }
+        // ── Étape 5 : statut BS ──────────────────────────────────────────────
+        bs.setStatut(partiel
+                ? BonSortieMere.Statut.PARTIELLE
+                : BonSortieMere.Statut.VALIDEE);
         bs.setDateSortie(LocalDateTime.now());
-        bsMereRepo.save(bs);
 
-        // 5) MAJ livraison demande
+        // ── Étape 6 : MAJ livraison demande ─────────────────────────────────
         updateLivraisonDemande(bs.getDemandeMere());
     }
 
+    // ────────────────────────────────────────────────────────────────────────
     private void updateLivraisonDemande(DemandeMere demande) {
 
-        // lignes demandées
         var lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
 
         boolean anySortie = false;
@@ -125,13 +141,11 @@ public class BonSortieFilleService {
         for (var l : lignes) {
             String code = l.getArticle().getCodeArticle();
             double demanded = l.getQuantite();
-
-            double out = stockFilleService.getTotalSortieByDemandeAndArticle(demande.getId(), code);
+            double out = stockFilleService
+                    .getTotalSortieByDemandeAndArticle(demande.getId(), code);
 
             if (out > 0) anySortie = true;
-            if (out + 1e-9 < demanded) {
-                allFullyDelivered = false;
-            }
+            if (out + 1e-9 < demanded) allFullyDelivered = false;
         }
 
         if (!anySortie) {
@@ -144,5 +158,4 @@ public class BonSortieFilleService {
 
         demandeMereService.saveDemandeMere(demande);
     }
-
 }
