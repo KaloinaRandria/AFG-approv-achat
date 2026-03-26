@@ -277,27 +277,83 @@
 .clickable-row { cursor: pointer; }
 .clickable-row:hover td { background: rgba(0,0,0,.03); }
 
-.badge-status{
-    display:inline-flex;
-    align-items:center;
-    gap:.45rem;
-    padding:.35rem .65rem;
-    border-radius:999px;
-    font-weight:700;
-    font-size:.78rem;
-    letter-spacing:.2px;
-    border:1px solid rgba(0,0,0,.08);
-    white-space:nowrap;
+.badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .35rem .65rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: .78rem;
+    letter-spacing: .2px;
+    border: 1px solid rgba(0,0,0,.08);
+    white-space: nowrap;
 }
 
-.badge-wait{ background:#fff7ed; color:#9a3412; border-color:rgba(154,52,18,.18); }     /* orange */
-.badge-info{ background:#eff6ff; color:#1d4ed8; border-color:rgba(29,78,216,.18); }     /* bleu */
-.badge-purple{ background:#f5f3ff; color:#6d28d9; border-color:rgba(109,40,217,.18);}   /* violet */
-.badge-success{ background:#ecfdf5; color:#047857; border-color:rgba(4,120,87,.18);}    /* vert */
-.badge-danger{ background:#fef2f2; color:#b91c1c; border-color:rgba(185,28,28,.18);}    /* rouge */
+/* 🩶 CREE */
+.badge-grey {
+    background:#E6E6E6;
+    color:#333;
+    border-color:rgba(0,0,0,.15);
+}
 
-.badge-status i{ font-size:.9em; opacity:.9; }
+/* 🔵 VALIDATION (progression) */
+.badge-blue {
+    background:#e6ebf5;
+    color:#000A31;
+    border-color:rgba(0,10,49,.2);
+}
 
+.badge-blue-light {
+    background:#ccd6eb;
+    color:#000A31;
+    border-color:rgba(0,10,49,.2);
+}
+
+.badge-blue-soft {
+    background:#b3c2e0;
+    color:#000A31;
+    border-color:rgba(0,10,49,.2);
+}
+
+/* 🔷 VALIDATION N4 */
+.badge-light-blue {
+    background:#667097;
+    color:#fff;
+    border-color:rgba(102,112,151,.4);
+}
+
+/* 🔵 DECISION CODEP */
+.badge-dark-blue {
+    background:#000A31;
+    color:#fff;
+    border-color:rgba(0,10,49,.5);
+}
+
+/* 🟢 VALIDE */
+.badge-green {
+    background:#9ECD95;
+    color:#004500;
+    border-color:rgba(0,69,0,.3);
+}
+
+/* 🔴 REFUSE */
+.badge-red {
+    background:#F39999;
+    color:#5A0000;
+    border-color:rgba(90,0,0,.3);
+}
+/* 🟠 CODEP = décision comité */
+.badge-orange {
+    background:#fff4e6;
+    color:#b45309;
+    border-color:rgba(180,83,9,.25);
+}
+
+.badge-status i {
+    font-size: .9em;
+    opacity: .9;
+}
 .bl-footer{
     border-top: 1px solid rgba(0,0,0,.15);
     margin-top: 18px;
