@@ -1313,9 +1313,9 @@ public class DemandeController {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N4);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
                 List<Utilisateur> sgs = utilisateurService.getUtilisateursByRole("SG");
-                for (Utilisateur sg : sgs) {
-                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N4, sg);
-                }
+//                for (Utilisateur sg : sgs) {
+//                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N4, sg);
+//                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par la D.F.C., transmise au S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1337,7 +1337,7 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
-                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDE, null);
+//                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDE, null);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le S.G.");
                 return "redirect:/demande/fiche/" + id;
             }

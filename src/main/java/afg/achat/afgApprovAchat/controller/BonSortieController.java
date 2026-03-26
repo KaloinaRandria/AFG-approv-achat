@@ -171,7 +171,7 @@ public class BonSortieController {
         BonSortieMere bs = bsMereRepo.findById(bsId)
                 .orElseThrow(() -> new IllegalArgumentException("BS introuvable"));
 
-        // ✅ Accepter aussi PARTIELLE (re-saisie possible)
+        // Accepter aussi PARTIELLE (re-saisie possible)
         if (bs.getStatut() == BonSortieMere.Statut.VALIDEE) {
             redirectAttributes.addFlashAttribute("ko", "Ce BS est déjà validé.");
             return "redirect:/bon-sortie/fiche/" + bsId;
@@ -199,7 +199,7 @@ public class BonSortieController {
                 return "redirect:/bon-sortie/fiche/" + bsId;
             }
 
-            // ✅ Validation stock côté serveur
+            //Validation stock côté serveur
             double dispo = stockFilleService
                     .getStockDisponible(line.getArticle().getCodeArticle());
             double maxSortie = Math.min(dispo, line.getQuantiteDemandee());
