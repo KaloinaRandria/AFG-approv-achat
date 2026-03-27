@@ -137,6 +137,18 @@
                     </div>
                 </div>
 
+                <!-- Demandes en attente par niveau -->
+                <div class="col-xl-12">
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <i class="fas fa-sitemap"></i>Demandes en attente par niveau de validation
+                        </div>
+                        <div class="card-body">
+                            <div id="niveauxChart" style="height:280px;"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Nature OPEX / CAPEX (Donut) -->
                 <div class="col-xl-6 col-md-6">
                     <div class="chart-card">
@@ -186,6 +198,13 @@
             const p1 = /*[[${p1}]]*/ 0;
             const p2 = /*[[${p2}]]*/ 0;
 
+            const attenteN1    = /*[[${attenteN1}]]*/ 0;
+            const attenteN2    = /*[[${attenteN2}]]*/ 0;
+            const attenteN3    = /*[[${attenteN3}]]*/ 0;
+            const attenteN4    = /*[[${attenteN4}]]*/ 0;
+            const attenteSG    = /*[[${attenteSG}]]*/ 0;
+            const attenteCodep = /*[[${attenteCodep}]]*/ 0;
+
 
             /*]]>*/
         </script>
@@ -200,6 +219,9 @@
             const VERT        = '#28a745';
             const ROUGE       = '#dc2626';
             const ORANGE      = '#fd7e14';
+            const BLEU_MOYEN   = '#3347c2'; // entre vif et clair
+            const BLEU_PALE    = '#99a3d1'; // version plus douce
+            const VIOLET_SOFT  = '#6d28d9'; // contrôle de gestion (différenciation)
 
             // ── 1. Donut – répartition des statuts ────────────────────
             echarts.init(document.getElementById('statutDonutChart')).setOption({
@@ -316,6 +338,48 @@
                         { value: p2, itemStyle: { color: BLEU_CLAIR, borderRadius: [4, 4, 0, 0] } }
                     ],
                     label: { show: true, position: 'top', fontSize: 12, fontWeight: 'bold' }
+                }]
+            });
+
+            // ── 5. Bar horizontal – demandes en attente par niveau ────────────
+            echarts.init(document.getElementById('niveauxChart')).setOption({
+                animation: true,
+                animationDuration: 1000,
+                animationEasing: 'cubicOut',
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' },
+                    formatter: params => `${params[0].name} : <b>${params[0].value}</b> demande(s)`
+                },
+                grid: { left: '3%', right: '8%', bottom: '5%', containLabel: true },
+                xAxis: {
+                    type: 'value',
+                    minInterval: 1,
+                    axisLabel: { fontSize: 11 }
+                },
+                yAxis: {
+                    type: 'category',
+                    data: ['N+1 (Manager)', 'Moyens Généraux', 'Contrôleur de gestion', 'DFC', 'SG', 'Comité de dépenses'],
+                    axisLabel: { fontSize: 12 },
+                    inverse: false
+                },
+                series: [{
+                    type: 'bar',
+                    data: [
+                        { value: attenteN1,    itemStyle: { color: BLEU_VIF,   borderRadius: [0, 4, 4, 0] } }, // N+1
+                        { value: attenteN2,    itemStyle: { color: BLEU_CLAIR, borderRadius: [0, 4, 4, 0] } }, // Moyens généraux
+                        { value: attenteN3,    itemStyle: { color: VIOLET_SOFT,borderRadius: [0, 4, 4, 0] } }, // Contrôle
+                        { value: attenteN4,    itemStyle: { color: VERT,       borderRadius: [0, 4, 4, 0] } }, // Finance
+                        { value: attenteSG,    itemStyle: { color: BLEU_FONCE, borderRadius: [0, 4, 4, 0] } }, // SG
+                        { value: attenteCodep, itemStyle: { color: ORANGE,     borderRadius: [0, 4, 4, 0] } }  // CODEP
+                    ],
+                    label: {
+                        show: true,
+                        position: 'right',
+                        fontSize: 12,
+                        fontWeight: 'bold'
+                    },
+                    barMaxWidth: 40
                 }]
             });
         </script>

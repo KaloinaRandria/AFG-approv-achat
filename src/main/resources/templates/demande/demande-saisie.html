@@ -55,7 +55,7 @@
                                     <span class="input-group-text bg-light">
                                         <i class="fas fa-calendar-alt icon-gradient-blue"></i>
                                     </span>
-                                    <input type="datetime-local"
+                                    <input type="date"
                                            class="form-control"
                                            id="dateSortie"
                                            name="dateSortie"
@@ -384,11 +384,11 @@
 
         function pad(n) { return String(n).padStart(2, "0"); }
 
-        function formatDateTimeFR(dateTimeValue) {
+        function formatDateFR(dateTimeValue) {
             if (!dateTimeValue) return "-";
             const d = new Date(dateTimeValue);
             if (isNaN(d.getTime())) return "-";
-            return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
         }
 
         function mark(el) {
@@ -745,8 +745,8 @@
                 $("#pvPriorite").textContent = $("#priorite option:checked")?.textContent || "---";
                 $("#pvMotif").textContent = $("#motif")?.value || "-";
 
-                const rawDate = $("#dateSortie")?.value; // ✅ ton champ réel
-                if (pvDate) pvDate.textContent = formatDateTimeFR(rawDate);
+                const rawDate = $("#dateSortie")?.value;
+                if (pvDate) pvDate.textContent = formatDateFR(rawDate);
 
                 if (pvDesc) pvDesc.textContent = $("#description")?.value || "-";
 

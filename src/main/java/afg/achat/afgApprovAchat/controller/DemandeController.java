@@ -520,16 +520,17 @@ public class DemandeController {
             model.addAttribute("statut", (statut == null) ? 0 : statut);
         }
 
-        // À ajouter dans listDemandePage, avant le return
         Map<Integer, String> badgeClasses = new HashMap<>();
-        badgeClasses.put(StatutDemande.CREE,           "badge-wait");
-        badgeClasses.put(StatutDemande.VALIDATION_N1,  "badge-info");
-        badgeClasses.put(StatutDemande.VALIDATION_N2,  "badge-purple");
-        badgeClasses.put(StatutDemande.VALIDATION_N3,  "badge-warning");
-        badgeClasses.put(StatutDemande.VALIDATION_N4,  "badge-teal");
-        badgeClasses.put(StatutDemande.DECISION_CODEP, "badge-codep");
-        badgeClasses.put(StatutDemande.VALIDE,         "badge-success");
-        badgeClasses.put(StatutDemande.REFUSE,         "badge-danger");
+
+        badgeClasses.put(StatutDemande.CREE,            "badge-grey");
+
+        badgeClasses.put(StatutDemande.VALIDATION_N1,   "badge-blue");
+        badgeClasses.put(StatutDemande.VALIDATION_N2,   "badge-light-blue");
+        badgeClasses.put(StatutDemande.VALIDATION_N3,   "badge-purple");
+        badgeClasses.put(StatutDemande.VALIDATION_N4,   "badge-green-soft");
+        badgeClasses.put(StatutDemande.DECISION_CODEP,  "badge-orange");
+        badgeClasses.put(StatutDemande.VALIDE,          "badge-green");
+        badgeClasses.put(StatutDemande.REFUSE,          "badge-red");
 
         Map<Integer, String> badgeIcons = new HashMap<>();
         badgeIcons.put(StatutDemande.CREE,           "fa-user-clock");
