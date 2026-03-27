@@ -195,11 +195,12 @@ public class DemandeController {
             propsDemandeur.put("demandeur",   demandeMere.getDemandeur());
             propsDemandeur.put("dateDemande", LocalDateTime.now()
                     .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+            propsDemandeur.put("Validateur", demandeMere.getDemandeur().getSuperieurHierarchique());
 
             Mail mail = new Mail(
                     "demandeSaved",
                     demandeMere.getDemandeur().getMail(),
-                    "[AFG/MADA] - Demande enregistrée",
+                    "[AFG Bank - Demande Achat] - Demande N°" + demandeMere.getId() + " en cours de validation",
                     propsDemandeur
             );
             ess.sendEmail(mail);
@@ -211,8 +212,8 @@ public class DemandeController {
                 Map<String, Object> propsSup = new HashMap<>();
                 propsSup.put("id",           demandeMere.getId());
                 propsSup.put("demandeur",    demandeMere.getDemandeur());
-                propsSup.put("destinataire", superieur);                  // ← le N+1
-                propsSup.put("validateur",   demandeMere.getDemandeur()); // ← le créateur = "validateur" initial
+                propsSup.put("destinataire", superieur);
+                propsSup.put("validateur",   demandeMere.getDemandeur());
                 propsSup.put("etape",        StatutDemande.getLibelle(StatutDemande.CREE));
                 propsSup.put("dateDecision", LocalDateTime.now()
                         .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
@@ -220,7 +221,7 @@ public class DemandeController {
                 Mail mailSup = new Mail(
                         "validSup",
                         superieur.getMail(),
-                        "[AFG/MADA] - Demande d'achat en attente de votre validation",
+                        "[AFG Bank - Demande Achat] - Action requise : Validation de la demande N°" + demandeMere.getId(),
                         propsSup
                 );
                 ess.sendEmail(mailSup);
