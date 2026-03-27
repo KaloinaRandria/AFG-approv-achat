@@ -132,7 +132,7 @@ public class DemandeController {
             DemandeMere demandeMere = new DemandeMere();
             demandeMere.setId(idGenerator);
             demandeMere.setDateDemande(String.valueOf(LocalDateTime.now()));
-            demandeMere.setDateSortie(dateSortie);
+            demandeMere.setDateSortie(dateSortie + "T00:00");
             demandeMere.setPriorite(DemandeMere.PrioriteDemande.valueOf(priorite.trim()));
             demandeMere.setMotifEvoque(motif);
             demandeMere.setDemandeur(utilisateur);
