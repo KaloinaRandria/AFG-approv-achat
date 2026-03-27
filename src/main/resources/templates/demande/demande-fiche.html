@@ -12,7 +12,7 @@
 
     <!-- Select2 JS (après jQuery) -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
+    <meta name="context-path" th:content="@{/}" />
 </head>
 
 <body>
@@ -1545,8 +1545,8 @@
             // Appel AJAX
             const formData = new FormData();
             formData.append("quantite", newQte);
-
-            fetch(`/demande/ligne/${ligneId}/quantite`, {
+            const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
+            fetch(`${CONTEXT_PATH}demande/ligne/${ligneId}/quantite`, {
                 method: "POST",
                 body: formData
             })
