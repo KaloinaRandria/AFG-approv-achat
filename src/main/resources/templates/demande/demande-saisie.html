@@ -381,11 +381,11 @@
 
         function pad(n) { return String(n).padStart(2, "0"); }
 
-        function formatDateTimeFR(dateTimeValue) {
+        function formatDateFR(dateTimeValue) {
             if (!dateTimeValue) return "-";
             const d = new Date(dateTimeValue);
             if (isNaN(d.getTime())) return "-";
-            return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
         }
 
         function mark(el) {
@@ -722,7 +722,7 @@
                 $("#pvPriorite").textContent = $("#priorite option:checked")?.textContent || "---";
                 $("#pvMotif").textContent = $("#motif")?.value || "-";
 
-                const rawDate = $("#dateSortie")?.value; // ✅ ton champ réel
+                const rawDate = $("#dateSortie")?.value;
                 if (pvDate) pvDate.textContent = formatDateTimeFR(rawDate);
 
                 if (pvDesc) pvDesc.textContent = $("#description")?.value || "-";

@@ -142,8 +142,13 @@
                             </div>
 
                             <div>
-                                <strong>Date :</strong>
+                                <strong>Date de la demande :</strong>
                                 <div th:text="${demande.dateDemande != null ? #temporals.format(demande.dateDemande,'dd/MM/yyyy HH:mm') : '-'}">-</div>
+                            </div>
+
+                            <div>
+                                <strong>Date prévue pour la livraison :</strong>
+                                <div th:text="${demande.dateSortie != null ? #temporals.format(demande.dateSortie,'dd/MM/yyyy') : '-'}">-</div>
                             </div>
 
                             <div>
