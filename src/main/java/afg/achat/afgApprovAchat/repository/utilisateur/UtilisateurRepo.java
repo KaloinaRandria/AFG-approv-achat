@@ -17,4 +17,7 @@ public interface UtilisateurRepo extends JpaRepository<Utilisateur,Integer> {
 
     @Query("SELECT u FROM Utilisateur u WHERE u.mail = :mail")
     Utilisateur findByMail(String mail);
+
+    @Query("SELECT u FROM Utilisateur u JOIN u.roles r WHERE r.role = :roleLibelle")
+    List<Utilisateur> findByRoleLibelle(@Param("roleLibelle") String roleLibelle);
 }
