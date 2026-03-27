@@ -114,7 +114,7 @@ public class EmailSenderService {
         this.sendEmail(new Mail(
                 "demandeValid",
                 demande.getDemandeur().getMail(),
-                "[AFG/MADA] - Votre demande a été validée",
+                "[AFG Bank - Demande Achat] - Votre demande a été validée",
                 propsDemandeur
         ));
 
@@ -137,7 +137,7 @@ public class EmailSenderService {
             this.sendEmail(new Mail(
                     "notificationValidateur",
                     prochainValidateur.getMail(),
-                    "[AFG/MADA] - Demande en attente de votre validation",
+                    "[AFG Bank - Demande Achat] - Demande en attente de votre validation",
                     propsValidateur
             ));
         }
