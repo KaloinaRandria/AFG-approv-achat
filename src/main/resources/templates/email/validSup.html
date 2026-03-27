@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+</head>
+<body>
+<div class="container">
+
+    <p>Bonjour <span th:text="${destinataire.prenom + ' ' + destinataire.nom}"></span>,</p>
+
+    <p>
+        Une demande d'achat nécessite votre validation.
+    </p>
+
+    <p>
+        <strong>Référence :</strong> <span th:text="${id}"></span><br/>
+        <strong>Demandeur :</strong> <span th:text="${demandeur.prenom + ' ' + demandeur.nom}"></span><br/>
+        <strong>Date :</strong> <span th:text="${dateDecision}"></span>
+    </p>
+
+    <p>
+        Cette demande a été soumise et validée à l'étape
+        <strong th:text="${etape}"></strong>.
+    </p>
+
+    <br/>
+
+    <p>
+        <a th:href="${lienValidation}">
+            Ouvrir la demande à valider
+        </a>
+    </p>
+
+    <p>Cordialement,</p>
+
+    <p><img src="cid:signature-image" /></p>
+
+</div>
+</body>
+</html>

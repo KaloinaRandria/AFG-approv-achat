@@ -7,6 +7,7 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <meta name="context-path" th:content="@{/}" />
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
@@ -495,7 +496,8 @@
                 .filter(Boolean);
 
             try {
-                const res = await fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`, {
+                const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
+                const res = await fetch(`${CONTEXT_PATH}api/articles/search?keyword=${encodeURIComponent(keyword)}`, {
                     signal: abortController.signal
                 });
                 if (!res.ok) throw new Error("HTTP " + res.status);
