@@ -49,6 +49,7 @@ public class ApiController {
                     Map<String, String> map = new HashMap<>();
                     map.put("code", a.getCodeArticle());
                     map.put("designation", a.getDesignation());
+                    map.put("udm", a.getUdm() != null ? a.getUdm().getDescription() : "—");
                     return map;
                 })
                 .toList();
@@ -104,7 +105,7 @@ public class ApiController {
                 demandeMere.getNatureDemande() != null ? demandeMere.getNatureDemande().toString() : "-"
         );
 
-        // ✅ Statut (libellé)
+        //Statut (libellé)
         Map<Integer, String> statutLabels = Map.of(
                 StatutDemande.CREE, "CREE",
                 StatutDemande.VALIDATION_N1, "EN_VALIDATION",
