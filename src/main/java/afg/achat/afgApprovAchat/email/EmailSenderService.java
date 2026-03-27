@@ -128,6 +128,11 @@ public class EmailSenderService {
             propsValidateur.put("dateDecision",   dateDecision);
             propsValidateur.put("etape",          StatutDemande.getLibelle(etapeCourante));
             propsValidateur.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
+            String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
+//                String baseUrl = "http://localhost:8080";
+
+            String lienValidation = baseUrl + "/demande/fiche/" + demande.getId();
+            propsValidateur.put("lienValidation", lienValidation);
 
             this.sendEmail(new Mail(
                     "notificationValidateur",
