@@ -115,14 +115,14 @@ public class MyAuthenticationProvider implements AuthenticationProvider{
 //
 //                return new UsernamePasswordAuthenticationToken(user, null, authorities);
 //            }
-//            if(email.equals("mialy.rasamimanana@afgbank.mg") && password.equals("mdp")) {
-//                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-//                Collection<GrantedAuthority> authorities = user.getRoles().stream()
-//                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
-//                        .toList();
-//
-//                return new UsernamePasswordAuthenticationToken(user, null, authorities);
-//            }
+            if(email.equals("mialy.rasamimanana@afgbank.mg") && password.equals("mdp")) {
+                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+                        .toList();
+
+                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+            }
 //
 //			if(email.equals("s.dago@atlantic-group.net") && password.equals("mdp")) {
 //				Utilisateur user = utilisateurService.getUtilisateurByMail(email);

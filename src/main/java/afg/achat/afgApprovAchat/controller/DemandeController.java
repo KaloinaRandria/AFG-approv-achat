@@ -217,6 +217,13 @@ public class DemandeController {
                 propsSup.put("etape",        StatutDemande.getLibelle(StatutDemande.CREE));
                 propsSup.put("dateDecision", LocalDateTime.now()
                         .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+//                String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
+                String baseUrl = "http://localhost:8080";
+
+
+
+                String lienValidation = baseUrl + "/demande/fiche/" + demandeMere.getId();
+                propsSup.put("lienValidation", lienValidation);
 
                 Mail mailSup = new Mail(
                         "validSup",
