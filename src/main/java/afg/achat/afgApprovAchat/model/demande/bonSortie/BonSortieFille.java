@@ -27,6 +27,7 @@ public class BonSortieFille {
     @Enumerated(EnumType.STRING)
     @Column(name = "statut")
     Statut statut = Statut.EN_ATTENTE;
+    @Transient
     Double maxSortie;
 
     public enum Statut {
