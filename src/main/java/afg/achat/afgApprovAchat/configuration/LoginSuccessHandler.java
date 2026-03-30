@@ -36,4 +36,19 @@ public class LoginSuccessHandler extends SavedRequestAwareAuthenticationSuccessH
 
         super.onAuthenticationSuccess(request, response, authentication);
     }
+
+    @Override
+    protected String determineTargetUrl(HttpServletRequest request,
+                                        HttpServletResponse response,
+                                        Authentication authentication) {
+
+        String targetUrl = super.determineTargetUrl(request, response, authentication);
+
+        // éviter redirection vers /error
+        if (targetUrl.contains("/error")) {
+            return "/";
+        }
+
+        return targetUrl;
+    }
 }

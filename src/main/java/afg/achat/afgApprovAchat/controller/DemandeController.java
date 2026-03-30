@@ -75,7 +75,6 @@ public class DemandeController {
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("ligneBudgetaires",centreBudgetaireService.getAllCentreBudgetaires() );
 
@@ -551,7 +550,6 @@ public class DemandeController {
         model.addAttribute("prioriteFiltre", prioriteFiltre);
 
         // Model commun
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demandesMeres", demandesMeres);
 
         model.addAttribute("page", page);
@@ -937,7 +935,6 @@ public class DemandeController {
         model.addAttribute("histoLabels", histoLabels);
 
         // Model (IMPORTANT : toujours envoyer les booléens)
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demande", demande);
         model.addAttribute("lignes", lignes);
 
