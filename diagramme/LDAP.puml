@@ -1,0 +1,21 @@
+@startuml
+
+title Authentification LDAP-Active Directory
+
+actor Utilisateur
+participant "AFG Sync" as App
+participant "Serveur LDAP" as LDAP
+
+Utilisateur -> App : Saisit identifiant / mot de passe
+
+App -> LDAP : Demande d'authentification (DN, password)
+
+alt Succès
+    LDAP --> App : Authentification réussie + attributs utilisateur
+    App --> Utilisateur : Accès autorisé
+else Échec
+    LDAP --> App : Authentification refusée
+    App --> Utilisateur : Accès refusé
+end
+
+@enduml
