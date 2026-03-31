@@ -61,7 +61,7 @@ public class BonSortieController {
             return "redirect:/demande/fiche/" + demandeId;
         }
 
-        // ✅ Anti-doublon : bloquer si BS déjà existant (peu importe le statut)
+        // Anti-doublon : bloquer si BS déjà existant (peu importe le statut)
         BonSortieMere existing = bsMereRepo
                 .findFirstByDemandeMereOrderByIdDesc(demande).orElse(null);
 
@@ -90,7 +90,7 @@ public class BonSortieController {
 
         // Créer BS mère
         BonSortieMere bs = new BonSortieMere();
-        bs.setId(idGenerator);   // ✅ appelle idGenerator.generateId("BS", "...")
+        bs.setId(idGenerator);
         bs.setDemandeMere(demande);
         bs.setStatut(BonSortieMere.Statut.CREE);
         bs = bsMereRepo.save(bs);
