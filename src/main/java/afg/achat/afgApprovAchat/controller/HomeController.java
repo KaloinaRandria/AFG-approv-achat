@@ -209,7 +209,6 @@ public class HomeController {
         // ── 9. Infos contextuelles ───────────────────────────────────────
         model.addAttribute("dateFrom",        dateFrom);
         model.addAttribute("dateTo",          dateTo);
-        model.addAttribute("currentUri",      request.getRequestURI());
         model.addAttribute("currentUser",     current);
         model.addAttribute("isAdminOrSpecial", isAdminOrSpecial);
 

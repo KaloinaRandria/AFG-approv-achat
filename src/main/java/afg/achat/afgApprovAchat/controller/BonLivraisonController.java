@@ -55,7 +55,6 @@ public class BonLivraisonController {
 
     @GetMapping("/add")
     public String addBonLivraisonPage(Model model, HttpServletRequest request) {
-        model.addAttribute("currentUri", request.getRequestURI());
 
         model.addAttribute("fournisseurs", fournisseurService.getAllFournisseurs());
         model.addAttribute("devises", deviseService.getAllDevises());
@@ -208,7 +207,6 @@ public class BonLivraisonController {
                 num, fournisseur, devise, dateFrom, dateTo, page, size, sort, dir
         );
 
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("bonLivraisonMeres", result);
 
         model.addAttribute("page", page);
@@ -216,7 +214,7 @@ public class BonLivraisonController {
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
 
-        // ✅ pour afficher la valeur dans les inputs
+        // pour afficher la valeur dans les inputs
         model.addAttribute("num", num == null ? "" : num);
         model.addAttribute("fournisseur", fournisseur == null ? "" : fournisseur);
         model.addAttribute("devise", devise == null ? "" : devise);

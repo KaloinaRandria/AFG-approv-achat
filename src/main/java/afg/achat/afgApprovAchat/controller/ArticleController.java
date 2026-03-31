@@ -63,7 +63,6 @@ public class ArticleController {
 
         Page<Article> articlesPage = articleService.searchArticlesMulti(code, designation, famille, udm, pageable);
 
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("articlesPage", articlesPage);
 
         model.addAttribute("page", page);
@@ -71,7 +70,7 @@ public class ArticleController {
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
 
-        // ✅ garder valeurs dans inputs
+        //garder valeurs dans inputs
         model.addAttribute("code", code == null ? "" : code);
         model.addAttribute("designation", designation == null ? "" : designation);
         model.addAttribute("famille", famille == null ? "" : famille);
@@ -87,7 +86,6 @@ public class ArticleController {
     @GetMapping("/entree-saisie/{codeArticle}")
     public String entreeArticle(@PathVariable String codeArticle, Model model, HttpServletRequest request) {
         Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("article", article);
         return "stock/entree-saisie";
     }
@@ -95,7 +93,6 @@ public class ArticleController {
     @GetMapping("/sortie-saisie/{codeArticle}")
     public String sortieArticle(@PathVariable String codeArticle, Model model, HttpServletRequest request) {
         Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("article", article);
         return "stock/sortie-saisie";
     }
@@ -108,7 +105,6 @@ public class ArticleController {
         if (!model.containsAttribute("article")) {
             model.addAttribute("article", new Article());
         }
-        model.addAttribute("currentUri", request.getRequestURI());
 
         // Toujours ajouter les listes de données
         model.addAttribute("unites", udmService.getAllUdms());

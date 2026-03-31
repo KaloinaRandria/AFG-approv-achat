@@ -8,6 +8,7 @@ import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 
@@ -29,19 +30,21 @@ public class WebSecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-            	.requestMatchers(
-            			"/login",
-                        "/login-error",
-                        "/webjars/**",
-                        "/img/**",
-                        "/static/**",
-                        "/select2/**",
-                        "/js/**",
-                        "/css/**",
-                        "/assets/**",
-                        "/jqueryFiler/**",
-                        "/fileUpload/**" )
-                    .permitAll()
+                    .requestMatchers(
+                            "/login",
+                            "/login-error",
+                            "/error",
+                            "/error/**",
+                            "/webjars/**",
+                            "/img/**",
+                            "/static/**",
+                            "/select2/**",
+                            "/js/**",
+                            "/css/**",
+                            "/assets/**",
+                            "/jqueryFiler/**",
+                            "/fileUpload/**"
+                    ).permitAll()
                 .anyRequest().authenticated()
 
             )
@@ -53,7 +56,7 @@ public class WebSecurityConfig {
                 .loginPage("/login")
                 .usernameParameter("email")
                 .passwordParameter("password")
-                .defaultSuccessUrl("/", false)
+                .successHandler(loginSuccessHandler)
                 .failureUrl("/login-error")
                 .permitAll()
             )
@@ -66,6 +69,9 @@ public class WebSecurityConfig {
             .sessionManagement(session -> session
                 .maximumSessions(1)
                 .expiredUrl("/login")
+            )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
             );
 
 

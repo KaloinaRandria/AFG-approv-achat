@@ -309,3 +309,21 @@ ALTER TABLE demande_mere
 ALTER TABLE demande_mere
     ADD CONSTRAINT demande_mere_priorite_check
         CHECK (priorite IN ('P0','P1','P2'));
+
+
+
+
+
+ALTER SEQUENCE bon_sortie_fille_id_bon_sortie_fille_seq RESTART WITH 1;
+ALTER SEQUENCE bon_sortie_mere_id_bon_sortie_mere_seq RESTART WITH 1;
+
+ALTER SEQUENCE demande_fille_id_demande_fille_seq RESTART WITH 1;
+ALTER SEQUENCE demande_mere_id_demande_mere_seq RESTART WITH 1;
+
+ALTER SEQUENCE bon_livraison_fille_id_bl_fille_seq RESTART WITH 1;
+ALTER SEQUENCE bon_livraison_mere_id_bl_mere_seq RESTART WITH 1;
+
+ALTER SEQUENCE stock_fille_id_stock_fille_seq RESTART WITH 1;
+ALTER SEQUENCE stock_mere_id_stock_mere_seq RESTART WITH 1;
+
+

@@ -25,7 +25,6 @@ public class FournisseurController {
 
     @GetMapping("/add")
     public String addFournisseurPage(Model model, HttpServletRequest request) {
-        model.addAttribute("currentUri", request.getRequestURI());
         return "fournisseur/fournisseur-saisie";
     }
 
@@ -71,7 +70,6 @@ public class FournisseurController {
 
     @GetMapping("/list")
     public String getListFournisseur(Model model , HttpServletRequest request) {
-        model.addAttribute("currentUri", request.getRequestURI());
         Fournisseur[] fournisseurs = fournisseurService.getAllFournisseurs();
         model.addAttribute("fournisseurs", fournisseurs);
         return "fournisseur/fournisseur-liste";

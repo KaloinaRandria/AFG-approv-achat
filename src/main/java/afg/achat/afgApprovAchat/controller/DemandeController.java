@@ -75,7 +75,6 @@ public class DemandeController {
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("ligneBudgetaires",centreBudgetaireService.getAllCentreBudgetaires() );
 
@@ -215,7 +214,7 @@ public class DemandeController {
                 propsSup.put("destinataire", superieur);
                 propsSup.put("validateur",   demandeMere.getDemandeur());
                 propsSup.put("etape",        StatutDemande.getLibelle(StatutDemande.CREE));
-                propsSup.put("dateDecision", LocalDateTime.now()
+                propsSup.put("dateDemande", LocalDateTime.now()
                         .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
                 String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
 //                String baseUrl = "http://localhost:8080";
@@ -551,7 +550,6 @@ public class DemandeController {
         model.addAttribute("prioriteFiltre", prioriteFiltre);
 
         // Model commun
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demandesMeres", demandesMeres);
 
         model.addAttribute("page", page);
@@ -937,7 +935,6 @@ public class DemandeController {
         model.addAttribute("histoLabels", histoLabels);
 
         // Model (IMPORTANT : toujours envoyer les booléens)
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demande", demande);
         model.addAttribute("lignes", lignes);
 
