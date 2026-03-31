@@ -3,7 +3,7 @@
 title Authentification LDAP-Active Directory
 
 actor Utilisateur
-participant "AFG Sync" as App
+participant "AFG Achat" as App
 participant "Serveur LDAP" as LDAP
 
 Utilisateur -> App : Saisit identifiant / mot de passe
