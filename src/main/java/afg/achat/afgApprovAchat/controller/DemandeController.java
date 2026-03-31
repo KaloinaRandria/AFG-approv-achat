@@ -75,7 +75,6 @@ public class DemandeController {
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("ligneBudgetaires",centreBudgetaireService.getAllCentreBudgetaires() );
 
@@ -132,7 +131,7 @@ public class DemandeController {
             DemandeMere demandeMere = new DemandeMere();
             demandeMere.setId(idGenerator);
             demandeMere.setDateDemande(String.valueOf(LocalDateTime.now()));
-            demandeMere.setDateSortie(dateSortie);
+            demandeMere.setDateSortie(dateSortie + "T00:00");
             demandeMere.setPriorite(DemandeMere.PrioriteDemande.valueOf(priorite.trim()));
             demandeMere.setMotifEvoque(motif);
             demandeMere.setDemandeur(utilisateur);
@@ -195,11 +194,12 @@ public class DemandeController {
             propsDemandeur.put("demandeur",   demandeMere.getDemandeur());
             propsDemandeur.put("dateDemande", LocalDateTime.now()
                     .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+            propsDemandeur.put("Validateur", demandeMere.getDemandeur().getSuperieurHierarchique());
 
             Mail mail = new Mail(
                     "demandeSaved",
                     demandeMere.getDemandeur().getMail(),
-                    "[AFG/MADA] - Demande enregistrée",
+                    "[AFG Bank - Demande Achat] - Demande N°" + demandeMere.getId() + " en cours de validation",
                     propsDemandeur
             );
             ess.sendEmail(mail);
@@ -211,16 +211,23 @@ public class DemandeController {
                 Map<String, Object> propsSup = new HashMap<>();
                 propsSup.put("id",           demandeMere.getId());
                 propsSup.put("demandeur",    demandeMere.getDemandeur());
-                propsSup.put("destinataire", superieur);                  // ← le N+1
-                propsSup.put("validateur",   demandeMere.getDemandeur()); // ← le créateur = "validateur" initial
+                propsSup.put("destinataire", superieur);
+                propsSup.put("validateur",   demandeMere.getDemandeur());
                 propsSup.put("etape",        StatutDemande.getLibelle(StatutDemande.CREE));
-                propsSup.put("dateDecision", LocalDateTime.now()
+                propsSup.put("dateDemande", LocalDateTime.now()
                         .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+                String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
+//                String baseUrl = "http://localhost:8080";
+
+
+
+                String lienValidation = baseUrl + "/demande/fiche/" + demandeMere.getId();
+                propsSup.put("lienValidation", lienValidation);
 
                 Mail mailSup = new Mail(
                         "validSup",
                         superieur.getMail(),
-                        "[AFG/MADA] - Demande d'achat en attente de votre validation",
+                        "[AFG Bank - Demande Achat] - Action requise : Validation de la demande N°" + demandeMere.getId(),
                         propsSup
                 );
                 ess.sendEmail(mailSup);
@@ -512,16 +519,17 @@ public class DemandeController {
             model.addAttribute("statut", (statut == null) ? 0 : statut);
         }
 
-        // À ajouter dans listDemandePage, avant le return
         Map<Integer, String> badgeClasses = new HashMap<>();
-        badgeClasses.put(StatutDemande.CREE,           "badge-wait");
-        badgeClasses.put(StatutDemande.VALIDATION_N1,  "badge-info");
-        badgeClasses.put(StatutDemande.VALIDATION_N2,  "badge-purple");
-        badgeClasses.put(StatutDemande.VALIDATION_N3,  "badge-warning");
-        badgeClasses.put(StatutDemande.VALIDATION_N4,  "badge-teal");
-        badgeClasses.put(StatutDemande.DECISION_CODEP, "badge-codep");
-        badgeClasses.put(StatutDemande.VALIDE,         "badge-success");
-        badgeClasses.put(StatutDemande.REFUSE,         "badge-danger");
+
+        badgeClasses.put(StatutDemande.CREE,            "badge-grey");
+
+        badgeClasses.put(StatutDemande.VALIDATION_N1,   "badge-blue");
+        badgeClasses.put(StatutDemande.VALIDATION_N2,   "badge-light-blue");
+        badgeClasses.put(StatutDemande.VALIDATION_N3,   "badge-purple");
+        badgeClasses.put(StatutDemande.VALIDATION_N4,   "badge-green-soft");
+        badgeClasses.put(StatutDemande.DECISION_CODEP,  "badge-orange");
+        badgeClasses.put(StatutDemande.VALIDE,          "badge-green");
+        badgeClasses.put(StatutDemande.REFUSE,          "badge-red");
 
         Map<Integer, String> badgeIcons = new HashMap<>();
         badgeIcons.put(StatutDemande.CREE,           "fa-user-clock");
@@ -542,7 +550,6 @@ public class DemandeController {
         model.addAttribute("prioriteFiltre", prioriteFiltre);
 
         // Model commun
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demandesMeres", demandesMeres);
 
         model.addAttribute("page", page);
@@ -928,7 +935,6 @@ public class DemandeController {
         model.addAttribute("histoLabels", histoLabels);
 
         // Model (IMPORTANT : toujours envoyer les booléens)
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demande", demande);
         model.addAttribute("lignes", lignes);
 

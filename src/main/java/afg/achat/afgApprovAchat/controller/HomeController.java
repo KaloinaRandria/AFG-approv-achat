@@ -184,11 +184,31 @@ public class HomeController {
         model.addAttribute("p1", p1);
         model.addAttribute("p2", p2);
 
+        // ── 8. Demandes en attente par niveau de validation ──────────────
+        long attenteN1  = Arrays.stream(toutes)
+                .filter(d -> d.getStatut() == StatutDemande.CREE).count();
+        long attenteN2  = Arrays.stream(toutes)
+                .filter(d -> d.getStatut() == StatutDemande.VALIDATION_N1).count();
+        long attenteN3  = Arrays.stream(toutes)
+                .filter(d -> d.getStatut() == StatutDemande.VALIDATION_N2).count();
+        long attenteN4  = Arrays.stream(toutes)
+                .filter(d -> d.getStatut() == StatutDemande.VALIDATION_N3).count();
+        long attenteSG  = Arrays.stream(toutes)
+                .filter(d -> d.getStatut() == StatutDemande.VALIDATION_N4).count();
+        long attenteCodep = Arrays.stream(toutes)
+                .filter(d -> d.getStatut() == StatutDemande.DECISION_CODEP).count();
+
+        model.addAttribute("attenteN1",    attenteN1);
+        model.addAttribute("attenteN2",    attenteN2);
+        model.addAttribute("attenteN3",    attenteN3);
+        model.addAttribute("attenteN4",    attenteN4);
+        model.addAttribute("attenteSG",    attenteSG);
+        model.addAttribute("attenteCodep", attenteCodep);
+
 
         // ── 9. Infos contextuelles ───────────────────────────────────────
         model.addAttribute("dateFrom",        dateFrom);
         model.addAttribute("dateTo",          dateTo);
-        model.addAttribute("currentUri",      request.getRequestURI());
         model.addAttribute("currentUser",     current);
         model.addAttribute("isAdminOrSpecial", isAdminOrSpecial);
 

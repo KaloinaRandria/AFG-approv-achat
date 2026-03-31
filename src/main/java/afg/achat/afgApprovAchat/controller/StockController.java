@@ -153,7 +153,6 @@ public class StockController {
         long ruptureCount = alertes.stream().filter(a -> "RUPTURE".equals(a.getTypeAlerte())).count();
         long seuilCount   = alertes.stream().filter(a -> "SEUIL".equals(a.getTypeAlerte())).count();
 
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("etatStocks", etatStocks);
 
         model.addAttribute("page", page);

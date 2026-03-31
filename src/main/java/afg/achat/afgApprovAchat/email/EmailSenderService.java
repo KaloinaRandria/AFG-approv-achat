@@ -114,7 +114,7 @@ public class EmailSenderService {
         this.sendEmail(new Mail(
                 "demandeValid",
                 demande.getDemandeur().getMail(),
-                "[AFG/MADA] - Votre demande a été validée",
+                "[AFG Bank - Demande Achat] - Votre demande a été validée",
                 propsDemandeur
         ));
 
@@ -128,11 +128,16 @@ public class EmailSenderService {
             propsValidateur.put("dateDecision",   dateDecision);
             propsValidateur.put("etape",          StatutDemande.getLibelle(etapeCourante));
             propsValidateur.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
+            String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
+//                String baseUrl = "http://localhost:8080";
+
+            String lienValidation = baseUrl + "/demande/fiche/" + demande.getId();
+            propsValidateur.put("lienValidation", lienValidation);
 
             this.sendEmail(new Mail(
                     "notificationValidateur",
                     prochainValidateur.getMail(),
-                    "[AFG/MADA] - Demande en attente de votre validation",
+                    "[AFG Bank - Demande Achat] - Demande en attente de votre validation",
                     propsValidateur
             ));
         }

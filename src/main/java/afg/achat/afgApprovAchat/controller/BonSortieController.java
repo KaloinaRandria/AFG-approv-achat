@@ -146,7 +146,6 @@ public class BonSortieController {
             Double dispo = dispoByArticleId.getOrDefault(l.getArticle().getId(),0.0);
             l.setMaxSortie(Math.min(dispo, l.getQuantiteDemandee()));
         }
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("bs", bs);
         model.addAttribute("lignes", lignes);
         model.addAttribute("dispoByArticleId", dispoByArticleId);
