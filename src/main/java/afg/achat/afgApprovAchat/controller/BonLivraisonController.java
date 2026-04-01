@@ -1,12 +1,14 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
 import afg.achat.afgApprovAchat.model.stock.StockFille;
 import afg.achat.afgApprovAchat.model.stock.StockMere;
 import afg.achat.afgApprovAchat.model.util.Devise;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
+import afg.achat.afgApprovAchat.model.util.PrixArticle;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonFilleService;
@@ -15,6 +17,7 @@ import afg.achat.afgApprovAchat.service.stock.StockFilleService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
+import afg.achat.afgApprovAchat.service.util.PrixArticleService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -22,7 +25,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -51,6 +53,8 @@ public class BonLivraisonController {
     StockFilleService stockFilleService;
     @Autowired
     IdGenerator idGenerator;
+    @Autowired
+    PrixArticleService prixArticleService;
 
 
     @GetMapping("/add")
@@ -103,19 +107,30 @@ public class BonLivraisonController {
 
 //            Enregistrement des bons de livraison filles
             List<BonLivraisonFille> bonLivraisonFilles = new ArrayList<>();
+            // Enregistrement des bons de livraison filles
             for (int i = 0; i < articleCodes.size(); i++) {
                 BonLivraisonFille bonLivraisonFille = new BonLivraisonFille();
                 bonLivraisonFille.setBonLivraisonMere(bonLivraisonMere);
+
                 int finalI = i;
-                bonLivraisonFille.setArticle(articleService.getArticleByCodeArticle(articleCodes.get(i))
-                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable avec le code: " + articleCodes.get(finalI))));
+                Article article = articleService.getArticleByCodeArticle(articleCodes.get(i))
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "Article introuvable avec le code: " + articleCodes.get(finalI)));
+
+                bonLivraisonFille.setArticle(article);
                 bonLivraisonFille.setQuantiteDemande(qteDemandes.get(i));
                 bonLivraisonFille.setQuantiteRecu(qteRecues.get(i));
                 bonLivraisonFille.setPrixUnitaire(prixUnitaires.get(i));
 
-                articleService.updatePrixUnitaire(articleCodes.get(i), prixUnitaires.get(i));
-                bonLivraisonFilles.add(bonLivraisonFille);
                 this.bonLivraisonFilleService.insertBonLivraisonFilleList(bonLivraisonFille);
+
+                //Historique du prix au lieu d'écraser l'article
+                PrixArticle prixArticle = new PrixArticle();
+                prixArticle.setArticle(article);
+                prixArticle.setBonLivraisonMere(bonLivraisonMere);
+                prixArticle.setPrixUnitaire(Double.parseDouble(prixUnitaires.get(i)));
+                prixArticle.setDatePrix(LocalDate.now());
+                prixArticleService.insert(prixArticle);
             }
 
 //            Entree en Stock

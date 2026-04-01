@@ -7,12 +7,14 @@ import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.demande.*;
 import afg.achat.afgApprovAchat.model.util.CommentaireFinance;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
+import afg.achat.afgApprovAchat.model.util.PrixArticle;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
 import afg.achat.afgApprovAchat.service.util.CommentaireFinanceService;
+import afg.achat.afgApprovAchat.service.util.PrixArticleService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
@@ -72,6 +74,8 @@ public class DemandeController {
     private CommentaireFinanceService commentaireFinanceService;
     @Autowired
     private EmailSenderService ess;
+    @Autowired
+    PrixArticleService prixArticleService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -110,23 +114,32 @@ public class DemandeController {
             }
 
             double totalGeneral = 0.0;
+            List<DemandeFille> lignes = new ArrayList<>();
 
+// Boucle unique — calcul total + préparation des lignes
             for (int i = 0; i < articleCodes.size(); i++) {
-
                 String code = articleCodes.get(i);
-
                 Article article = articleService.getArticleByCodeArticle(code)
                         .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + code));
 
                 double qte = MontantCalculator.parseDoubleSafe(quantite.get(i));
-                if (qte <= 0) continue; // ou throw si tu veux obligatoire
+                if (qte <= 0) continue;
 
-                double prix = (article.getPrixUnitaire() == null) ? 0.0 : article.getPrixUnitaire();
+                // Prix issu de PrixArticle (dernier BL reçu pour cet article)
+                double prix = prixArticleService.getDernierPrixByArticle(code)
+                        .map(PrixArticle::getPrixUnitaire)
+                        .orElse(0.0);
 
-                totalGeneral += (qte * prix);
+                totalGeneral += qte * prix;
+
+                DemandeFille demandeFille = new DemandeFille();
+                demandeFille.setArticle(article);
+                demandeFille.setQuantite(quantite.get(i));
+                demandeFille.setStatut(1);
+                demandeFille.setPrixUnitaire(prix); // snapshot issu de PrixArticle
+                lignes.add(demandeFille);
             }
 
-            // (ton contrôle quantité > 0 tu peux le garder ici avant save)
 
             DemandeMere demandeMere = new DemandeMere();
             demandeMere.setId(idGenerator);
@@ -137,25 +150,14 @@ public class DemandeController {
             demandeMere.setDemandeur(utilisateur);
             demandeMere.setDescription(description);
             demandeMere.setStatut(1);
-            demandeMere.setTotalPrix(totalGeneral);
-
-            // 1) Save la demande (pour avoir la ref)
+            demandeMere.setTotalPrix(totalGeneral); //total basé sur PrixArticle
             this.demandeMereService.saveDemandeMere(demandeMere);
 
-            // 2) Save les lignes
-            for (int i = 0; i < articleCodes.size(); i++) {
-                DemandeFille demandeFille = new DemandeFille();
-                demandeFille.setDemandeMere(demandeMere);
-
-                String code = articleCodes.get(i);
-                demandeFille.setArticle(articleService.getArticleByCodeArticle(code)
-                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + code)));
-
-                demandeFille.setQuantite(quantite.get(i));
-                demandeFille.setStatut(1);
-                this.demandeFilleService.saveDemandeFille(demandeFille);
+            // Save les lignes (après demandeMere pour que la FK soit valide)
+            for (DemandeFille ligne : lignes) {
+                ligne.setDemandeMere(demandeMere); //FK settée après persist
+                this.demandeFilleService.saveDemandeFille(ligne);
             }
-
             if (piecesJointes != null) {
                 for (MultipartFile f : piecesJointes) {
                     if (f == null || f.isEmpty()) continue;
@@ -202,7 +204,7 @@ public class DemandeController {
                     "[AFG Bank - Demande Achat] - Demande N°" + demandeMere.getId() + " en cours de validation",
                     propsDemandeur
             );
-            ess.sendEmail(mail);
+//            ess.sendEmail(mail);
 
 // ── Mail 2 : notification au N+1 pour validation ────────────────────────
             Utilisateur superieur = demandeMere.getDemandeur().getSuperieurHierarchique();
@@ -230,7 +232,7 @@ public class DemandeController {
                         "[AFG Bank - Demande Achat] - Action requise : Validation de la demande N°" + demandeMere.getId(),
                         propsSup
                 );
-                ess.sendEmail(mailSup);
+//                ess.sendEmail(mailSup);
             }
 
 
@@ -1081,7 +1083,7 @@ public class DemandeController {
                     "[AFG/MADA] - Votre demande a été refusée",
                     props
             );
-            ess.sendEmail(mail);
+//            ess.sendEmail(mail);
 
             redirectAttributes.addFlashAttribute("ok", "Demande rejetée.");
             return "redirect:/demande/fiche/" + id;
@@ -1114,7 +1116,7 @@ public class DemandeController {
                 System.out.println("Nombre de MG trouvés : " + mgs.size());
                 for (Utilisateur mg : mgs) {
                     System.out.println("Envoi mail à MG : " + mg.getMail());
-                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N1, mg);
+//                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N1, mg);
                 }
 
                 redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
@@ -1250,9 +1252,9 @@ public class DemandeController {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
                 List<Utilisateur> controleurs = utilisateurService.getUtilisateursByRole("CONTROLEUR");
-                for (Utilisateur controleur : controleurs) {
-                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N2, controleur);
-                }
+//                for (Utilisateur controleur : controleurs) {
+//                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N2, controleur);
+//                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1296,9 +1298,9 @@ public class DemandeController {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
                 List<Utilisateur> dfcs = utilisateurService.getUtilisateursByRole("DFC");
-                for (Utilisateur dfc : dfcs) {
-                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N3, dfc);
-                }
+//                for (Utilisateur dfc : dfcs) {
+//                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N3, dfc);
+//                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le contrôleur de gestion (N3).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1323,9 +1325,9 @@ public class DemandeController {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N4);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
                 List<Utilisateur> sgs = utilisateurService.getUtilisateursByRole("SG");
-                for (Utilisateur sg : sgs) {
-                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N4, sg);
-                }
+//                for (Utilisateur sg : sgs) {
+//                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N4, sg);
+//                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par la D.F.C., transmise au S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1347,7 +1349,7 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
-                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDE, null);
+//                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDE, null);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
