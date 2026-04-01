@@ -67,7 +67,7 @@ public class DemandeMere {
     String codeProvisoire;
 
     @Column(name = "total_estime")
-    double totalEstime;
+    Double totalEstime;
 
 
     public enum PrioriteDemande {

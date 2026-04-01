@@ -92,4 +92,8 @@ public class DemandeFilleService {
         return demandeFilleRepo.findByDemandeMereAndStatutValidee(demandeMere);
     }
 
+    public List<DemandeFille> getDemandeFilleByArticleCodeAndPrixNull(String codeArticle) {
+        return demandeFilleRepo.findByArticleCodeAndPrixNull(codeArticle);
+    }
+
 }

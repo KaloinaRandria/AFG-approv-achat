@@ -14,6 +14,7 @@ import java.util.List;
 public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
     @Query("select dmf from DemandeFille dmf where dmf.demandeMere = :demandeMere")
     List<DemandeFille> findDemandeFilleByDemandeMere(DemandeMere demandeMere);
+
     @Query("""
     SELECT COALESCE(SUM(l.article.prixUnitaire * l.quantite), 0)
     FROM DemandeFille l
@@ -28,4 +29,12 @@ public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
 
     @Query("SELECT df FROM DemandeFille df WHERE df.demandeMere = :demandeMere AND df.statut = 14")
     List<DemandeFille> findByDemandeMereAndStatutValidee(DemandeMere demandeMere);
+
+    @Query("""
+    SELECT df FROM DemandeFille df
+    WHERE df.article.codeArticle = :codeArticle
+    AND df.prixUnitaire = 0
+    """)
+    List<DemandeFille> findByArticleCodeAndPrixNull(@Param("codeArticle") String codeArticle);
+
 }
