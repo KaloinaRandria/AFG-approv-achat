@@ -4,6 +4,8 @@ import afg.achat.afgApprovAchat.model.Fournisseur;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
+import afg.achat.afgApprovAchat.model.demande.DemandeFille;
+import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.stock.StockFille;
 import afg.achat.afgApprovAchat.model.stock.StockMere;
 import afg.achat.afgApprovAchat.model.util.Devise;
@@ -13,6 +15,8 @@ import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonFilleService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
+import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
+import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.stock.StockFilleService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
@@ -55,6 +59,10 @@ public class BonLivraisonController {
     IdGenerator idGenerator;
     @Autowired
     PrixArticleService prixArticleService;
+    @Autowired
+    DemandeMereService demandeMereService;
+    @Autowired
+    DemandeFilleService demandeFilleService;
 
 
     @GetMapping("/add")
@@ -131,6 +139,23 @@ public class BonLivraisonController {
                 prixArticle.setPrixUnitaire(Double.parseDouble(prixUnitaires.get(i)));
                 prixArticle.setDatePrix(LocalDate.now());
                 prixArticleService.insert(prixArticle);
+
+                double prix = Double.parseDouble(prixUnitaires.get(i));
+                List<DemandeFille> lignesEnAttente = demandeFilleService
+                        .getDemandeFilleByArticleCodeAndPrixNull(articleCodes.get(i));
+                System.out.println("Prix : " + prix);
+
+                for (DemandeFille ligne : lignesEnAttente) {
+                    ligne.setPrixUnitaire(prix);
+
+                    // Recalcul du total de la demande mère
+                    DemandeMere demandeMere = ligne.getDemandeMere();
+                    double ancienTotal = demandeMere.getTotalPrix() != 0.0 ? demandeMere.getTotalPrix() : 0.0;
+                    demandeMere.setTotalPrix(ancienTotal + (ligne.getQuantite() * prix));
+                    demandeMereService.saveDemandeMere(demandeMere);
+                    demandeFilleService.saveDemandeFille(ligne);
+                    System.out.println("Article : " + ligne.getPrixUnitaire() + " Nom : " + ligne.getArticle().getDesignation());
+                }
             }
 
 //            Entree en Stock

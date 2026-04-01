@@ -457,7 +457,7 @@
 
                         <!-- TOTAL -->
                         <div class="px-3 pb-3 mt-3"
-                             sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_CONTROLEUR','ROLE_DFC','ROLE_SG')">
+                             th:if="${canVoirPrix}">
                             <table class="bl-table">
                                 <tfoot>
                                 <tr class="fw-bold" style="border-top: 2px solid #dee2e6;">
