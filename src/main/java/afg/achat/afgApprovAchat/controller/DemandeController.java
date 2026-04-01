@@ -722,6 +722,7 @@ public class DemandeController {
 
         boolean isAdminOrSpecial = isAdmin || isMG || isControleur || isDFC || isSG;
 
+
         DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
         if (demande == null) {
             redirectAttributes.addFlashAttribute("ko", "Demande introuvable : " + id);
@@ -922,6 +923,9 @@ public class DemandeController {
 
         List<ValidationDemande> historiques = validationDemandeService.getHistorique(demande);
         CentreBudgetaire[] ligneBudgetaires = centreBudgetaireService.getAllCentreBudgetaires();
+
+        boolean canVoirPrix = isAdminOrSpecial || isViewerNplus1OfDemandeur;
+        model.addAttribute("canVoirPrix", canVoirPrix);
 
         model.addAttribute("steps", steps);
         model.addAttribute("historiques", historiques);

@@ -350,7 +350,7 @@
                                     </th>
 
                                     <!-- PRIX -->
-                                    <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_CONTROLEUR','ROLE_DFC','ROLE_SG')"
+                                    <th th:if="${canVoirPrix}"
                                         style="width:25%"
                                         class="text-end">
                                         PRIX UNITAIRE
@@ -393,7 +393,7 @@
 
                                     </td>
 
-                                    <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX','ROLE_CONTROLEUR','ROLE_DFC','ROLE_SG')"
+                                    <td th:if="${canVoirPrix}"
                                         class="text-end"
                                         th:text="${#numbers.formatDecimal(l.article.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')}">
                                         0
