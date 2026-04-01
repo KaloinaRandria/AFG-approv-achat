@@ -361,7 +361,7 @@
                                 <tbody>
 
                                 <tr th:if="${lignes == null || lignes.isEmpty()}">
-                                    <td th:colspan="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')} ? 3 : 2"
+                                    <td th:colspan="${canVoirPrix} ? 4 : 3"
                                         class="text-center text-muted">
                                         Aucun article
                                     </td>
