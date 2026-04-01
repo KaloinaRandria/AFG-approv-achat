@@ -7,12 +7,14 @@ import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.demande.*;
 import afg.achat.afgApprovAchat.model.util.CommentaireFinance;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
+import afg.achat.afgApprovAchat.model.util.PrixArticle;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
 import afg.achat.afgApprovAchat.service.util.CommentaireFinanceService;
+import afg.achat.afgApprovAchat.service.util.PrixArticleService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
@@ -72,6 +74,8 @@ public class DemandeController {
     private CommentaireFinanceService commentaireFinanceService;
     @Autowired
     private EmailSenderService ess;
+    @Autowired
+    PrixArticleService prixArticleService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request) {
@@ -110,23 +114,32 @@ public class DemandeController {
             }
 
             double totalGeneral = 0.0;
+            List<DemandeFille> lignes = new ArrayList<>();
 
+// Boucle unique — calcul total + préparation des lignes
             for (int i = 0; i < articleCodes.size(); i++) {
-
                 String code = articleCodes.get(i);
-
                 Article article = articleService.getArticleByCodeArticle(code)
                         .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + code));
 
                 double qte = MontantCalculator.parseDoubleSafe(quantite.get(i));
-                if (qte <= 0) continue; // ou throw si tu veux obligatoire
+                if (qte <= 0) continue;
 
-                double prix = (article.getPrixUnitaire() == null) ? 0.0 : article.getPrixUnitaire();
+                // Prix issu de PrixArticle (dernier BL reçu pour cet article)
+                double prix = prixArticleService.getDernierPrixByArticle(code)
+                        .map(PrixArticle::getPrixUnitaire)
+                        .orElse(0.0);
 
-                totalGeneral += (qte * prix);
+                totalGeneral += qte * prix;
+
+                DemandeFille demandeFille = new DemandeFille();
+                demandeFille.setArticle(article);
+                demandeFille.setQuantite(quantite.get(i));
+                demandeFille.setStatut(1);
+                demandeFille.setPrixUnitaire(prix); // snapshot issu de PrixArticle
+                lignes.add(demandeFille);
             }
 
-            // (ton contrôle quantité > 0 tu peux le garder ici avant save)
 
             DemandeMere demandeMere = new DemandeMere();
             demandeMere.setId(idGenerator);
@@ -137,25 +150,14 @@ public class DemandeController {
             demandeMere.setDemandeur(utilisateur);
             demandeMere.setDescription(description);
             demandeMere.setStatut(1);
-            demandeMere.setTotalPrix(totalGeneral);
-
-            // 1) Save la demande (pour avoir la ref)
+            demandeMere.setTotalPrix(totalGeneral); //total basé sur PrixArticle
             this.demandeMereService.saveDemandeMere(demandeMere);
 
-            // 2) Save les lignes
-            for (int i = 0; i < articleCodes.size(); i++) {
-                DemandeFille demandeFille = new DemandeFille();
-                demandeFille.setDemandeMere(demandeMere);
-
-                String code = articleCodes.get(i);
-                demandeFille.setArticle(articleService.getArticleByCodeArticle(code)
-                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + code)));
-
-                demandeFille.setQuantite(quantite.get(i));
-                demandeFille.setStatut(1);
-                this.demandeFilleService.saveDemandeFille(demandeFille);
+            // Save les lignes (après demandeMere pour que la FK soit valide)
+            for (DemandeFille ligne : lignes) {
+                ligne.setDemandeMere(demandeMere); //FK settée après persist
+                this.demandeFilleService.saveDemandeFille(ligne);
             }
-
             if (piecesJointes != null) {
                 for (MultipartFile f : piecesJointes) {
                     if (f == null || f.isEmpty()) continue;

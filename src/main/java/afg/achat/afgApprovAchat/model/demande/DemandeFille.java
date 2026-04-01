@@ -23,6 +23,24 @@ public class DemandeFille {
     double quantite;
     int statut;
 
+
+    //Prix au moment de la demande (issu du dernier bon de livraison)
+    @Column(name = "prix_unitaire")
+    Double prixUnitaire;
+
+    //Calculé = quantite * prixUnitaire
+    @Column(name = "montant_estime")
+    Double montantEstime;
+
+
+    //Auto-calcul du montant estimé
+    public void setPrixUnitaire(Double prixUnitaire) {
+        this.prixUnitaire = prixUnitaire;
+        if (prixUnitaire != null) {
+            this.montantEstime = this.quantite * prixUnitaire;
+        }
+    }
+
     public void setQuantite(String quantite) {
         this.quantite = Double.parseDouble(quantite);
     }
