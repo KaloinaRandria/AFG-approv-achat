@@ -5,11 +5,13 @@ import afg.achat.afgApprovAchat.email.Mail;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.demande.*;
+import afg.achat.afgApprovAchat.model.demande.bonSortie.BonSortieMere;
 import afg.achat.afgApprovAchat.model.util.CommentaireFinance;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
 import afg.achat.afgApprovAchat.model.util.PrixArticle;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
+import afg.achat.afgApprovAchat.repository.demande.bonSortie.BonSortieMereRepo;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
@@ -78,6 +80,8 @@ public class DemandeController {
     private EmailSenderService ess;
     @Autowired
     PrixArticleService prixArticleService;
+    @Autowired
+    BonSortieMereRepo bsMereRepo;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
@@ -883,6 +887,10 @@ public class DemandeController {
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("ligneBudgetaires", ligneBudgetaires);
         model.addAttribute("commentaireFinance", commentaireFinance);
+
+// ── Bon de Sortie lié à cette demande ────────────────────────────────────
+        BonSortieMere bonSortie = bsMereRepo.findFirstByDemandeMereOrderByIdDesc(demande).orElse(null);
+        model.addAttribute("bonSortie", bonSortie);
 
         return "demande/demande-fiche";
     }

@@ -14,24 +14,44 @@ import lombok.Setter;
 @Entity
 @Table(name = "bon_sortie_fille")
 public class BonSortieFille {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_bon_sortie_fille")
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_bon_sortie_fille")
     int id;
-    @ManyToOne @JoinColumn(name = "id_article", referencedColumnName = "id_article")
+
+    @ManyToOne
+    @JoinColumn(name = "id_article", referencedColumnName = "id_article")
     Article article;
+
     @Column(name = "quantite_demandee")
     double quantiteDemandee;
+
     @Column(name = "quantite_sortie")
     double quantiteSortie;
-    @ManyToOne @JoinColumn(name = "id_bon_sortie_mere", referencedColumnName = "id_bon_sortie_mere")
+
+    @Column(name = "prix_unitaire")
+    Double prixUnitaire;
+
+    @ManyToOne
+    @JoinColumn(name = "id_bon_sortie_mere", referencedColumnName = "id_bon_sortie_mere")
     BonSortieMere bonSortieMere;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "statut")
     Statut statut = Statut.EN_ATTENTE;
+
     Double maxSortie;
 
-    public enum Statut {
-        EN_ATTENTE, // pas de sortie (stock insuffisant)
-        SORTIE      // sortie effectuée
+    // Prix total calculé (quantiteSortie * prixUnitaire)
+    @Transient
+    public double getTotalLigne() {
+        if (prixUnitaire == null || quantiteSortie <= 0) return 0.0;
+        return quantiteSortie * prixUnitaire;
     }
 
+    public enum Statut {
+        EN_ATTENTE,
+        SORTIE
+    }
 }

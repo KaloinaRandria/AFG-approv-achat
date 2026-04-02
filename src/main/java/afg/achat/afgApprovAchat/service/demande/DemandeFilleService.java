@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class DemandeFilleService {
@@ -94,6 +95,12 @@ public class DemandeFilleService {
 
     public List<DemandeFille> getDemandeFilleByArticleCodeAndPrixNull(String codeArticle) {
         return demandeFilleRepo.findByArticleCodeAndPrixNull(codeArticle);
+    }
+
+    public Optional<Double> getPrixByDemandeAndArticle(String demandeId, String codeArticle) {
+        return demandeFilleRepo
+                .findByDemandeMereIdAndArticleCodeArticle(demandeId, codeArticle)
+                .map(DemandeFille::getPrixUnitaire);
     }
 
 }
