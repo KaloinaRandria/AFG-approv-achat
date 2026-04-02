@@ -204,7 +204,7 @@ public class DemandeMereService {
         double total = demandeFilleRepo
                 .calculerTotal(demande, StatutDemande.REFUSE);
 
-        demande.setTotalPrix(total);
+        demande.setTotalEstime(total);
 
         demandeMereRepo.save(demande);
     }

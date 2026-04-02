@@ -587,16 +587,26 @@ public class DemandeController {
         // Recalculer le total de la demande mère
         DemandeMere demande = ligne.getDemandeMere();
         List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
-        double newTotal = lignes.stream()
+        // APRÈS — utilise prixUnitaire de DemandeFille + met à jour totalEstime
+// Recalcul du montantEstime de la ligne modifiée
+        if (ligne.getPrixUnitaire() != null && ligne.getPrixUnitaire() > 0) {
+            ligne.setMontantEstime(quantite * ligne.getPrixUnitaire());
+        } else {
+            ligne.setMontantEstime(null);
+        }
+        demandeFilleService.saveDemandeFille(ligne);
+
+// Recalcul du totalEstime sur la demande mère
+        double newTotalEstime = lignes.stream()
+                .filter(l -> l.getPrixUnitaire() != null && l.getPrixUnitaire() > 0)
                 .mapToDouble(l -> {
-                    double qte = 0;
-                    try { qte = l.getQuantite(); } catch (Exception ignored) {}
-                    double prix = (l.getArticle().getPrixUnitaire() == null) ? 0 : l.getArticle().getPrixUnitaire();
-                    return qte * prix;
+                    // Pour la ligne qu'on vient de modifier, utiliser la nouvelle quantité
+                    double qte = (l.getId() == ligneId) ? quantite : l.getQuantite();
+                    return qte * l.getPrixUnitaire();
                 })
                 .sum();
 
-        demande.setTotalPrix(newTotal);
+        demande.setTotalEstime(newTotalEstime > 0 ? newTotalEstime : null);
         demandeMereService.saveDemandeMere(demande);
 
         //Historique de la modification
@@ -619,7 +629,7 @@ public class DemandeController {
 
         return ResponseEntity.ok(Map.of(
                 "quantite", quantite,
-                "newTotal", newTotal
+                "totalEstime", newTotalEstime
         ));
     }
     @GetMapping("/fiche/{id}")
@@ -1115,6 +1125,19 @@ public class DemandeController {
 
             if (canDecisionMG) {
                 int etape = demande.getStatut();
+                List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
+                List<String> lignesSansPrix = lignes.stream()
+                        .filter(l -> l.getStatut() != StatutDemande.REFUSE)
+                        .filter(l -> l.getPrixUnitaire() == null || l.getPrixUnitaire() <= 0)
+                        .map(l -> l.getArticle().getCodeArticle() + " - " + l.getArticle().getDesignation())
+                        .toList();
+
+                if (!lignesSansPrix.isEmpty()) {
+                    redirectAttributes.addFlashAttribute("ko",
+                            "Impossible de valider : les articles suivants n'ont pas de prix unitaire : "
+                                    + String.join(", ", lignesSansPrix));
+                    return "redirect:/demande/fiche/" + id;
+                }
                 List<String> pjAjoutees = sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_MG", redirectAttributes);
                 if (!pjAjoutees.isEmpty()) {
                     String listePj = pjAjoutees.stream()
@@ -1303,6 +1326,79 @@ public class DemandeController {
         System.out.println(">>> decision reçue = [" + decision + "]");
         redirectAttributes.addFlashAttribute("ko", "Décision invalide.");
         return "redirect:/demande/fiche/" + id;
+    }
+
+    @PostMapping("/fiche/{id}/prix")
+    @ResponseBody
+    public ResponseEntity<?> savePrix(
+            @PathVariable("id") String id,
+            @RequestBody Map<String, Double> prix,
+            HttpServletRequest request) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        boolean isMG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        if (!isMG && !isAdmin) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Accès refusé."));
+        }
+
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Demande introuvable."));
+        }
+
+        if (demande.getStatut() != StatutDemande.VALIDATION_N1) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "La saisie des prix n'est autorisée qu'à l'étape Validation MG."));
+        }
+
+        // Mise à jour des prix ligne par ligne
+        List<String> erreurs = new ArrayList<>();
+        for (Map.Entry<String, Double> entry : prix.entrySet()) {
+            int ligneId;
+            try {
+                ligneId = Integer.parseInt(entry.getKey());
+            } catch (NumberFormatException e) {
+                erreurs.add("ID invalide : " + entry.getKey());
+                continue;
+            }
+            Double valeur = entry.getValue();
+            if (valeur == null || valeur <= 0) {
+                erreurs.add("Prix invalide pour la ligne " + ligneId);
+                continue;
+            }
+            DemandeFille ligne = demandeFilleService.getDemandeFilleById(ligneId);
+            if (ligne == null || !ligne.getDemandeMere().getId().equals(id)) {
+                erreurs.add("Ligne introuvable : " + ligneId);
+                continue;
+            }
+            ligne.setPrixUnitaire(valeur); // déclenche aussi setMontantEstime via le setter
+            demandeFilleService.saveDemandeFille(ligne);
+        }
+
+        // Recalcul du total estimé sur la DemandeMere
+        List<DemandeFille> toutesLignes = demandeFilleService.getDemandeFilleByDemandeMere(demandeMereService.getDemandeMereById(id).orElseThrow());
+        double total = toutesLignes.stream()
+                .filter(l -> l.getPrixUnitaire() != null && l.getPrixUnitaire() > 0)
+                .mapToDouble(DemandeFille::getMontantEstime)
+                .sum();
+        demande.setTotalEstime(total);
+        demandeMereService.saveDemandeMere(demande);
+
+        if (!erreurs.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                    .body(Map.of("warning", erreurs, "totalEstime", total));
+        }
+
+        return ResponseEntity.ok(Map.of("ok", "Prix enregistrés.", "totalEstime", total));
     }
 
     @PostMapping("/fiche/{id}/send-codep")

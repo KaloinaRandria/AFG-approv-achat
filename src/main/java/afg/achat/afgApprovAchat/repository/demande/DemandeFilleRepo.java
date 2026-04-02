@@ -17,7 +17,7 @@ public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
     List<DemandeFille> findDemandeFilleByDemandeMere(DemandeMere demandeMere);
 
     @Query("""
-    SELECT COALESCE(SUM(l.article.prixUnitaire * l.quantite), 0)
+    SELECT COALESCE(SUM(l.prixUnitaire * l.quantite), 0)
     FROM DemandeFille l
     WHERE l.demandeMere = :demande
     AND l.statut != :statutRefuse
