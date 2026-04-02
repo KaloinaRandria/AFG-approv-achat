@@ -42,6 +42,7 @@
                         <h6 class="form-section-title">
                             <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations générales
                         </h6>
+                        <input type="hidden" name="submissionToken" th:value="${submissionToken}" />
 
                         <div class="row">
                             <!-- Fournisseur -->
@@ -338,12 +339,13 @@
                     <i class="fas fa-pen me-1"></i>Modifier
                 </button>
 
-                <!-- ✅ Le vrai submit du formulaire -->
-                <button type="submit" class="btn btn-gradient-green" form="bonlivraisonForm">
+                <button type="submit"
+                        class="btn btn-gradient-green"
+                        form="bonlivraisonForm"
+                        id="btnSubmitBL">
                     <i class="fas fa-save me-1"></i>Confirmer et enregistrer
                 </button>
             </div>
-
         </div>
     </div>
 </div>
@@ -351,6 +353,28 @@
 <script th:inline="javascript">
     /*<![CDATA[*/
 
+    document.getElementById('btnSubmitBL').addEventListener('click', function (e) {
+        e.preventDefault();
+
+        const form = document.getElementById('bonlivraisonForm');
+        const btn  = this;
+
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Envoi en cours...';
+
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save me-1"></i>Confirmer et enregistrer';
+        }, 15000);
+
+        form.submit();
+    });
+    
     //Global : accessible partout
     const fournisseurs = [
         /*[# th:each="f : ${fournisseurs}"]*/

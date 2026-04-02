@@ -23,6 +23,7 @@ import afg.achat.afgApprovAchat.service.util.DeviseService;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.util.PrixArticleService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -36,6 +37,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
 @Controller
@@ -66,7 +68,11 @@ public class BonLivraisonController {
 
 
     @GetMapping("/add")
-    public String addBonLivraisonPage(Model model, HttpServletRequest request) {
+    public String addBonLivraisonPage(Model model, HttpServletRequest request, HttpSession session) {
+        // Token anti double-soumission
+        String token = UUID.randomUUID().toString();
+        session.setAttribute("submissionToken", token);
+        model.addAttribute("submissionToken", token);
 
         model.addAttribute("fournisseurs", fournisseurService.getAllFournisseurs());
         model.addAttribute("devises", deviseService.getAllDevises());
@@ -83,7 +89,20 @@ public class BonLivraisonController {
                                      @RequestParam("quantiteDemande[]") List<String> qteDemandes,
                                      @RequestParam("quantiteRecu[]") List<String> qteRecues,
                                      @RequestParam("prixUnitaire[]") List<String> prixUnitaires,
+                                     @RequestParam(name = "submissionToken") String submissionToken,
+                                     HttpSession session,
                                      RedirectAttributes redirectAttributes) {
+        // ── Vérification token anti double-soumission ────────────────────────────
+        String sessionToken = (String) session.getAttribute("submissionToken");
+
+        if (sessionToken == null || !sessionToken.equals(submissionToken)) {
+            redirectAttributes.addFlashAttribute("warningMessage",
+                    "Ce bon de livraison a déjà été soumis. Veuillez vérifier la liste.");
+            return "redirect:/bonlivraison/list";
+        }
+
+        // Consommer le token immédiatement
+        session.removeAttribute("submissionToken");
         try {
             if (fournisseurId == null || fournisseurId.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "Veuillez sélectionner un fournisseur.");
