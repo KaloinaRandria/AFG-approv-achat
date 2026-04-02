@@ -345,95 +345,90 @@
 
                         <!-- TABLE ARTICLES -->
                         <div class="bl-body">
-                            <table class="bl-table">
-                                <thead>
+                            <table class="bl-table table table-hover align-middle">
+
+                                <thead class="table-light">
                                 <tr>
                                     <!-- DESIGNATION -->
                                     <th th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}
-                  ? 'width:55%' : 'width:70%'">
+              ? 'width:55%' : 'width:70%'">
                                         DÉSIGNATION
                                     </th>
 
                                     <!-- QUANTITE -->
                                     <th class="text-end"
                                         th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}
-                  ? 'width:20%' : 'width:30%'">
+              ? 'width:20%' : 'width:30%'">
                                         QUANTITÉ
                                     </th>
+
                                     <!-- UDM -->
-                                    <th class="text-end"
-                                        th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}
-                  ? 'width:20%' : 'width:30%'">
-                                        UDM
-                                    </th>
+                                    <th class="text-end">UDM</th>
 
                                     <!-- PRIX -->
-                                    <!-- THEAD : ajouter colonne prix éditable pour MG -->
-                                    <th th:if="${canVoirPrix}"
-                                        style="width:25%"
-                                        class="text-end">
+                                    <th th:if="${canVoirPrix}" class="text-end" style="width:25%">
                                         PRIX UNITAIRE
-                                        <!-- Indicateur si des prix manquent -->
                                         <span th:if="${canDecisionMG}"
                                               id="badgePrixManquants"
                                               class="badge bg-danger ms-1"
                                               style="display:none;">
-                                            <i class="fas fa-exclamation-triangle"></i>
-                                        </span>
+                    <i class="fas fa-exclamation-triangle"></i>
+                </span>
                                     </th>
+
+                                    <!-- ACTION -->
+                                    <th class="text-center">Actions</th>
                                 </tr>
                                 </thead>
 
                                 <tbody>
 
+                                <!-- VIDE -->
                                 <tr th:if="${lignes == null || lignes.isEmpty()}">
-                                    <td th:colspan="${canVoirPrix} ? 4 : 3"
-                                        class="text-center text-muted">
+                                    <td th:colspan="${canVoirPrix} ? 5 : 4"
+                                        class="text-center text-muted py-4">
                                         Aucun article
                                     </td>
                                 </tr>
 
+                                <!-- LIGNES -->
                                 <tr th:each="l : ${lignes}"
-                                    th:classappend="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? 'ligne-refusee'">
+                                    th:classappend="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' table-danger opacity-75'">
 
-                                    <td th:text="${l.article != null ? l.article.codeArticle +' - '+ l.article.designation : '-'}">-</td>
+                                    <!-- DESIGNATION -->
+                                    <td th:text="${l.article != null ? l.article.codeArticle +' - '+ l.article.designation : '-'}"></td>
 
+                                    <!-- QUANTITE -->
                                     <td class="text-end" th:data-ligne-id="${l.id}">
-                                        <!-- Mode lecture -->
-                                        <span class="qte-display"
-                                              th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
-                                            0
-                                        </span>
-                                        <!-- Mode édition (caché par défaut) -->
+                <span class="qte-display"
+                      th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                </span>
+
                                         <input type="number"
                                                class="form-control form-control-sm qte-input d-none text-end"
                                                th:value="${l.quantite}"
                                                th:data-initial="${l.quantite}"
                                                min="1"
                                                step="1"
-                                               pattern="\d*"
                                                oninput="this.value = Math.floor(this.value)"
                                                style="width: 100px; display: inline-block;">
                                     </td>
-                                    <td th:text="${l.article.udm.description}">
 
-                                    </td>
+                                    <!-- UDM -->
+                                    <td th:text="${l.article.udm.description}"></td>
 
-                                    <!-- TBODY : cellule prix, remplacer l'existante -->
+                                    <!-- PRIX -->
                                     <td th:if="${canVoirPrix}"
                                         class="text-end"
                                         th:data-ligne-prix-id="${l.id}">
 
-                                        <!-- Lecture seule si pas MG ou si ligne refusée -->
-                                        <span class="prix-display"
-                                              th:classappend="${(l.prixUnitaire == null or l.prixUnitaire == 0) and canDecisionMG} ? ' text-danger fw-bold' : ''"
-                                              th:text="${l.prixUnitaire != null and l.prixUnitaire > 0
-                                                        ? #numbers.formatDecimal(l.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')
-                                                        : '—'}">
-                                            —
-                                        </span>
+                <span class="prix-display"
+                      th:classappend="${(l.prixUnitaire == null or l.prixUnitaire == 0) and canDecisionMG} ? ' text-danger fw-bold' : ''"
+                      th:text="${l.prixUnitaire != null and l.prixUnitaire > 0
+                                ? #numbers.formatDecimal(l.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')
+                                : '—'}">
+                </span>
 
-                                        <!-- Saisie MG (visible uniquement pour les MG, lignes non refusées) -->
                                         <input th:if="${canDecisionMG and l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE}"
                                                type="number"
                                                class="form-control form-control-sm prix-input text-end mt-1"
@@ -441,104 +436,76 @@
                                                th:name="'prix-' + ${l.id}"
                                                th:value="${l.prixUnitaire != null and l.prixUnitaire > 0 ? l.prixUnitaire : ''}"
                                                th:data-ligne-id="${l.id}"
-                                               min="0.01"
-                                               step="0.01"
+                                               min="1"
+                                               step="1"
                                                placeholder="Saisir le prix"
                                                style="width: 120px; display: inline-block;">
                                     </td>
 
-                                    <!-- Colonne action -->
-                                    <td th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE and
-                                        l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP
-                                        and (canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)}"
-                                        class="text-center">
+                                    <!-- ACTIONS -->
+                                    <td class="text-center"
+                                        th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE and
+                        l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP
+                        and (canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)}">
 
                                         <div class="d-flex gap-2 justify-content-center">
 
-                                            <!-- Bouton éditer quantité -->
+                                            <!-- EDIT -->
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-gradient-blue btn-edit-qte"
-                                                    th:data-id="${l.id}"
-                                                    title="Modifier la quantité">
+                                                    th:data-id="${l.id}">
                                                 <i class="fas fa-pen"></i>
                                             </button>
 
-                                            <!-- Bouton confirmer (caché par défaut) -->
+                                            <!-- SAVE -->
                                             <button type="button"
                                                     class="btn btn-sm btn-gradient-green btn-save-qte d-none"
-                                                    th:data-id="${l.id}"
-                                                    title="Confirmer la modification">
+                                                    th:data-id="${l.id}">
                                                 <i class="fas fa-check"></i>
                                             </button>
 
-                                            <!-- Bouton annuler (caché par défaut) -->
+                                            <!-- CANCEL -->
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-danger btn-cancel-qte d-none"
-                                                    th:data-id="${l.id}"
-                                                    title="Annuler la modification">
+                                                    th:data-id="${l.id}">
                                                 <i class="fas fa-times"></i>
                                             </button>
 
-                                            <!-- Bouton refus article -->
+                                            <!-- REFUS -->
                                             <button type="button"
-                                                    class="btn btn-sm btn-outline-danger btnRefuserArticle btn-refus-article"
+                                                    class="btn btn-sm btn-outline-danger btnRefuserArticle"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#refusArticleModal"
                                                     th:data-id="${l.id}"
                                                     th:data-designation="${l.article.designation}"
-                                                    th:data-codearticle="${l.article.codeArticle}"
-                                                    th:disabled="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
-                                or !(canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)}"
-                                                    title="Refuser cet article">
+                                                    th:data-codearticle="${l.article.codeArticle}">
                                                 <i class="fas fa-times-circle"></i>
                                             </button>
+
                                         </div>
                                     </td>
 
                                 </tr>
 
                                 </tbody>
-                            </table>
-                        </div>
 
-                        <!-- TOTAL -->
-                        <div class="px-3 pb-3 mt-3"
-                             th:if="${canVoirPrix}">
-                            <table class="bl-table">
-                                <tfoot>
-                                <tr class="fw-bold" style="border-top: 2px solid #dee2e6;">
-                                    <td style="width:55%"></td>
-                                    <td style="width:20%" class="text-end py-2 text-muted small text-uppercase">
-                                        Total
-                                    </td>
-                                    <td style="width:25%" class="text-end py-2" id="totalEstimeDisplay"
+                                <!-- TOTAL -->
+                                <tfoot th:if="${canVoirPrix}">
+                                <tr class="table-light fw-bold border-top">
+                                    <td></td>
+                                    <td class="text-end text-muted text-uppercase small">Total</td>
+                                    <td></td>
+                                    <td class="text-end" id="totalEstimeDisplay"
                                         th:text="${demande.totalEstime != null and demande.totalEstime > 0
-                                                    ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')
-                                                    : '—'}">
+                            ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')
+                            : '—'}">
                                     </td>
+                                    <td></td>
                                 </tr>
                                 </tfoot>
+
                             </table>
                         </div>
-
-                        <!-- Total estimé -->
-<!--                        <div class="d-flex align-items-center gap-2 px-3 py-2 rounded-3"-->
-<!--                             style="background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);-->
-<!--                                        border: 1px solid #c5d3f0;">-->
-<!--                            <i class="fas fa-calculator text-primary opacity-75"></i>-->
-<!--                            <span class="text-muted small text-uppercase fw-semibold" style="letter-spacing:.05em;">-->
-<!--                                        Total estimé-->
-<!--                                    </span>-->
-<!--                            <span class="vr mx-1 opacity-25"></span>-->
-<!--                            <span id="totalEstimeDisplay"-->
-<!--                                  class="fw-bold fs-6 text-primary"-->
-<!--                                  th:text="${demande.totalEstime != null and demande.totalEstime > 0-->
-<!--                                                    ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')-->
-<!--                                                    : '—'}">-->
-<!--                                        —-->
-<!--                                    </span>-->
-<!--                        </div>-->
-
 
                         <!-- COMMENTAIRE CONTROLEUR DE GESTION -->
                         <div class="px-3 pb-2"
@@ -568,7 +535,7 @@
                                 <div class="d-flex align-items-center gap-2">
                                     <button type="button"
                                             id="btnSavePrix"
-                                            class="btn btn-outline-primary btn-sm">
+                                            class="btn btn-outline-gradient-blue btn-sm">
                                         <i class="fas fa-save me-1"></i> Enregistrer les prix
                                     </button>
                                     <span id="prixSaveStatus" class="small"></span>
