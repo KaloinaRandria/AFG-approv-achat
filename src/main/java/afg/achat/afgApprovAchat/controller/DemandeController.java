@@ -1164,7 +1164,7 @@ public class DemandeController {
                             histoPriorite.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
                             histoPriorite.setCommentaire(
                                     "Modification de priorité : " + anciennePriorite
-                                            + " → " + nouvellePriorite.name()
+                                            + " -> " + nouvellePriorite.name()
                             );
                             histoPriorite.setDateAction(String.valueOf(LocalDateTime.now()));
                             validationDemandeService.logAction(histoPriorite);
