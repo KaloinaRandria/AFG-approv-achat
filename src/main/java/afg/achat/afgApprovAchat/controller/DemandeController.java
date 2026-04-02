@@ -15,6 +15,7 @@ import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
 import afg.achat.afgApprovAchat.service.util.CommentaireFinanceService;
 import afg.achat.afgApprovAchat.service.util.PrixArticleService;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
@@ -31,6 +32,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -78,13 +80,18 @@ public class DemandeController {
     PrixArticleService prixArticleService;
 
     @GetMapping("/add")
-    public String addDemandePage(Model model, HttpServletRequest request) {
+    public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
+
+        // Token anti double-soumission
+        String token = UUID.randomUUID().toString();
+        session.setAttribute("submissionToken", token);
+        model.addAttribute("submissionToken", token);
+
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
-        model.addAttribute("ligneBudgetaires",centreBudgetaireService.getAllCentreBudgetaires() );
+        model.addAttribute("ligneBudgetaires", centreBudgetaireService.getAllCentreBudgetaires());
 
         return "demande/demande-saisie";
     }
-
     @PostMapping("/save")
     public String insertDemande(@RequestParam(name = "dateSortie") String dateSortie,
                                 @RequestParam(name = "motif") String motif,
@@ -93,7 +100,21 @@ public class DemandeController {
                                 @RequestParam(name = "quantite[]") List<String> quantite,
                                 @RequestParam(name = "priorite") String priorite,
                                 @RequestParam(name = "piecesJointes") MultipartFile[] piecesJointes,
+                                @RequestParam(name = "submissionToken") String submissionToken,
+                                HttpSession session,
                                 RedirectAttributes redirectAttributes) {
+        // ── Vérification token anti double-soumission ────────────────────────────
+        String sessionToken = (String) session.getAttribute("submissionToken");
+
+        if (sessionToken == null || !sessionToken.equals(submissionToken)) {
+            redirectAttributes.addFlashAttribute("warningMessage",
+                    "Cette demande a déjà été soumise. Veuillez vérifier la liste des demandes.");
+            return "redirect:/demande/list";
+        }
+
+        // Consommer le token immédiatement — toute soumission suivante sera bloquée
+        session.removeAttribute("submissionToken");
+
 
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
@@ -265,274 +286,174 @@ public class DemandeController {
                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
                                   @RequestParam(required = false, defaultValue = "ALL") String scope) {
 
+        // ── 1. Contexte utilisateur ──────────────────────────────────────────────
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
         Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
 
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        boolean isMG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
-        boolean isControleur = auth.getAuthorities().stream().anyMatch(a -> "ROLE_CONTROLEUR".equals(a.getAuthority()));
-        boolean isDFC = auth.getAuthorities().stream().anyMatch(a -> "ROLE_DFC".equals(a.getAuthority()));
-        boolean isSG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
+        boolean isAdmin      = hasRole(auth, "ROLE_ADMIN");
+        boolean isMG         = hasRole(auth, "ROLE_MOYENS_GENERAUX");
+        boolean isControleur = hasRole(auth, "ROLE_CONTROLEUR");
+        boolean isDFC        = hasRole(auth, "ROLE_DFC");
+        boolean isSG         = hasRole(auth, "ROLE_SG");
 
-
-        boolean isAdminOrMGOrControleur = isAdmin || isMG || isControleur;
         boolean isBackofficeValidator = isAdmin || isMG || isControleur || isDFC;
 
-        //Labels (table)
-        Map<Integer, String> statutLabels = Map.of(
-                StatutDemande.CREE, "En attente N+1",
-                StatutDemande.VALIDATION_N1, "En attente M.G.",
-                StatutDemande.VALIDATION_N2, "En attente Contrôle de gestion",
-                StatutDemande.VALIDATION_N3, "En attente D.F.C.",
-                StatutDemande.VALIDATION_N4,  "En attente S.G.",
-                StatutDemande.DECISION_CODEP,"En attente CODEP",
-                StatutDemande.VALIDE, "VALIDÉE",
-                StatutDemande.REFUSE, "REFUSÉE"
-        );
-
-        //Filtre (select)
-        Map<Integer, String> statutFiltre = new LinkedHashMap<>();
-        statutFiltre.put(StatutDemande.CREE, "En attente N+1");
-        statutFiltre.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
-        statutFiltre.put(StatutDemande.VALIDATION_N2,"En attente Contrôle de gestion");
-        statutFiltre.put(StatutDemande.VALIDATION_N3, "En attente D.F.C.");
-        statutFiltre.put(StatutDemande.VALIDATION_N4,  "En attente S.G.");
-        statutFiltre.put(StatutDemande.DECISION_CODEP,"En attente CODEP");
-        statutFiltre.put(StatutDemande.VALIDE, "VALIDÉE");
-        statutFiltre.put(StatutDemande.REFUSE, "REFUSÉE");
-        model.addAttribute("statutFiltre", statutFiltre);
-
-        //Normalisation (0/null => pas de filtre)
-        Integer statutFilter = (statut == null || statut == 0) ? null : statut;
-
-        //Visibilité (moi + enfants)
+        // ── 2. Visibilité hiérarchique ───────────────────────────────────────────
         List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
         boolean hasChildren = visibleIds.size() > 1;
 
-        boolean showDemandeurColumn = isBackofficeValidator || hasChildren;
-        model.addAttribute("showDemandeurColumn", showDemandeurColumn);
+        // Scope (filtre portée pour les managers non-backoffice)
+        List<Integer> idsToUse = resolveScope(scope, current, visibleIds, isAdmin || isMG || isControleur);
 
-        boolean showScopeFilter = hasChildren && !isBackofficeValidator;
-        model.addAttribute("showDemandeurScopeFilter", showScopeFilter);
+        // ── 3. Statuts autorisés selon le rôle ──────────────────────────────────
+        Integer statutFilter = (statut == null || statut == 0) ? null : statut;
+        List<Integer> statutsAutorises = resolveStatutsAutorises(
+                isAdmin, isMG, isControleur, isDFC, isSG, statutFilter
+        );
 
-        List<Integer> idsToUse = visibleIds;
-        if (!isAdminOrMGOrControleur) {
-            if ("ME".equalsIgnoreCase(scope)) {
-                idsToUse = List.of(current.getId());
-            } else if ("CHILDREN".equalsIgnoreCase(scope)) {
-                idsToUse = visibleIds.stream()
-                        .filter(idU -> !idU.equals(current.getId()))
-                        .toList();
-            }
-        }
-
+        // ── 4. Requête principale ────────────────────────────────────────────────
         Page<DemandeMere> demandesMeres;
 
-// Cas MG : voit tout ce qui est déjà validé par N+1 (N1 -> VALIDE)
-        if (isMG && !isAdmin) {
+        if (isAdmin) {
+            // Admin : voit tout, pagination native
+            demandesMeres = demandeMereService.searchDemandes(
+                    num, demandeur, type, statutFilter, priorite,
+                    dateFrom, dateTo, page, size, sort, dir
+            );
 
-            List<Integer> mgStatuses = new ArrayList<>(List.of(
-                    StatutDemande.VALIDATION_N1,
-                    StatutDemande.VALIDATION_N2,
-                    StatutDemande.VALIDATION_N3,
-                    StatutDemande.VALIDATION_N4,
-                    StatutDemande.DECISION_CODEP,
-                    StatutDemande.VALIDE,
-                    StatutDemande.REFUSE
-            ));
+        } else if (isMG || isControleur || isDFC || isSG) {
+            // Backoffice : statuts autorisés globalement
+            // + ses propres demandes (tous statuts) via UNION SQL → 1 requête
+            demandesMeres = demandeMereService.searchDemandesBackoffice(
+                    num, demandeur, type,
+                    statutsAutorises, statutFilter,
+                    priorite, dateFrom, dateTo,
+                    visibleIds,
+                    page, size, sort, dir
+            );
 
-            // appliquer le filtre statut AVANT la boucle
-            if (statutFilter != null) {
-                mgStatuses = mgStatuses.contains(statutFilter) ? List.of(statutFilter) : List.of();
-            }
-
-            List<DemandeMere> merged = new ArrayList<>();
-
-            for (Integer st : mgStatuses) {
-                Page<DemandeMere> p = demandeMereService.searchDemandes(
-                        num, demandeur, type,
-                        st,
-                        priorite,
-                        dateFrom, dateTo,
-                        0, Integer.MAX_VALUE,
-                        sort, dir
-                );
-                merged.addAll(p.getContent());
-            }
-
-            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
-
-            Pageable pageable = PageRequest.of(page, size);
-            int start = (int) pageable.getOffset();
-            int end = Math.min(start + pageable.getPageSize(), merged.size());
-
-            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
-            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
-
-            // pour que la valeur sélectionnée reste affichée dans le select
-            model.addAttribute("statut", (statut == null) ? 0 : statut);
+        } else {
+            // Utilisateur simple : seulement ses demandes visibles
+            demandesMeres = demandeMereService.searchDemandesVisibleParUtilisateur(
+                    num, demandeur, type, statutFilter, priorite,
+                    dateFrom, dateTo,
+                    idsToUse.isEmpty() ? List.of(-1) : idsToUse,
+                    page, size, sort, dir
+            );
         }
 
+        // ── 5. Model ─────────────────────────────────────────────────────────────
+        populateModel(model, demandesMeres, statut, priorite, num, demandeur,
+                type, dateFrom, dateTo, scope, size, sort, dir,
+                isBackofficeValidator, hasChildren,
+                isMG, isControleur, isDFC, isSG, isAdmin);
 
-        else if (isControleur && !isAdmin) {
+        return "demande/demande-liste";
+    }
 
-            List<Integer> controleurStatuses = new ArrayList<>(List.of(
-                    StatutDemande.VALIDATION_N2,
-                    StatutDemande.VALIDATION_N3,
-                    StatutDemande.DECISION_CODEP,
-                    StatutDemande.VALIDATION_N4,
-                    StatutDemande.VALIDE,
-                    StatutDemande.REFUSE
-            ));
+// ── Helpers privés ───────────────────────────────────────────────────────────
 
-            if (statutFilter != null) {
-                controleurStatuses = controleurStatuses.contains(statutFilter) ? List.of(statutFilter) : List.of();
-            }
+    private boolean hasRole(Authentication auth, String role) {
+        return auth.getAuthorities().stream().anyMatch(a -> role.equals(a.getAuthority()));
+    }
 
-            List<DemandeMere> merged = new ArrayList<>();
+    private List<Integer> resolveScope(String scope, Utilisateur current,
+                                       List<Integer> visibleIds, boolean isPrivileged) {
+        if (isPrivileged) return visibleIds;
+        if ("ME".equalsIgnoreCase(scope))       return List.of(current.getId());
+        if ("CHILDREN".equalsIgnoreCase(scope)) return visibleIds.stream()
+                .filter(id -> !id.equals(current.getId())).toList();
+        return visibleIds; // ALL
+    }
 
-            for (Integer st : controleurStatuses) {
-                Page<DemandeMere> p = demandeMereService.searchDemandes(
-                        num, demandeur, type,
-                        st,
-                        priorite,
-                        dateFrom, dateTo,
-                        0, Integer.MAX_VALUE,
-                        sort, dir
-                );
-                merged.addAll(p.getContent());
-            }
+    private List<Integer> resolveStatutsAutorises(boolean isAdmin, boolean isMG,
+                                                  boolean isControleur, boolean isDFC,
+                                                  boolean isSG, Integer statutFilter) {
+        List<Integer> base;
 
-            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
-
-            Pageable pageable = PageRequest.of(page, size);
-            int start = (int) pageable.getOffset();
-            int end = Math.min(start + pageable.getPageSize(), merged.size());
-
-            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
-            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
-
-            model.addAttribute("statut", (statut == null) ? 0 : statut);
+        if (isAdmin) {
+            return null; // pas de restriction
+        } else if (isMG) {
+            base = List.of(
+                    StatutDemande.VALIDATION_N1, StatutDemande.VALIDATION_N2,
+                    StatutDemande.VALIDATION_N3, StatutDemande.VALIDATION_N4,
+                    StatutDemande.DECISION_CODEP, StatutDemande.VALIDE, StatutDemande.REFUSE
+            );
+        } else if (isControleur) {
+            base = List.of(
+                    StatutDemande.VALIDATION_N2, StatutDemande.VALIDATION_N3,
+                    StatutDemande.VALIDATION_N4, StatutDemande.DECISION_CODEP,
+                    StatutDemande.VALIDE, StatutDemande.REFUSE
+            );
+        } else if (isDFC) {
+            base = List.of(
+                    StatutDemande.VALIDATION_N3, StatutDemande.VALIDATION_N4,
+                    StatutDemande.DECISION_CODEP, StatutDemande.VALIDE, StatutDemande.REFUSE
+            );
+        } else if (isSG) {
+            base = List.of(
+                    StatutDemande.VALIDATION_N4, StatutDemande.DECISION_CODEP,
+                    StatutDemande.VALIDE, StatutDemande.REFUSE
+            );
+        } else {
+            return null;
         }
 
-// Cas SG : voit uniquement N3 (En attente S.G.)
-        else if (isDFC && !isAdmin) {
-
-            List<Integer> dfcStatuses = new ArrayList<>(List.of(
-                    StatutDemande.VALIDATION_N3,
-                    StatutDemande.VALIDATION_N4,
-                    StatutDemande.DECISION_CODEP,
-                    StatutDemande.VALIDE,
-                    StatutDemande.REFUSE
-            ));
-
-            if (statutFilter != null) {
-                dfcStatuses = dfcStatuses.contains(statutFilter) ? List.of(statutFilter) : List.of();
-            }
-
-            List<DemandeMere> merged = new ArrayList<>();
-
-            for (Integer st : dfcStatuses) {
-                Page<DemandeMere> p = demandeMereService.searchDemandes(
-                        num, demandeur, type,
-                        st,
-                        priorite,
-                        dateFrom, dateTo,
-                        0, Integer.MAX_VALUE,
-                        sort, dir
-                );
-                merged.addAll(p.getContent());
-            }
-
-            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
-
-            Pageable pageable = PageRequest.of(page, size);
-            int start = (int) pageable.getOffset();
-            int end = Math.min(start + pageable.getPageSize(), merged.size());
-
-            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
-            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
-
-            model.addAttribute("statut", (statut == null) ? 0 : statut);
+        // Appliquer le filtre statut sélectionné par l'utilisateur
+        if (statutFilter != null) {
+            return base.contains(statutFilter) ? List.of(statutFilter) : List.of();
         }
 
-        else if (isSG && !isAdmin) {
+        return new ArrayList<>(base);
+    }
 
-            List<Integer> sgStatuses = new ArrayList<>(List.of(
-                    StatutDemande.VALIDATION_N4,
-                    StatutDemande.DECISION_CODEP,
-                    StatutDemande.VALIDE,
-                    StatutDemande.REFUSE
-            ));
+    private void populateModel(Model model, Page<DemandeMere> demandesMeres,
+                               Integer statut, String priorite, String num,
+                               String demandeur, String type,
+                               LocalDate dateFrom, LocalDate dateTo,
+                               String scope, int size, String sort, String dir,
+                               boolean isBackofficeValidator, boolean hasChildren,
+                               boolean isMG, boolean isControleur,
+                               boolean isDFC, boolean isSG, boolean isAdmin) {
 
-            if (statutFilter != null) {
-                sgStatuses = sgStatuses.contains(statutFilter) ? List.of(statutFilter) : List.of();
-            }
+        // Statut labels (tableau)
+        model.addAttribute("statutLabels", Map.of(
+                StatutDemande.CREE,           "En attente N+1",
+                StatutDemande.VALIDATION_N1,  "En attente M.G.",
+                StatutDemande.VALIDATION_N2,  "En attente Contrôle de gestion",
+                StatutDemande.VALIDATION_N3,  "En attente D.F.C.",
+                StatutDemande.VALIDATION_N4,  "En attente S.G.",
+                StatutDemande.DECISION_CODEP, "En attente CODEP",
+                StatutDemande.VALIDE,         "VALIDÉE",
+                StatutDemande.REFUSE,         "REFUSÉE"
+        ));
 
-            List<DemandeMere> merged = new ArrayList<>();
-            for (Integer st : sgStatuses) {
-                Page<DemandeMere> p = demandeMereService.searchDemandes(
-                        num, demandeur, type, st, priorite,
-                        dateFrom, dateTo, 0, Integer.MAX_VALUE, sort, dir
-                );
-                merged.addAll(p.getContent());
-            }
+        // Statut filtre (select)
+        Map<Integer, String> statutFiltre = new LinkedHashMap<>();
+        statutFiltre.put(StatutDemande.CREE,           "En attente N+1");
+        statutFiltre.put(StatutDemande.VALIDATION_N1,  "En attente M.G.");
+        statutFiltre.put(StatutDemande.VALIDATION_N2,  "En attente Contrôle de gestion");
+        statutFiltre.put(StatutDemande.VALIDATION_N3,  "En attente D.F.C.");
+        statutFiltre.put(StatutDemande.VALIDATION_N4,  "En attente S.G.");
+        statutFiltre.put(StatutDemande.DECISION_CODEP, "En attente CODEP");
+        statutFiltre.put(StatutDemande.VALIDE,         "VALIDÉE");
+        statutFiltre.put(StatutDemande.REFUSE,         "REFUSÉE");
+        model.addAttribute("statutFiltre", statutFiltre);
 
-            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
-
-            Pageable pageable = PageRequest.of(page, size);
-            int start = (int) pageable.getOffset();
-            int end = Math.min(start + pageable.getPageSize(), merged.size());
-            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
-            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
-
-            model.addAttribute("statut", (statut == null) ? 0 : statut);
-        }
-
-// Cas normal / admin
-        else {
-            if (isBackofficeValidator) {
-                demandesMeres = demandeMereService.searchDemandes(
-                        num, demandeur, type,
-                        statutFilter,
-                        priorite,
-                        dateFrom, dateTo,
-                        page, size,
-                        sort, dir
-                );
-            } else {
-                demandesMeres = idsToUse.isEmpty()
-                        ? demandeMereService.searchDemandesVisibleParUtilisateur(
-                        num, demandeur, type, statutFilter, priorite,
-                        dateFrom, dateTo,
-                        List.of(-1),
-                        page, size,
-                        sort, dir
-                )
-                        : demandeMereService.searchDemandesVisibleParUtilisateur(
-                        num, demandeur, type, statutFilter, priorite,
-                        dateFrom, dateTo,
-                        idsToUse,
-                        page, size,
-                        sort, dir
-                );
-            }
-            model.addAttribute("statut", (statut == null) ? 0 : statut);
-        }
-
+        // Badge classes
         Map<Integer, String> badgeClasses = new HashMap<>();
+        badgeClasses.put(StatutDemande.CREE,           "badge-grey");
+        badgeClasses.put(StatutDemande.VALIDATION_N1,  "badge-blue");
+        badgeClasses.put(StatutDemande.VALIDATION_N2,  "badge-light-blue");
+        badgeClasses.put(StatutDemande.VALIDATION_N3,  "badge-purple");
+        badgeClasses.put(StatutDemande.VALIDATION_N4,  "badge-green-soft");
+        badgeClasses.put(StatutDemande.DECISION_CODEP, "badge-orange");
+        badgeClasses.put(StatutDemande.VALIDE,         "badge-green");
+        badgeClasses.put(StatutDemande.REFUSE,         "badge-red");
+        model.addAttribute("badgeClasses", badgeClasses);
 
-        badgeClasses.put(StatutDemande.CREE,            "badge-grey");
-
-        badgeClasses.put(StatutDemande.VALIDATION_N1,   "badge-blue");
-        badgeClasses.put(StatutDemande.VALIDATION_N2,   "badge-light-blue");
-        badgeClasses.put(StatutDemande.VALIDATION_N3,   "badge-purple");
-        badgeClasses.put(StatutDemande.VALIDATION_N4,   "badge-green-soft");
-        badgeClasses.put(StatutDemande.DECISION_CODEP,  "badge-orange");
-        badgeClasses.put(StatutDemande.VALIDE,          "badge-green");
-        badgeClasses.put(StatutDemande.REFUSE,          "badge-red");
-
+        // Badge icons
         Map<Integer, String> badgeIcons = new HashMap<>();
         badgeIcons.put(StatutDemande.CREE,           "fa-user-clock");
         badgeIcons.put(StatutDemande.VALIDATION_N1,  "fa-clipboard-check");
@@ -542,42 +463,42 @@ public class DemandeController {
         badgeIcons.put(StatutDemande.DECISION_CODEP, "fa-landmark");
         badgeIcons.put(StatutDemande.VALIDE,         "fa-check-circle");
         badgeIcons.put(StatutDemande.REFUSE,         "fa-times-circle");
-
-        model.addAttribute("badgeClasses", badgeClasses);
         model.addAttribute("badgeIcons", badgeIcons);
+
+        // Priorité filtre
         Map<String, String> prioriteFiltre = new LinkedHashMap<>();
         prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P2), "P2");
         prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P1), "P1");
         prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P0), "P0");
         model.addAttribute("prioriteFiltre", prioriteFiltre);
 
-        // Model commun
-        model.addAttribute("demandesMeres", demandesMeres);
+        // Colonnes visibilité
+        model.addAttribute("showDemandeurColumn",       isBackofficeValidator || hasChildren);
+        model.addAttribute("showDemandeurScopeFilter",  hasChildren && !isBackofficeValidator);
 
-        model.addAttribute("page", page);
-        model.addAttribute("size", size);
-        model.addAttribute("sort", sort);
-        model.addAttribute("dir", dir);
-        model.addAttribute("priorite", priorite == null ? "" : priorite);
-
-        model.addAttribute("num", num == null ? "" : num);
-        model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
-        model.addAttribute("type", type == null ? "" : type);
-        model.addAttribute("dateFrom", dateFrom);
-        model.addAttribute("dateTo", dateTo);
-        model.addAttribute("scope", scope);
-
-        model.addAttribute("natures", DemandeMere.NatureDemande.values());
-        model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
-        model.addAttribute("statutLabels", statutLabels);
-
-        // flags de vue
-        model.addAttribute("isMGOnly", isMG && !isAdmin);
+        // Flags de vue
+        model.addAttribute("isMGOnly",         isMG && !isAdmin);
         model.addAttribute("isControleurOnly", isControleur && !isAdmin);
-        model.addAttribute("isDFCOnly", isDFC && !isAdmin);
-        model.addAttribute("isSGOnly", isSG && !isAdmin);
+        model.addAttribute("isDFCOnly",        isDFC && !isAdmin);
+        model.addAttribute("isSGOnly",         isSG && !isAdmin);
 
-        return "demande/demande-liste";
+        // Données pagination / filtres
+        model.addAttribute("demandesMeres", demandesMeres);
+        model.addAttribute("statut",    (statut == null) ? 0 : statut);
+        model.addAttribute("priorite",  priorite == null ? "" : priorite);
+        model.addAttribute("num",       num == null ? "" : num);
+        model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
+        model.addAttribute("type",      type == null ? "" : type);
+        model.addAttribute("dateFrom",  dateFrom);
+        model.addAttribute("dateTo",    dateTo);
+        model.addAttribute("scope",     scope);
+        model.addAttribute("page",      demandesMeres.getNumber());
+        model.addAttribute("size",      size);
+        model.addAttribute("sort",      sort);
+        model.addAttribute("dir",       dir);
+
+        model.addAttribute("natures",   DemandeMere.NatureDemande.values());
+        model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
     }
 
     @PostMapping("/fiche/{id}/type-demande")

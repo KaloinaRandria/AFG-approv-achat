@@ -156,12 +156,12 @@ public class DemandeMereService {
                                             String sort,
                                             String dir) {
 
-        // ✅ tri / pagination
+        // tri / pagination
         String sortBy = (sort == null || sort.isBlank()) ? "dateDemande" : sort;
         Sort.Direction direction = "desc".equalsIgnoreCase(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
 
-        // ✅ dates (borne large si null)
+        // dates (borne large si null)
         LocalDateTime from = (dateFrom == null)
                 ? LocalDate.of(1900, 1, 1).atStartOfDay()
                 : dateFrom.atStartOfDay();
@@ -170,12 +170,12 @@ public class DemandeMereService {
                 ? LocalDate.of(2999, 12, 31).atTime(23, 59, 59)
                 : dateTo.atTime(23, 59, 59);
 
-        // ✅ normalisation des champs texte
+        // normalisation des champs texte
         String n = (num == null) ? "" : num.trim();
         String d = (demandeur == null) ? "" : demandeur.trim();
         String t = (type == null) ? "" : type.trim();
 
-        // ✅ statuts : null ou vide => pas de filtre
+        // statuts : null ou vide => pas de filtre
         List<Integer> st = (statuts == null || statuts.isEmpty()) ? null : statuts;
 
         return demandeMereRepo.searchMultiWithStatuts(n, d, t, st, from, to, pageable);
@@ -209,5 +209,103 @@ public class DemandeMereService {
         demandeMereRepo.save(demande);
     }
 
+    /**
+     * Recherche par liste de statuts (pour les rôles backoffice globaux)
+     */
+    public Page<DemandeMere> searchDemandesParStatuts(
+            String num, String demandeur, String type,
+            List<Integer> statuts, String priorite,
+            LocalDate dateFrom, LocalDate dateTo,
+            int page, int size, String sort, String dir) {
+
+        Pageable pageable = buildPageable(page, size, sort, dir);
+        LocalDateTime from = buildFrom(dateFrom);
+        LocalDateTime to   = buildTo(dateTo);
+
+        List<Integer> st = (statuts == null || statuts.isEmpty()) ? null : statuts;
+
+        return demandeMereRepo.searchMultiWithStatuts(
+                clean(num), clean(demandeur), clean(type),
+                st, from, to, pageable
+        );
+    }
+
+    /**
+     * Recherche par liste de statuts filtrée sur les demandeurIds visibles
+     */
+    public Page<DemandeMere> searchDemandesVisibleParStatuts(
+            String num, String demandeur, String type,
+            List<Integer> statuts, String priorite,
+            LocalDate dateFrom, LocalDate dateTo,
+            List<Integer> demandeurIds,
+            int page, int size, String sort, String dir) {
+
+        Pageable pageable = buildPageable(page, size, sort, dir);
+        LocalDateTime from = buildFrom(dateFrom);
+        LocalDateTime to   = buildTo(dateTo);
+
+        List<Integer> st = (statuts == null || statuts.isEmpty()) ? null : statuts;
+
+        return demandeMereRepo.searchMultiByDemandeurIdsAndStatuts(
+                clean(num), clean(demandeur), clean(type),
+                clean(priorite), st, from, to,
+                demandeurIds.isEmpty() ? List.of(-1) : demandeurIds,
+                pageable
+        );
+    }
+
+// ── helpers privés ──────────────────────────────────────────────────────────
+
+    private Pageable buildPageable(int page, int size, String sort, String dir) {
+        String sortBy = (sort == null || sort.isBlank()) ? "dateDemande" : sort;
+        Sort.Direction direction = "desc".equalsIgnoreCase(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return PageRequest.of(page, size, Sort.by(direction, sortBy));
+    }
+
+    private LocalDateTime buildFrom(LocalDate d) {
+        return d == null ? LocalDate.of(1900, 1, 1).atStartOfDay() : d.atStartOfDay();
+    }
+
+    private LocalDateTime buildTo(LocalDate d) {
+        return d == null ? LocalDate.of(2999, 12, 31).atTime(23, 59, 59) : d.atTime(23, 59, 59);
+    }
+
+    private String clean(String s) {
+        return s == null ? "" : s.trim();
+    }
+
+    /**
+     * Pour les rôles backoffice (MG, Controleur, DFC, SG) :
+     * - Les demandes dans les statutsAutorises (visibilité du rôle)
+     * - OU les propres demandes de l'utilisateur (tous statuts)
+     * Le tout en une seule requête SQL avec pagination native.
+     */
+    public Page<DemandeMere> searchDemandesBackoffice(
+            String num, String demandeur, String type,
+            List<Integer> statutsAutorises, Integer statutFilter,
+            String priorite, LocalDate dateFrom, LocalDate dateTo,
+            List<Integer> myVisibleIds,
+            int page, int size, String sort, String dir) {
+
+        Pageable pageable = buildPageable(page, size, sort, dir);
+        LocalDateTime from = buildFrom(dateFrom);
+        LocalDateTime to   = buildTo(dateTo);
+
+        List<Integer> roleStatuts = (statutsAutorises == null || statutsAutorises.isEmpty())
+                ? null : statutsAutorises;
+
+        // Si un filtre statut est sélectionné, les demandes perso
+        // doivent aussi respecter ce filtre
+        Integer myStatutFilter = statutFilter;
+
+        return demandeMereRepo.searchBackoffice(
+                clean(num), clean(demandeur), clean(type),
+                clean(priorite),
+                roleStatuts,
+                myStatutFilter,
+                myVisibleIds.isEmpty() ? List.of(-1) : myVisibleIds,
+                from, to, pageable
+        );
+    }
 
 }
