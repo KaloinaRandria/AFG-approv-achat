@@ -422,24 +422,26 @@
                                         class="text-end"
                                         th:data-ligne-prix-id="${l.id}">
 
-                <span class="prix-display"
-                      th:classappend="${(l.prixUnitaire == null or l.prixUnitaire == 0) and canDecisionMG} ? ' text-danger fw-bold' : ''"
-                      th:text="${l.prixUnitaire != null and l.prixUnitaire > 0
-                                ? #numbers.formatDecimal(l.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')
-                                : '—'}">
-                </span>
-
                                         <input th:if="${canDecisionMG and l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE}"
                                                type="number"
-                                               class="form-control form-control-sm prix-input text-end mt-1"
+                                               class="form-control form-control-sm prix-input text-end"
                                                th:id="'prix-' + ${l.id}"
                                                th:name="'prix-' + ${l.id}"
                                                th:value="${l.prixUnitaire != null and l.prixUnitaire > 0 ? l.prixUnitaire : ''}"
                                                th:data-ligne-id="${l.id}"
                                                min="1"
                                                step="1"
-                                               placeholder="Saisir le prix"
+                                               placeholder="—"
                                                style="width: 120px; display: inline-block;">
+
+                                        <!-- Lecture seule (si pas MG) -->
+                                        <span th:if="${!canDecisionMG or l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE}"
+                                              class="fw-semibold"
+                                              th:text="${l.prixUnitaire != null and l.prixUnitaire > 0
+                                                        ? #numbers.formatDecimal(l.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')
+                                                        : '—'}">
+                                        </span>
+
                                     </td>
 
                                     <!-- ACTIONS -->
@@ -535,8 +537,9 @@
                                 <div class="d-flex align-items-center gap-2">
                                     <button type="button"
                                             id="btnSavePrix"
-                                            class="btn btn-outline-gradient-blue btn-sm">
-                                        <i class="fas fa-save me-1"></i> Enregistrer les prix
+                                            class="btn btn-gradient-blue btn-sm px-3">
+                                        <i class="fas fa-save me-1"></i>
+                                        <span class="btn-text">Enregistrer le prix</span>
                                     </button>
                                     <span id="prixSaveStatus" class="small"></span>
                                 </div>
@@ -1276,7 +1279,7 @@
                     btnSave.disabled = false;
                     if (data.ok) {
                         statusEl.className = 'ms-2 small text-success';
-                        statusEl.textContent = '✓ Prix enregistrés avec succès.';
+                        statusEl.textContent = 'Prix enregistrés avec succès.';
                         if (data.totalEstime !== undefined && totalEl) {
                             totalEl.textContent = new Intl.NumberFormat('fr-FR', {
                                 minimumFractionDigits: 2
@@ -1287,13 +1290,7 @@
                             const val = parseFloat(inp.value);
                             if (!isNaN(val) && val > 0) {
                                 const ligneId = inp.dataset.ligneId;
-                                const span = document.querySelector(
-                                    `[data-ligne-prix-id="${ligneId}"] .prix-display`
-                                );
-                                if (span) {
-                                    span.textContent = val.toFixed(2);
-                                    span.classList.remove('text-danger', 'fw-bold');
-                                }
+                                inp.classList.remove('is-invalid');
                             }
                         });
                         verifierPrixManquants();
