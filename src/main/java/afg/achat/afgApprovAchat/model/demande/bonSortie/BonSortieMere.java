@@ -22,20 +22,29 @@ import java.time.LocalDateTime;
         allocationSize = 1
 )
 public class BonSortieMere {
-    @Id @Column(name = "id_bon_sortie_mere")
+
+    @Id
+    @Column(name = "id_bon_sortie_mere")
     String id;
-    @ManyToOne @JoinColumn(name = "id_demande_mere", referencedColumnName = "id_demande_mere")
+
+    @ManyToOne
+    @JoinColumn(name = "id_demande_mere", referencedColumnName = "id_demande_mere")
     DemandeMere demandeMere;
+
     @Column(name = "date_sortie")
     LocalDateTime dateSortie;
+
+    @Column(name = "total_prix")
+    Double totalPrix = 0.0;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "statut")
     Statut statut = Statut.CREE;
 
     public enum Statut {
-        CREE,       // BS créé mais non confirmé
-        PARTIELLE,  // BS confirmé partiellement (certaines lignes en attente)
-        VALIDEE     // BS confirmé entièrement
+        CREE,
+        PARTIELLE,
+        VALIDEE
     }
 
     public void setId(IdGenerator idGenerator) {

@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
@@ -16,7 +17,7 @@ public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
     List<DemandeFille> findDemandeFilleByDemandeMere(DemandeMere demandeMere);
 
     @Query("""
-    SELECT COALESCE(SUM(l.article.prixUnitaire * l.quantite), 0)
+    SELECT COALESCE(SUM(l.prixUnitaire * l.quantite), 0)
     FROM DemandeFille l
     WHERE l.demandeMere = :demande
     AND l.statut != :statutRefuse
@@ -36,5 +37,9 @@ public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
     AND df.prixUnitaire = 0
     """)
     List<DemandeFille> findByArticleCodeAndPrixNull(@Param("codeArticle") String codeArticle);
+
+    Optional<DemandeFille> findByDemandeMereIdAndArticleCodeArticle(
+            String demandeId, String codeArticle
+    );
 
 }

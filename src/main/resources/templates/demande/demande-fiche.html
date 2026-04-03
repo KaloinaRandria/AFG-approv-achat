@@ -33,19 +33,37 @@
 
                 <div class="d-flex gap-2">
 
-                    <!-- Créer / Ouvrir le bon de sortie (MG + ADMIN) -->
+                    <!-- Cas 1 : Demande validée, aucun BS encore . créer -->
                     <a class="btn btn-gradient-blue"
                        sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
-                       th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE}"
+                       th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE
+                   and bonSortie == null}"
                        th:href="@{/bon-sortie/create-from-demande/{id}(id=${demande.id})}">
-                        <i class="fas fa-truck-loading me-1"></i> Bon de sortie
+                        <i class="fas fa-truck-loading me-1"></i> Créer le bon de sortie
+                    </a>
+
+                    <!-- Cas 2 : BS en cours (CREE ou PARTIELLE)  ouvrir -->
+                    <a class="btn btn-gradient-orange"
+                       sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
+                       th:if="${bonSortie != null
+                   and (bonSortie.statut.name() == 'CREE' or bonSortie.statut.name() == 'PARTIELLE')}"
+                       th:href="@{/bon-sortie/fiche/{id}(id=${bonSortie.id})}">
+                        <i class="fas fa-box-open me-1"></i>
+                        <span th:text="${bonSortie.statut.name() == 'PARTIELLE'} ? 'BS partiel — continuer' : 'Voir le bon de sortie'"></span>
+                    </a>
+
+                    <!-- Cas 3 : BS validé . lecture seule -->
+                    <a class="btn btn-outline-success"
+                       sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
+                       th:if="${bonSortie != null and bonSortie.statut.name() == 'VALIDEE'}"
+                       th:href="@{/bon-sortie/fiche/{id}(id=${bonSortie.id})}">
+                        <i class="fas fa-check-circle me-1"></i> Bon de sortie validé
                     </a>
 
                     <a class="btn btn-outline-secondary" th:href="@{/demande/list}">
                         <i class="fas fa-arrow-left me-1"></i> Retour liste
                     </a>
                 </div>
-
             </div>
 
             <div class="card shadow-lg border-0">
@@ -327,154 +345,169 @@
 
                         <!-- TABLE ARTICLES -->
                         <div class="bl-body">
-                            <table class="bl-table">
-                                <thead>
+                            <table class="bl-table table table-hover align-middle">
+
+                                <thead class="table-light">
                                 <tr>
                                     <!-- DESIGNATION -->
                                     <th th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}
-                  ? 'width:55%' : 'width:70%'">
+              ? 'width:55%' : 'width:70%'">
                                         DÉSIGNATION
                                     </th>
 
                                     <!-- QUANTITE -->
                                     <th class="text-end"
                                         th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}
-                  ? 'width:20%' : 'width:30%'">
+              ? 'width:20%' : 'width:30%'">
                                         QUANTITÉ
                                     </th>
+
                                     <!-- UDM -->
-                                    <th class="text-end"
-                                        th:style="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}
-                  ? 'width:20%' : 'width:30%'">
-                                        UDM
-                                    </th>
+                                    <th class="text-end">UDM</th>
 
                                     <!-- PRIX -->
-                                    <th th:if="${canVoirPrix}"
-                                        style="width:25%"
-                                        class="text-end">
+                                    <th th:if="${canVoirPrix}" class="text-end" style="width:25%">
                                         PRIX UNITAIRE
+                                        <span th:if="${canDecisionMG}"
+                                              id="badgePrixManquants"
+                                              class="badge bg-danger ms-1"
+                                              style="display:none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </span>
                                     </th>
+
+                                    <!-- ACTION -->
+                                    <th class="text-center">Actions</th>
                                 </tr>
                                 </thead>
 
                                 <tbody>
 
+                                <!-- VIDE -->
                                 <tr th:if="${lignes == null || lignes.isEmpty()}">
-                                    <td th:colspan="${canVoirPrix} ? 4 : 3"
-                                        class="text-center text-muted">
+                                    <td th:colspan="${canVoirPrix} ? 5 : 4"
+                                        class="text-center text-muted py-4">
                                         Aucun article
                                     </td>
                                 </tr>
 
+                                <!-- LIGNES -->
                                 <tr th:each="l : ${lignes}"
-                                    th:classappend="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? 'ligne-refusee'">
+                                    th:classappend="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' table-danger opacity-75'">
 
-                                    <td th:text="${l.article != null ? l.article.codeArticle +' - '+ l.article.designation : '-'}">-</td>
+                                    <!-- DESIGNATION -->
+                                    <td th:text="${l.article != null ? l.article.codeArticle +' - '+ l.article.designation : '-'}"></td>
 
+                                    <!-- QUANTITE -->
                                     <td class="text-end" th:data-ligne-id="${l.id}">
-                                        <!-- Mode lecture -->
-                                        <span class="qte-display"
-                                              th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
-                                            0
-                                        </span>
-                                        <!-- Mode édition (caché par défaut) -->
+                <span class="qte-display"
+                      th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                </span>
+
                                         <input type="number"
                                                class="form-control form-control-sm qte-input d-none text-end"
                                                th:value="${l.quantite}"
                                                th:data-initial="${l.quantite}"
                                                min="1"
                                                step="1"
-                                               pattern="\d*"
                                                oninput="this.value = Math.floor(this.value)"
                                                style="width: 100px; display: inline-block;">
                                     </td>
-                                    <td th:text="${l.article.udm.description}">
 
-                                    </td>
+                                    <!-- UDM -->
+                                    <td th:text="${l.article.udm.description}"></td>
 
+                                    <!-- PRIX -->
                                     <td th:if="${canVoirPrix}"
                                         class="text-end"
-                                        th:text="${l.prixUnitaire != null
-                                        ? #numbers.formatDecimal(l.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')
-                                        : '-'}">
-                                        0
+                                        th:data-ligne-prix-id="${l.id}">
+
+                                        <input th:if="${canDecisionMG and l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE}"
+                                               type="number"
+                                               class="form-control form-control-sm prix-input text-end"
+                                               th:id="'prix-' + ${l.id}"
+                                               th:name="'prix-' + ${l.id}"
+                                               th:value="${l.prixUnitaire != null and l.prixUnitaire > 0 ? l.prixUnitaire : ''}"
+                                               th:data-ligne-id="${l.id}"
+                                               min="1"
+                                               step="1"
+                                               placeholder="—"
+                                               style="width: 120px; display: inline-block;">
+
+                                        <!-- Lecture seule (si pas MG) -->
+                                        <span th:if="${!canDecisionMG or l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE}"
+                                              class="fw-semibold"
+                                              th:text="${l.prixUnitaire != null and l.prixUnitaire > 0
+                                                        ? #numbers.formatDecimal(l.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')
+                                                        : '—'}">
+                                        </span>
+
                                     </td>
 
-                                    <!-- Colonne action -->
-                                    <td th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE and
-                                        l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP
-                                        and (canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)}"
-                                        class="text-center">
+                                    <!-- ACTIONS -->
+                                    <td class="text-center"
+                                        th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE and
+                        l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP
+                        and (canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)}">
 
                                         <div class="d-flex gap-2 justify-content-center">
 
-                                            <!-- Bouton éditer quantité -->
+                                            <!-- EDIT -->
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-gradient-blue btn-edit-qte"
-                                                    th:data-id="${l.id}"
-                                                    title="Modifier la quantité">
+                                                    th:data-id="${l.id}">
                                                 <i class="fas fa-pen"></i>
                                             </button>
 
-                                            <!-- Bouton confirmer (caché par défaut) -->
+                                            <!-- SAVE -->
                                             <button type="button"
                                                     class="btn btn-sm btn-gradient-green btn-save-qte d-none"
-                                                    th:data-id="${l.id}"
-                                                    title="Confirmer la modification">
+                                                    th:data-id="${l.id}">
                                                 <i class="fas fa-check"></i>
                                             </button>
 
-                                            <!-- Bouton annuler (caché par défaut) -->
+                                            <!-- CANCEL -->
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-danger btn-cancel-qte d-none"
-                                                    th:data-id="${l.id}"
-                                                    title="Annuler la modification">
+                                                    th:data-id="${l.id}">
                                                 <i class="fas fa-times"></i>
                                             </button>
 
-                                            <!-- Bouton refus article -->
+                                            <!-- REFUS -->
                                             <button type="button"
-                                                    class="btn btn-sm btn-outline-danger btnRefuserArticle btn-refus-article"
+                                                    class="btn btn-sm btn-outline-danger btnRefuserArticle"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#refusArticleModal"
                                                     th:data-id="${l.id}"
                                                     th:data-designation="${l.article.designation}"
-                                                    th:data-codearticle="${l.article.codeArticle}"
-                                                    th:disabled="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE
-                                or !(canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)}"
-                                                    title="Refuser cet article">
+                                                    th:data-codearticle="${l.article.codeArticle}">
                                                 <i class="fas fa-times-circle"></i>
                                             </button>
+
                                         </div>
                                     </td>
 
                                 </tr>
 
                                 </tbody>
-                            </table>
-                        </div>
 
-                        <!-- TOTAL -->
-                        <div class="px-3 pb-3 mt-3"
-                             th:if="${canVoirPrix}">
-                            <table class="bl-table">
-                                <tfoot>
-                                <tr class="fw-bold" style="border-top: 2px solid #dee2e6;">
-                                    <td style="width:55%"></td>
-                                    <td style="width:20%" class="text-end py-2 text-muted small text-uppercase">
-                                        Total
+                                <!-- TOTAL -->
+                                <tfoot th:if="${canVoirPrix}">
+                                <tr class="table-light fw-bold border-top">
+                                    <td></td>
+                                    <td class="text-end text-muted text-uppercase small">Total</td>
+                                    <td></td>
+                                    <td class="text-end" id="totalEstimeDisplay"
+                                        th:text="${demande.totalEstime != null and demande.totalEstime > 0
+                            ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')
+                            : '—'}">
                                     </td>
-                                    <td style="width:25%" class="text-end py-2"
-                                        th:text="${demande.totalPrix != null
-                    ? #numbers.formatDecimal(demande.totalPrix, 1, 'DEFAULT', 2, 'DEFAULT')
-                    : '0,00'}">
-                                    </td>
+                                    <td></td>
                                 </tr>
                                 </tfoot>
+
                             </table>
                         </div>
-
 
                         <!-- COMMENTAIRE CONTROLEUR DE GESTION -->
                         <div class="px-3 pb-2"
@@ -498,6 +531,19 @@
 
                         <!-- ACTIONS -->
                         <div class="p-3">
+                            <div th:if="${canDecisionMG}" class="mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+                                <!-- Bouton + statut -->
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="button"
+                                            id="btnSavePrix"
+                                            class="btn btn-gradient-blue btn-sm px-3">
+                                        <i class="fas fa-save me-1"></i>
+                                        <span class="btn-text">Enregistrer le prix</span>
+                                    </button>
+                                    <span id="prixSaveStatus" class="small"></span>
+                                </div>
+                            </div>
 
                             <div th:if="${(canDecisionN1 ?: false)
                                   or (canDecisionMG ?: false)
@@ -1158,6 +1204,108 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const btnSave = document.getElementById('btnSavePrix');
+        if (!btnSave) return; // Pas MG, on sort
+
+        const statusEl  = document.getElementById('prixSaveStatus');
+        const totalEl   = document.getElementById('totalEstimeDisplay');
+        const badge     = document.getElementById('badgePrixManquants');
+        const demandeId = /*[[${demande.id}]]*/ '';
+
+        // Vérifie en temps réel si des prix manquent → active/désactive le badge
+        function verifierPrixManquants() {
+            const inputs = document.querySelectorAll('.prix-input');
+            let manquants = 0;
+            inputs.forEach(inp => {
+                const val = parseFloat(inp.value);
+                if (!inp.value || isNaN(val) || val <= 0) manquants++;
+            });
+            if (badge) badge.style.display = manquants > 0 ? 'inline-block' : 'none';
+            return manquants;
+        }
+
+        document.querySelectorAll('.prix-input').forEach(inp => {
+            inp.addEventListener('input', verifierPrixManquants);
+        });
+
+        verifierPrixManquants(); // vérif initiale
+
+        // Enregistrement AJAX
+        btnSave.addEventListener('click', function () {
+            const inputs = document.querySelectorAll('.prix-input');
+            const payload = {};
+            let valid = true;
+
+            inputs.forEach(inp => {
+                const ligneId = inp.dataset.ligneId;
+                const val = parseFloat(inp.value);
+                if (inp.value && !isNaN(val) && val > 0) {
+                    payload[ligneId] = val;
+                } else if (inp.value) {
+                    // Valeur saisie mais invalide
+                    inp.classList.add('is-invalid');
+                    valid = false;
+                }
+            });
+
+            if (!valid) {
+                statusEl.className = 'ms-2 small text-danger';
+                statusEl.textContent = 'Certains prix saisis sont invalides (doivent être > 0).';
+                return;
+            }
+
+            if (Object.keys(payload).length === 0) {
+                statusEl.className = 'ms-2 small text-warning';
+                statusEl.textContent = 'Aucun prix à enregistrer.';
+                return;
+            }
+
+            btnSave.disabled = true;
+            statusEl.className = 'ms-2 small text-muted';
+            statusEl.textContent = 'Enregistrement…';
+            const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
+            fetch(`${CONTEXT_PATH}demande/fiche/${demandeId}/prix`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.content ?? ''
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(r => r.json())
+                .then(data => {
+                    btnSave.disabled = false;
+                    if (data.ok) {
+                        statusEl.className = 'ms-2 small text-success';
+                        statusEl.textContent = 'Prix enregistrés avec succès.';
+                        if (data.totalEstime !== undefined && totalEl) {
+                            totalEl.textContent = new Intl.NumberFormat('fr-FR', {
+                                minimumFractionDigits: 2
+                            }).format(data.totalEstime);
+                        }
+                        // Mise à jour des spans d'affichage
+                        document.querySelectorAll('.prix-input').forEach(inp => {
+                            const val = parseFloat(inp.value);
+                            if (!isNaN(val) && val > 0) {
+                                const ligneId = inp.dataset.ligneId;
+                                inp.classList.remove('is-invalid');
+                            }
+                        });
+                        verifierPrixManquants();
+                    } else {
+                        statusEl.className = 'ms-2 small text-danger';
+                        statusEl.textContent = data.error ?? 'Erreur lors de l\'enregistrement.';
+                    }
+                })
+                .catch(() => {
+                    btnSave.disabled = false;
+                    statusEl.className = 'ms-2 small text-danger';
+                    statusEl.textContent = 'Erreur réseau, veuillez réessayer.';
+                });
+        });
+    });
 
     document.addEventListener("DOMContentLoaded", () => {
         const form = document.getElementById("decisionForm");
@@ -1564,7 +1712,14 @@
                         return;
                     }
 
-                    //Recharger la page pour afficher l'historique mis à jour
+                    // Mise à jour du total estimé affiché
+                    const totalEl = document.getElementById('totalEstimeDisplay');
+                    if (totalEl && data.totalEstime !== undefined) {
+                        totalEl.textContent = new Intl.NumberFormat('fr-FR', {
+                            minimumFractionDigits: 2
+                        }).format(data.totalEstime);
+                    }
+
                     window.location.reload();
                 })
                 .catch(() => {
