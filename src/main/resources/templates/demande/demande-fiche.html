@@ -32,34 +32,6 @@
                 </div>
 
                 <div class="d-flex gap-2">
-
-                    <!-- Cas 1 : Demande validée, aucun BS encore . créer -->
-                    <a class="btn btn-gradient-blue"
-                       sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
-                       th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE
-                   and bonSortie == null}"
-                       th:href="@{/bon-sortie/create-from-demande/{id}(id=${demande.id})}">
-                        <i class="fas fa-truck-loading me-1"></i> Créer le bon de sortie
-                    </a>
-
-                    <!-- Cas 2 : BS en cours (CREE ou PARTIELLE)  ouvrir -->
-                    <a class="btn btn-gradient-orange"
-                       sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
-                       th:if="${bonSortie != null
-                   and (bonSortie.statut.name() == 'CREE' or bonSortie.statut.name() == 'PARTIELLE')}"
-                       th:href="@{/bon-sortie/fiche/{id}(id=${bonSortie.id})}">
-                        <i class="fas fa-box-open me-1"></i>
-                        <span th:text="${bonSortie.statut.name() == 'PARTIELLE'} ? 'BS partiel — continuer' : 'Voir le bon de sortie'"></span>
-                    </a>
-
-                    <!-- Cas 3 : BS validé . lecture seule -->
-                    <a class="btn btn-outline-success"
-                       sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
-                       th:if="${bonSortie != null and bonSortie.statut.name() == 'VALIDEE'}"
-                       th:href="@{/bon-sortie/fiche/{id}(id=${bonSortie.id})}">
-                        <i class="fas fa-check-circle me-1"></i> Bon de sortie validé
-                    </a>
-
                     <a class="btn btn-outline-secondary" th:href="@{/demande/list}">
                         <i class="fas fa-arrow-left me-1"></i> Retour liste
                     </a>

@@ -81,9 +81,9 @@ public class DemandeMere {
     }
 
     public enum EtatLivraison {
-        NON_LIVREE,
-        PARTIELLE,
-        LIVREE
+        NON_LIVREE,       // Aucun BS encore
+        EN_COURS_SORTIE,  // Au moins 1 BS confirmé, reste des lignes
+        SOLDEE            // Toutes les lignes sorties
     }
 
     public void setId(IdGenerator idGenerator) {
