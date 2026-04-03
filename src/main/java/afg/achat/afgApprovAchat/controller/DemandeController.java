@@ -636,11 +636,15 @@ public class DemandeController {
     public String demandeFiche(@PathVariable("id") String id,
                                Model model,
                                HttpServletRequest request,
-                               RedirectAttributes redirectAttributes) {
+                               RedirectAttributes redirectAttributes, HttpSession session) {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
         Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        String decisionToken = UUID.randomUUID().toString();
+        session.setAttribute("decisionToken_" + id, decisionToken);
+        model.addAttribute("decisionToken", decisionToken);
 
         boolean isAdmin = auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
@@ -916,7 +920,19 @@ public class DemandeController {
                            @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                            @RequestParam(name = "ligneBudgetaire", required = false) String ligneBudgetaire,
                            @RequestParam(name = "commentaireControleur" , required = false) String commentaireControleur,
+                           @RequestParam(value = "submissionToken") String submissionToken,
+                           HttpSession session,
                            RedirectAttributes redirectAttributes, HttpServletRequest request)  {
+        // ── Token anti double-soumission ────────────────────────────────────────
+        String sessionKey   = "decisionToken_" + id;
+        String sessionToken = (String) session.getAttribute(sessionKey);
+
+        if (sessionToken == null || !sessionToken.equals(submissionToken)) {
+            redirectAttributes.addFlashAttribute("warningMessage",
+                    "Cette décision a déjà été soumise. Veuillez vérifier l'état de la demande.");
+            return "redirect:/demande/fiche/" + id;
+        }
+        session.removeAttribute(sessionKey); // consommer immédiatement
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();

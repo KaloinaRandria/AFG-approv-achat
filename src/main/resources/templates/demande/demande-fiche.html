@@ -557,7 +557,7 @@
                                       method="post"
                                       enctype="multipart/form-data"
                                       class="d-inline">
-
+                                    <input type="hidden" name="submissionToken" th:value="${decisionToken}" />
                                     <input type="hidden" name="commentaire" id="decisionCommentaire">
                                     <input type="hidden" name="decision" id="decisionValue">
 
@@ -976,6 +976,7 @@
             </div>
             <form th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}" method="post" enctype="multipart/form-data">
                 <div class="modal-body">
+                    <input type="hidden" name="submissionToken" th:value="${decisionToken}" />
 
                     <!-- INFO DYNAMIQUE DECISION CODEP -->
                     <div class="alert mb-3" id="decisionCodepInfo">
@@ -1204,6 +1205,54 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+
+    // ── Anti double-soumission : formulaire décision principal ─────────────────
+    document.getElementById('btnConfirmDecision').addEventListener('click', function () {
+
+        const commentaire = document.getElementById('commentaireInput').value.trim();
+        const decision    = document.getElementById('decisionValue').value;
+
+        // Validation commentaire obligatoire sur REJECT (déjà gérée, mais on garde)
+        if (decision === 'REJECT' && commentaire === '') {
+            document.getElementById('commentaireError').style.display = 'block';
+            return;
+        }
+
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Envoi en cours...';
+
+        // Sécurité : réactiver après 15s si timeout réseau
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Confirmer';
+        }, 15000);
+
+        document.getElementById('decisionCommentaire').value = commentaire;
+        document.getElementById('decisionForm').submit();
+    });
+
+    // ── Anti double-soumission : formulaire décision CODEP ────────────────────
+    document.getElementById('btnConfirmDecisionCodep').addEventListener('click', function () {
+
+        const decision    = document.getElementById('decisionInput').value;
+        const commentaire = document.getElementById('codepCommentaireInput').value.trim();
+
+        if (decision === 'REJECT' && commentaire === '') return; // validation déjà gérée
+
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Envoi en cours...';
+
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Confirmer';
+        }, 15000);
+
+        // Le form CODEP se soumet directement (type="submit" déjà sur le bouton)
+        // On le remplace par un submit programmatique pour contrôler le spinner
+        document.getElementById('decisionCodepForm').submit();
+    });
     document.addEventListener('DOMContentLoaded', function () {
 
         const btnSave = document.getElementById('btnSavePrix');
