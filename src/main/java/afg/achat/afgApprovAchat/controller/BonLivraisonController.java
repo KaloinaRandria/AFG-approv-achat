@@ -158,23 +158,6 @@ public class BonLivraisonController {
                 prixArticle.setPrixUnitaire(Double.parseDouble(prixUnitaires.get(i)));
                 prixArticle.setDatePrix(LocalDate.now());
                 prixArticleService.insert(prixArticle);
-
-                double prix = Double.parseDouble(prixUnitaires.get(i));
-                List<DemandeFille> lignesEnAttente = demandeFilleService
-                        .getDemandeFilleByArticleCodeAndPrixNull(articleCodes.get(i));
-                System.out.println("Prix : " + prix);
-
-                for (DemandeFille ligne : lignesEnAttente) {
-                    ligne.setPrixUnitaire(prix);
-
-                    // Recalcul du total de la demande mère
-                    DemandeMere demandeMere = ligne.getDemandeMere();
-                    double ancienTotal = demandeMere.getTotalPrix() != 0.0 ? demandeMere.getTotalPrix() : 0.0;
-                    demandeMere.setTotalPrix(ancienTotal + (ligne.getQuantite() * prix));
-                    demandeMereService.saveDemandeMere(demandeMere);
-                    demandeFilleService.saveDemandeFille(ligne);
-                    System.out.println("Article : " + ligne.getPrixUnitaire() + " Nom : " + ligne.getArticle().getDesignation());
-                }
             }
 
 //            Entree en Stock

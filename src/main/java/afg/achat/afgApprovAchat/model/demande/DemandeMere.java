@@ -53,7 +53,7 @@ public class DemandeMere {
     CentreBudgetaire centreBudgetaire;
 
     @Column(name = "total_prix")
-    double totalPrix;
+    Double totalPrix;
 
     int statut;
 
