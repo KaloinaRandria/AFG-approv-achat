@@ -4,15 +4,16 @@ import afg.achat.afgApprovAchat.email.EmailSenderService;
 import afg.achat.afgApprovAchat.email.Mail;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
+import afg.achat.afgApprovAchat.model.LigneRestanteDTO;
 import afg.achat.afgApprovAchat.model.demande.*;
-import afg.achat.afgApprovAchat.model.demande.bonSortie.BonSortieMere;
 import afg.achat.afgApprovAchat.model.util.CommentaireFinance;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
 import afg.achat.afgApprovAchat.model.util.PrixArticle;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
-import afg.achat.afgApprovAchat.repository.demande.bonSortie.BonSortieMereRepo;
+import afg.achat.afgApprovAchat.repository.stock.StockFilleRepo;
 import afg.achat.afgApprovAchat.service.ArticleService;
+import afg.achat.afgApprovAchat.service.BonSortieService;
 import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
 import afg.achat.afgApprovAchat.service.util.CommentaireFinanceService;
@@ -81,7 +82,9 @@ public class DemandeController {
     @Autowired
     PrixArticleService prixArticleService;
     @Autowired
-    BonSortieMereRepo bsMereRepo;
+    BonSortieService bonSortieService;
+    @Autowired
+    private StockFilleRepo stockFilleRepo;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
@@ -902,9 +905,35 @@ public class DemandeController {
         model.addAttribute("ligneBudgetaires", ligneBudgetaires);
         model.addAttribute("commentaireFinance", commentaireFinance);
 
-// ── Bon de Sortie lié à cette demande ────────────────────────────────────
-        BonSortieMere bonSortie = bsMereRepo.findFirstByDemandeMereOrderByIdDesc(demande).orElse(null);
-        model.addAttribute("bonSortie", bonSortie);
+        // ── Bon de sortie ────────────────────────────────────────────────────────
+        boolean canCreateBS = demande.getStatut() == StatutDemande.VALIDE
+                && isMG
+                && demande.getEtatLivraison() != DemandeMere.EtatLivraison.SOLDEE;
+
+        model.addAttribute("canCreateBS", canCreateBS);
+        model.addAttribute("bonsSortie", bonSortieService.getBonSortieByDemande(demande));
+
+        if (canCreateBS) {
+            List<LigneRestanteDTO> lignesRestantes = demandeFilleService
+                    .getDemandeFilleByDemandeMere(demande)
+                    .stream()
+                    .filter(df -> df.getStatut() != StatutDemande.REFUSE)
+                    .map(df -> {
+                        double restant         = bonSortieService.getQuantiteRestante(df);
+                        double totalSorti      = df.getQuantite() - restant;
+                        double stockDisponible = stockFilleRepo.getStockDisponible(
+                                df.getArticle().getCodeArticle()
+                        ); // ← SUM(entree) - SUM(sortie)
+                        return new LigneRestanteDTO(df, totalSorti, restant, stockDisponible);
+                    })
+                    .filter(l -> l.getRestant() > 0)
+                    .toList();
+
+            model.addAttribute("lignesRestantes", lignesRestantes);
+        }
+        // ── Fin Bon de sortie ────────────────────────────────────────────────────
+
+
 
         return "demande/demande-fiche";
     }
