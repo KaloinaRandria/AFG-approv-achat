@@ -1639,27 +1639,36 @@ public class DemandeController {
     @ResponseBody
     public ResponseEntity<?> getStockDisponible(
             @PathVariable String codeArticle,
-            @RequestParam(required = false) String demandeId) {  // Ajouter paramètre
+            @RequestParam(required = false) String demandeId) {
 
+        // Stock physique = SUM(entree) - SUM(sortie) sur toutes les StockFille
         double stockPhysique = stockFilleRepo.getStockDisponible(codeArticle);
 
-        // Déduire les quantités déjà réservées par des lignes STOCK dans cette demande
-        if (demandeId != null) {
-            Double quantiteStockReservee = demandeFilleService
+        // Déduire les quantités déjà réservées par des lignes STOCK
+        // dans CETTE demande (scission en cours)
+        double quantiteReservee = 0;
+        if (demandeId != null && !demandeId.isBlank()) {
+            Double reserved = demandeFilleService
                     .getQuantiteStockReserveePourDemande(demandeId, codeArticle);
-            if (quantiteStockReservee != null) {
-                stockPhysique = Math.max(0, stockPhysique - quantiteStockReservee);
-            }
+            quantiteReservee = (reserved != null) ? reserved : 0;
         }
+
+        double stockDisponible = Math.max(0, stockPhysique - quantiteReservee);
 
         double dernierPrix = prixArticleService
                 .getDernierPrixByArticle(codeArticle)
                 .map(PrixArticle::getPrixUnitaire)
                 .orElse(0.0);
 
+        System.out.println(">>> [STOCK] code=" + codeArticle
+                + " | stockPhysique=" + stockPhysique
+                + " | reserved=" + quantiteReservee
+                + " | disponible=" + stockDisponible);
+
         return ResponseEntity.ok(Map.of(
-                "stockDisponible", stockPhysique,
-                "dernierPrix",     dernierPrix
+                "stockDisponible",   stockDisponible,
+                "quantiteReservee",  quantiteReservee,
+                "dernierPrix",       dernierPrix
         ));
     }
 

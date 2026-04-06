@@ -32,7 +32,7 @@ public class BonSortieController {
 
     // ── Créer un BS depuis la fiche demande ─────────────────────────────────
     @PostMapping("/creer/{idDemande}")
-    public String creerBonSortie(@PathVariable("idDemande") String idDemande,
+    public String creerBonSortie(@PathVariable String idDemande,
                                  @RequestParam("commentaire") String commentaire,
                                  @RequestParam("lignes[]") List<Integer> demandeFilleIds,
                                  @RequestParam("quantites[]") List<Double> quantites,
