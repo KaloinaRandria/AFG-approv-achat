@@ -301,14 +301,14 @@ SELECT * FROM v_historique_mouvement_stock;
 SELECT conname,
        pg_get_constraintdef(oid)
 FROM pg_constraint
-WHERE conname = 'demande_mere_priorite_check';
+WHERE conname = 'demande_fille_type_approvisionnement_check';
 
-ALTER TABLE demande_mere
-    DROP CONSTRAINT demande_mere_priorite_check;
+alter table demande_fille
+    drop constraint demande_fille_type_approvisionnement_check;
 
-ALTER TABLE demande_mere
-    ADD CONSTRAINT demande_mere_priorite_check
-        CHECK (priorite IN ('P0','P1','P2'));
+ALTER TABLE demande_fille
+    ADD CONSTRAINT demande_fille_type_approvisionnement_check
+        CHECK (type_approvisionnement IN ('STOCK','ACHAT'));
 
 
 

@@ -42,4 +42,22 @@ public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
             String demandeId, String codeArticle
     );
 
+    /**
+     * Calcule la quantité totale réservée en stock pour un article dans une demande spécifique
+     * @param demandeId L'ID de la demande mère
+     * @param codeArticle Le code article
+     * @return La quantité totale réservée en stock (somme des quantiteStock des lignes STOCK)
+     */
+    @Query("""
+        SELECT COALESCE(SUM(df.quantiteStock), 0)
+        FROM DemandeFille df
+        WHERE df.demandeMere.id = :demandeId
+        AND df.article.codeArticle = :codeArticle
+        AND df.typeApprovisionnement = 'STOCK'
+        AND df.statut != -1
+    """)
+    Double getQuantiteStockReserveePourDemande(
+            @Param("demandeId") String demandeId,
+            @Param("codeArticle") String codeArticle
+    );
 }

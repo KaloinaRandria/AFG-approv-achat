@@ -5,6 +5,7 @@ import afg.achat.afgApprovAchat.email.Mail;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.LigneRestanteDTO;
+import afg.achat.afgApprovAchat.model.ScinderDTO;
 import afg.achat.afgApprovAchat.model.demande.*;
 import afg.achat.afgApprovAchat.model.util.CommentaireFinance;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
@@ -1632,5 +1633,83 @@ public class DemandeController {
         return nomsAjoutes;
     }
 
+
+
+    @GetMapping("/stock/disponible/{codeArticle}")
+    @ResponseBody
+    public ResponseEntity<?> getStockDisponible(
+            @PathVariable String codeArticle,
+            @RequestParam(required = false) String demandeId) {  // Ajouter paramètre
+
+        double stockPhysique = stockFilleRepo.getStockDisponible(codeArticle);
+
+        // Déduire les quantités déjà réservées par des lignes STOCK dans cette demande
+        if (demandeId != null) {
+            Double quantiteStockReservee = demandeFilleService
+                    .getQuantiteStockReserveePourDemande(demandeId, codeArticle);
+            if (quantiteStockReservee != null) {
+                stockPhysique = Math.max(0, stockPhysique - quantiteStockReservee);
+            }
+        }
+
+        double dernierPrix = prixArticleService
+                .getDernierPrixByArticle(codeArticle)
+                .map(PrixArticle::getPrixUnitaire)
+                .orElse(0.0);
+
+        return ResponseEntity.ok(Map.of(
+                "stockDisponible", stockPhysique,
+                "dernierPrix",     dernierPrix
+        ));
+    }
+
+    @PostMapping("/ligne/{id}/scinder")
+    @ResponseBody
+    public ResponseEntity<?> scinderLigne(
+            @PathVariable int id,
+            @RequestBody ScinderDTO dto) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isMG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+        if (!isMG)
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Accès refusé."));
+
+        DemandeFille ligneOriginale = demandeFilleService.getDemandeFilleById(id);
+        if (ligneOriginale == null)
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Ligne introuvable."));
+
+        double qteTotale = ligneOriginale.getQuantite();
+        double qteStock  = dto.getQteStock();
+        double qteAchat  = qteTotale - qteStock;
+
+        if (qteStock <= 0 || qteStock >= qteTotale)
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Quantité stock invalide."));
+
+        // 1. Modifier la ligne originale → devient la ligne ACHAT
+        ligneOriginale.setQuantite(String.valueOf(qteAchat));
+        ligneOriginale.setTypeApprovisionnement(
+                DemandeFille.TypeApprovisionnement.ACHAT);
+        demandeFilleService.saveDemandeFille(ligneOriginale);
+
+        // 2. Créer la nouvelle ligne STOCK
+        DemandeFille ligneStock = new DemandeFille();
+        ligneStock.setDemandeMere(ligneOriginale.getDemandeMere());
+        ligneStock.setArticle(ligneOriginale.getArticle());
+        ligneStock.setQuantite(String.valueOf(qteStock));
+        ligneStock.setPrixUnitaire(dto.getPrixStock());
+        ligneStock.setStatut(ligneOriginale.getStatut());
+        ligneStock.setTypeApprovisionnement(
+                DemandeFille.TypeApprovisionnement.STOCK);
+        demandeFilleService.saveDemandeFille(ligneStock);
+
+        // 3. Recalcul total estimé
+        demandeMereService.recalculerTotal(ligneOriginale.getDemandeMere());
+
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
 
 }
