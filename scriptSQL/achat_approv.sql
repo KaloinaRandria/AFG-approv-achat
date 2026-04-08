@@ -301,14 +301,14 @@ SELECT * FROM v_historique_mouvement_stock;
 SELECT conname,
        pg_get_constraintdef(oid)
 FROM pg_constraint
-WHERE conname = 'demande_fille_type_approvisionnement_check';
+WHERE conname = 'demande_mere_etat_livraison_check';
 
-alter table demande_fille
-    drop constraint demande_fille_type_approvisionnement_check;
+alter table demande_mere
+    drop constraint demande_mere_etat_livraison_check;
 
-ALTER TABLE demande_fille
-    ADD CONSTRAINT demande_fille_type_approvisionnement_check
-        CHECK (type_approvisionnement IN ('STOCK','ACHAT'));
+ALTER TABLE demande_mere
+    ADD CONSTRAINT demande_mere_etat_livraison_check
+        CHECK (etat_livraison IN ('NON_LIVREE','EN_COURS_SORTIE','SOLDEE'));
 
 
 

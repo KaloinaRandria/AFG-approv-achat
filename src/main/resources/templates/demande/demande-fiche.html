@@ -338,6 +338,11 @@
                                     <!-- UDM -->
                                     <th class="text-end">UDM</th>
 
+                                    <th class="text-center"
+                                        th:if="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}">
+                                        TYPE
+                                    </th>
+
                                     <!-- PRIX -->
                                     <th th:if="${canVoirPrix}" class="text-end" style="width:25%">
                                         PRIX UNITAIRE
@@ -349,8 +354,16 @@
                 </span>
                                     </th>
 
+                                    <th th:if="${canVoirPrix}" class="text-end" style="width:12%">
+                                        MONTANT
+                                    </th>
+
                                     <!-- ACTION -->
-                                    <th class="text-center">Actions</th>
+                                    <th class="text-center"
+                                        th:if="${(canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)
+             and demande.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP}">
+                                        Actions
+                                    </th>
                                 </tr>
                                 </thead>
 
@@ -390,6 +403,21 @@
                                     <!-- UDM -->
                                     <td th:text="${l.article.udm.description}"></td>
 
+                                    <td class="text-center"
+                                        th:if="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}"
+                                        th:text="${l.typeApprovisionnement?.name()}">
+<!--                                        <span th:switch="${l.typeApprovisionnement?.name()}">-->
+<!--                                            <span th:case="'STOCK'" class="badge bg-success">-->
+<!--                                                <i class="fas fa-warehouse me-1"></i>Stock-->
+<!--                                            </span>-->
+<!--                                            <span th:case="'ACHAT'" class="badge bg-primary">-->
+<!--                                                <i class="fas fa-shopping-cart me-1"></i>Achat-->
+<!--                                            </span>-->
+<!--                                            <span th:case="*" class="badge bg-secondary">—</span>-->
+<!--                                        </span>-->
+                                    </td>
+
+
                                     <!-- PRIX -->
                                     <td th:if="${canVoirPrix}"
                                         class="text-end"
@@ -415,6 +443,14 @@
                                                         : '—'}">
                                         </span>
 
+                                    </td>
+
+                                    <td th:if="${canVoirPrix}" class="text-end fw-semibold">
+    <span th:if="${l.montantEstime != null and l.montantEstime > 0}"
+          th:text="${#numbers.formatDecimal(l.montantEstime, 1, 'DEFAULT', 2, 'DEFAULT')}">
+    </span>
+                                        <span th:if="${l.montantEstime == null or l.montantEstime <= 0}"
+                                              class="text-muted">—</span>
                                     </td>
 
                                     <!-- ACTIONS -->
@@ -468,14 +504,16 @@
                                 <tfoot th:if="${canVoirPrix}">
                                 <tr class="table-light fw-bold border-top">
                                     <td></td>
-                                    <td class="text-end text-muted text-uppercase small">Total</td>
                                     <td></td>
+                                    <td></td>
+                                    <td></td>  <!-- colonne prix unitaire -->
+                                    <td class="text-end text-muted text-uppercase small">Total</td>
                                     <td class="text-end" id="totalEstimeDisplay"
                                         th:text="${demande.totalEstime != null and demande.totalEstime > 0
-                            ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')
-                            : '—'}">
+            ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')
+            : '—'}">
                                     </td>
-                                    <td></td>
+
                                 </tr>
                                 </tfoot>
 
@@ -506,28 +544,25 @@
                                 </thead>
                                 <tbody id="lignesBody">
                                 <tr th:each="l : ${lignes}"
-                                    th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE}"
-                                    th:classappend="${l.typeApprovisionnement?.name() == 'STOCK'} ? ' table-success'">
+                                    th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE}">
 
                                     <!-- Désignation -->
                                     <td>
                                         <span th:text="${l.article.codeArticle + ' - ' + l.article.designation}"></span>
-                                        <!-- Badge si ligne générée par scission -->
-                                        <span th:if="${l.typeApprovisionnement?.name() == 'STOCK'}"
-                                              class="badge bg-success ms-1">
-                    <i class="fas fa-warehouse me-1"></i>Stock
-                </span>
-                                        <span th:if="${l.typeApprovisionnement?.name() == 'ACHAT'}"
-                                              class="badge bg-primary ms-1">
-                    <i class="fas fa-shopping-cart me-1"></i>Achat
-                </span>
+<!--                                        &lt;!&ndash; Badge si ligne générée par scission &ndash;&gt;-->
+<!--                                        <span th:if="${l.typeApprovisionnement?.name() == 'STOCK'}"-->
+<!--                                              class="badge bg-success ms-1">-->
+<!--                                        </span>-->
+<!--                                        <span th:if="${l.typeApprovisionnement?.name() == 'ACHAT'}"-->
+<!--                                              class="badge bg-primary ms-1">-->
+<!--                                        </span>-->
                                     </td>
 
                                     <!-- Quantité -->
                                     <td class="text-end" th:data-ligne-id="${l.id}">
-                <span class="qte-display"
-                      th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
-                </span>
+                                    <span class="qte-display"
+                                          th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                                    </span>
                                         <input type="number"
                                                class="form-control form-control-sm qte-input d-none text-end"
                                                th:value="${l.quantite}"
@@ -544,14 +579,11 @@
                                     <td class="text-end" th:data-ligne-prix-id="${l.id}">
                                         <!-- Ligne STOCK → prix auto BL (lecture seule) -->
                                         <div th:if="${l.typeApprovisionnement?.name() == 'STOCK'}">
-                    <span class="fw-semibold text-success"
-                          th:text="${l.prixUnitaire != null and l.prixUnitaire > 0
-                                     ? #numbers.formatDecimal(l.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')
-                                     : '—'}">
-                    </span>
-                                            <small class="text-muted d-block">
-                                                <i class="fas fa-magic me-1"></i>Auto BL
-                                            </small>
+                                            <span class="fw-semibold text-success"
+                                                  th:text="${l.prixUnitaire != null and l.prixUnitaire > 0
+                                                             ? #numbers.formatDecimal(l.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')
+                                                             : '—'}">
+                                            </span>
                                         </div>
                                         <!-- Ligne ACHAT → saisie proforma -->
                                         <div th:if="${l.typeApprovisionnement == null or l.typeApprovisionnement?.name() == 'ACHAT'}">
@@ -567,16 +599,16 @@
                                     </td>
 
                                     <!-- Type -->
-                                    <td class="text-center">
-                <span th:switch="${l.typeApprovisionnement?.name()}">
-                    <span th:case="'STOCK'" class="badge bg-success">
-                        <i class="fas fa-warehouse me-1"></i>Stock
-                    </span>
-                    <span th:case="'ACHAT'" class="badge bg-primary">
-                        <i class="fas fa-shopping-cart me-1"></i>Achat
-                    </span>
-                    <span th:case="*" class="badge bg-secondary">—</span>
-                </span>
+                                    <td class="text-center" th:text="${l.typeApprovisionnement?.name()}">
+<!--                                        <span th:switch="${l.typeApprovisionnement?.name()}">-->
+<!--                                            <span th:case="'STOCK'" class="badge bg-success">-->
+<!--                                                <i class="fas fa-warehouse me-1"></i>Stock-->
+<!--                                            </span>-->
+<!--                                            <span th:case="'ACHAT'" class="badge bg-primary">-->
+<!--                                                <i class="fas fa-shopping-cart me-1"></i>Achat-->
+<!--                                            </span>-->
+<!--                                            <span th:case="*" class="badge bg-secondary">—</span>-->
+<!--                                        </span>-->
                                     </td>
 
                                     <!-- Stock disponible (chargé par JS) -->
@@ -1112,7 +1144,7 @@
                                                 </td>
                                                 <td class="text-center">
                                                     <a th:href="@{/bon-sortie/{id}(id=${bs.id})}"
-                                                       class="btn btn-sm btn-outline-primary"
+                                                       class="btn btn-sm btn-outline-gradient-blue"
                                                        title="Voir le bon de sortie"
                                                        >
                                                         <i class="fas fa-eye me-1"></i> Voir
@@ -1158,6 +1190,7 @@
                                                     <th class="text-end" style="width:12%">Qté demandée</th>
                                                     <th class="text-end" style="width:12%">Déjà sorti</th>
                                                     <th class="text-end" style="width:12%">Restant</th>
+                                                    <th class="text-end" style="width:12%">Prix unitaire</th>
                                                     <th class="text-center" style="width:14%">
                                                         Stock disponible
                                                         <i class="fas fa-info-circle text-muted ms-1"
@@ -1193,6 +1226,14 @@
                                                     <td class="text-end fw-semibold text-success"
                                                         th:text="${#numbers.formatDecimal(ligne.restant, 1, 'DEFAULT', 2, 'DEFAULT')}">
                                                     </td>
+                                                    <td class="text-end">
+    <span th:if="${ligne.demandeFille.prixUnitaire != null and ligne.demandeFille.prixUnitaire > 0}"
+          class="fw-semibold"
+          th:text="${#numbers.formatDecimal(ligne.demandeFille.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')}">
+    </span>
+                                                        <span th:if="${ligne.demandeFille.prixUnitaire == null or ligne.demandeFille.prixUnitaire <= 0}"
+                                                              class="text-muted">—</span>
+                                                    </td>
 
                                                     <!-- Stock disponible -->
                                                     <td class="text-center">
@@ -1223,7 +1264,7 @@
                                                                name="quantites[]"
                                                                class="form-control form-control-sm text-end bs-qte-input"
                                                                min="0"
-                                                               step="0.01"
+                                                               step="1"
                                                                value="0"
                                                                th:max="${ligne.restant}"
                                                                th:data-max="${ligne.restant}"
@@ -1861,31 +1902,6 @@
                     });
             });
 
-        // Charger le stock disponible pour chaque ligne ACHAT dans la table MG
-        document.querySelectorAll('.stock-dispo-cell').forEach(cell => {
-            const code = cell.dataset.code;
-            if (!code) return;
-
-            fetch(`${CONTEXT_PATH}demande/stock/disponible/${code}`)
-                .then(r => r.json())
-                .then(data => {
-                    const stock = data.stockDisponible ?? 0;
-                    if (stock > 0) {
-                        cell.innerHTML =
-                            `<span class="badge bg-success">
-                            <i class="fas fa-check-circle me-1"></i>${stock}
-                         </span>`;
-                    } else {
-                        cell.innerHTML =
-                            `<span class="badge bg-danger">
-                            <i class="fas fa-times-circle me-1"></i>0
-                         </span>`;
-                    }
-                })
-                .catch(() => {
-                    cell.innerHTML = '<span class="text-danger small">Erreur</span>';
-                });
-        });
     })();
 
     // ===================== BON DE SORTIE =====================

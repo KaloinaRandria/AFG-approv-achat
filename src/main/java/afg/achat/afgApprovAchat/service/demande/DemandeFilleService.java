@@ -110,7 +110,12 @@ public class DemandeFilleService {
      * @return La quantité réservée en stock
      */
     public double getQuantiteStockReserveePourDemande(String demandeId, String codeArticle) {
-        Double quantite = demandeFilleRepo.getQuantiteStockReserveePourDemande(demandeId, codeArticle);
+        Double quantite = demandeFilleRepo.getQuantiteStockReserveePourDemande(
+                demandeId,
+                codeArticle,
+                DemandeFille.TypeApprovisionnement.STOCK,
+                StatutDemande.REFUSE
+        );
         return quantite != null ? quantite : 0.0;
     }
 

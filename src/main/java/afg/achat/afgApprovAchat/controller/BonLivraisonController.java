@@ -156,7 +156,7 @@ public class BonLivraisonController {
                 prixArticle.setArticle(article);
                 prixArticle.setBonLivraisonMere(bonLivraisonMere);
                 prixArticle.setPrixUnitaire(Double.parseDouble(prixUnitaires.get(i)));
-                prixArticle.setDatePrix(LocalDate.now());
+                prixArticle.setDatePrix(LocalDate.from(bonLivraisonMere.getDateReception()));
                 prixArticleService.insert(prixArticle);
             }
 

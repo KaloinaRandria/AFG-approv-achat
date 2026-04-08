@@ -49,15 +49,17 @@ public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
      * @return La quantité totale réservée en stock (somme des quantiteStock des lignes STOCK)
      */
     @Query("""
-        SELECT COALESCE(SUM(df.quantiteStock), 0)
-        FROM DemandeFille df
-        WHERE df.demandeMere.id = :demandeId
-        AND df.article.codeArticle = :codeArticle
-        AND df.typeApprovisionnement = 'STOCK'
-        AND df.statut != -1
-    """)
+    SELECT COALESCE(SUM(df.quantite), 0)
+    FROM DemandeFille df
+    WHERE df.demandeMere.id = :demandeId
+    AND df.article.codeArticle = :codeArticle
+    AND df.typeApprovisionnement = :type
+    AND df.statut != :refuse
+""")
     Double getQuantiteStockReserveePourDemande(
             @Param("demandeId") String demandeId,
-            @Param("codeArticle") String codeArticle
+            @Param("codeArticle") String codeArticle,
+            @Param("type") DemandeFille.TypeApprovisionnement type,
+            @Param("refuse") int refuse
     );
 }
