@@ -357,6 +357,8 @@ public class DemandeController {
                 isBackofficeValidator, hasChildren,
                 isMG, isControleur, isDFC, isSG, isAdmin);
 
+        // Dans populateModel(), ajouter :
+        model.addAttribute("StatutValide", StatutDemande.VALIDE);
         return "demande/demande-liste";
     }
 
