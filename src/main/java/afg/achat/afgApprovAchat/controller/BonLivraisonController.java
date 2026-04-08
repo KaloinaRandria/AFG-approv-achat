@@ -17,6 +17,7 @@ import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonFilleService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
+import afg.achat.afgApprovAchat.service.stock.LotStockService;
 import afg.achat.afgApprovAchat.service.stock.StockFilleService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
@@ -62,9 +63,7 @@ public class BonLivraisonController {
     @Autowired
     PrixArticleService prixArticleService;
     @Autowired
-    DemandeMereService demandeMereService;
-    @Autowired
-    DemandeFilleService demandeFilleService;
+    LotStockService lotStockService;
 
 
     @GetMapping("/add")
