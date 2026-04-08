@@ -1696,10 +1696,21 @@ public class DemandeController {
         double qteStock  = dto.getQteStock();
         double qteAchat  = qteTotale - qteStock;
 
-        if (qteStock <= 0 || qteStock >= qteTotale)
+        // Correction : > au lieu de >=
+        if (qteStock <= 0 || qteStock > qteTotale)
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Quantité stock invalide."));
 
+        // Cas où tout est couvert par le stock → simple conversion, pas de scission
+        if (qteStock == qteTotale) {
+            ligneOriginale.setTypeApprovisionnement(DemandeFille.TypeApprovisionnement.STOCK);
+            ligneOriginale.setPrixUnitaire(dto.getPrixStock());
+            demandeFilleService.saveDemandeFille(ligneOriginale);
+            demandeMereService.recalculerTotal(ligneOriginale.getDemandeMere());
+            return ResponseEntity.ok(Map.of("ok", true));
+        }
+
+        // Scission normale (qteStock < qteTotale)
         // 1. Modifier la ligne originale → devient la ligne ACHAT
         ligneOriginale.setQuantite(String.valueOf(qteAchat));
         ligneOriginale.setTypeApprovisionnement(

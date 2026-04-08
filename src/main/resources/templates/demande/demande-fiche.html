@@ -501,19 +501,27 @@
                                 </tbody>
 
                                 <!-- TOTAL -->
+
                                 <tfoot th:if="${canVoirPrix}">
                                 <tr class="table-light fw-bold border-top">
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>  <!-- colonne prix unitaire -->
+                                    <td></td>  <!-- DÉSIGNATION -->
+                                    <td></td>  <!-- QUANTITÉ -->
+                                    <td></td>  <!-- UDM -->
+
+                                    <!-- Cellule vide TYPE — uniquement si le rôle la voit -->
+                                    <td th:if="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}"></td>
+
                                     <td class="text-end text-muted text-uppercase small">Total</td>
+
                                     <td class="text-end" id="totalEstimeDisplay"
                                         th:text="${demande.totalEstime != null and demande.totalEstime > 0
             ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')
             : '—'}">
                                     </td>
 
+                                    <!-- Cellule vide ACTIONS — uniquement si visible -->
+                                    <td th:if="${(canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)
+                 and demande.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP}"></td>
                                 </tr>
                                 </tfoot>
 
@@ -1823,7 +1831,7 @@
                         const stockDispo = data.stockDisponible ?? 0;
                         document.getElementById('scinderStockDispo').textContent = `Dispo: ${stockDispo}`;
                         document.getElementById('scinderQteStock').max =
-                            Math.min(stockDispo, currentQteTotale - 0.01);
+                            Math.min(stockDispo, currentQteTotale);
 
                         recalculerResume();
                     })
@@ -1842,12 +1850,20 @@
             const qteAchat  = Math.max(0, currentQteTotale - qteStock);
             const prixStock = currentPrixStock;
 
-            document.getElementById('scinderResQteStock').textContent  = qteStock.toFixed(2);
-            document.getElementById('scinderResQteAchat').textContent  = qteAchat.toFixed(2);
+            document.getElementById('scinderResQteStock').textContent =
+                qteStock.toFixed(2);
+            document.getElementById('scinderResQteAchat').textContent =
+                qteAchat.toFixed(2);
             document.getElementById('scinderResPrixStock').textContent =
                 new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 2}).format(prixStock);
             document.getElementById('scinderResMontantStock').textContent =
                 new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 2}).format(qteStock * prixStock);
+
+            //AJOUTER : masquer la ligne ACHAT si tout est couvert par le stock
+            const ligneAchat = document.getElementById('scinderResQteAchat')?.closest('tr');
+            if (ligneAchat) {
+                ligneAchat.style.display = qteAchat <= 0 ? 'none' : '';
+            }
         }
 
         // Confirmer la scission
@@ -1862,8 +1878,8 @@
                     errEl.style.display = 'block';
                     return;
                 }
-                if (qteStock >= currentQteTotale) {
-                    errEl.textContent   = `La quantité stock (${qteStock}) doit être inférieure à la quantité totale (${currentQteTotale}).`;
+                if (qteStock > currentQteTotale) {
+                    errEl.textContent   = `La quantité stock (${qteStock}) ne peut pas dépasser la quantité totale (${currentQteTotale}).`;
                     errEl.style.display = 'block';
                     return;
                 }
