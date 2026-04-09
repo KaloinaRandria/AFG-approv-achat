@@ -103,4 +103,20 @@ public class DemandeFilleService {
                 .map(DemandeFille::getPrixUnitaire);
     }
 
+    /**
+     * Récupère la quantité totale réservée en stock pour un article dans une demande
+     * @param demandeId L'ID de la demande mère
+     * @param codeArticle Le code article
+     * @return La quantité réservée en stock
+     */
+    public double getQuantiteStockReserveePourDemande(String demandeId, String codeArticle) {
+        Double quantite = demandeFilleRepo.getQuantiteStockReserveePourDemande(
+                demandeId,
+                codeArticle,
+                DemandeFille.TypeApprovisionnement.STOCK,
+                StatutDemande.REFUSE
+        );
+        return quantite != null ? quantite : 0.0;
+    }
+
 }

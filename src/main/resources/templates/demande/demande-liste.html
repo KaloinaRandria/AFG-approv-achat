@@ -252,17 +252,38 @@
                             </td>
                             <td th:text="${demande.priorite != null ? demande.priorite : '-'}"></td>
                             <td>
-                              <span class="badge-status"
-                                    th:classappend="${badgeClasses[demande.statut] ?: 'badge-info'}">
+                                <!-- Cas VALIDE + SOLDEE -->
+                                <span th:if="${demande.statut == StatutValide and demande.etatLivraison?.name() == 'SOLDEE'}"
+                                      class="badge-status badge-success">
+                                    <i class="fas fa-check-double"></i>
+                                    <span>Validée &amp; Soldée</span>
+                                </span>
 
-                                <i class="fas"
-                                   th:classappend="${badgeIcons[demande.statut] ?: 'fa-info-circle'}">
-                                </i>
+                                <!-- Cas VALIDE + EN_COURS_SORTIE -->
+                                <span th:if="${demande.statut == StatutValide and demande.etatLivraison?.name() == 'EN_COURS_SORTIE'}"
+                                      class="badge-status badge-warning">
+                                    <i class="fas fa-truck"></i>
+                                    <span>Validée — En cours</span>
+                                </span>
 
-                                <span th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></span>
-                              </span>
+                                <!-- Cas VALIDE + NON_LIVREE (ou etatLivraison null) -->
+                                <span th:if="${demande.statut == StatutValide
+                                              and (demande.etatLivraison == null or demande.etatLivraison?.name() == 'NON_LIVREE')}"
+                                                                  class="badge-status badge-info">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Validée</span>
+                                </span>
+
+                                <!-- Tous les autres statuts -->
+                                <span th:if="${demande.statut != StatutValide}"
+                                      class="badge-status"
+                                      th:classappend="${badgeClasses[demande.statut] ?: 'badge-info'}">
+                                    <i class="fas"
+                                       th:classappend="${badgeIcons[demande.statut] ?: 'fa-info-circle'}">
+                                    </i>
+                                    <span th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></span>
+                                </span>
                             </td>
-                        </tr>
 
                         <tr th:if="${demandesMeres.totalElements == 0}">
                             <td class="text-center text-muted py-4"

@@ -32,34 +32,6 @@
                 </div>
 
                 <div class="d-flex gap-2">
-
-                    <!-- Cas 1 : Demande validée, aucun BS encore . créer -->
-                    <a class="btn btn-gradient-blue"
-                       sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
-                       th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE
-                   and bonSortie == null}"
-                       th:href="@{/bon-sortie/create-from-demande/{id}(id=${demande.id})}">
-                        <i class="fas fa-truck-loading me-1"></i> Créer le bon de sortie
-                    </a>
-
-                    <!-- Cas 2 : BS en cours (CREE ou PARTIELLE)  ouvrir -->
-                    <a class="btn btn-gradient-orange"
-                       sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
-                       th:if="${bonSortie != null
-                   and (bonSortie.statut.name() == 'CREE' or bonSortie.statut.name() == 'PARTIELLE')}"
-                       th:href="@{/bon-sortie/fiche/{id}(id=${bonSortie.id})}">
-                        <i class="fas fa-box-open me-1"></i>
-                        <span th:text="${bonSortie.statut.name() == 'PARTIELLE'} ? 'BS partiel — continuer' : 'Voir le bon de sortie'"></span>
-                    </a>
-
-                    <!-- Cas 3 : BS validé . lecture seule -->
-                    <a class="btn btn-outline-success"
-                       sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
-                       th:if="${bonSortie != null and bonSortie.statut.name() == 'VALIDEE'}"
-                       th:href="@{/bon-sortie/fiche/{id}(id=${bonSortie.id})}">
-                        <i class="fas fa-check-circle me-1"></i> Bon de sortie validé
-                    </a>
-
                     <a class="btn btn-outline-secondary" th:href="@{/demande/list}">
                         <i class="fas fa-arrow-left me-1"></i> Retour liste
                     </a>
@@ -344,7 +316,8 @@
 
 
                         <!-- TABLE ARTICLES -->
-                        <div class="bl-body">
+                        <div class="bl-body" th:if="${not (canDecisionMG and demande.statut
+     == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1)}">
                             <table class="bl-table table table-hover align-middle">
 
                                 <thead class="table-light">
@@ -365,9 +338,14 @@
                                     <!-- UDM -->
                                     <th class="text-end">UDM</th>
 
+                                    <th class="text-center"
+                                        th:if="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}">
+                                        TYPE
+                                    </th>
+
                                     <!-- PRIX -->
                                     <th th:if="${canVoirPrix}" class="text-end" style="width:25%">
-                                        PRIX UNITAIRE
+                                        PRIX UNITAIRE H.T.
                                         <span th:if="${canDecisionMG}"
                                               id="badgePrixManquants"
                                               class="badge bg-danger ms-1"
@@ -376,8 +354,16 @@
                 </span>
                                     </th>
 
+                                    <th th:if="${canVoirPrix}" class="text-end" style="width:12%">
+                                        MONTANT
+                                    </th>
+
                                     <!-- ACTION -->
-                                    <th class="text-center">Actions</th>
+                                    <th class="text-center"
+                                        th:if="${(canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)
+             and demande.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP}">
+                                        Actions
+                                    </th>
                                 </tr>
                                 </thead>
 
@@ -393,7 +379,7 @@
 
                                 <!-- LIGNES -->
                                 <tr th:each="l : ${lignes}"
-                                    th:classappend="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' table-danger opacity-75'">
+                                    th:classappend="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' table-danger opacity-75'" th:attr="data-type-appro=${l.typeApprovisionnement?.name()}">
 
                                     <!-- DESIGNATION -->
                                     <td th:text="${l.article != null ? l.article.codeArticle +' - '+ l.article.designation : '-'}"></td>
@@ -416,6 +402,21 @@
 
                                     <!-- UDM -->
                                     <td th:text="${l.article.udm.description}"></td>
+
+                                    <td class="text-center"
+                                        th:if="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}"
+                                        th:text="${l.typeApprovisionnement?.name()}">
+<!--                                        <span th:switch="${l.typeApprovisionnement?.name()}">-->
+<!--                                            <span th:case="'STOCK'" class="badge bg-success">-->
+<!--                                                <i class="fas fa-warehouse me-1"></i>Stock-->
+<!--                                            </span>-->
+<!--                                            <span th:case="'ACHAT'" class="badge bg-primary">-->
+<!--                                                <i class="fas fa-shopping-cart me-1"></i>Achat-->
+<!--                                            </span>-->
+<!--                                            <span th:case="*" class="badge bg-secondary">—</span>-->
+<!--                                        </span>-->
+                                    </td>
+
 
                                     <!-- PRIX -->
                                     <td th:if="${canVoirPrix}"
@@ -444,36 +445,46 @@
 
                                     </td>
 
+                                    <td th:if="${canVoirPrix}" class="text-end fw-semibold">
+    <span th:if="${l.montantEstime != null and l.montantEstime > 0}"
+          th:text="${#numbers.formatDecimal(l.montantEstime, 1, 'DEFAULT', 2, 'DEFAULT')}">
+    </span>
+                                        <span th:if="${l.montantEstime == null or l.montantEstime <= 0}"
+                                              class="text-muted">—</span>
+                                    </td>
+
                                     <!-- ACTIONS -->
                                     <td class="text-center"
                                         th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE and
-                        l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP
-                        and (canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)}">
+            l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP
+            and (canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)}">
 
                                         <div class="d-flex gap-2 justify-content-center">
 
-                                            <!-- EDIT -->
-                                            <button type="button"
-                                                    class="btn btn-sm btn-outline-gradient-blue btn-edit-qte"
-                                                    th:data-id="${l.id}">
-                                                <i class="fas fa-pen"></i>
-                                            </button>
+                                            <!-- EDIT - Uniquement pour N1 et MG -->
+                                            <th:block th:if="${canDecisionN1 or canDecisionMG}">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-gradient-blue btn-edit-qte"
+                                                        th:data-id="${l.id}">
+                                                    <i class="fas fa-pen"></i>
+                                                </button>
 
-                                            <!-- SAVE -->
-                                            <button type="button"
-                                                    class="btn btn-sm btn-gradient-green btn-save-qte d-none"
-                                                    th:data-id="${l.id}">
-                                                <i class="fas fa-check"></i>
-                                            </button>
+                                                <!-- SAVE -->
+                                                <button type="button"
+                                                        class="btn btn-sm btn-gradient-green btn-save-qte d-none"
+                                                        th:data-id="${l.id}">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
 
-                                            <!-- CANCEL -->
-                                            <button type="button"
-                                                    class="btn btn-sm btn-outline-danger btn-cancel-qte d-none"
-                                                    th:data-id="${l.id}">
-                                                <i class="fas fa-times"></i>
-                                            </button>
+                                                <!-- CANCEL -->
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-danger btn-cancel-qte d-none"
+                                                        th:data-id="${l.id}">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </th:block>
 
-                                            <!-- REFUS -->
+                                            <!-- REFUS - Tout le monde peut refuser -->
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-danger btnRefuserArticle"
                                                     data-bs-toggle="modal"
@@ -492,20 +503,200 @@
                                 </tbody>
 
                                 <!-- TOTAL -->
+
                                 <tfoot th:if="${canVoirPrix}">
+                                <tr class="table-light fw-bold border-top">
+                                    <td></td>  <!-- DÉSIGNATION -->
+                                    <td></td>  <!-- QUANTITÉ -->
+                                    <td></td>  <!-- UDM -->
+
+                                    <!-- Cellule vide TYPE — uniquement si le rôle la voit -->
+                                    <td th:if="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}"></td>
+
+                                    <td class="text-end text-muted text-uppercase small">Total</td>
+
+                                    <td class="text-end" id="totalEstimeDisplay"
+                                        th:text="${demande.totalEstime != null and demande.totalEstime > 0
+            ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')
+            : '—'}">
+                                    </td>
+
+                                    <!-- Cellule vide ACTIONS — uniquement si visible -->
+                                    <td th:if="${(canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)
+                 and demande.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP}"></td>
+                                </tr>
+                                </tfoot>
+
+                            </table>
+                        </div>
+
+                        <!-- TABLE ARTICLES — version MG en VALIDATION_N1 -->
+                        <div class="bl-body" th:if="${canDecisionMG and demande.statut
+     == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
+
+                            <div class="alert alert-info py-2 mx-3 mb-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Pour chaque article, saisissez le prix proforma. Si du stock est disponible,
+                                utilisez <strong>"Scinder"</strong> pour créer une ligne stock séparée.
+                            </div>
+
+                            <table class="bl-table table table-hover align-middle">
+                                <thead class="table-light">
+                                <tr>
+                                    <th style="width:30%">DÉSIGNATION</th>
+                                    <th class="text-end" style="width:10%">QUANTITÉ</th>
+                                    <th class="text-end" style="width:8%">UDM</th>
+                                    <th class="text-end" style="width:12%">PRIX UNITAIRE H.T.</th>
+                                    <th class="text-center" style="width:10%">TYPE</th>
+                                    <th class="text-center" style="width:10%">STOCK DISPO</th>
+                                    <th class="text-center" style="width:20%">ACTIONS</th>
+                                </tr>
+                                </thead>
+                                <tbody id="lignesBody">
+                                <tr th:each="l : ${lignes}"
+                                    th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE}" th:attr="data-type-appro=${l.typeApprovisionnement?.name()}">
+
+                                    <!-- Désignation -->
+                                    <td>
+                                        <span th:text="${l.article.codeArticle + ' - ' + l.article.designation}"></span>
+<!--                                        &lt;!&ndash; Badge si ligne générée par scission &ndash;&gt;-->
+<!--                                        <span th:if="${l.typeApprovisionnement?.name() == 'STOCK'}"-->
+<!--                                              class="badge bg-success ms-1">-->
+<!--                                        </span>-->
+<!--                                        <span th:if="${l.typeApprovisionnement?.name() == 'ACHAT'}"-->
+<!--                                              class="badge bg-primary ms-1">-->
+<!--                                        </span>-->
+                                    </td>
+
+                                    <!-- Quantité -->
+                                    <td class="text-end" th:data-ligne-id="${l.id}">
+                                    <span class="qte-display"
+                                          th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                                    </span>
+                                        <input type="number"
+                                               class="form-control form-control-sm qte-input d-none text-end"
+                                               th:value="${l.quantite}"
+                                               th:data-initial="${l.quantite}"
+                                               min="1" step="1"
+                                               oninput="this.value = Math.floor(this.value)"
+                                               style="width: 100px; display: inline-block;">
+                                    </td>
+
+                                    <!-- UDM -->
+                                    <td class="text-end" th:text="${l.article.udm.description}"></td>
+
+                                    <!-- Prix unitaire -->
+                                    <td class="text-end" th:data-ligne-prix-id="${l.id}">
+                                        <!-- Ligne STOCK → prix auto BL (lecture seule) -->
+                                        <div th:if="${l.typeApprovisionnement?.name() == 'STOCK'}">
+                                            <span class="fw-semibold text-success"
+                                                  th:text="${l.prixUnitaire != null and l.prixUnitaire > 0
+                                                             ? #numbers.formatDecimal(l.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')
+                                                             : '—'}">
+                                            </span>
+                                        </div>
+                                        <!-- Ligne ACHAT → saisie proforma -->
+                                        <div th:if="${l.typeApprovisionnement == null or l.typeApprovisionnement?.name() == 'ACHAT'}">
+                                            <input type="number"
+                                                   class="form-control form-control-sm prix-input text-end"
+                                                   th:id="'prix-' + ${l.id}"
+                                                   th:value="${l.prixUnitaire != null and l.prixUnitaire > 0 ? l.prixUnitaire : ''}"
+                                                   th:data-ligne-id="${l.id}"
+                                                   min="1" step="1"
+                                                   placeholder="Proforma"
+                                                   style="width: 120px; display: inline-block;">
+                                        </div>
+                                    </td>
+
+                                    <!-- Type -->
+                                    <td class="text-center" th:text="${l.typeApprovisionnement?.name()}">
+<!--                                        <span th:switch="${l.typeApprovisionnement?.name()}">-->
+<!--                                            <span th:case="'STOCK'" class="badge bg-success">-->
+<!--                                                <i class="fas fa-warehouse me-1"></i>Stock-->
+<!--                                            </span>-->
+<!--                                            <span th:case="'ACHAT'" class="badge bg-primary">-->
+<!--                                                <i class="fas fa-shopping-cart me-1"></i>Achat-->
+<!--                                            </span>-->
+<!--                                            <span th:case="*" class="badge bg-secondary">—</span>-->
+<!--                                        </span>-->
+                                    </td>
+
+                                    <!-- Stock disponible (chargé par JS) -->
+                                    <td class="text-center stock-dispo-cell"
+                                        th:data-code="${l.article.codeArticle}"
+                                        th:if="${l.typeApprovisionnement == null or l.typeApprovisionnement?.name() == 'ACHAT'}">
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    </td>
+                                    <td th:if="${l.typeApprovisionnement?.name() == 'STOCK'}"
+                                        class="text-center text-muted small">
+                                        —
+                                    </td>
+
+                                    <!-- Actions -->
+                                    <td class="text-center">
+                                        <div class="d-flex gap-1 justify-content-center flex-wrap">
+
+                                            <!-- Édition quantité -->
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-gradient-blue btn-edit-qte"
+                                                    th:data-id="${l.id}">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-gradient-green btn-save-qte d-none"
+                                                    th:data-id="${l.id}">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger btn-cancel-qte d-none"
+                                                    th:data-id="${l.id}">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+
+                                            <!-- Refus -->
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger btnRefuserArticle"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#refusArticleModal"
+                                                    th:data-id="${l.id}"
+                                                    th:data-designation="${l.article.designation}"
+                                                    th:data-codearticle="${l.article.codeArticle}">
+                                                <i class="fas fa-times-circle"></i>
+                                            </button>
+
+                                            <!-- SCINDER (uniquement ligne ACHAT, pas encore scindée) -->
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-success btn-scinder"
+                                                    th:if="${l.typeApprovisionnement?.name() != 'STOCK'}"
+                                                    th:data-id="${l.id}"
+                                                    th:data-designation="${l.article.codeArticle + ' - ' + l.article.designation}"
+                                                    th:data-qte="${l.quantite}"
+                                                    th:data-code="${l.article.codeArticle}"
+                                                    title="Scinder en ligne stock + ligne achat"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#scinderModal">
+                                                <i class="fas fa-layer-group me-1"></i>Scinder
+                                            </button>
+
+                                        </div>
+                                    </td>
+                                </tr>
+                                </tbody>
+
+                                <!-- TOTAL -->
+                                <tfoot>
                                 <tr class="table-light fw-bold border-top">
                                     <td></td>
                                     <td class="text-end text-muted text-uppercase small">Total</td>
                                     <td></td>
-                                    <td class="text-end" id="totalEstimeDisplay"
+                                    <td class="text-end" id="totalEstimeDisplayMG"
                                         th:text="${demande.totalEstime != null and demande.totalEstime > 0
-                            ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')
-                            : '—'}">
+                           ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')
+                           : '—'}">
                                     </td>
-                                    <td></td>
+                                    <td colspan="3"></td>
                                 </tr>
                                 </tfoot>
-
                             </table>
                         </div>
 
@@ -557,7 +748,7 @@
                                       method="post"
                                       enctype="multipart/form-data"
                                       class="d-inline">
-
+                                    <input type="hidden" name="submissionToken" th:value="${decisionToken}" />
                                     <input type="hidden" name="commentaire" id="decisionCommentaire">
                                     <input type="hidden" name="decision" id="decisionValue">
 
@@ -892,7 +1083,261 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+
+                        <!-- ===================== BON DE SORTIE ===================== -->
+                        <!-- Section visible uniquement si demande VALIDE -->
+                        <div class="px-3 pb-3 mt-3"
+                             th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE}">
+
+                            <div class="p-3 border rounded bg-light">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div class="fw-bold">
+                                        <i class="fas fa-file-export me-2"></i> Bons de sortie
+                                    </div>
+
+                                    <!-- Badge etatLivraison -->
+                                    <span th:switch="${demande.etatLivraison?.name()}">
+                                        <span th:case="'NON_LIVREE'"
+                                              class="badge bg-secondary">
+                                            <i class="fas fa-clock me-1"></i> Aucune sortie
+                                        </span>
+                                        <span th:case="'EN_COURS_SORTIE'"
+                                              class="badge bg-warning text-dark">
+                                            <i class="fas fa-spinner me-1"></i> En cours de sortie
+                                        </span>
+                                        <span th:case="'SOLDEE'"
+                                              class="badge bg-success">
+                                            <i class="fas fa-check-circle me-1"></i> Soldée
+                                        </span>
+                                    </span>
+                                </div>
+
+                                <!-- ── HISTORIQUE DES BS ── -->
+                                <div th:if="${bonsSortie != null and !bonsSortie.isEmpty()}"
+                                     class="mb-4">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-hover align-middle bg-white">
+                                            <thead class="table-light">
+                                            <tr>
+                                                <th>Numéro BS</th>
+                                                <th>Date création</th>
+                                                <th>Date confirmation</th>
+                                                <th>Créé par</th>
+                                                <th>Statut</th>
+                                                <th class="text-center">Action</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr th:each="bs : ${bonsSortie}">
+                                                <td class="fw-semibold" th:text="${bs.numeroBs}"></td>
+                                                <td th:text="${#temporals.format(bs.dateCreation, 'dd/MM/yyyy HH:mm')}"></td>
+                                                <td th:text="${bs.dateConfirmation != null
+                                                              ? #temporals.format(bs.dateConfirmation, 'dd/MM/yyyy HH:mm')
+                                                              : '—'}">
+                                                </td>
+                                                <td th:text="${bs.creePar.nom + ' ' + bs.creePar.prenom}"></td>
+                                                <td>
+                                                    <span th:switch="${bs.statut?.name()}">
+                                                        <span th:case="'BROUILLON'"
+                                                              class="badge bg-warning text-dark">
+                                                            <i class="fas fa-pencil me-1"></i>Brouillon
+                                                        </span>
+                                                        <span th:case="'CONFIRME'"
+                                                              class="badge bg-success">
+                                                            <i class="fas fa-check me-1"></i>Confirmé
+                                                        </span>
+                                                        <span th:case="'ANNULE'"
+                                                              class="badge bg-danger">
+                                                            <i class="fas fa-times me-1"></i>Annulé
+                                                        </span>
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <a th:href="@{/bon-sortie/{id}(id=${bs.id})}"
+                                                       class="btn btn-sm btn-outline-gradient-blue"
+                                                       title="Voir le bon de sortie"
+                                                       >
+                                                        <i class="fas fa-eye me-1"></i> Voir
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Message si aucun BS -->
+                                <div th:if="${bonsSortie == null or bonsSortie.isEmpty()}"
+                                     class="text-muted mb-3">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Aucun bon de sortie créé pour cette demande.
+                                </div>
+
+                                <!-- ── FORMULAIRE CREATION BS (MG seulement, si pas soldée) ── -->
+                                <div th:if="${canCreateBS}">
+                                    <hr class="my-3">
+                                    <div class="fw-bold mb-2">
+                                        <i class="fas fa-plus-circle me-2 text-success"></i>
+                                        Créer un nouveau bon de sortie
+                                    </div>
+
+                                    <div class="alert alert-info py-2 mb-3">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Sélectionnez les articles disponibles en stock et saisissez
+                                        les quantités à sortir. Laissez <strong>0</strong> pour les
+                                        articles non encore disponibles.
+                                    </div>
+
+                                    <form th:action="@{/bon-sortie/creer/{id}(id=${demande.id})}"
+                                          method="post"
+                                          id="formCreerBs">
+
+                                        <div class="table-responsive mb-3">
+                                            <table class="table table-bordered align-middle">
+                                                <thead class="table-light">
+                                                <tr>
+                                                    <th style="width:30%">Article</th>
+                                                    <th class="text-end" style="width:12%">Qté demandée</th>
+                                                    <th class="text-end" style="width:12%">Déjà sorti</th>
+                                                    <th class="text-end" style="width:12%">Restant</th>
+                                                    <th class="text-end" style="width:12%">Prix unitaire</th>
+                                                    <th class="text-center" style="width:14%">
+                                                        Stock disponible
+                                                        <i class="fas fa-info-circle text-muted ms-1"
+                                                           title="Stock global disponible pour cet article (toutes demandes confondues)">
+                                                        </i>
+                                                    </th>
+                                                    <th class="text-center" style="width:20%">Qté à sortir</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                <tr th:each="ligne : ${lignesRestantes}">
+                                                    <td>
+                                                        <input type="hidden"
+                                                               name="lignes[]"
+                                                               th:value="${ligne.demandeFille.id}"/>
+                                                        <span th:text="${ligne.demandeFille.article.codeArticle
+                            + ' - '
+                            + ligne.demandeFille.article.designation}">
+            </span>
+                                                    </td>
+
+                                                    <!-- Qté demandée -->
+                                                    <td class="text-end"
+                                                        th:text="${#numbers.formatDecimal(ligne.demandeFille.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                                                    </td>
+
+                                                    <!-- Déjà sorti -->
+                                                    <td class="text-end"
+                                                        th:text="${#numbers.formatDecimal(ligne.totalSorti, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                                                    </td>
+
+                                                    <!-- Restant à sortir -->
+                                                    <td class="text-end fw-semibold text-success"
+                                                        th:text="${#numbers.formatDecimal(ligne.restant, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                                                    </td>
+                                                    <td class="text-end">
+    <span th:if="${ligne.demandeFille.prixUnitaire != null and ligne.demandeFille.prixUnitaire > 0}"
+          class="fw-semibold"
+          th:text="${#numbers.formatDecimal(ligne.demandeFille.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')}">
+    </span>
+                                                        <span th:if="${ligne.demandeFille.prixUnitaire == null or ligne.demandeFille.prixUnitaire <= 0}"
+                                                              class="text-muted">—</span>
+                                                    </td>
+
+                                                    <!-- Stock disponible -->
+                                                    <td class="text-center">
+            <span th:if="${ligne.stockDisponible <= 0}"
+                  class="badge bg-danger">
+                <i class="fas fa-times-circle me-1"></i>
+                Indisponible
+            </span>
+
+                                                        <span th:if="${ligne.stockDisponible > 0 and ligne.stockDisponible < ligne.restant}"
+                                                              class="badge bg-warning text-dark">
+                <i class="fas fa-exclamation-triangle me-1"></i>
+                <span th:text="${#numbers.formatDecimal(ligne.stockDisponible, 1, 'DEFAULT', 2, 'DEFAULT')}"></span>
+                <span th:text="${ligne.demandeFille.article.udm != null ? ligne.demandeFille.article.udm.description : ''}"></span>
+            </span>
+
+                                                        <span th:if="${ligne.stockDisponible >= ligne.restant}"
+                                                              class="badge bg-success">
+                <i class="fas fa-check-circle me-1"></i>
+                <span th:text="${#numbers.formatDecimal(ligne.stockDisponible, 1, 'DEFAULT', 2, 'DEFAULT')}"></span>
+                <span th:text="${ligne.demandeFille.article.udm != null ? ligne.demandeFille.article.udm.description : ''}"></span>
+            </span>
+                                                    </td>
+
+                                                    <!-- Qté à sortir -->
+                                                    <td class="text-center">
+                                                        <input type="number"
+                                                               name="quantites[]"
+                                                               class="form-control form-control-sm text-end bs-qte-input"
+                                                               min="0"
+                                                               step="1"
+                                                               value="0"
+                                                               th:max="${ligne.restant}"
+                                                               th:data-max="${ligne.restant}"
+                                                               th:data-stock="${ligne.stockDisponible}"
+                                                               th:data-article="${ligne.demandeFille.article.designation}"
+                                                               th:disabled="${ligne.stockDisponible <= 0}"/>
+
+                                                        <!-- Hint si stock insuffisant -->
+                                                        <small class="text-warning d-block mt-1"
+                                                               th:if="${ligne.stockDisponible > 0 and ligne.stockDisponible < ligne.restant}">
+                                                            Max sortable : <span th:text="${#numbers.formatDecimal(ligne.stockDisponible, 1, 'DEFAULT', 2, 'DEFAULT')}"></span>
+                                                        </small>
+                                                        <small class="text-danger d-block mt-1"
+                                                               th:if="${ligne.stockDisponible <= 0}">
+                                                            En attente de livraison
+                                                        </small>
+                                                    </td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">
+                                                Commentaire
+                                                <span class="text-muted fw-normal small">(optionnel)</span>
+                                            </label>
+                                            <textarea name="commentaire"
+                                                      class="form-control"
+                                                      rows="2"
+                                                      placeholder="Ex: Articles disponibles en stock central...">
+                                            </textarea>
+                                        </div>
+
+                                        <!-- Alerte validation JS -->
+                                        <div id="bsAlertAucunArticle"
+                                             class="alert alert-danger d-none mb-2">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            Veuillez saisir une quantité supérieure à 0 pour au moins un article.
+                                        </div>
+                                        <div id="bsAlertDepassement"
+                                             class="alert alert-danger d-none mb-2">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            <span id="bsAlertDepassementMsg"></span>
+                                        </div>
+
+                                        <div class="d-flex gap-2">
+                                            <button type="button"
+                                                    id="btnCreerBs"
+                                                    class="btn btn-gradient-green">
+                                                <i class="fas fa-file-export me-1"></i>
+                                                Créer et confirmer le bon de sortie
+                                            </button>
+                                        </div>
+
+                                    </form>
+                                </div>
+
+                            </div>
+                        </div>
+                        <!-- ===================== FIN BON DE SORTIE ===================== -->
+
+                    </div><!-- fin bl-document -->
                 </div>
             </div>
         </div>
@@ -976,6 +1421,7 @@
             </div>
             <form th:action="@{/demande/fiche/{id}/decision(id=${demande.id})}" method="post" enctype="multipart/form-data">
                 <div class="modal-body">
+                    <input type="hidden" name="submissionToken" th:value="${decisionToken}" />
 
                     <!-- INFO DYNAMIQUE DECISION CODEP -->
                     <div class="alert mb-3" id="decisionCodepInfo">
@@ -1201,20 +1647,393 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="scinderModal" tabindex="-1"
+     aria-hidden="true"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title">
+                    <i class="fas fa-layer-group me-2"></i>
+                    Scinder la ligne
+                </h5>
+            </div>
+
+            <div class="modal-body">
+                <div class="alert alert-info mb-3" id="scinderInfo"></div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        Quantité disponible en stock
+                        <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="number"
+                               id="scinderQteStock"
+                               class="form-control"
+                               min="0.01" step="0.01"
+                               placeholder="Ex: 5"/>
+                        <span class="input-group-text" id="scinderStockDispo"></span>
+                    </div>
+                    <div class="form-text text-muted">
+                        <i class="fas fa-warehouse me-1"></i>
+                        Le reste sera automatiquement mis en ligne achat.
+                    </div>
+                    <div id="scinderQteError"
+                         class="invalid-feedback d-block"
+                         style="display:none !important"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        Prix stock (auto — dernier BL)
+                    </label>
+                    <div class="input-group">
+                        <input type="number"
+                               id="scinderPrixStock"
+                               class="form-control"
+                               readonly/>
+                        <span class="input-group-text">Ar</span>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-magic me-1"></i>
+                        Pré-rempli automatiquement depuis le dernier bon de livraison.
+                    </small>
+                </div>
+
+                <!-- Résumé -->
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Type</th>
+                            <th class="text-end">Quantité</th>
+                            <th class="text-end">Prix</th>
+                            <th class="text-end">Montant</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr class="table-success">
+                            <td><span class="badge bg-success">Stock</span></td>
+                            <td class="text-end" id="scinderResQteStock">—</td>
+                            <td class="text-end" id="scinderResPrixStock">—</td>
+                            <td class="text-end fw-semibold" id="scinderResMontantStock">—</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-primary">Achat</span></td>
+                            <td class="text-end" id="scinderResQteAchat">—</td>
+                            <td class="text-end text-muted">Prix proforma</td>
+                            <td class="text-end text-muted">à saisir après</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+                    <i class="fas fa-arrow-left me-1"></i> Annuler
+                </button>
+                <button type="button"
+                        class="btn btn-gradient-green"
+                        id="btnConfirmScinder">
+                    <i class="fas fa-layer-group me-1"></i>
+                    Confirmer la scission
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+
+    const CONTEXT_PATH = document.querySelector('meta[name="context-path"]')?.getAttribute('content') ?? '/';
+    const demandeId    = /*[[${demande.id}]]*/ '';
+
+    // Helper : trouve le bon élément total (deux tables possibles)
+    function getTotalEl() {
+        return document.getElementById('totalEstimeDisplay')
+            ?? document.getElementById('totalEstimeDisplayMG');
+    }
+
+    document.querySelectorAll('.stock-dispo-cell').forEach(cell => {
+        const code = cell.dataset.code;
+        if (!code) return;
+
+        // Passer l'ID de la demande pour calculer le stock réservé
+        const url = `${CONTEXT_PATH}demande/stock/disponible/${code}?demandeId=${demandeId}`;
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                const stockDisponible = data.stockDisponible ?? 0;
+                const quantiteReservee = data.quantiteReservee ?? 0;
+
+                if (stockDisponible > 0) {
+                    let tooltip = `Stock physique: ${stockDisponible + quantiteReservee}\nRéservé: ${quantiteReservee}`;
+                    cell.innerHTML = `<span class="badge bg-success" title="${tooltip}">
+                    <i class="fas fa-check-circle me-1"></i>${stockDisponible}
+                </span>`;
+                } else if (quantiteReservee > 0) {
+                    cell.innerHTML = `<span class="badge bg-warning text-dark" title="Tout le stock est déjà réservé">
+                    <i class="fas fa-clock me-1"></i>0 (réservé)
+                </span>`;
+                } else {
+                    cell.innerHTML = `<span class="badge bg-danger">
+                    <i class="fas fa-times-circle me-1"></i>0
+                </span>`;
+                }
+            })
+            .catch(() => {
+                cell.innerHTML = '<span class="text-danger small">Erreur</span>';
+            });
+    });
+
+    // ===================== SCINDER =====================
+    (function () {
+        const scinderModalEl = document.getElementById('scinderModal');
+        if (!scinderModalEl) return;
+
+        let currentLigneId   = null;
+        let currentQteTotale = 0;
+        let currentPrixStock = 0;
+
+        // Ouvrir le modal au clic sur "Scinder"
+        document.querySelectorAll('.btn-scinder').forEach(btn => {
+            btn.addEventListener('click', function () {
+                currentLigneId    = this.dataset.id;
+                currentQteTotale  = parseFloat(this.dataset.qte);
+                const code        = this.dataset.code;
+                const designation = this.dataset.designation;
+
+                // Reset
+                document.getElementById('scinderQteStock').value = '';
+                document.getElementById('scinderPrixStock').value = '';
+                const errEl = document.getElementById('scinderQteError');
+                errEl.style.display = 'none';
+                errEl.textContent   = '';
+
+                document.getElementById('scinderInfo').innerHTML =
+                    `<i class="fas fa-info-circle me-1"></i>
+                 <strong>${designation}</strong> — Quantité totale : <strong>${currentQteTotale}</strong>`;
+
+                // Charger stock + dernier prix
+                // Dans le modal scinder
+                fetch(`${CONTEXT_PATH}demande/stock/disponible/${code}?demandeId=${demandeId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        currentPrixStock = data.dernierPrix ?? 0;
+                        document.getElementById('scinderPrixStock').value = currentPrixStock;
+
+                        const stockDispo = data.stockDisponible ?? 0;
+                        document.getElementById('scinderStockDispo').textContent = `Dispo: ${stockDispo}`;
+                        document.getElementById('scinderQteStock').max =
+                            Math.min(stockDispo, currentQteTotale);
+
+                        recalculerResume();
+                    })
+                    .catch(() => {
+                        document.getElementById('scinderStockDispo').textContent = 'Erreur chargement';
+                    });
+            });
+        });
+
+        // Recalcul résumé en temps réel
+        document.getElementById('scinderQteStock')
+            ?.addEventListener('input', recalculerResume);
+
+        function recalculerResume() {
+            const qteStock  = parseFloat(document.getElementById('scinderQteStock').value) || 0;
+            const qteAchat  = Math.max(0, currentQteTotale - qteStock);
+            const prixStock = currentPrixStock;
+
+            document.getElementById('scinderResQteStock').textContent =
+                qteStock.toFixed(2);
+            document.getElementById('scinderResQteAchat').textContent =
+                qteAchat.toFixed(2);
+            document.getElementById('scinderResPrixStock').textContent =
+                new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 2}).format(prixStock);
+            document.getElementById('scinderResMontantStock').textContent =
+                new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 2}).format(qteStock * prixStock);
+
+            //AJOUTER : masquer la ligne ACHAT si tout est couvert par le stock
+            const ligneAchat = document.getElementById('scinderResQteAchat')?.closest('tr');
+            if (ligneAchat) {
+                ligneAchat.style.display = qteAchat <= 0 ? 'none' : '';
+            }
+        }
+
+        // Confirmer la scission
+        document.getElementById('btnConfirmScinder')
+            ?.addEventListener('click', function () {
+                const qteStock = parseFloat(document.getElementById('scinderQteStock').value);
+                const errEl    = document.getElementById('scinderQteError');
+                errEl.style.display = 'none';
+
+                if (isNaN(qteStock) || qteStock <= 0) {
+                    errEl.textContent   = 'La quantité stock doit être supérieure à 0.';
+                    errEl.style.display = 'block';
+                    return;
+                }
+                if (qteStock > currentQteTotale) {
+                    errEl.textContent   = `La quantité stock (${qteStock}) ne peut pas dépasser la quantité totale (${currentQteTotale}).`;
+                    errEl.style.display = 'block';
+                    return;
+                }
+
+                const btn = this;
+                btn.disabled  = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Scission...';
+
+                fetch(`${CONTEXT_PATH}demande/ligne/${currentLigneId}/scinder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.content ?? ''
+                    },
+                    body: JSON.stringify({
+                        qteStock:  qteStock,
+                        prixStock: currentPrixStock
+                    })
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        btn.disabled  = false;
+                        btn.innerHTML = '<i class="fas fa-layer-group me-1"></i> Confirmer la scission';
+                        if (data.ok) {
+                            window.location.reload();
+                        } else {
+                            errEl.textContent   = data.error ?? 'Erreur lors de la scission.';
+                            errEl.style.display = 'block';
+                        }
+                    })
+                    .catch(() => {
+                        btn.disabled  = false;
+                        btn.innerHTML = '<i class="fas fa-layer-group me-1"></i> Confirmer la scission';
+                        errEl.textContent   = 'Erreur réseau, veuillez réessayer.';
+                        errEl.style.display = 'block';
+                    });
+            });
+
+    })();
+
+    // ===================== BON DE SORTIE =====================
+    (function () {
+        const btnCreerBs = document.getElementById('btnCreerBs');
+        if (!btnCreerBs) return;
+
+        btnCreerBs.addEventListener('click', function () {
+            const form        = document.getElementById('formCreerBs');
+            const inputs      = form.querySelectorAll('.bs-qte-input');
+            const alertAucun  = document.getElementById('bsAlertAucunArticle');
+            const alertDep    = document.getElementById('bsAlertDepassement');
+            const alertDepMsg = document.getElementById('bsAlertDepassementMsg');
+
+            alertAucun.classList.add('d-none');
+            alertDep.classList.add('d-none');
+            inputs.forEach(i => i.classList.remove('is-invalid'));
+
+            // Vérif 1 : au moins une quantité > 0
+            const atLeastOne = Array.from(inputs).some(i => parseFloat(i.value) > 0);
+            if (!atLeastOne) {
+                alertAucun.classList.remove('d-none');
+                return;
+            }
+
+            // Vérif 2 : dépassement restant ou stock
+            let hasDepassement = false;
+            let depassementMsg = '';
+            inputs.forEach(inp => {
+                if (inp.disabled) return;
+                const val     = parseFloat(inp.value) || 0;
+                const max     = parseFloat(inp.dataset.max);
+                const stock   = parseFloat(inp.dataset.stock);
+                const article = inp.dataset.article;
+
+                if (val > max) {
+                    inp.classList.add('is-invalid');
+                    hasDepassement = true;
+                    depassementMsg = `Quantité saisie (${val}) supérieure au restant (${max}) pour : ${article}`;
+                } else if (val > stock) {
+                    inp.classList.add('is-invalid');
+                    hasDepassement = true;
+                    depassementMsg = `Quantité saisie (${val}) supérieure au stock disponible (${stock}) pour : ${article}`;
+                }
+            });
+
+            if (hasDepassement) {
+                alertDepMsg.textContent = depassementMsg;
+                alertDep.classList.remove('d-none');
+                return;
+            }
+
+            btnCreerBs.disabled  = true;
+            btnCreerBs.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Création en cours...';
+
+            setTimeout(() => {
+                btnCreerBs.disabled  = false;
+                btnCreerBs.innerHTML = '<i class="fas fa-file-export me-1"></i> Créer et confirmer le bon de sortie';
+            }, 15000);
+
+            form.submit();
+        });
+    })();
+
+    // ── Anti double-soumission décision principal ──────────────────────────────
+    document.getElementById('btnConfirmDecision')?.addEventListener('click', function () {
+        const commentaire = document.getElementById('commentaireInput').value.trim();
+        const decision    = document.getElementById('decisionValue').value;
+
+        if (decision === 'REJECT' && commentaire === '') {
+            document.getElementById('commentaireError').style.display = 'block';
+            return;
+        }
+
+        const btn = this;
+        btn.disabled  = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Envoi en cours...';
+
+        setTimeout(() => {
+            btn.disabled  = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Confirmer';
+        }, 15000);
+
+        document.getElementById('decisionCommentaire').value = commentaire;
+        document.getElementById('decisionForm').submit();
+    });
+
+    // ── Anti double-soumission décision CODEP ─────────────────────────────────
+    document.getElementById('btnConfirmDecisionCodep')?.addEventListener('click', function () {
+        const decision    = document.getElementById('decisionInput').value;
+        const commentaire = document.getElementById('codepCommentaireInput').value.trim();
+
+        if (decision === 'REJECT' && commentaire === '') return;
+
+        const btn = this;
+        btn.disabled  = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Envoi en cours...';
+
+        setTimeout(() => {
+            btn.disabled  = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Confirmer';
+        }, 15000);
+
+        document.getElementById('decisionCodepForm').submit();
+    });
+
+    // ── Save prix ──────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
-
         const btnSave = document.getElementById('btnSavePrix');
-        if (!btnSave) return; // Pas MG, on sort
+        if (!btnSave) return;
 
-        const statusEl  = document.getElementById('prixSaveStatus');
-        const totalEl   = document.getElementById('totalEstimeDisplay');
-        const badge     = document.getElementById('badgePrixManquants');
-        const demandeId = /*[[${demande.id}]]*/ '';
+        const statusEl = document.getElementById('prixSaveStatus');
+        const badge    = document.getElementById('badgePrixManquants');
 
-        // Vérifie en temps réel si des prix manquent → active/désactive le badge
         function verifierPrixManquants() {
             const inputs = document.querySelectorAll('.prix-input');
             let manquants = 0;
@@ -1223,49 +2042,47 @@
                 if (!inp.value || isNaN(val) || val <= 0) manquants++;
             });
             if (badge) badge.style.display = manquants > 0 ? 'inline-block' : 'none';
-            return manquants;
         }
 
         document.querySelectorAll('.prix-input').forEach(inp => {
             inp.addEventListener('input', verifierPrixManquants);
         });
+        verifierPrixManquants();
 
-        verifierPrixManquants(); // vérif initiale
-
-        // Enregistrement AJAX
         btnSave.addEventListener('click', function () {
-            const inputs = document.querySelectorAll('.prix-input');
+            const inputs  = document.querySelectorAll('.prix-input');
             const payload = {};
             let valid = true;
 
             inputs.forEach(inp => {
+                // Ignorer les lignes STOCK (prix auto, pas d'input éditable)
+                if (inp.closest('tr')?.classList.contains('table-success')) return;
+
                 const ligneId = inp.dataset.ligneId;
-                const val = parseFloat(inp.value);
+                const val     = parseFloat(inp.value);
                 if (inp.value && !isNaN(val) && val > 0) {
                     payload[ligneId] = val;
                 } else if (inp.value) {
-                    // Valeur saisie mais invalide
                     inp.classList.add('is-invalid');
                     valid = false;
                 }
             });
 
             if (!valid) {
-                statusEl.className = 'ms-2 small text-danger';
+                statusEl.className   = 'ms-2 small text-danger';
                 statusEl.textContent = 'Certains prix saisis sont invalides (doivent être > 0).';
                 return;
             }
-
             if (Object.keys(payload).length === 0) {
-                statusEl.className = 'ms-2 small text-warning';
+                statusEl.className   = 'ms-2 small text-warning';
                 statusEl.textContent = 'Aucun prix à enregistrer.';
                 return;
             }
 
-            btnSave.disabled = true;
-            statusEl.className = 'ms-2 small text-muted';
+            btnSave.disabled  = true;
+            statusEl.className   = 'ms-2 small text-muted';
             statusEl.textContent = 'Enregistrement…';
-            const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
+
             fetch(`${CONTEXT_PATH}demande/fiche/${demandeId}/prix`, {
                 method: 'POST',
                 headers: {
@@ -1278,212 +2095,152 @@
                 .then(data => {
                     btnSave.disabled = false;
                     if (data.ok) {
-                        statusEl.className = 'ms-2 small text-success';
+                        statusEl.className   = 'ms-2 small text-success';
                         statusEl.textContent = 'Prix enregistrés avec succès.';
+
+                        // ← Correction : chercher le bon élément total
+                        const totalEl = getTotalEl();
                         if (data.totalEstime !== undefined && totalEl) {
                             totalEl.textContent = new Intl.NumberFormat('fr-FR', {
                                 minimumFractionDigits: 2
                             }).format(data.totalEstime);
                         }
-                        // Mise à jour des spans d'affichage
-                        document.querySelectorAll('.prix-input').forEach(inp => {
-                            const val = parseFloat(inp.value);
-                            if (!isNaN(val) && val > 0) {
-                                const ligneId = inp.dataset.ligneId;
-                                inp.classList.remove('is-invalid');
-                            }
-                        });
+                        document.querySelectorAll('.prix-input').forEach(inp => inp.classList.remove('is-invalid'));
                         verifierPrixManquants();
                     } else {
-                        statusEl.className = 'ms-2 small text-danger';
+                        statusEl.className   = 'ms-2 small text-danger';
                         statusEl.textContent = data.error ?? 'Erreur lors de l\'enregistrement.';
                     }
                 })
                 .catch(() => {
-                    btnSave.disabled = false;
-                    statusEl.className = 'ms-2 small text-danger';
+                    btnSave.disabled     = false;
+                    statusEl.className   = 'ms-2 small text-danger';
                     statusEl.textContent = 'Erreur réseau, veuillez réessayer.';
                 });
         });
     });
 
+    // ── Modal décision ─────────────────────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", () => {
-        const form = document.getElementById("decisionForm");
+        const form    = document.getElementById("decisionForm");
         const modalEl = document.getElementById("decisionModal");
-
         if (!form || !modalEl) return;
-
-        const btnConfirm = document.getElementById("btnConfirmDecision");
 
         const decisionValue = document.getElementById("decisionValue");
         const hiddenComment = document.getElementById("decisionCommentaire");
-
-        const commentInput = document.getElementById("commentaireInput");
-        const infoBox = document.getElementById("decisionModalInfo");
-        const err = document.getElementById("commentaireError");
-        const star = document.getElementById("commentaireRequiredStar");
-
-        const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+        const commentInput  = document.getElementById("commentaireInput");
+        const infoBox       = document.getElementById("decisionModalInfo");
+        const err           = document.getElementById("commentaireError");
+        const star          = document.getElementById("commentaireRequiredStar");
+        const modal         = window.bootstrap.Modal.getOrCreateInstance(modalEl);
 
         function openModal(decision) {
             decisionValue.value = decision;
-
-            // Reset UI
-            commentInput.value = "";
+            commentInput.value  = "";
             commentInput.classList.remove("is-invalid");
             err.style.display = "none";
 
             const isReject = (decision === "REJECT");
             star.style.display = isReject ? "inline" : "none";
-
-            infoBox.className = "alert " + (isReject ? "alert-warning" : "alert-success");
-            infoBox.innerHTML = isReject
+            infoBox.className  = "alert " + (isReject ? "alert-warning" : "alert-success");
+            infoBox.innerHTML  = isReject
                 ? "<i class='fas fa-exclamation-triangle me-2'></i>Vous êtes sur le point de <b>rejeter</b> cette demande. Un commentaire est obligatoire."
                 : "<i class='fas fa-check-circle me-2'></i>Vous êtes sur le point de <b>valider</b> cette demande. Le commentaire est facultatif.";
 
             modal.show();
         }
 
-        document.querySelectorAll(".btn-approve, .btn-reject")
-            .forEach(btn => {
-                btn.addEventListener("click", () => {
-                    openModal(btn.dataset.decision);
-                });
-            });
+        document.querySelectorAll(".btn-approve, .btn-reject").forEach(btn => {
+            btn.addEventListener("click", () => openModal(btn.dataset.decision));
+        });
 
-        btnConfirm?.addEventListener("click", () => {
-            const decision = decisionValue.value;
+        document.getElementById("btnConfirmDecision")?.addEventListener("click", () => {
+            const decision    = decisionValue.value;
             const commentaire = (commentInput.value || "").trim();
 
-            const isReject = (decision === "REJECT");
-
-            if (isReject && commentaire.length === 0) {
+            if (decision === "REJECT" && commentaire.length === 0) {
                 commentInput.classList.add("is-invalid");
                 err.style.display = "block";
                 return;
             }
-
-            // sync vers le hidden
             hiddenComment.value = commentaire;
-
-            // submit du form
             form.submit();
         });
     });
 
-    // REFUS ARTICLE
+    // ── Refus article ──────────────────────────────────────────────────────────
     let articleIdToRefuse = null;
-    const refusArticleModal =
-        new bootstrap.Modal(document.getElementById('refusArticleModal'));
+    const refusArticleModal = new bootstrap.Modal(document.getElementById('refusArticleModal'));
 
     document.querySelectorAll(".btnRefuserArticle").forEach(btn => {
-
         btn.addEventListener("click", function () {
-
             articleIdToRefuse = this.dataset.id;
-
             document.getElementById("refusArticleInfo").innerHTML =
-                "<strong>Article :</strong> " +this.dataset.codearticle+'-'+ this.dataset.designation;
-
+                "<strong>Article :</strong> " + this.dataset.codearticle + ' - ' + this.dataset.designation;
             document.getElementById("refusArticleCommentaire").value = "";
             document.getElementById("refusArticleError").style.display = "none";
-
             refusArticleModal.show();
         });
-
     });
 
-    document.getElementById("btnConfirmRefusArticle")
-        .addEventListener("click", function () {
+    document.getElementById("btnConfirmRefusArticle")?.addEventListener("click", function () {
+        const commentaire = document.getElementById("refusArticleCommentaire").value.trim();
+        if (commentaire === "") {
+            document.getElementById("refusArticleError").style.display = "block";
+            return;
+        }
+        const form  = document.createElement("form");
+        form.method = "POST";
+        form.action = "/demande/ligne/" + articleIdToRefuse + "/refuser";
+        const input  = document.createElement("input");
+        input.type   = "hidden";
+        input.name   = "commentaire";
+        input.value  = commentaire;
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    });
 
-            const commentaire =
-                document.getElementById("refusArticleCommentaire").value.trim();
+    // ── CODEP decision ─────────────────────────────────────────────────────────
+    const codepModalEl = document.getElementById("decisionCodepModal");
+    if (codepModalEl) {
+        const codepModal    = new bootstrap.Modal(codepModalEl);
+        const commentInput  = document.getElementById("codepCommentaireInput");
+        const infoBox       = document.getElementById("decisionCodepInfo");
+        const star          = document.getElementById("codepCommentStar");
+        const fileInput     = document.getElementById("piecesJointes");
+        const fileList      = document.getElementById("codepFileList");
+        const decisionInput = document.getElementById("decisionInput");
+        const form          = codepModalEl.querySelector("form");
+        let selectedFiles   = [];
 
-            if (commentaire === "") {
-                document.getElementById("refusArticleError").style.display = "block";
-                return;
-            }
-
-            const form = document.createElement("form");
-            form.method = "POST";
-            form.action = "/demande/ligne/" + articleIdToRefuse + "/refuser";
-
-
-            const input = document.createElement("input");
-            input.type = "hidden";
-            input.name = "commentaire";
-            input.value = commentaire;
-
-            form.appendChild(input);
-            document.body.appendChild(form);
-            form.submit();
+        document.querySelectorAll('[data-bs-target="#decisionCodepModal"]').forEach(btn => {
+            btn.addEventListener("click", function () {
+                const decision = this.dataset.decision;
+                if (decisionInput) decisionInput.value = decision;
+                commentInput.value = "";
+                commentInput.classList.remove("is-invalid");
+                star.style.display = (decision === "REJECT") ? "inline" : "none";
+                infoBox.className  = "alert " + (decision === "REJECT" ? "alert-warning" : "alert-success");
+                infoBox.innerHTML  = decision === "REJECT"
+                    ? "<i class='fas fa-exclamation-triangle me-2'></i>Vous êtes sur le point de <b>rejeter</b> cette demande."
+                    : "<i class='fas fa-check-circle me-2'></i>Vous êtes sur le point de <b>valider</b> cette demande.";
+                codepModal.show();
+            });
         });
 
-    // ================= CODEP DECISION =================
-    const codepModalEl = document.getElementById("decisionCodepModal");
-
-    if (codepModalEl) {
-
-        const codepModal = new bootstrap.Modal(codepModalEl);
-
-        const commentInput = document.getElementById("codepCommentaireInput");
-        const infoBox = document.getElementById("decisionCodepInfo");
-        const star = document.getElementById("codepCommentStar");
-        const fileInput = document.getElementById("piecesJointes");
-        const fileList = document.getElementById("codepFileList");
-        const decisionInput = document.getElementById("decisionInput");
-        const form = codepModalEl.querySelector("form");
-
-        let selectedFiles = [];
-
-        // ====== RÉCUPÉRATION DU data-decision ======
-        document.querySelectorAll('[data-bs-target="#decisionCodepModal"]')
-            .forEach(btn => {
-
-                btn.addEventListener("click", function () {
-
-                    const decision = this.dataset.decision;
-
-                    if (decisionInput) {
-                        decisionInput.value = decision;
-                    }
-
-                    // Reset UI
-                    commentInput.value = "";
-                    commentInput.classList.remove("is-invalid");
-                    star.style.display = (decision === "REJECT") ? "inline" : "none";
-
-                    infoBox.className = "alert " +
-                        (decision === "REJECT" ? "alert-warning" : "alert-success");
-
-                    infoBox.innerHTML =
-                        decision === "REJECT"
-                            ? "<i class='fas fa-exclamation-triangle me-2'></i>Vous êtes sur le point de <b>rejeter</b> cette demande."
-                            : "<i class='fas fa-check-circle me-2'></i>Vous êtes sur le point de <b>valider</b> cette demande.";
-
-                    codepModal.show();
-                });
-
-            });
-
-        // ====== VALIDATION AVANT SUBMIT ======
         form.addEventListener("submit", function (e) {
-
-            const decision = decisionInput.value;
+            const decision    = decisionInput.value;
             const commentaire = (commentInput.value || "").trim();
-
             if (decision === "REJECT" && commentaire.length === 0) {
                 e.preventDefault();
                 commentInput.classList.add("is-invalid");
                 star.style.display = "inline";
-                return;
             }
         });
 
-        // ========= Gestion affichage fichiers =========
-        function renderFiles() {
+        function renderCodepFiles() {
             fileList.innerHTML = "";
-
             if (selectedFiles.length === 0) {
                 const empty = document.createElement("li");
                 empty.className = "list-group-item text-muted";
@@ -1491,79 +2248,67 @@
                 fileList.appendChild(empty);
                 return;
             }
-
             selectedFiles.forEach((file, idx) => {
                 const li = document.createElement("li");
                 li.className = "list-group-item d-flex align-items-center gap-2";
-
                 li.innerHTML = `
-                <i class="fas fa-file-alt text-gradient-blue"></i>
+                <i class="fas fa-file-alt"></i>
                 <div class="flex-grow-1">
                     <div class="fw-semibold">${file.name}</div>
                     <small class="text-muted">${(file.size / 1024).toFixed(1)} KB</small>
                 </div>
                 <button type="button" class="btn btn-outline-danger btn-sm" data-remove-index="${idx}">
                     <i class="fas fa-trash"></i>
-                </button>
-            `;
-
+                </button>`;
                 fileList.appendChild(li);
             });
         }
 
-        function syncInputFiles() {
+        function syncCodepFiles() {
             const dt = new DataTransfer();
             selectedFiles.forEach(f => dt.items.add(f));
             fileInput.files = dt.files;
         }
 
-        fileInput.addEventListener("change", function () {
-            const newFiles = Array.from(this.files || []);
-            selectedFiles = [...selectedFiles, ...newFiles];
-            syncInputFiles();
-            renderFiles();
+        fileInput?.addEventListener("change", function () {
+            selectedFiles = [...selectedFiles, ...Array.from(this.files || [])];
+            syncCodepFiles();
+            renderCodepFiles();
         });
 
-        fileList.addEventListener("click", function (e) {
+        fileList?.addEventListener("click", function (e) {
             const btn = e.target.closest("button[data-remove-index]");
             if (!btn) return;
-
-            const index = parseInt(btn.dataset.removeIndex);
-            selectedFiles.splice(index, 1);
-
-            syncInputFiles();
-            renderFiles();
+            selectedFiles.splice(parseInt(btn.dataset.removeIndex), 1);
+            syncCodepFiles();
+            renderCodepFiles();
         });
+
+        renderCodepFiles();
     }
 
-    document.getElementById('codepModal').addEventListener('show.bs.modal', function () {
-        // typeDemande
-        const typeDemandeSelect = document.querySelector('select[name="typeDemande"]');
+    // ── Modal CODEP envoi ──────────────────────────────────────────────────────
+    document.getElementById('codepModal')?.addEventListener('show.bs.modal', function () {
+        const typeDemandeSelect    = document.querySelector('select[name="typeDemande"]');
         const codepTypeDemandeInput = document.getElementById('codepTypeDemande');
-        if (typeDemandeSelect && codepTypeDemandeInput) {
+        if (typeDemandeSelect && codepTypeDemandeInput)
             codepTypeDemandeInput.value = typeDemandeSelect.value;
-        }
 
-
-        const prioriteSelect = document.querySelector('select[name="priorite"]');
+        const prioriteSelect    = document.querySelector('select[name="priorite"]');
         const codepPrioriteInput = document.getElementById('codepPriorite');
-        if (prioriteSelect && codepPrioriteInput) {
+        if (prioriteSelect && codepPrioriteInput)
             codepPrioriteInput.value = prioriteSelect.value;
-        }
     });
 
-    // ========= Aperçu pièces jointes (fiche demande) =========
+    // ── Aperçu pièces jointes ──────────────────────────────────────────────────
     (function () {
         const previewPjModal    = document.getElementById("previewPjModal");
         const previewPjFileName = document.getElementById("previewPjFileName");
         const previewPjBody     = document.getElementById("previewPjBody");
-
         if (!previewPjModal) return;
 
-        // Rattacher au body pour éviter conflits z-index
-        if (previewPjModal.parentElement !== document.body) {
+        if (previewPjModal.parentElement !== document.body)
             document.body.appendChild(previewPjModal);
-        }
 
         document.querySelectorAll(".btn-preview-pj").forEach(btn => {
             btn.addEventListener("click", function () {
@@ -1572,63 +2317,26 @@
                 const contentType = this.dataset.type;
 
                 previewPjFileName.textContent = name;
-                previewPjBody.innerHTML = `
-                <div class="text-muted py-4">
-                    <i class="fas fa-spinner fa-spin fa-2x"></i>
-                </div>`;
+                previewPjBody.innerHTML = `<div class="text-muted py-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>`;
 
                 if (contentType.startsWith("image/")) {
-                    previewPjBody.innerHTML = `
-                    <img src="${url}"
-                         class="img-fluid rounded-3"
-                         style="max-height: 80vh; width: 100%; object-fit: contain;"
-                         alt="${name}">
-                `;
+                    previewPjBody.innerHTML = `<img src="${url}" class="img-fluid rounded-3"
+                    style="max-height:80vh;width:100%;object-fit:contain;" alt="${name}">`;
                 } else if (contentType === "application/pdf") {
-                    previewPjBody.innerHTML = `
-                    <div class="text-muted py-4">
-                        <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    </div>`;
-
-                    fetch(url)
-                        .then(res => res.blob())
-                        .then(blob => {
-                            const blobUrl = URL.createObjectURL(blob);
-                            previewPjBody.innerHTML = `
-                    <iframe src="${blobUrl}"
-                            width="100%"
-                            height="750px"
-                            style="border: none; border-radius: 8px; min-height: 75vh;">
-                    </iframe>
-                    `;
-                        })
-                        .catch(() => {
-                            previewPjBody.innerHTML = `
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Impossible d'afficher ce fichier.
-                    </div>`;
-                        });
+                    fetch(url).then(r => r.blob()).then(blob => {
+                        const blobUrl = URL.createObjectURL(blob);
+                        previewPjBody.innerHTML = `<iframe src="${blobUrl}" width="100%" height="750px"
+                        style="border:none;border-radius:8px;min-height:75vh;"></iframe>`;
+                    });
                 }
 
-                // Détruire l'ancienne instance si elle existe
                 const existing = window.bootstrap.Modal.getInstance(previewPjModal);
                 if (existing) existing.dispose();
-
-                const bsModal = new window.bootstrap.Modal(previewPjModal, {
-                    backdrop: true,
-                    keyboard: true,
-                    focus: true
-                });
-
-                bsModal.show();
+                new window.bootstrap.Modal(previewPjModal, {backdrop: true, keyboard: true, focus: true}).show();
 
                 previewPjModal.addEventListener("hidden.bs.modal", () => {
-                    // Libérer le blob URL si existant
                     const iframe = previewPjBody.querySelector("iframe");
-                    if (iframe && iframe.src.startsWith("blob:")) {
-                        URL.revokeObjectURL(iframe.src);
-                    }
+                    if (iframe?.src.startsWith("blob:")) URL.revokeObjectURL(iframe.src);
                     previewPjBody.innerHTML = "";
                     document.querySelectorAll(".modal-backdrop").forEach(el => el.remove());
                     document.body.classList.remove("modal-open");
@@ -1639,92 +2347,85 @@
         });
     })();
 
-    // ========= Édition quantité inline =========
-    document.addEventListener("click", function (e) {
-
-        // --- Clic sur crayon : passer en mode édition ---
+    // ── Édition quantité inline ────────────────────────────────────────────────
+    document.addEventListener("click", async function (e) {  // ← AJOUTER "async" ici
         const btnEdit = e.target.closest(".btn-edit-qte");
         if (btnEdit) {
             const ligneId = btnEdit.dataset.id;
-            const td = document.querySelector(`td[data-ligne-id="${ligneId}"]`);
+            const td      = document.querySelector(`td[data-ligne-id="${ligneId}"]`);
             if (!td) return;
 
-            const input = td.querySelector(".qte-input");
+            const input   = td.querySelector(".qte-input");
             const btnSave = document.querySelector(`.btn-save-qte[data-id="${ligneId}"]`);
 
             td.querySelector(".qte-display").classList.add("d-none");
             input.classList.remove("d-none");
             input.focus();
-
             btnEdit.classList.add("d-none");
             btnSave.classList.remove("d-none");
             document.querySelector(`.btn-cancel-qte[data-id="${ligneId}"]`).classList.remove("d-none");
-
-            // Griser le bouton save au départ
             btnSave.disabled = true;
 
-            // Surveiller les changements
             input.oninput = function () {
-                this.value = Math.floor(this.value); // forcer entier
+                this.value = Math.floor(this.value);
                 const initial = parseFloat(this.dataset.initial);
                 const current = parseFloat(this.value);
                 btnSave.disabled = isNaN(current) || current <= 0 || current === initial;
             };
-
             return;
         }
 
-        // --- Clic sur annuler ---
         const btnCancel = e.target.closest(".btn-cancel-qte");
-        if (btnCancel) {
-            const ligneId = btnCancel.dataset.id;
-            resetLigne(ligneId);
-            return;
-        }
+        if (btnCancel) { resetLigne(btnCancel.dataset.id); return; }
 
-        // --- Clic sur confirmer ---
         const btnSave = e.target.closest(".btn-save-qte");
         if (btnSave) {
             const ligneId = btnSave.dataset.id;
-            const td = document.querySelector(`td[data-ligne-id="${ligneId}"]`);
+            const td      = document.querySelector(`td[data-ligne-id="${ligneId}"]`);
             if (!td) return;
 
-            const input = td.querySelector(".qte-input");
+            const input  = td.querySelector(".qte-input");
             const newQte = parseFloat(input.value);
+            if (isNaN(newQte) || newQte <= 0) { input.classList.add("is-invalid"); return; }
 
-            if (isNaN(newQte) || newQte <= 0) {
-                input.classList.add("is-invalid");
-                return;
-            }
+            // Vérifier si c'est une ligne STOCK (ajoutez l'attribut data-type-appro dans votre HTML)
+            const row = td.closest('tr');
+            const typeLigne = row.querySelector('[data-type-appro]')?.dataset.typeAppro;
 
-            // Appel AJAX
-            const formData = new FormData();
-            formData.append("quantite", newQte);
-            const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
-            fetch(`${CONTEXT_PATH}demande/ligne/${ligneId}/quantite`, {
-                method: "POST",
-                body: formData
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.error) {
-                        alert(data.error);
+            if (typeLigne === 'STOCK') {
+                try {
+                    // Appel API pour vérifier stock disponible
+                    const response = await fetch(`${CONTEXT_PATH}demande/ligne/${ligneId}/stock-disponible`);
+                    const stockData = await response.json();
+
+                    if (newQte > stockData.stockDisponible) {
+                        alert(`Stock insuffisant ! Stock disponible : ${stockData.stockDisponible}`);
+                        input.classList.add("is-invalid");
                         return;
                     }
+                } catch (error) {
+                    console.error("Erreur lors de la vérification du stock:", error);
+                    alert("Impossible de vérifier la disponibilité du stock");
+                    return;
+                }
+            }
 
-                    // Mise à jour du total estimé affiché
-                    const totalEl = document.getElementById('totalEstimeDisplay');
+            const formData = new FormData();
+            formData.append("quantite", newQte);
+
+            fetch(`${CONTEXT_PATH}demande/ligne/${ligneId}/quantite`, {method: "POST", body: formData})
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) { alert(data.error); return; }
+                    const totalEl = getTotalEl();
                     if (totalEl && data.totalEstime !== undefined) {
                         totalEl.textContent = new Intl.NumberFormat('fr-FR', {
                             minimumFractionDigits: 2
                         }).format(data.totalEstime);
                     }
-
                     window.location.reload();
                 })
-                .catch(() => {
-                    alert("Erreur lors de la mise à jour de la quantité.");
-                });
+                .catch(() => alert("Erreur lors de la mise à jour de la quantité."));
         }
     });
 
@@ -1735,332 +2436,174 @@
         const input = td.querySelector(".qte-input");
         input.classList.add("d-none");
         input.classList.remove("is-invalid");
-        input.oninput = null; // nettoyer le listener
-
+        input.oninput = null;
         td.querySelector(".qte-display").classList.remove("d-none");
 
         document.querySelector(`.btn-edit-qte[data-id="${ligneId}"]`).classList.remove("d-none");
-
         const btnSave = document.querySelector(`.btn-save-qte[data-id="${ligneId}"]`);
         btnSave.classList.add("d-none");
-        btnSave.disabled = false; // reset pour la prochaine fois
-
+        btnSave.disabled = false;
         document.querySelector(`.btn-cancel-qte[data-id="${ligneId}"]`).classList.add("d-none");
     }
 
-    // =========================
-    // Pièces jointes — formulaire décision
-    // =========================
+    // ── Pièces jointes décision ────────────────────────────────────────────────
     (function () {
-        const fileInput  = document.getElementById("piecesJointesDecision");
-        const fileList   = document.getElementById("fileListDecision");
-        const alertBox   = document.getElementById("fileTypeAlertDecision");
-        const alertMsg   = document.getElementById("fileTypeAlertMsgDecision");
-        const previewModal     = document.getElementById("previewFileDecisionModal");
-        const previewFileName  = document.getElementById("previewFileDecisionName");
-        const previewFileBody  = document.getElementById("previewFileDecisionBody");
+        const fileInput       = document.getElementById("piecesJointesDecision");
+        const fileList        = document.getElementById("fileListDecision");
+        const alertBox        = document.getElementById("fileTypeAlertDecision");
+        const alertMsg        = document.getElementById("fileTypeAlertMsgDecision");
+        const previewModal    = document.getElementById("previewFileDecisionModal");
+        const previewFileName = document.getElementById("previewFileDecisionName");
+        const previewFileBody = document.getElementById("previewFileDecisionBody");
 
         if (!fileInput || !fileList) return;
+        if (previewModal?.parentElement !== document.body) document.body.appendChild(previewModal);
 
-        // Déplacer le modal dans <body> pour éviter les conflits z-index
-        if (previewModal && previewModal.parentElement !== document.body) {
-            document.body.appendChild(previewModal);
-        }
-
-        const ALLOWED_TYPES = [
-            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'
-        ];
-        const TYPE_ICONS = {
-            'application/pdf': 'fa-file-pdf text-danger',
-            'image/jpeg':      'fa-file-image text-primary',
-            'image/png':       'fa-file-image text-primary',
-            'image/gif':       'fa-file-image text-primary',
-            'image/webp':      'fa-file-image text-primary',
-        };
-        const TYPE_LABELS = {
-            'application/pdf': 'PDF',
-            'image/jpeg':      'JPG',
-            'image/png':       'PNG',
-            'image/gif':       'GIF',
-            'image/webp':      'WEBP',
-        };
-
+        const ALLOWED_TYPES = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'];
+        const TYPE_ICONS  = {'application/pdf':'fa-file-pdf text-danger','image/jpeg':'fa-file-image text-primary','image/png':'fa-file-image text-primary','image/gif':'fa-file-image text-primary','image/webp':'fa-file-image text-primary'};
+        const TYPE_LABELS = {'application/pdf':'PDF','image/jpeg':'JPG','image/png':'PNG','image/gif':'GIF','image/webp':'WEBP'};
         let selectedFiles = [];
 
-        function escapeHtmlLocal(str) {
-            return String(str)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;");
-        }
-
-        function showAlert(msg) {
-            if (!alertBox || !alertMsg) return;
-            alertMsg.textContent = msg;
-            alertBox.classList.remove("d-none");
-        }
-
-        function hideAlert() {
-            if (!alertBox || !alertMsg) return;
-            alertBox.classList.add("d-none");
-            alertMsg.textContent = "";
-        }
-
-        function syncInputFiles() {
-            const dt = new DataTransfer();
-            selectedFiles.forEach(f => dt.items.add(f));
-            fileInput.files = dt.files;
-        }
+        const escHtml = str => String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+        const showAlert = msg => { if(alertBox&&alertMsg){alertMsg.textContent=msg;alertBox.classList.remove("d-none");} };
+        const hideAlert = ()  => { if(alertBox&&alertMsg){alertBox.classList.add("d-none");alertMsg.textContent="";} };
+        const syncFiles = ()  => { const dt=new DataTransfer(); selectedFiles.forEach(f=>dt.items.add(f)); fileInput.files=dt.files; };
 
         function renderFiles() {
             fileList.innerHTML = "";
-
-            if (selectedFiles.length === 0) {
-                const empty = document.createElement("li");
-                empty.className = "list-group-item text-muted small";
-                empty.innerHTML = `<i class="fas fa-circle-info me-2"></i>Aucun fichier sélectionné`;
-                fileList.appendChild(empty);
-                return;
+            if (!selectedFiles.length) {
+                const li = document.createElement("li");
+                li.className = "list-group-item text-muted small";
+                li.innerHTML = `<i class="fas fa-circle-info me-2"></i>Aucun fichier sélectionné`;
+                fileList.appendChild(li); return;
             }
-
             selectedFiles.forEach((file, idx) => {
-                const icon   = TYPE_ICONS[file.type]  || 'fa-file text-secondary';
-                const label  = TYPE_LABELS[file.type] || file.type;
-                const sizeKb = (file.size / 1024).toFixed(1);
-                const isImage = file.type.startsWith("image/");
-                const isPdf   = file.type === "application/pdf";
-
+                const icon  = TYPE_ICONS[file.type]  || 'fa-file text-secondary';
+                const label = TYPE_LABELS[file.type] || file.type;
                 const li = document.createElement("li");
                 li.className = "list-group-item d-flex align-items-center gap-2 px-0";
                 li.innerHTML = `
                 <i class="fas ${icon}"></i>
                 <div class="flex-grow-1">
-                    <div class="fw-semibold small">${escapeHtmlLocal(file.name)}
+                    <div class="fw-semibold small">${escHtml(file.name)}
                         <span class="badge bg-light text-dark border ms-1">${label}</span>
                     </div>
-                    <small class="text-muted">${sizeKb} KB</small>
+                    <small class="text-muted">${(file.size/1024).toFixed(1)} KB</small>
                 </div>
                 <div class="d-flex gap-1">
-                    ${(isImage || isPdf) ? `
-                    <button type="button"
-                            class="btn btn-outline-gradient-blue btn-sm"
-                            data-decision-preview-index="${idx}"
-                            title="Aperçu">
-                        <i class="fas fa-eye"></i>
-                    </button>` : ''}
-                    <button type="button"
-                            class="btn btn-outline-danger btn-sm"
-                            data-decision-remove-index="${idx}"
-                            title="Supprimer">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `;
+                    ${(file.type.startsWith("image/")||file.type==="application/pdf") ? `
+                    <button type="button" class="btn btn-outline-gradient-blue btn-sm"
+                            data-decision-preview-index="${idx}"><i class="fas fa-eye"></i></button>` : ''}
+                    <button type="button" class="btn btn-outline-danger btn-sm"
+                            data-decision-remove-index="${idx}"><i class="fas fa-trash"></i></button>
+                </div>`;
                 fileList.appendChild(li);
             });
         }
 
-        // Ajout de fichiers
         fileInput.addEventListener("change", () => {
             hideAlert();
             const incoming = Array.from(fileInput.files || []);
             const rejected = incoming.filter(f => !ALLOWED_TYPES.includes(f.type));
             const accepted  = incoming.filter(f =>  ALLOWED_TYPES.includes(f.type));
-
-            if (rejected.length > 0) {
-                const names = rejected.map(f => escapeHtmlLocal(f.name)).join(", ");
-                showAlert(`Fichier(s) refusé(s) — formats non autorisés (PDF et images uniquement) : ${names}`);
-                if (accepted.length === 0) {
-                    fileInput.value = "";
-                    selectedFiles = [];
-                    renderFiles();
-                    return;
-                }
-            }
-
-            // Dédoublonnage par nom + taille
-            const existingKeys = new Set(selectedFiles.map(f => `${f.name}_${f.size}`));
-            const newFiles = accepted.filter(f => !existingKeys.has(`${f.name}_${f.size}`));
-            selectedFiles = [...selectedFiles, ...newFiles];
-            syncInputFiles();
-            renderFiles();
+            if (rejected.length) showAlert(`Fichier(s) refusé(s) : ${rejected.map(f=>escHtml(f.name)).join(", ")}`);
+            const keys = new Set(selectedFiles.map(f=>`${f.name}_${f.size}`));
+            selectedFiles = [...selectedFiles, ...accepted.filter(f=>!keys.has(`${f.name}_${f.size}`))];
+            syncFiles(); renderFiles();
         });
 
-        // Suppression + Aperçu
-        fileList.addEventListener("click", (e) => {
-
-            // Suppression
+        fileList.addEventListener("click", e => {
             const btnRemove = e.target.closest("[data-decision-remove-index]");
             if (btnRemove) {
-                const idx = parseInt(btnRemove.getAttribute("data-decision-remove-index"), 10);
-                if (!Number.isNaN(idx)) {
-                    selectedFiles.splice(idx, 1);
-                    syncInputFiles();
-                    renderFiles();
-                    if (selectedFiles.length === 0) hideAlert();
-                }
-                return;
+                selectedFiles.splice(parseInt(btnRemove.getAttribute("data-decision-remove-index")),1);
+                syncFiles(); renderFiles(); if(!selectedFiles.length) hideAlert(); return;
             }
-
-            // Aperçu
             const btnPreview = e.target.closest("[data-decision-preview-index]");
             if (btnPreview && previewModal) {
-                const idx = parseInt(btnPreview.getAttribute("data-decision-preview-index"), 10);
-                if (Number.isNaN(idx)) return;
-
-                const file = selectedFiles[idx];
+                const file = selectedFiles[parseInt(btnPreview.getAttribute("data-decision-preview-index"))];
                 if (!file) return;
-
                 previewFileBody.innerHTML = `<div class="text-muted py-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>`;
                 previewFileName.textContent = file.name;
-
                 const reader = new FileReader();
-
                 if (file.type.startsWith("image/")) {
-                    reader.onload = (ev) => {
-                        previewFileBody.innerHTML = `
-                        <img src="${ev.target.result}"
-                             class="img-fluid rounded-3"
-                             style="max-height:80vh;width:100%;object-fit:contain;"
-                             alt="${escapeHtmlLocal(file.name)}">`;
-                    };
-                    reader.readAsDataURL(file);
-                } else if (file.type === "application/pdf") {
-                    reader.onload = (ev) => {
-                        previewFileBody.innerHTML = `
-                        <iframe src="${ev.target.result}"
-                                width="100%" height="750px"
-                                style="border:none;border-radius:8px;min-height:75vh;">
-                        </iframe>`;
-                    };
-                    reader.readAsDataURL(file);
+                    reader.onload = ev => { previewFileBody.innerHTML = `<img src="${ev.target.result}" class="img-fluid rounded-3" style="max-height:80vh;width:100%;object-fit:contain;">`; };
+                } else {
+                    reader.onload = ev => { previewFileBody.innerHTML = `<iframe src="${ev.target.result}" width="100%" height="750px" style="border:none;border-radius:8px;min-height:75vh;"></iframe>`; };
                 }
-
+                reader.readAsDataURL(file);
                 const existing = window.bootstrap.Modal.getInstance(previewModal);
                 if (existing) existing.dispose();
-
-                const bsModal = new window.bootstrap.Modal(previewModal, {
-                    backdrop: true, keyboard: true, focus: true
-                });
-                bsModal.show();
-
-                previewModal.addEventListener("hidden.bs.modal", () => {
-                    previewFileBody.innerHTML = "";
-                    document.querySelectorAll(".modal-backdrop").forEach(el => el.remove());
+                new window.bootstrap.Modal(previewModal,{backdrop:true,keyboard:true,focus:true}).show();
+                previewModal.addEventListener("hidden.bs.modal",()=>{
+                    previewFileBody.innerHTML="";
+                    document.querySelectorAll(".modal-backdrop").forEach(el=>el.remove());
                     document.body.classList.remove("modal-open");
                     document.body.style.removeProperty("overflow");
                     document.body.style.removeProperty("padding-right");
-                }, { once: true });
+                },{once:true});
             }
         });
-
         renderFiles();
     })();
 
-    // =========================
-    // Pièces jointes — formulaire CODEP
-    // =========================
+    // ── Pièces jointes CODEP ───────────────────────────────────────────────────
     (function () {
-        const fileInput  = document.getElementById("piecesJointesCodep");
-        const fileList   = document.getElementById("fileListCodep");
-
+        const fileInput = document.getElementById("piecesJointesCodep");
+        const fileList  = document.getElementById("fileListCodep");
         if (!fileInput || !fileList) return;
 
-        const ALLOWED_TYPES = [
-            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'
-        ];
-        const TYPE_ICONS = {
-            'application/pdf': 'fa-file-pdf text-danger',
-            'image/jpeg':      'fa-file-image text-primary',
-            'image/png':       'fa-file-image text-primary',
-            'image/gif':       'fa-file-image text-primary',
-            'image/webp':      'fa-file-image text-primary',
-        };
-        const TYPE_LABELS = {
-            'application/pdf': 'PDF',
-            'image/jpeg':      'JPG',
-            'image/png':       'PNG',
-            'image/gif':       'GIF',
-            'image/webp':      'WEBP',
-        };
-
+        const ALLOWED = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'];
+        const TYPE_ICONS  = {'application/pdf':'fa-file-pdf text-danger','image/jpeg':'fa-file-image text-primary','image/png':'fa-file-image text-primary','image/gif':'fa-file-image text-primary','image/webp':'fa-file-image text-primary'};
+        const TYPE_LABELS = {'application/pdf':'PDF','image/jpeg':'JPG','image/png':'PNG','image/gif':'GIF','image/webp':'WEBP'};
         let selectedFiles = [];
 
-        function escapeHtml(str) {
-            return String(str)
-                .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-        }
-
-        function syncInputFiles() {
-            const dt = new DataTransfer();
-            selectedFiles.forEach(f => dt.items.add(f));
-            fileInput.files = dt.files;
-        }
+        const escHtml = str => String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+        const syncFiles = () => { const dt=new DataTransfer(); selectedFiles.forEach(f=>dt.items.add(f)); fileInput.files=dt.files; };
 
         function renderFiles() {
             fileList.innerHTML = "";
-
-            if (selectedFiles.length === 0) {
-                const empty = document.createElement("li");
-                empty.className = "list-group-item text-muted small";
-                empty.innerHTML = `<i class="fas fa-circle-info me-2"></i>Aucun fichier sélectionné`;
-                fileList.appendChild(empty);
-                return;
+            if (!selectedFiles.length) {
+                const li = document.createElement("li");
+                li.className = "list-group-item text-muted small";
+                li.innerHTML = `<i class="fas fa-circle-info me-2"></i>Aucun fichier sélectionné`;
+                fileList.appendChild(li); return;
             }
-
             selectedFiles.forEach((file, idx) => {
-                const icon   = TYPE_ICONS[file.type]  || 'fa-file text-secondary';
-                const label  = TYPE_LABELS[file.type] || file.type;
-                const sizeKb = (file.size / 1024).toFixed(1);
-
+                const icon  = TYPE_ICONS[file.type]  || 'fa-file text-secondary';
+                const label = TYPE_LABELS[file.type] || file.type;
                 const li = document.createElement("li");
                 li.className = "list-group-item d-flex align-items-center gap-2 px-0";
                 li.innerHTML = `
                 <i class="fas ${icon}"></i>
                 <div class="flex-grow-1">
-                    <div class="fw-semibold small">${escapeHtml(file.name)}
+                    <div class="fw-semibold small">${escHtml(file.name)}
                         <span class="badge bg-light text-dark border ms-1">${label}</span>
                     </div>
-                    <small class="text-muted">${sizeKb} KB</small>
+                    <small class="text-muted">${(file.size/1024).toFixed(1)} KB</small>
                 </div>
-                <button type="button"
-                        class="btn btn-outline-danger btn-sm"
-                        data-codep-remove-index="${idx}"
-                        title="Supprimer">
-                    <i class="fas fa-trash"></i>
-                </button>
-            `;
+                <button type="button" class="btn btn-outline-danger btn-sm"
+                        data-codep-remove-index="${idx}"><i class="fas fa-trash"></i></button>`;
                 fileList.appendChild(li);
             });
         }
 
         fileInput.addEventListener("change", () => {
-            const incoming = Array.from(fileInput.files || []);
-            const accepted = incoming.filter(f => ALLOWED_TYPES.includes(f.type));
-            const existingKeys = new Set(selectedFiles.map(f => `${f.name}_${f.size}`));
-            const newFiles = accepted.filter(f => !existingKeys.has(`${f.name}_${f.size}`));
-            selectedFiles = [...selectedFiles, ...newFiles];
-            syncInputFiles();
-            renderFiles();
+            const keys = new Set(selectedFiles.map(f=>`${f.name}_${f.size}`));
+            selectedFiles = [...selectedFiles, ...Array.from(fileInput.files||[]).filter(f=>ALLOWED.includes(f.type)&&!keys.has(`${f.name}_${f.size}`))];
+            syncFiles(); renderFiles();
         });
 
-        fileList.addEventListener("click", (e) => {
-            const btnRemove = e.target.closest("[data-codep-remove-index]");
-            if (btnRemove) {
-                const idx = parseInt(btnRemove.getAttribute("data-codep-remove-index"), 10);
-                if (!Number.isNaN(idx)) {
-                    selectedFiles.splice(idx, 1);
-                    syncInputFiles();
-                    renderFiles();
-                }
+        fileList.addEventListener("click", e => {
+            const btn = e.target.closest("[data-codep-remove-index]");
+            if (btn) {
+                selectedFiles.splice(parseInt(btn.getAttribute("data-codep-remove-index")),1);
+                syncFiles(); renderFiles();
             }
         });
-
         renderFiles();
     })();
 
+    // ── Select2 ────────────────────────────────────────────────────────────────
     $(document).ready(function () {
         $('select[name="ligneBudgetaire"]').select2({
             placeholder: "-- Rechercher une ligne budgétaire --",
@@ -2069,6 +2612,7 @@
             language: "fr"
         });
     });
+
     /*]]>*/
 </script>
 </body>
