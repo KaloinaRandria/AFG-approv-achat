@@ -17,6 +17,7 @@ import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonFilleService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
+import afg.achat.afgApprovAchat.service.stock.LotStockService;
 import afg.achat.afgApprovAchat.service.stock.StockFilleService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
@@ -62,9 +63,7 @@ public class BonLivraisonController {
     @Autowired
     PrixArticleService prixArticleService;
     @Autowired
-    DemandeMereService demandeMereService;
-    @Autowired
-    DemandeFilleService demandeFilleService;
+    LotStockService lotStockService;
 
 
     @GetMapping("/add")
@@ -156,8 +155,14 @@ public class BonLivraisonController {
                 prixArticle.setArticle(article);
                 prixArticle.setBonLivraisonMere(bonLivraisonMere);
                 prixArticle.setPrixUnitaire(Double.parseDouble(prixUnitaires.get(i)));
-                prixArticle.setDatePrix(LocalDate.now());
+                prixArticle.setDatePrix(LocalDate.from(bonLivraisonMere.getDateReception()));
                 prixArticleService.insert(prixArticle);
+
+                double qteRecue = Double.parseDouble(qteRecues.get(i));
+                double prixUnit = Double.parseDouble(prixUnitaires.get(i));
+                if (qteRecue > 0) {
+                    lotStockService.creerLot(article, bonLivraisonMere, qteRecue, prixUnit);
+                }
             }
 
 //            Entree en Stock
