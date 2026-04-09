@@ -379,7 +379,7 @@
 
                                 <!-- LIGNES -->
                                 <tr th:each="l : ${lignes}"
-                                    th:classappend="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' table-danger opacity-75'">
+                                    th:classappend="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' table-danger opacity-75'" th:attr="data-type-appro=${l.typeApprovisionnement?.name()}">
 
                                     <!-- DESIGNATION -->
                                     <td th:text="${l.article != null ? l.article.codeArticle +' - '+ l.article.designation : '-'}"></td>
@@ -456,33 +456,35 @@
                                     <!-- ACTIONS -->
                                     <td class="text-center"
                                         th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE and
-                        l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP
-                        and (canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)}">
+            l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).DECISION_CODEP
+            and (canDecisionN1 or canDecisionMG or canDecisionControleur or canDecisionDFC or canDecisionSG or canDecisionCodep)}">
 
                                         <div class="d-flex gap-2 justify-content-center">
 
-                                            <!-- EDIT -->
-                                            <button type="button"
-                                                    class="btn btn-sm btn-outline-gradient-blue btn-edit-qte"
-                                                    th:data-id="${l.id}">
-                                                <i class="fas fa-pen"></i>
-                                            </button>
+                                            <!-- EDIT - Uniquement pour N1 et MG -->
+                                            <th:block th:if="${canDecisionN1 or canDecisionMG}">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-gradient-blue btn-edit-qte"
+                                                        th:data-id="${l.id}">
+                                                    <i class="fas fa-pen"></i>
+                                                </button>
 
-                                            <!-- SAVE -->
-                                            <button type="button"
-                                                    class="btn btn-sm btn-gradient-green btn-save-qte d-none"
-                                                    th:data-id="${l.id}">
-                                                <i class="fas fa-check"></i>
-                                            </button>
+                                                <!-- SAVE -->
+                                                <button type="button"
+                                                        class="btn btn-sm btn-gradient-green btn-save-qte d-none"
+                                                        th:data-id="${l.id}">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
 
-                                            <!-- CANCEL -->
-                                            <button type="button"
-                                                    class="btn btn-sm btn-outline-danger btn-cancel-qte d-none"
-                                                    th:data-id="${l.id}">
-                                                <i class="fas fa-times"></i>
-                                            </button>
+                                                <!-- CANCEL -->
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-danger btn-cancel-qte d-none"
+                                                        th:data-id="${l.id}">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </th:block>
 
-                                            <!-- REFUS -->
+                                            <!-- REFUS - Tout le monde peut refuser -->
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-danger btnRefuserArticle"
                                                     data-bs-toggle="modal"
@@ -552,7 +554,7 @@
                                 </thead>
                                 <tbody id="lignesBody">
                                 <tr th:each="l : ${lignes}"
-                                    th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE}">
+                                    th:if="${l.statut != T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE}" th:attr="data-type-appro=${l.typeApprovisionnement?.name()}">
 
                                     <!-- Désignation -->
                                     <td>
@@ -2346,7 +2348,7 @@
     })();
 
     // ── Édition quantité inline ────────────────────────────────────────────────
-    document.addEventListener("click", function (e) {
+    document.addEventListener("click", async function (e) {  // ← AJOUTER "async" ici
         const btnEdit = e.target.closest(".btn-edit-qte");
         if (btnEdit) {
             const ligneId = btnEdit.dataset.id;
@@ -2386,6 +2388,28 @@
             const newQte = parseFloat(input.value);
             if (isNaN(newQte) || newQte <= 0) { input.classList.add("is-invalid"); return; }
 
+            // Vérifier si c'est une ligne STOCK (ajoutez l'attribut data-type-appro dans votre HTML)
+            const row = td.closest('tr');
+            const typeLigne = row.querySelector('[data-type-appro]')?.dataset.typeAppro;
+
+            if (typeLigne === 'STOCK') {
+                try {
+                    // Appel API pour vérifier stock disponible
+                    const response = await fetch(`${CONTEXT_PATH}demande/ligne/${ligneId}/stock-disponible`);
+                    const stockData = await response.json();
+
+                    if (newQte > stockData.stockDisponible) {
+                        alert(`Stock insuffisant ! Stock disponible : ${stockData.stockDisponible}`);
+                        input.classList.add("is-invalid");
+                        return;
+                    }
+                } catch (error) {
+                    console.error("Erreur lors de la vérification du stock:", error);
+                    alert("Impossible de vérifier la disponibilité du stock");
+                    return;
+                }
+            }
+
             const formData = new FormData();
             formData.append("quantite", newQte);
 
@@ -2393,7 +2417,6 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.error) { alert(data.error); return; }
-                    // ← Correction : chercher le bon élément total
                     const totalEl = getTotalEl();
                     if (totalEl && data.totalEstime !== undefined) {
                         totalEl.textContent = new Intl.NumberFormat('fr-FR', {

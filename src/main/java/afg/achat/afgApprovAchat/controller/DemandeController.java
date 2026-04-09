@@ -586,6 +586,41 @@ public class DemandeController {
                     .body(Map.of("error", "La quantité doit être supérieure à 0"));
         }
 
+        // VÉRIFICATION STOCK POUR LES LIGNES STOCK
+        if (ligne.getTypeApprovisionnement() == DemandeFille.TypeApprovisionnement.STOCK) {
+            String codeArticle = ligne.getArticle().getCodeArticle();
+            double stockDisponible = lotStockService.getStockDisponible(codeArticle);
+
+            // Récupérer la demande mère pour connaître les autres lignes du même article
+            DemandeMere demande = ligne.getDemandeMere();
+            List<DemandeFille> autresLignesStock = demandeFilleService.getDemandeFilleByDemandeMere(demande)
+                    .stream()
+                    .filter(l -> l.getId() != ligneId)  // Exclure la ligne en cours
+                    .filter(l -> l.getTypeApprovisionnement() == DemandeFille.TypeApprovisionnement.STOCK)
+                    .filter(l -> l.getArticle().getCodeArticle().equals(codeArticle))
+                    .toList();
+
+            // Calculer la quantité totale déjà réservée par d'autres lignes stock du même article
+            double totalReserveAutres = autresLignesStock.stream()
+                    .mapToDouble(DemandeFille::getQuantite)
+                    .sum();
+
+            // Stock réellement disponible pour CETTE ligne
+            double stockReelDisponible = stockDisponible - totalReserveAutres;
+
+            if (quantite > stockReelDisponible) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", String.format(
+                                "Stock insuffisant pour l'article %s - %s. " +
+                                        "Stock disponible : %.2f, Demandé : %.2f",
+                                ligne.getArticle().getCodeArticle(),
+                                ligne.getArticle().getDesignation(),
+                                stockReelDisponible,
+                                quantite
+                        )));
+            }
+        }
+
         // Garder l'ancienne quantité pour l'historique
         double ancienneQuantite = ligne.getQuantite();
 
@@ -596,8 +631,8 @@ public class DemandeController {
         // Recalculer le total de la demande mère
         DemandeMere demande = ligne.getDemandeMere();
         List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
-        // APRÈS — utilise prixUnitaire de DemandeFille + met à jour totalEstime
-// Recalcul du montantEstime de la ligne modifiée
+
+        // Recalcul du montantEstime de la ligne modifiée
         if (ligne.getPrixUnitaire() != null && ligne.getPrixUnitaire() > 0) {
             ligne.setMontantEstime(quantite * ligne.getPrixUnitaire());
         } else {
@@ -605,11 +640,10 @@ public class DemandeController {
         }
         demandeFilleService.saveDemandeFille(ligne);
 
-// Recalcul du totalEstime sur la demande mère
+        // Recalcul du totalEstime sur la demande mère
         double newTotalEstime = lignes.stream()
                 .filter(l -> l.getPrixUnitaire() != null && l.getPrixUnitaire() > 0)
                 .mapToDouble(l -> {
-                    // Pour la ligne qu'on vient de modifier, utiliser la nouvelle quantité
                     double qte = (l.getId() == ligneId) ? quantite : l.getQuantite();
                     return qte * l.getPrixUnitaire();
                 })
@@ -618,9 +652,9 @@ public class DemandeController {
         demande.setTotalEstime(newTotalEstime > 0 ? newTotalEstime : null);
         demandeMereService.saveDemandeMere(demande);
 
-        //Historique de la modification
-        String designation  = ligne.getArticle() != null ? ligne.getArticle().getDesignation()  : "Article inconnu";
-        String codeArticle  = ligne.getArticle() != null ? ligne.getArticle().getCodeArticle()  : "N/A";
+        // Historique de la modification
+        String designation = ligne.getArticle() != null ? ligne.getArticle().getDesignation() : "Article inconnu";
+        String codeArticle = ligne.getArticle() != null ? ligne.getArticle().getCodeArticle() : "N/A";
 
         ValidationDemande historique = new ValidationDemande();
         historique.setDemandeMere(demande);
@@ -1746,6 +1780,40 @@ public class DemandeController {
 
         demandeMereService.recalculerTotal(ligneOriginale.getDemandeMere());
         return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    @GetMapping("/ligne/{ligneId}/stock-disponible")
+    @ResponseBody
+    public ResponseEntity<?> getStockDisponiblePourLigne(@PathVariable Integer ligneId) {
+        DemandeFille ligne = demandeFilleService.getDemandeFilleById(ligneId);
+        if (ligne == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (ligne.getTypeApprovisionnement() != DemandeFille.TypeApprovisionnement.STOCK) {
+            return ResponseEntity.ok(Map.of("stockDisponible", Double.MAX_VALUE));
+        }
+
+        String codeArticle = ligne.getArticle().getCodeArticle();
+        double stockPhysique = lotStockService.getStockDisponible(codeArticle);
+
+        // Récupérer toutes les lignes stock du même article dans la même demande
+        DemandeMere demande = ligne.getDemandeMere();
+        double totalReserveAutres = demandeFilleService.getDemandeFilleByDemandeMere(demande)
+                .stream()
+                .filter(l -> l.getId() != ligneId)
+                .filter(l -> l.getTypeApprovisionnement() == DemandeFille.TypeApprovisionnement.STOCK)
+                .filter(l -> l.getArticle().getCodeArticle().equals(codeArticle))
+                .mapToDouble(DemandeFille::getQuantite)
+                .sum();
+
+        double stockDisponible = Math.max(0, stockPhysique - totalReserveAutres);
+
+        return ResponseEntity.ok(Map.of(
+                "stockDisponible", stockDisponible,
+                "stockPhysique", stockPhysique,
+                "totalReserveAutres", totalReserveAutres
+        ));
     }
 
 }
