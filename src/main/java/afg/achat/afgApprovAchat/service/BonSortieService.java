@@ -13,6 +13,7 @@ import afg.achat.afgApprovAchat.repository.stock.StockFilleRepo;
 import afg.achat.afgApprovAchat.repository.stock.StockMereRepo;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
+import afg.achat.afgApprovAchat.service.stock.LotStockService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class BonSortieService {
     private final DemandeMereService demandeMereService;
     private final StockFilleRepo stockFilleRepo;
     private final StockMereRepo stockMereRepo;
+    private final LotStockService lotStockService;
 
     // ── Création d'un BS en brouillon ───────────────────────────────────────
     public BonSortieMere creerBrouillon(DemandeMere demande, Utilisateur mg) {
@@ -110,6 +112,19 @@ public class BonSortieService {
 
             sf.setSortie(String.valueOf(sf.getSortie() + ligne.getQuantiteSortie()));
             stockFilleRepo.save(sf);
+
+            try {
+                lotStockService.consommerStock(
+                        ligne.getArticle().getCodeArticle(),
+                        ligne.getQuantiteSortie()
+                );
+            } catch (IllegalStateException e) {
+                throw new IllegalStateException(
+                        "Stock FIFO insuffisant pour l'article "
+                                + ligne.getArticle().getDesignation()
+                                + " : " + e.getMessage()
+                );
+            }
         }
 
         // 3. Passer le BS en CONFIRME

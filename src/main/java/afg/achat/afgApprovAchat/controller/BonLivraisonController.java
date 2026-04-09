@@ -157,6 +157,12 @@ public class BonLivraisonController {
                 prixArticle.setPrixUnitaire(Double.parseDouble(prixUnitaires.get(i)));
                 prixArticle.setDatePrix(LocalDate.from(bonLivraisonMere.getDateReception()));
                 prixArticleService.insert(prixArticle);
+
+                double qteRecue = Double.parseDouble(qteRecues.get(i));
+                double prixUnit = Double.parseDouble(prixUnitaires.get(i));
+                if (qteRecue > 0) {
+                    lotStockService.creerLot(article, bonLivraisonMere, qteRecue, prixUnit);
+                }
             }
 
 //            Entree en Stock

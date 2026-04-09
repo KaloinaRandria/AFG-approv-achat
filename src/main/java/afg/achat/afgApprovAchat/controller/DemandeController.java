@@ -17,6 +17,7 @@ import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.BonSortieService;
 import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
+import afg.achat.afgApprovAchat.service.stock.LotStockService;
 import afg.achat.afgApprovAchat.service.util.CommentaireFinanceService;
 import afg.achat.afgApprovAchat.service.util.PrixArticleService;
 import jakarta.servlet.http.HttpSession;
@@ -86,6 +87,8 @@ public class DemandeController {
     BonSortieService bonSortieService;
     @Autowired
     private StockFilleRepo stockFilleRepo;
+    @Autowired
+    LotStockService lotStockService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
@@ -1643,11 +1646,9 @@ public class DemandeController {
             @PathVariable String codeArticle,
             @RequestParam(required = false) String demandeId) {
 
-        // Stock physique = SUM(entree) - SUM(sortie) sur toutes les StockFille
-        double stockPhysique = stockFilleRepo.getStockDisponible(codeArticle);
+        // Utiliser LotStock au lieu de StockFille
+        double stockPhysique = lotStockService.getStockDisponible(codeArticle);
 
-        // Déduire les quantités déjà réservées par des lignes STOCK
-        // dans CETTE demande (scission en cours)
         double quantiteReservee = 0;
         if (demandeId != null && !demandeId.isBlank()) {
             Double reserved = demandeFilleService
@@ -1657,20 +1658,30 @@ public class DemandeController {
 
         double stockDisponible = Math.max(0, stockPhysique - quantiteReservee);
 
-        double dernierPrix = prixArticleService
-                .getDernierPrixByArticle(codeArticle)
-                .map(PrixArticle::getPrixUnitaire)
-                .orElse(0.0);
+        // Prix FIFO : prix du premier lot disponible
+        double prixFifo = 0;
+        try {
+            if (stockDisponible > 0) {
+                prixFifo = lotStockService.getPrixFifo(codeArticle, 1);
+            }
+        } catch (Exception e) {
+            // Fallback sur le dernier prix connu
+            prixFifo = prixArticleService
+                    .getDernierPrixByArticle(codeArticle)
+                    .map(PrixArticle::getPrixUnitaire)
+                    .orElse(0.0);
+        }
 
-        System.out.println(">>> [STOCK] code=" + codeArticle
+        System.out.println(">>> [STOCK FIFO] code=" + codeArticle
                 + " | stockPhysique=" + stockPhysique
                 + " | reserved=" + quantiteReservee
-                + " | disponible=" + stockDisponible);
+                + " | disponible=" + stockDisponible
+                + " | prixFifo=" + prixFifo);
 
         return ResponseEntity.ok(Map.of(
-                "stockDisponible",   stockDisponible,
-                "quantiteReservee",  quantiteReservee,
-                "dernierPrix",       dernierPrix
+                "stockDisponible",  stockDisponible,
+                "quantiteReservee", quantiteReservee,
+                "dernierPrix",      prixFifo
         ));
     }
 
@@ -1701,36 +1712,39 @@ public class DemandeController {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Quantité stock invalide."));
 
-        // Cas où tout est couvert par le stock → simple conversion, pas de scission
+        double prixFifo;
+        try {
+            prixFifo = lotStockService.getPrixFifo(
+                    ligneOriginale.getArticle().getCodeArticle(), qteStock
+            );
+        } catch (Exception e) {
+            prixFifo = dto.getPrixStock(); // fallback sur le prix envoyé par le JS
+        }
+
+        // Cas conversion totale
         if (qteStock == qteTotale) {
             ligneOriginale.setTypeApprovisionnement(DemandeFille.TypeApprovisionnement.STOCK);
-            ligneOriginale.setPrixUnitaire(dto.getPrixStock());
+            ligneOriginale.setPrixUnitaire(prixFifo);
             demandeFilleService.saveDemandeFille(ligneOriginale);
             demandeMereService.recalculerTotal(ligneOriginale.getDemandeMere());
             return ResponseEntity.ok(Map.of("ok", true));
         }
 
-        // Scission normale (qteStock < qteTotale)
-        // 1. Modifier la ligne originale → devient la ligne ACHAT
+        // Scission normale
         ligneOriginale.setQuantite(String.valueOf(qteAchat));
-        ligneOriginale.setTypeApprovisionnement(
-                DemandeFille.TypeApprovisionnement.ACHAT);
+        ligneOriginale.setTypeApprovisionnement(DemandeFille.TypeApprovisionnement.ACHAT);
         demandeFilleService.saveDemandeFille(ligneOriginale);
 
-        // 2. Créer la nouvelle ligne STOCK
         DemandeFille ligneStock = new DemandeFille();
         ligneStock.setDemandeMere(ligneOriginale.getDemandeMere());
         ligneStock.setArticle(ligneOriginale.getArticle());
         ligneStock.setQuantite(String.valueOf(qteStock));
-        ligneStock.setPrixUnitaire(dto.getPrixStock());
+        ligneStock.setPrixUnitaire(prixFifo);
         ligneStock.setStatut(ligneOriginale.getStatut());
-        ligneStock.setTypeApprovisionnement(
-                DemandeFille.TypeApprovisionnement.STOCK);
+        ligneStock.setTypeApprovisionnement(DemandeFille.TypeApprovisionnement.STOCK);
         demandeFilleService.saveDemandeFille(ligneStock);
 
-        // 3. Recalcul total estimé
         demandeMereService.recalculerTotal(ligneOriginale.getDemandeMere());
-
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
