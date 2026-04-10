@@ -714,7 +714,7 @@
                                              th:if="${commentaireFinance.commentateur != null}"
                                              th:text="${commentaireFinance.commentateur.prenom + ' ' + commentaireFinance.commentateur.nom}">
                                         </div>
-                                        <div th:text="${commentaireFinance.commentaire}"></div>
+                                        <div th:text="${commentaireFinance.commentaire}" style="white-space: pre-wrap;"></div>
                                     </div>
                                 </div>
                             </div>

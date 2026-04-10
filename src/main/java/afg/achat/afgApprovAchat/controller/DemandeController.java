@@ -310,12 +310,21 @@ public class DemandeController {
 
         boolean isBackofficeValidator = isAdmin || isMG || isControleur || isDFC;
 
-        // ── 2. Visibilité hiérarchique ───────────────────────────────────────────
+        // ── 2. Visibilité hiérarchique + validateurs assignés ───────────────────
         List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
-        boolean hasChildren = visibleIds.size() > 1;
+
+        //Récupérer les IDs des utilisateurs que current doit valider
+        List<Integer> idsAValider = utilisateurService.getIdsUtilisateursAValider(current.getId());
+
+        //Fusionner les deux listes
+        Set<Integer> allVisibleIdsSet = new HashSet<>(visibleIds);
+        allVisibleIdsSet.addAll(idsAValider);
+        List<Integer> allVisibleIds = new ArrayList<>(allVisibleIdsSet);
+
+        boolean hasChildren = allVisibleIds.size() > 1;
 
         // Scope (filtre portée pour les managers non-backoffice)
-        List<Integer> idsToUse = resolveScope(scope, current, visibleIds, isAdmin || isMG || isControleur);
+        List<Integer> idsToUse = resolveScope(scope, current, allVisibleIds, isAdmin || isMG || isControleur);
 
         // ── 3. Statuts autorisés selon le rôle ──────────────────────────────────
         Integer statutFilter = (statut == null || statut == 0) ? null : statut;
@@ -335,17 +344,16 @@ public class DemandeController {
 
         } else if (isMG || isControleur || isDFC || isSG) {
             // Backoffice : statuts autorisés globalement
-            // + ses propres demandes (tous statuts) via UNION SQL → 1 requête
             demandesMeres = demandeMereService.searchDemandesBackoffice(
                     num, demandeur, type,
                     statutsAutorises, statutFilter,
                     priorite, dateFrom, dateTo,
-                    visibleIds,
+                    allVisibleIds,  //Utiliser la liste complète
                     page, size, sort, dir
             );
 
         } else {
-            // Utilisateur simple : seulement ses demandes visibles
+            // Utilisateur simple : ses demandes + demandes à valider
             demandesMeres = demandeMereService.searchDemandesVisibleParUtilisateur(
                     num, demandeur, type, statutFilter, priorite,
                     dateFrom, dateTo,
@@ -360,8 +368,11 @@ public class DemandeController {
                 isBackofficeValidator, hasChildren,
                 isMG, isControleur, isDFC, isSG, isAdmin);
 
-        // Dans populateModel(), ajouter :
+        // Ajouter des attributs pour l'interface
+        model.addAttribute("nbUtilisateursAValider", idsAValider.size());
+        model.addAttribute("hasDemandesAValider", !idsAValider.isEmpty());
         model.addAttribute("StatutValide", StatutDemande.VALIDE);
+
         return "demande/demande-liste";
     }
 
@@ -706,23 +717,34 @@ public class DemandeController {
 
         boolean isAdminOrSpecial = isAdmin || isMG || isControleur || isDFC || isSG;
 
-
         DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
         if (demande == null) {
             redirectAttributes.addFlashAttribute("ko", "Demande introuvable : " + id);
             return "redirect:/demande/list";
         }
-        Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
 
+        Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
+        Utilisateur demandeur = demande.getDemandeur();
+
+        // Récupérer tous les IDs visibles (hiérarchie + validateurs assignés)
         List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
+        List<Integer> idsAValider = utilisateurService.getIdsUtilisateursAValider(current.getId());
+
+        // Fusionner les deux listes pour l'accès
+        Set<Integer> allAccessibleIds = new HashSet<>(visibleIds);
+        allAccessibleIds.addAll(idsAValider);
+
+        // Vérifier si l'utilisateur est validateur assigné pour ce demandeur
+        boolean estValidateurAssigne = demandeur != null && idsAValider.contains(demandeur.getId());
+
         if (!isAdminOrSpecial) {
-            if (demandeurId == null || !visibleIds.contains(demandeurId)) {
+            if (demandeurId == null || !allAccessibleIds.contains(demandeurId)) {
                 redirectAttributes.addFlashAttribute("ko", "Accès refusé à cette demande.");
                 return "redirect:/demande/list";
             }
         }
 
-        // Enfants directs (sans moi)
+        // Enfants directs (sans moi) - pour la hiérarchie
         List<Integer> childrenIds = visibleIds.stream()
                 .filter(x -> !x.equals(current.getId()))
                 .toList();
@@ -730,16 +752,51 @@ public class DemandeController {
         // N+1 du demandeur = la demande appartient à un de mes enfants
         boolean isViewerNplus1OfDemandeur = (demandeurId != null) && childrenIds.contains(demandeurId);
 
-        // Droits de décision par niveau
-        boolean canDecisionN1 = isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.CREE;
+        // Droits de décision par niveau - MODIFIÉ pour inclure les validateurs assignés
+        boolean canDecisionN1 = demande.getStatut() == StatutDemande.CREE
+                && (isViewerNplus1OfDemandeur || estValidateurAssigne);
+
         boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
         boolean canDecisionControleur = isControleur && demande.getStatut() == StatutDemande.VALIDATION_N2;
         boolean canDecisionDFC = isDFC && demande.getStatut() == StatutDemande.VALIDATION_N3;
-        boolean canDecisionSG   = isSG  && demande.getStatut() == StatutDemande.VALIDATION_N4;
+        boolean canDecisionSG = isSG && demande.getStatut() == StatutDemande.VALIDATION_N4;
         boolean isCodepWorkflow = Boolean.TRUE.equals(demande.getViaCodep());
         boolean canDecisionCodep = isMG && demande.getStatut() == StatutDemande.DECISION_CODEP;
 
         boolean isValidatedCodep = demande.getStatut() == StatutDemande.VALIDE && demande.getDecisionViaCodep(isCodepWorkflow);
+
+        // Message spécifique pour les validateurs assignés
+        String statutHint = null;
+
+        if (estValidateurAssigne && demande.getStatut() == StatutDemande.CREE) {
+            statutHint = "Vous êtes validateur assigné pour cette demande. Action requise.";
+        } else if (isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.VALIDATION_N1) {
+            statutHint = "Vous avez validé — en attente de traitement par les Moyens Généraux.";
+        } else if (isMG) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N1) {
+                statutHint = "Demande en attente de votre validation (Moyens Généraux).";
+            } else if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
+                statutHint = "Vous avez validé — en attente de traitement par le contrôleur de gestion.";
+            }
+        } else if (isControleur) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
+                statutHint = "Demande en attente de votre validation (contrôleur de gestion).";
+            } else if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
+                statutHint = "Vous avez validé — en attente de validation finale (D.F.C.).";
+            }
+        } else if (isDFC) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
+                statutHint = "Demande en attente de votre validation (D.F.C.).";
+            } else if (demande.getStatut() == StatutDemande.VALIDATION_N4) {
+                statutHint = "Vous avez validé — en attente de validation finale (S.G.).";
+            }
+        } else if (isSG) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N4) {
+                statutHint = "Demande en attente de votre validation finale (S.G.).";
+            } else if (demande.getStatut() == StatutDemande.VALIDE) {
+                statutHint = "Demande finalisée.";
+            }
+        }
 
         // Lignes
         List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
@@ -830,50 +887,6 @@ public class DemandeController {
 
 
 
-        // statutHint (UI) : message adapté au viewer
-        String statutHint = null;
-
-        // N+1 a validé (donc la demande est passée à N1)
-        if (isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.VALIDATION_N1) {
-            statutHint = "Vous avez validé — en attente de traitement par les Moyens Généraux.";
-        }
-
-        // MG : soit en attente de MG (N1), soit déjà traité par MG (N2)
-        if (isMG) {
-            if (demande.getStatut() == StatutDemande.VALIDATION_N1) {
-                statutHint = "Demande en attente de votre validation (Moyens Généraux).";
-            } else if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
-                statutHint = "Vous avez validé — en attente de traitement par le contrôleur de gestion.";
-            }
-        }
-
-
-        if (isControleur) {
-            if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
-                statutHint = "Demande en attente de votre validation (contrôleur de gestion).";
-            } else if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
-                statutHint = "Vous avez validé — en attente de validation finale (D.F.C.).";
-            }
-        }
-
-
-        if (isDFC) {
-            if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
-                statutHint = "Demande en attente de votre validation (D.F.C.).";
-            } else if (demande.getStatut() == StatutDemande.VALIDATION_N4) {
-                statutHint = "Vous avez validé — en attente de validation finale (S.G.).";
-            }
-        }
-
-
-        if (isSG) {
-            if (demande.getStatut() == StatutDemande.VALIDATION_N4) {
-                statutHint = "Demande en attente de votre validation finale (S.G.).";
-            } else if (demande.getStatut() == StatutDemande.VALIDE) {
-                statutHint = "Demande finalisée.";
-            }
-        }
-
         List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
         List<CodepPieceJointe> codepPiecesJointes = codepPieceJointeService.listByDemandeId(demande.getId());
         CommentaireFinance commentaireFinance = commentaireFinanceService.getCommentaireFinanceByIdDemande(demande); // ← AJOUTER
@@ -944,6 +957,9 @@ public class DemandeController {
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("ligneBudgetaires", ligneBudgetaires);
         model.addAttribute("commentaireFinance", commentaireFinance);
+
+        model.addAttribute("estValidateurAssigne", estValidateurAssigne);
+        model.addAttribute("isViewerNplus1OfDemandeur", isViewerNplus1OfDemandeur);
 
         // ── Bon de sortie ────────────────────────────────────────────────────────
         boolean canCreateBS = demande.getStatut() == StatutDemande.VALIDE
@@ -1039,9 +1055,20 @@ public class DemandeController {
                 .toList();
 
         // Autorisations par niveau
-        boolean canDecisionN1 = demandeurId != null
-                && childrenIds.contains(demandeurId)
-                && demande.getStatut() == StatutDemande.CREE;
+        boolean canDecisionN1 = false;
+        if (demandeurId != null && demande.getStatut() == StatutDemande.CREE) {
+            Utilisateur demandeur = utilisateurService.getUtilisateurById(demandeurId);
+            if (demandeur != null) {
+                // Vérifier si le current user est N+1
+                boolean estNPlusUn = childrenIds.contains(demandeurId);
+
+                // Vérifier si le current user est dans les validateurs assignés
+                boolean estValidateurAssigné = demandeur.getValidateurs().stream()
+                        .anyMatch(v -> v.getId() == current.getId());
+
+                canDecisionN1 = estNPlusUn || estValidateurAssigné;
+            }
+        }
 
         boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
         boolean canDecisionControleur = isControleur && demande.getStatut() == StatutDemande.VALIDATION_N2;

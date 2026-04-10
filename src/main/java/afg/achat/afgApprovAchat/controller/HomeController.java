@@ -23,10 +23,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import javax.naming.NamingException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -80,8 +77,21 @@ public class HomeController {
 
         boolean isAdminOrSpecial = isAdmin || isMG || isControleur || isDFC || isSG;
 
-        // ── 1. Récupération du périmètre visible ────────────────────────
+        // ── 1. Récupération du périmètre visible (hiérarchie + validateurs) ─
         List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
+
+        // Récupérer les IDs des utilisateurs que current doit valider
+        List<Integer> idsAValider = utilisateurService.getIdsUtilisateursAValider(current.getId());
+
+        // Fusionner les deux périmètres
+        Set<Integer> allAccessibleIds = new HashSet<>(visibleIds);
+        allAccessibleIds.addAll(idsAValider);
+        List<Integer> finalVisibleIds = new ArrayList<>(allAccessibleIds);
+
+        // Séparer les enfants hiérarchiques des utilisateurs à valider
+        List<Integer> childrenIds = visibleIds.stream()
+                .filter(x -> !x.equals(current.getId()))
+                .toList();
 
         // ── 2. Récupération de TOUTES les demandes selon le rôle ────────
         DemandeMere[] toutes;
@@ -90,7 +100,7 @@ public class HomeController {
         } else {
             toutes = Arrays.stream(demandeMereService.getAllDemandesMeres())
                     .filter(d -> d.getDemandeur() != null
-                            && visibleIds.contains(d.getDemandeur().getId()))
+                            && finalVisibleIds.contains(d.getDemandeur().getId()))
                     .toArray(DemandeMere[]::new);
         }
 
@@ -134,7 +144,7 @@ public class HomeController {
         for (DemandeMere d : toutes) {
             if (d.getDateDemande() == null) continue;
             int annee = d.getDateDemande().getYear();
-            int mois  = d.getDateDemande().getMonthValue(); // 1-based
+            int mois  = d.getDateDemande().getMonthValue();
             String key = annee + "-" + String.format("%02d", mois);
             parMois.computeIfAbsent(key, k -> new long[3]);
 
@@ -147,12 +157,11 @@ public class HomeController {
             }
         }
 
-// Construire la liste triée
         List<Map<String, Object>> moisData = parMois.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .map(e -> {
                     Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("mois",      e.getKey());          // "2025-01"
+                    m.put("mois",      e.getKey());
                     m.put("enCours",   e.getValue()[0]);
                     m.put("refusees",  e.getValue()[1]);
                     m.put("terminees", e.getValue()[2]);
@@ -161,7 +170,6 @@ public class HomeController {
                 .collect(Collectors.toList());
 
         model.addAttribute("moisData", moisData);
-
 
         // ── 6. Nature OPEX / CAPEX ───────────────────────────────────────
         long opex = Arrays.stream(toutes)
@@ -205,8 +213,42 @@ public class HomeController {
         model.addAttribute("attenteSG",    attenteSG);
         model.addAttribute("attenteCodep", attenteCodep);
 
+        // 9. Demandes spécifiques à l'utilisateur courant ─────────────────
+        // Demandes que je dois valider (en tant que validateur assigné ou N+1)
+        long mesDemandesAValider = Arrays.stream(toutes)
+                .filter(d -> d.getStatut() == StatutDemande.CREE)
+                .filter(d -> {
+                    if (d.getDemandeur() == null) return false;
+                    Integer demandeurId = d.getDemandeur().getId();
+                    // Vérifier si je suis N+1 ou validateur assigné
+                    return childrenIds.contains(demandeurId) || idsAValider.contains(demandeurId);
+                })
+                .count();
 
-        // ── 9. Infos contextuelles ───────────────────────────────────────
+        // Demandes que je dois valider en tant que validateur assigné uniquement
+        long demandesValidateurAssigné = Arrays.stream(toutes)
+                .filter(d -> d.getStatut() == StatutDemande.CREE)
+                .filter(d -> d.getDemandeur() != null && idsAValider.contains(d.getDemandeur().getId()))
+                .filter(d -> !childrenIds.contains(d.getDemandeur().getId())) // Exclure ceux déjà N+1
+                .count();
+
+        // Demandes de mes subordonnés hiérarchiques (N+1)
+        long demandesNPlusUn = Arrays.stream(toutes)
+                .filter(d -> d.getStatut() == StatutDemande.CREE)
+                .filter(d -> d.getDemandeur() != null && childrenIds.contains(d.getDemandeur().getId()))
+                .count();
+
+        model.addAttribute("mesDemandesAValider", mesDemandesAValider);
+        model.addAttribute("demandesValidateurAssigné", demandesValidateurAssigné);
+        model.addAttribute("demandesNPlusUn", demandesNPlusUn);
+        model.addAttribute("nbUtilisateursAValider", idsAValider.size());
+        model.addAttribute("nbSubordonnes", childrenIds.size());
+
+        // 10. Indicateur si l'utilisateur a des demandes à valider ─────────
+        boolean hasDemandesAValider = mesDemandesAValider > 0;
+        model.addAttribute("hasDemandesAValider", hasDemandesAValider);
+
+        // ── 11. Infos contextuelles ───────────────────────────────────────
         model.addAttribute("dateFrom",        dateFrom);
         model.addAttribute("dateTo",          dateTo);
         model.addAttribute("currentUser",     current);
