@@ -20,4 +20,11 @@ public interface UtilisateurRepo extends JpaRepository<Utilisateur,Integer> {
 
     @Query("SELECT u FROM Utilisateur u JOIN u.roles r WHERE r.role = :roleLibelle")
     List<Utilisateur> findByRoleLibelle(@Param("roleLibelle") String roleLibelle);
+
+
+    @Query("SELECT u FROM Utilisateur u JOIN u.validateurs v WHERE v.id = :validateurId")
+    List<Utilisateur> findUtilisateursAValiderByValidateurId(@Param("validateurId") Integer validateurId);
+
+    @Query("SELECT u.id FROM Utilisateur u JOIN u.validateurs v WHERE v.id = :validateurId")
+    List<Integer> findIdsUtilisateursAValiderByValidateurId(@Param("validateurId") Integer validateurId);
 }
