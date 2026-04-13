@@ -13,8 +13,8 @@ public class GlobalModelAttribute {
         String uri = request.getRequestURI();
         String contextPath = request.getContextPath();
         String cleanUri = uri.substring(contextPath.length());
-        System.out.println("=== Context PATH: " + contextPath);
-        System.out.println("=== Current URI: " + cleanUri);
+//        System.out.println("=== Context PATH: " + contextPath);
+//        System.out.println("=== Current URI: " + cleanUri);
 
         model.addAttribute("currentUri", cleanUri);
     }
