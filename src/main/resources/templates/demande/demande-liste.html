@@ -210,6 +210,7 @@
                             <th th:if="${showDemandeurColumn}">
                                 <i class="far fa-user me-2 icon-gradient-light-blue"></i>Demandeur
                             </th>
+                            <th>Motif évoqué</th>
                             <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"><i class="fas fa-tags me-2 icon-gradient-light-blue"></i>Type de demande</th>
                             <th>Priorité</th>
                             <th>Statut</th>
@@ -245,6 +246,10 @@
                                 <span th:if="${demande.demandeur == null}">-</span>
                             </td>
 
+                            <td th:text="${#strings.length(demande.motifEvoque) > 30
+                            ? #strings.substring(demande.motifEvoque, 0, 30) + '...'
+                            : demande.motifEvoque}">
+                            </td>
 
                             <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
                                 class="td-nature-demande"
