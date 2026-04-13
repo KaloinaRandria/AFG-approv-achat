@@ -1686,18 +1686,29 @@
                          style="display:none !important"></div>
                 </div>
 
+                <!-- Prix stock (auto BL ou saisie manuelle si introuvable) -->
                 <div class="mb-3">
                     <label class="form-label fw-bold">
-                        Prix stock (auto — dernier BL)
+                        Prix stock (dernier BL)
                     </label>
+
+                    <!-- Alerte visible uniquement si prix = 0 -->
+                    <div class="alert alert-warning py-2 px-3 mb-2 d-none" id="scinderPrixManquantAlert">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Aucun bon de livraison trouvé pour cet article.
+                        <strong>Saisissez le prix stock manuellement.</strong>
+                    </div>
+
                     <div class="input-group">
                         <input type="number"
                                id="scinderPrixStock"
                                class="form-control"
+                               min="1" step="1"
                                readonly/>
                         <span class="input-group-text">Ar</span>
                     </div>
-                    <small class="text-muted">
+
+                    <small class="text-muted" id="scinderPrixHint">
                         <i class="fas fa-magic me-1"></i>
                         Pré-rempli automatiquement depuis le dernier bon de livraison.
                     </small>
@@ -1828,12 +1839,36 @@
                     .then(r => r.json())
                     .then(data => {
                         currentPrixStock = data.dernierPrix ?? 0;
-                        document.getElementById('scinderPrixStock').value = currentPrixStock;
+                        const prixInput  = document.getElementById('scinderPrixStock');
+                        const alertEl    = document.getElementById('scinderPrixManquantAlert');
+                        const hintEl     = document.getElementById('scinderPrixHint');
+
+                        if (currentPrixStock <= 0) {
+                            // Prix introuvable → rendre éditable + afficher alerte
+                            prixInput.removeAttribute('readonly');
+                            prixInput.value       = '';
+                            prixInput.placeholder = 'Saisir le prix';
+                            prixInput.style.borderColor = '#dc3545';
+                            alertEl.classList.remove('d-none');
+                            hintEl.classList.add('d-none');
+
+                            // Mettre à jour currentPrixStock en temps réel
+                            prixInput.addEventListener('input', function () {
+                                currentPrixStock = parseFloat(this.value) || 0;
+                                recalculerResume();
+                            });
+                        } else {
+                            // Prix trouvé → lecture seule comme avant
+                            prixInput.setAttribute('readonly', true);
+                            prixInput.value = currentPrixStock;
+                            prixInput.style.borderColor = '';
+                            alertEl.classList.add('d-none');
+                            hintEl.classList.remove('d-none');
+                        }
 
                         const stockDispo = data.stockDisponible ?? 0;
                         document.getElementById('scinderStockDispo').textContent = `Dispo: ${stockDispo}`;
-                        document.getElementById('scinderQteStock').max =
-                            Math.min(stockDispo, currentQteTotale);
+                        document.getElementById('scinderQteStock').max = Math.min(stockDispo, currentQteTotale);
 
                         recalculerResume();
                     })
@@ -1883,6 +1918,14 @@
                 if (qteStock > currentQteTotale) {
                     errEl.textContent   = `La quantité stock (${qteStock}) ne peut pas dépasser la quantité totale (${currentQteTotale}).`;
                     errEl.style.display = 'block';
+                    return;
+                }
+                // Bloquer si prix stock = 0 (article du stock initial sans prix)
+                if (currentPrixStock <= 0) {
+                    const errEl = document.getElementById('scinderQteError');
+                    errEl.textContent   = 'Le prix stock est requis. Veuillez saisir un prix avant de confirmer.';
+                    errEl.style.display = 'block';
+                    document.getElementById('scinderPrixStock').focus();
                     return;
                 }
 

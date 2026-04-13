@@ -27,7 +27,7 @@ public class LotStock {
     private Article article;
 
     @ManyToOne
-    @JoinColumn(name = "id_bon_livraison")
+    @JoinColumn(name = "id_bon_livraison", nullable = true)
     private BonLivraisonMere bonLivraison;
 
     @Column(name = "quantite_initiale", nullable = false)
@@ -41,6 +41,8 @@ public class LotStock {
 
     @Column(name = "date_entree", nullable = false)
     private LocalDateTime dateEntree;
+
+    Boolean estStockInitial;
 
     // Constructeur utilitaire
     public static LotStock creer(Article article, BonLivraisonMere bl,
