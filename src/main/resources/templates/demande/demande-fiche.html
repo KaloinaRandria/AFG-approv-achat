@@ -1600,49 +1600,53 @@
                 </h5>
             </div>
 
-            <div class="modal-body">
+            <!--Form Thymeleaf : CSRF injecté automatiquement -->
+            <form id="refusArticleForm" th:action="@{/demande/ligne/0/refuser}" method="post">
 
-                <div class="alert alert-info mb-3" id="refusArticleInfo">
-                    <!-- rempli dynamiquement -->
+                <div class="modal-body">
+
+                    <div class="alert alert-info mb-3" id="refusArticleInfo"></div>
+
+                    <label class="form-label fw-bold">
+                        Commentaire <span class="text-danger">*</span>
+                    </label>
+
+                    <textarea class="form-control"
+                              id="refusArticleCommentaire"
+                              name="commentaire"
+                              rows="3"
+                              placeholder="Ajoutez un commentaire..."></textarea>
+
+                    <div class="invalid-feedback d-block"
+                         id="refusArticleError"
+                         style="display:none">
+                        Le commentaire est obligatoire pour refuser cet article.
+                    </div>
+
+                    <div class="text-muted small mt-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Le commentaire est obligatoire pour confirmer le refus.
+                    </div>
+
                 </div>
 
-                <label class="form-label fw-bold">
-                    Commentaire <span class="text-danger">*</span>
-                </label>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Annuler
+                    </button>
 
-                <textarea class="form-control"
-                          id="refusArticleCommentaire"
-                          rows="3"
-                          placeholder="Ajoutez un commentaire..."></textarea>
-
-                <div class="invalid-feedback d-block"
-                     id="refusArticleError"
-                     style="display:none">
-                    Le commentaire est obligatoire pour refuser cet article.
+                    <button type="submit"
+                            class="btn btn-gradient-green"
+                            id="btnConfirmRefusArticle">
+                        <i class="fas fa-paper-plane me-1"></i>
+                        Confirmer
+                    </button>
                 </div>
 
-                <div class="text-muted small mt-2">
-                    <i class="fas fa-info-circle me-1"></i>
-                    Le commentaire est obligatoire pour confirmer le refus.
-                </div>
-
-            </div>
-
-            <div class="modal-footer">
-                <button type="button"
-                        class="btn btn-outline-secondary"
-                        data-bs-dismiss="modal">
-                    <i class="fas fa-arrow-left me-1"></i>
-                    Annuler
-                </button>
-
-                <button type="button"
-                        class="btn btn-gradient-green"
-                        id="btnConfirmRefusArticle">
-                    <i class="fas fa-paper-plane me-1"></i>
-                    Confirmer
-                </button>
-            </div>
+            </form>
 
         </div>
     </div>
@@ -2169,36 +2173,32 @@
     });
 
     // ── Refus article ──────────────────────────────────────────────────────────
-    let articleIdToRefuse = null;
-    const refusArticleModal = new bootstrap.Modal(document.getElementById('refusArticleModal'));
-
     document.querySelectorAll(".btnRefuserArticle").forEach(btn => {
         btn.addEventListener("click", function () {
-            articleIdToRefuse = this.dataset.id;
+            const id          = this.dataset.id;
+            const code        = this.dataset.codearticle;
+            const designation = this.dataset.designation;
+
+            // Met à jour l'action du formulaire avec le bon ID de ligne
+            document.getElementById("refusArticleForm").action = "/demande/ligne/" + id + "/refuser";
+
+            // Affiche les infos de l'article dans le modal
             document.getElementById("refusArticleInfo").innerHTML =
-                "<strong>Article :</strong> " + this.dataset.codearticle + ' - ' + this.dataset.designation;
+                "<strong>Article :</strong> " + code + " - " + designation;
+
+            // Réinitialise le formulaire
             document.getElementById("refusArticleCommentaire").value = "";
             document.getElementById("refusArticleError").style.display = "none";
-            refusArticleModal.show();
         });
     });
 
-    document.getElementById("btnConfirmRefusArticle")?.addEventListener("click", function () {
+    // Validation avant soumission
+    document.getElementById("refusArticleForm")?.addEventListener("submit", function (e) {
         const commentaire = document.getElementById("refusArticleCommentaire").value.trim();
         if (commentaire === "") {
+            e.preventDefault();
             document.getElementById("refusArticleError").style.display = "block";
-            return;
         }
-        const form  = document.createElement("form");
-        form.method = "POST";
-        form.action = "/demande/ligne/" + articleIdToRefuse + "/refuser";
-        const input  = document.createElement("input");
-        input.type   = "hidden";
-        input.name   = "commentaire";
-        input.value  = commentaire;
-        form.appendChild(input);
-        document.body.appendChild(form);
-        form.submit();
     });
 
     // ── CODEP decision ─────────────────────────────────────────────────────────

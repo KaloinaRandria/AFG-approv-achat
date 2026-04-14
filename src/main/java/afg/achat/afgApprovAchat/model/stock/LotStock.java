@@ -42,7 +42,6 @@ public class LotStock {
     @Column(name = "date_entree", nullable = false)
     private LocalDateTime dateEntree;
 
-    // Constructeur utilitaire
     public static LotStock creer(Article article, BonLivraisonMere bl,
                                  double quantite, double prix) {
         LotStock lot = new LotStock();
