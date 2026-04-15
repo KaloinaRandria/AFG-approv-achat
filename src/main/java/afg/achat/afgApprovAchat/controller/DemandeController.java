@@ -1165,9 +1165,12 @@ public class DemandeController {
                 validationDemandeService.logValidation(demande, current, cmt, etape);
                 List<Utilisateur> mgs = utilisateurService.getUtilisateursByRole("MOYENS_GENERAUX");
                 System.out.println("Nombre de MG trouvés : " + mgs.size());
+                //Mail demandeur : une seule fois, sans prochainValidateur
+                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N1);
+
+                //Mail MGs : une fois par MG, sans re-notifier le demandeur
                 for (Utilisateur mg : mgs) {
-                    System.out.println("Envoi mail à MG : " + mg.getMail());
-                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N1, mg);
+                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N1, mg);
                 }
 
                 redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
@@ -1316,8 +1319,12 @@ public class DemandeController {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
                 List<Utilisateur> controleurs = utilisateurService.getUtilisateursByRole("CONTROLEUR");
+                // Mail demandeur : une seule fois, sans prochainValidateur
+                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N2);
+
+                // Mail controleurs : une fois par MG, sans re-notifier le demandeur
                 for (Utilisateur controleur : controleurs) {
-                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N2, controleur);
+                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N2, controleur);
                 }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
                 return "redirect:/demande/fiche/" + id;
@@ -1362,8 +1369,12 @@ public class DemandeController {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
                 List<Utilisateur> dfcs = utilisateurService.getUtilisateursByRole("DFC");
+                // Mail demandeur : une seule fois, sans prochainValidateur
+                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N3);
+
+                // Mail controleurs : une fois par MG, sans re-notifier le demandeur
                 for (Utilisateur dfc : dfcs) {
-                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N3, dfc);
+                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N3, dfc);
                 }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le contrôleur de gestion (N3).");
                 return "redirect:/demande/fiche/" + id;
@@ -1389,8 +1400,12 @@ public class DemandeController {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N4);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
                 List<Utilisateur> sgs = utilisateurService.getUtilisateursByRole("SG");
+// Mail demandeur : une seule fois, sans prochainValidateur
+                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N4);
+
+                // Mail controleurs : une fois par MG, sans re-notifier le demandeur
                 for (Utilisateur sg : sgs) {
-                    ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N4, sg);
+                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N4, sg);
                 }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par la D.F.C., transmise au S.G.");
                 return "redirect:/demande/fiche/" + id;
@@ -1413,7 +1428,10 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
-                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDE, null);
+
+                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDE);
+
+                ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDE, null);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
