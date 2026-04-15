@@ -142,4 +142,60 @@ public class EmailSenderService {
             ));
         }
     }
+
+    // Mail unique au demandeur
+    public void envoyerMailDemandeur(DemandeMere demande,
+                                     Utilisateur validateur,
+                                     String commentaire,
+                                     int etapeCourante,
+                                     int prochaineEtape) {
+        String dateDecision = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+
+        Map<String, Object> props = new HashMap<>();
+        props.put("id",             demande.getId());
+        props.put("demandeur",      demande.getDemandeur());
+        props.put("validateur",     validateur);
+        props.put("commentaire",    commentaire);
+        props.put("dateDecision",   dateDecision);
+        props.put("etape",          StatutDemande.getLibelle(etapeCourante));
+        props.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
+
+        this.sendEmail(new Mail(
+                "demandeValid",
+                demande.getDemandeur().getMail(),
+                "[AFG Bank - Demande Achat] - Votre demande a été validée",
+                props
+        ));
+    }
+
+    // Mail individuel au validateur suivant (pas de mail demandeur)
+    public void envoyerMailValidateur(DemandeMere demande,
+                                      Utilisateur validateur,
+                                      int etapeCourante,
+                                      int prochaineEtape,
+                                      Utilisateur prochainValidateur) {
+        if (prochainValidateur == null || prochainValidateur.getMail() == null) return;
+
+        String dateDecision = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
+
+        Map<String, Object> props = new HashMap<>();
+        props.put("id",             demande.getId());
+        props.put("demandeur",      demande.getDemandeur());
+        props.put("validateur",     validateur);
+        props.put("destinataire",   prochainValidateur);
+        props.put("dateDecision",   dateDecision);
+        props.put("etape",          StatutDemande.getLibelle(etapeCourante));
+        props.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
+        props.put("lienValidation", baseUrl + "/demande/fiche/" + demande.getId());
+
+        this.sendEmail(new Mail(
+                "notificationValidateur",
+                prochainValidateur.getMail(),
+                "[AFG Bank - Demande Achat] - Demande en attente de votre validation",
+                props
+        ));
+    }
 }
