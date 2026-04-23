@@ -40,6 +40,7 @@ public class DemandeMereService {
                                             String type,
                                             Integer statut,
                                             String priorite,
+                                            String motif,
                                             LocalDate dateFrom,
                                             LocalDate dateTo,
                                             int page,
@@ -61,8 +62,9 @@ public class DemandeMereService {
         // null = tous
         Integer st = (statut == null || statut == 0) ? null : statut;
         String p = (priorite == null) ? "" : priorite.trim();
+        String m = (motif == null) ? "" : motif.trim();
 
-        return demandeMereRepo.searchMulti(n, d, t, st ,p ,from, to, pageable);
+        return demandeMereRepo.searchMulti(n, d, t, st ,p,m ,from, to, pageable);
     }
 
 
@@ -101,6 +103,7 @@ public class DemandeMereService {
                                                                  String type,
                                                                  Integer statut,
                                                                  String priorite,
+                                                                 String motif,
                                                                  LocalDate dateFrom,
                                                                  LocalDate dateTo,
                                                                  List<Integer> demandeurIds,
@@ -122,8 +125,9 @@ public class DemandeMereService {
 
         Integer st = (statut == null || statut == 0) ? null : statut;
         String p = (priorite == null) ? "" : priorite.trim();
+        String m = (motif == null) ? "" : motif.trim();
 
-        return demandeMereRepo.searchMultiByDemandeurIds(n, d, t, st, p, from, to, demandeurIds, pageable);
+        return demandeMereRepo.searchMultiByDemandeurIds(n, d, t, st, p,m, from, to, demandeurIds, pageable);
     }
 
     @Transactional
@@ -283,7 +287,7 @@ public class DemandeMereService {
     public Page<DemandeMere> searchDemandesBackoffice(
             String num, String demandeur, String type,
             List<Integer> statutsAutorises, Integer statutFilter,
-            String priorite, LocalDate dateFrom, LocalDate dateTo,
+            String priorite, String motif,LocalDate dateFrom, LocalDate dateTo,
             List<Integer> myVisibleIds,
             int page, int size, String sort, String dir) {
 
@@ -301,6 +305,7 @@ public class DemandeMereService {
         return demandeMereRepo.searchBackoffice(
                 clean(num), clean(demandeur), clean(type),
                 clean(priorite),
+                clean(motif),
                 roleStatuts,
                 myStatutFilter,
                 myVisibleIds.isEmpty() ? List.of(-1) : myVisibleIds,

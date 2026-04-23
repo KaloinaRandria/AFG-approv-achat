@@ -95,6 +95,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
       and (:statut is null or dm.statut = :statut)
       
       and (:priorite = '' or lower(coalesce(dm.priorite, '')) = lower(:priorite))
+      and (:motif = '' or lower(coalesce(dm.motifEvoque, '')) like lower(concat('%', :motif, '%')))
 """)
     Page<DemandeMere> searchMulti(
             @Param("num") String num,
@@ -102,6 +103,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
             @Param("type") String type,
             @Param("statut") Integer statut,
             @Param("priorite") String priorite,
+            @Param("motif") String motif,
             @Param("dateFrom") LocalDateTime dateFrom,
             @Param("dateTo") LocalDateTime dateTo,
             Pageable pageable
@@ -127,6 +129,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
 
       and (:statut is null or dm.statut = :statut)
       and (:priorite = '' or lower(coalesce(dm.priorite, '')) = lower(:priorite))
+      and (:motif = '' or lower(coalesce(dm.motifEvoque, '')) like lower(concat('%', :motif, '%')))
 """)
     Page<DemandeMere> searchMultiByDemandeurIds(
             @Param("num") String num,
@@ -134,6 +137,7 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
             @Param("type") String type,
             @Param("statut") Integer statut,
             @Param("priorite") String priorite,
+            @Param("motif") String motif,
             @Param("dateFrom") LocalDateTime dateFrom,
             @Param("dateTo") LocalDateTime dateTo,
             @Param("demandeurIds") List<Integer> demandeurIds,
@@ -217,12 +221,14 @@ public interface DemandeMereRepo extends JpaRepository<DemandeMere, String> {
             or
             (dmd.id in :myVisibleIds and (:myStatut is null or dm.statut = :myStatut))
       )
+      and (:motif = '' or lower(coalesce(dm.motifEvoque, '')) like lower(concat('%', :motif, '%')))
 """)
     Page<DemandeMere> searchBackoffice(
             @Param("num")          String num,
             @Param("demandeur")    String demandeur,
             @Param("type")         String type,
             @Param("priorite")     String priorite,
+            @Param("motif")        String motif,
             @Param("roleStatuts")  List<Integer> roleStatuts,
             @Param("myStatut")     Integer myStatut,
             @Param("myVisibleIds") List<Integer> myVisibleIds,

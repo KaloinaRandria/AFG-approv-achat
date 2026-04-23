@@ -290,6 +290,7 @@ public class DemandeController {
                                   @RequestParam(defaultValue = "desc") String dir,
                                   @RequestParam(required = false) Integer statut,
                                   @RequestParam(required = false) String priorite,
+                                  @RequestParam(required = false) String motif,
                                   @RequestParam(required = false) String num,
                                   @RequestParam(required = false) String demandeur,
                                   @RequestParam(required = false) String type,
@@ -338,7 +339,7 @@ public class DemandeController {
         if (isAdmin) {
             // Admin : voit tout, pagination native
             demandesMeres = demandeMereService.searchDemandes(
-                    num, demandeur, type, statutFilter, priorite,
+                    num, demandeur, type, statutFilter, priorite, motif,
                     dateFrom, dateTo, page, size, sort, dir
             );
 
@@ -347,7 +348,7 @@ public class DemandeController {
             demandesMeres = demandeMereService.searchDemandesBackoffice(
                     num, demandeur, type,
                     statutsAutorises, statutFilter,
-                    priorite, dateFrom, dateTo,
+                    priorite,motif, dateFrom, dateTo,
                     allVisibleIds,  //Utiliser la liste complète
                     page, size, sort, dir
             );
@@ -355,7 +356,7 @@ public class DemandeController {
         } else {
             // Utilisateur simple : ses demandes + demandes à valider
             demandesMeres = demandeMereService.searchDemandesVisibleParUtilisateur(
-                    num, demandeur, type, statutFilter, priorite,
+                    num, demandeur, type, statutFilter, priorite, motif,
                     dateFrom, dateTo,
                     idsToUse.isEmpty() ? List.of(-1) : idsToUse,
                     page, size, sort, dir
@@ -367,6 +368,8 @@ public class DemandeController {
                 type, dateFrom, dateTo, scope, size, sort, dir,
                 isBackofficeValidator, hasChildren,
                 isMG, isControleur, isDFC, isSG, isAdmin);
+
+        model.addAttribute("motif", motif);
 
         // Ajouter des attributs pour l'interface
         model.addAttribute("nbUtilisateursAValider", idsAValider.size());
