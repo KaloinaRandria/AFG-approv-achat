@@ -2232,7 +2232,7 @@
             const designation = this.dataset.designation;
 
             // Met à jour l'action du formulaire avec le bon ID de ligne
-            document.getElementById("refusArticleForm").action = "/demande/ligne/" + id + "/refuser";
+            document.getElementById("refusArticleForm").action = `${CONTEXT_PATH}demande/ligne/${id}/refuser`;
 
             // Affiche les infos de l'article dans le modal
             document.getElementById("refusArticleInfo").innerHTML =
