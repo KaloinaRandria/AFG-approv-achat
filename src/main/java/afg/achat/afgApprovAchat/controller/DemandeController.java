@@ -236,7 +236,7 @@ public class DemandeController {
                     "[AFG Bank - Demande Achat] - Demande N°" + demandeMere.getId() + " en cours de validation",
                     propsDemandeur
             );
-            ess.sendEmail(mail);
+//            ess.sendEmail(mail);
 
 // ── Mail 2 : notification au N+1 pour validation ────────────────────────
             Utilisateur superieur = demandeMere.getDemandeur().getSuperieurHierarchique();
@@ -264,7 +264,7 @@ public class DemandeController {
                         "[AFG Bank - Demande Achat] - Action requise : Validation de la demande N°" + demandeMere.getId(),
                         propsSup
                 );
-                ess.sendEmail(mailSup);
+//                ess.sendEmail(mailSup);
             }
 
 
@@ -1134,7 +1134,7 @@ public class DemandeController {
                     "[AFG/MADA] - Votre demande a été refusée",
                     props
             );
-            ess.sendEmail(mail);
+//            ess.sendEmail(mail);
 
             redirectAttributes.addFlashAttribute("ok", "Demande rejetée.");
             return "redirect:/demande/fiche/" + id;
@@ -1166,12 +1166,12 @@ public class DemandeController {
                 List<Utilisateur> mgs = utilisateurService.getUtilisateursByRole("MOYENS_GENERAUX");
                 System.out.println("Nombre de MG trouvés : " + mgs.size());
                 //Mail demandeur : une seule fois, sans prochainValidateur
-                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N1);
+//                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N1);
 
                 //Mail MGs : une fois par MG, sans re-notifier le demandeur
-                for (Utilisateur mg : mgs) {
-                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N1, mg);
-                }
+//                for (Utilisateur mg : mgs) {
+//                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N1, mg);
+//                }
 
                 redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
                 return "redirect:/demande/fiche/" + id;
@@ -1320,12 +1320,12 @@ public class DemandeController {
                 validationDemandeService.logValidation(demande, current, cmt , etape);
                 List<Utilisateur> controleurs = utilisateurService.getUtilisateursByRole("CONTROLEUR");
                 // Mail demandeur : une seule fois, sans prochainValidateur
-                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N2);
+//                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N2);
 
                 // Mail controleurs : une fois par MG, sans re-notifier le demandeur
-                for (Utilisateur controleur : controleurs) {
-                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N2, controleur);
-                }
+//                for (Utilisateur controleur : controleurs) {
+//                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N2, controleur);
+//                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1370,12 +1370,12 @@ public class DemandeController {
                 validationDemandeService.logValidation(demande, current, cmt , etape);
                 List<Utilisateur> dfcs = utilisateurService.getUtilisateursByRole("DFC");
                 // Mail demandeur : une seule fois, sans prochainValidateur
-                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N3);
+//                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N3);
 
                 // Mail controleurs : une fois par MG, sans re-notifier le demandeur
-                for (Utilisateur dfc : dfcs) {
-                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N3, dfc);
-                }
+//                for (Utilisateur dfc : dfcs) {
+//                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N3, dfc);
+//                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le contrôleur de gestion (N3).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1401,12 +1401,12 @@ public class DemandeController {
                 validationDemandeService.logValidation(demande, current, cmt, etape);
                 List<Utilisateur> sgs = utilisateurService.getUtilisateursByRole("SG");
 // Mail demandeur : une seule fois, sans prochainValidateur
-                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N4);
+//                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N4);
 
                 // Mail controleurs : une fois par MG, sans re-notifier le demandeur
-                for (Utilisateur sg : sgs) {
-                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N4, sg);
-                }
+//                for (Utilisateur sg : sgs) {
+//                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N4, sg);
+//                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par la D.F.C., transmise au S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1429,9 +1429,9 @@ public class DemandeController {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
 
-                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDE);
+//                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDE);
 
-                ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDE, null);
+//                ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDE, null);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1715,6 +1715,108 @@ public class DemandeController {
             nomsAjoutes.add(f.getOriginalFilename()); // ← collecte le nom original
         }
         return nomsAjoutes;
+    }
+
+    @PostMapping("/fiche/{id}/pieces-jointes-mg")
+    @ResponseBody
+    public ResponseEntity<?> savePiecesJointesMG(
+            @PathVariable("id") String id,
+            @RequestParam("piecesJointes") MultipartFile[] piecesJointes,
+            HttpServletRequest request) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        boolean isMG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        if (!isMG && !isAdmin) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Accès refusé."));
+        }
+
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Demande introuvable."));
+        }
+
+        if (demande.getStatut() != StatutDemande.VALIDATION_N1) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "L'ajout de pièces jointes n'est autorisé qu'à l'étape Validation MG."));
+        }
+
+        if (piecesJointes == null || piecesJointes.length == 0) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Aucun fichier reçu."));
+        }
+
+        List<String> nomsSauvegardes = new ArrayList<>();
+        List<String> erreurs = new ArrayList<>();
+
+        //APRÈS — logAction une seule fois après la boucle
+        for (MultipartFile f : piecesJointes) {
+            if (f == null || f.isEmpty()) continue;
+
+            String contentType = f.getContentType();
+            if (contentType == null ||
+                    (!contentType.startsWith("image/") && !contentType.equals("application/pdf"))) {
+                erreurs.add("Format refusé : " + f.getOriginalFilename() + " (PDF et images uniquement).");
+                continue;
+            }
+
+            String safeDate = LocalDateTime.now()
+                    .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String ref = "PJ_MG"
+                    + "_" + demande.getId()
+                    + "_" + demande.getDemandeur().getNom()
+                    + "_" + demande.getDemandeur().getPrenom()
+                    + "_" + safeDate;
+
+            String storedName = storageService.store(f, ref);
+
+            DemandePieceJointe pj = new DemandePieceJointe();
+            pj.setDemande(demande);
+            pj.setOriginalName(f.getOriginalFilename());
+            pj.setStoredName(storedName);
+            pj.setContentType(contentType);
+            pj.setSize(f.getSize());
+            pj.setUploadedAt(LocalDateTime.now());
+
+            demandePieceJointeService.insert(pj);
+            nomsSauvegardes.add(f.getOriginalFilename()); // ← collecte seulement
+        }
+
+//Une seule entrée d'historique pour tous les fichiers
+        if (!nomsSauvegardes.isEmpty()) {
+            String listePj = nomsSauvegardes.stream()
+                    .map(n -> "• " + n)
+                    .collect(Collectors.joining("\n"));
+
+            ValidationDemande histo = new ValidationDemande();
+            histo.setDemandeMere(demande);
+            histo.setValidateur(current);
+            histo.setEtape(demande.getStatut());
+            histo.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+            histo.setCommentaire(nomsSauvegardes.size() + " pièce(s) jointe(s) MG ajoutée(s) :\n" + listePj);
+            histo.setDateAction(String.valueOf(LocalDateTime.now()));
+            validationDemandeService.logAction(histo);
+        }
+
+        if (!erreurs.isEmpty() && nomsSauvegardes.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", String.join(", ", erreurs)));
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("ok", true);
+        result.put("sauvegardes", nomsSauvegardes);
+        if (!erreurs.isEmpty()) result.put("warnings", erreurs);
+
+        return ResponseEntity.ok(result);
     }
 
 

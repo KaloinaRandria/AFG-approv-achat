@@ -722,10 +722,10 @@
 
                         <!-- ACTIONS -->
                         <div class="p-3">
-                            <div th:if="${canDecisionMG}" class="mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div th:if="${canDecisionMG}" class="mb-3">
 
-                                <!-- Bouton + statut -->
-                                <div class="d-flex align-items-center gap-2">
+                                <!-- Ligne des boutons -->
+                                <div class="d-flex align-items-center gap-2 mb-2">
                                     <button type="button"
                                             id="btnSavePrix"
                                             class="btn btn-gradient-blue btn-sm px-3">
@@ -733,7 +733,47 @@
                                         <span class="btn-text">Enregistrer le prix</span>
                                     </button>
                                     <span id="prixSaveStatus" class="small"></span>
+
+                                    <button type="button"
+                                            id="btnSavePjMg"
+                                            class="btn btn-gradient-blue btn-sm px-3"
+                                            disabled>
+                                        <i class="fas fa-paperclip me-1"></i>
+                                        <span class="btn-text">Enregistrer les PJ</span>
+                                    </button>
+                                    <span id="pjMgStatus" class="small"></span>
                                 </div>
+
+                                <!-- Zone upload -->
+                                <div class="file-upload-card border rounded-4 p-3 text-center position-relative">
+                                    <input type="file"
+                                           class="file-upload-input"
+                                           id="pjMgInput"
+                                           name="piecesJointesMg"
+                                           multiple
+                                           accept="image/jpeg,image/png,image/gif,image/webp,application/pdf">
+                                    <div class="file-upload-content">
+                                        <div class="mb-1">
+                                            <i class="fas fa-paperclip fa-xl text-gradient-blue"></i>
+                                        </div>
+                                        <p class="mb-1 fw-semibold small">Glissez-déposez vos pièces jointes MG</p>
+                                        <p class="text-muted mb-2 small">ou cliquez pour sélectionner</p>
+                                        <span class="badge bg-light text-dark border">PDF · Images (JPG, PNG, GIF, WEBP)</span>
+                                    </div>
+                                </div>
+
+                                <!-- Alerte format invalide -->
+                                <div id="pjMgAlert" class="alert alert-danger mt-2 d-none" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <span id="pjMgAlertMsg"></span>
+                                </div>
+
+                                <!-- Liste fichiers sélectionnés -->
+                                <ul id="pjMgList" class="list-group list-group-flush mt-2"></ul>
+
+                                <!-- Liste fichiers confirmés après save -->
+                                <ul id="pjMgSavedList" class="list-group list-group-flush mt-1"></ul>
+
                             </div>
 
                             <div th:if="${(canDecisionN1 ?: false)
@@ -860,7 +900,7 @@
                                     </div>
 
                                     <!-- ================= PIECES JOINTES ================= -->
-                                    <div class="mb-3" th:if="${!canDecisionCodep}">
+                                    <div class="mb-3" th:if="${!canDecisionCodep and !canDecisionMG}">
                                         <label class="form-label mb-1">
                                             <i class="fas fa-paperclip me-1"></i>
                                             Pièces jointes
@@ -909,6 +949,18 @@
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <div class="modal-body text-center p-3" id="previewFileDecisionBody"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="modal fade" id="previewFileMgModal" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-lg-down">
+                                            <div class="modal-content rounded-4">
+                                                <div class="modal-header border-0">
+                                                    <h6 class="modal-title fw-bold" id="previewFileMgName"></h6>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body text-center p-3" id="previewFileMgBody"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -2600,6 +2652,257 @@
                 syncFiles(); renderFiles();
             }
         });
+        renderFiles();
+    })();
+
+    // ── Pièces jointes MG (upload séparé AJAX) ───────────────────────────────────
+    (function () {
+        const fileInput       = document.getElementById("pjMgInput");
+        const fileList        = document.getElementById("pjMgList");
+        const alertBox        = document.getElementById("pjMgAlert");
+        const alertMsg        = document.getElementById("pjMgAlertMsg");
+        const btnSave         = document.getElementById("btnSavePjMg");
+        const statusEl        = document.getElementById("pjMgStatus");
+        const savedList       = document.getElementById("pjMgSavedList");
+
+        // Modal preview — réutilise le modal décision existant ou en crée un dédié
+        const previewModal    = document.getElementById("previewFileMgModal");
+        const previewFileName = document.getElementById("previewFileMgName");
+        const previewFileBody = document.getElementById("previewFileMgBody");
+
+        if (!fileInput || !fileList) return;
+        if (previewModal?.parentElement !== document.body) document.body.appendChild(previewModal);
+
+        const ALLOWED_TYPES = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'];
+        const TYPE_ICONS  = {
+            'application/pdf' : 'fa-file-pdf text-danger',
+            'image/jpeg'      : 'fa-file-image text-primary',
+            'image/png'       : 'fa-file-image text-primary',
+            'image/gif'       : 'fa-file-image text-primary',
+            'image/webp'      : 'fa-file-image text-primary'
+        };
+        const TYPE_LABELS = {
+            'application/pdf' : 'PDF',
+            'image/jpeg'      : 'JPG',
+            'image/png'       : 'PNG',
+            'image/gif'       : 'GIF',
+            'image/webp'      : 'WEBP'
+        };
+
+        let selectedFiles = [];
+
+        const escHtml = str => String(str)
+            .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+            .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+        const showAlert = msg => {
+            if (alertBox && alertMsg) {
+                alertMsg.textContent = msg;
+                alertBox.classList.remove("d-none");
+            }
+        };
+        const hideAlert = () => {
+            if (alertBox && alertMsg) {
+                alertBox.classList.add("d-none");
+                alertMsg.textContent = "";
+            }
+        };
+        const syncFiles = () => {
+            const dt = new DataTransfer();
+            selectedFiles.forEach(f => dt.items.add(f));
+            fileInput.files = dt.files;
+        };
+        const refreshBtn = () => {
+            if (btnSave) btnSave.disabled = selectedFiles.length === 0;
+        };
+
+        function renderFiles() {
+            fileList.innerHTML = "";
+
+            if (!selectedFiles.length) {
+                const li = document.createElement("li");
+                li.className = "list-group-item text-muted small";
+                li.innerHTML = `<i class="fas fa-circle-info me-2"></i>Aucun fichier sélectionné`;
+                fileList.appendChild(li);
+                refreshBtn();
+                return;
+            }
+
+            selectedFiles.forEach((file, idx) => {
+                const icon  = TYPE_ICONS[file.type]  || 'fa-file text-secondary';
+                const label = TYPE_LABELS[file.type] || file.type;
+                const li = document.createElement("li");
+                li.className = "list-group-item d-flex align-items-center gap-2 px-0";
+                li.innerHTML = `
+                <i class="fas ${icon}"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold small">${escHtml(file.name)}
+                        <span class="badge bg-light text-dark border ms-1">${label}</span>
+                    </div>
+                    <small class="text-muted">${(file.size / 1024).toFixed(1)} KB</small>
+                </div>
+                <div class="d-flex gap-1">
+                    ${(file.type.startsWith("image/") || file.type === "application/pdf") ? `
+                    <button type="button" class="btn btn-outline-gradient-blue btn-sm"
+                            data-mg-preview-index="${idx}">
+                        <i class="fas fa-eye"></i>
+                    </button>` : ''}
+                    <button type="button" class="btn btn-outline-danger btn-sm"
+                            data-mg-remove-index="${idx}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>`;
+                fileList.appendChild(li);
+            });
+
+            refreshBtn();
+        }
+
+        // ── Sélection fichiers ────────────────────────────────────────────────────
+        fileInput.addEventListener("change", () => {
+            hideAlert();
+            const incoming = Array.from(fileInput.files || []);
+            const rejected = incoming.filter(f => !ALLOWED_TYPES.includes(f.type));
+            const accepted = incoming.filter(f =>  ALLOWED_TYPES.includes(f.type));
+
+            if (rejected.length) {
+                showAlert(`Fichier(s) refusé(s) : ${rejected.map(f => escHtml(f.name)).join(", ")}`);
+            }
+
+            // Dédoublonnage par nom + taille
+            const keys = new Set(selectedFiles.map(f => `${f.name}_${f.size}`));
+            selectedFiles = [
+                ...selectedFiles,
+                ...accepted.filter(f => !keys.has(`${f.name}_${f.size}`))
+            ];
+            syncFiles();
+            renderFiles();
+        });
+
+        // ── Clics liste (remove + preview) ───────────────────────────────────────
+        fileList.addEventListener("click", e => {
+            // Remove
+            const btnRemove = e.target.closest("[data-mg-remove-index]");
+            if (btnRemove) {
+                selectedFiles.splice(parseInt(btnRemove.getAttribute("data-mg-remove-index")), 1);
+                syncFiles();
+                renderFiles();
+                if (!selectedFiles.length) hideAlert();
+                return;
+            }
+
+            // Preview
+            const btnPreview = e.target.closest("[data-mg-preview-index]");
+            if (btnPreview && previewModal) {
+                const file = selectedFiles[parseInt(btnPreview.getAttribute("data-mg-preview-index"))];
+                if (!file) return;
+
+                previewFileBody.innerHTML = `
+                <div class="text-muted py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                </div>`;
+                previewFileName.textContent = file.name;
+
+                const reader = new FileReader();
+                if (file.type.startsWith("image/")) {
+                    reader.onload = ev => {
+                        previewFileBody.innerHTML = `
+                        <img src="${ev.target.result}"
+                             class="img-fluid rounded-3"
+                             style="max-height:80vh;width:100%;object-fit:contain;">`;
+                    };
+                } else {
+                    reader.onload = ev => {
+                        previewFileBody.innerHTML = `
+                        <iframe src="${ev.target.result}"
+                                width="100%" height="750px"
+                                style="border:none;border-radius:8px;min-height:75vh;">
+                        </iframe>`;
+                    };
+                }
+                reader.readAsDataURL(file);
+
+                const existing = window.bootstrap.Modal.getInstance(previewModal);
+                if (existing) existing.dispose();
+                new window.bootstrap.Modal(previewModal, {
+                    backdrop: true, keyboard: true, focus: true
+                }).show();
+
+                previewModal.addEventListener("hidden.bs.modal", () => {
+                    previewFileBody.innerHTML = "";
+                    document.querySelectorAll(".modal-backdrop").forEach(el => el.remove());
+                    document.body.classList.remove("modal-open");
+                    document.body.style.removeProperty("overflow");
+                    document.body.style.removeProperty("padding-right");
+                }, { once: true });
+            }
+        });
+
+        // ── Upload AJAX ───────────────────────────────────────────────────────────
+        btnSave?.addEventListener("click", () => {
+            if (selectedFiles.length === 0) {
+                statusEl.className   = "small text-warning";
+                statusEl.textContent = "Aucun fichier à enregistrer.";
+                return;
+            }
+
+            const formData = new FormData();
+            selectedFiles.forEach(f => formData.append("piecesJointes", f));
+
+            btnSave.disabled     = true;
+            statusEl.className   = "small text-muted";
+            statusEl.textContent = "Envoi en cours…";
+
+            fetch(`${CONTEXT_PATH}demande/fiche/${demandeId}/pieces-jointes-mg`, {
+                method  : "POST",
+                headers : {
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="_csrf"]')?.content ?? ""
+                },
+                body: formData
+            })
+                .then(r => r.json())
+                .then(data => {
+                    btnSave.disabled = false;
+
+                    if (data.ok) {
+                        statusEl.className   = "small text-success";
+                        statusEl.textContent = `${data.sauvegardes.length} fichier(s) enregistré(s).`;
+
+                        // Affiche les fichiers confirmés dans la liste "sauvegardés"
+                        if (savedList) {
+                            data.sauvegardes.forEach(nom => {
+                                const li = document.createElement("li");
+                                li.className = "list-group-item d-flex align-items-center gap-2 py-1 px-0";
+                                li.innerHTML = `
+                            <i class="fas fa-check-circle text-success"></i>
+                            <span class="small">${escHtml(nom)}</span>`;
+                                savedList.appendChild(li);
+                            });
+                        }
+
+                        // Réinitialise la sélection
+                        selectedFiles = [];
+                        syncFiles();
+                        renderFiles();
+                        hideAlert();
+
+                    } else {
+                        statusEl.className   = "small text-danger";
+                        statusEl.textContent = data.error ?? "Erreur lors de l'enregistrement.";
+                    }
+
+                    // Warnings partiels (fichiers refusés côté serveur)
+                    if (data.warnings?.length) {
+                        showAlert(data.warnings.join(" | "));
+                    }
+                })
+                .catch(() => {
+                    btnSave.disabled     = false;
+                    statusEl.className   = "small text-danger";
+                    statusEl.textContent = "Erreur réseau, veuillez réessayer.";
+                });
+        });
+
         renderFiles();
     })();
 
