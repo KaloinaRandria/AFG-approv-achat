@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface UdmRepo extends JpaRepository<Udm, Integer> {
+    boolean existsByAcronyme(String acronyme);
 }
