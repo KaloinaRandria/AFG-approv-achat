@@ -236,6 +236,45 @@
             </div>
         </div>
 
+        <!-- OPERATION UTILISATEUR -->
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseOperation"
+                        aria-expanded="false"
+                        aria-controls="collapseOperation"
+                        th:classappend="${currentUri.contains('/udm') or currentUri.contains('/message') ? '' : 'collapsed'}">
+                    <i class="fas fa-cogs me-3"></i> Paramétrage des opérations
+                </button>
+            </h2>
+            <div id="collapseOperation"
+                 class="accordion-collapse collapse"
+                 aria-labelledby="headingStock"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/udm') ? 'show' : ''}">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/udm/udm-pages}"
+                               th:classappend="${currentUri == '/udm/udm-pages' ? 'active' : ''}">
+                                Unité de mesure
+                            </a>
+                        </li>
+                        <!--                        <li>-->
+                        <!--                            <a class="nav-link text-white sidebar-sub"-->
+                        <!--                               th:href="@{/admin/message/alertes-stock}"-->
+                        <!--                               th:classappend="${currentUri == '/admin/message/alertes-stock'} ? 'active' : ''">-->
+                        <!--                                Alertes de stock-->
+                        <!--                            </a>-->
+                        <!--                        </li>-->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <div class="dropdown mt-auto p-3 border-top">
