@@ -1,4 +1,4 @@
-package afg.achat.afgApprovAchat.model;
+package afg.achat.afgApprovAchat.DTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,8 +9,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class ArticleLivraisonDTO {
+public class ArticleDemandeDTO {
     private String designation;
     private Double quantite;
-    private Double prixUnitaire;
 }

@@ -1,6 +1,9 @@
 package afg.achat.afgApprovAchat.controller;
 
-import afg.achat.afgApprovAchat.model.*;
+import afg.achat.afgApprovAchat.DTO.ArticleDemandeDTO;
+import afg.achat.afgApprovAchat.DTO.ArticleLivraisonDTO;
+import afg.achat.afgApprovAchat.DTO.BonLivraisonDetailDTO;
+import afg.achat.afgApprovAchat.DTO.DemandeDetailDTO;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;

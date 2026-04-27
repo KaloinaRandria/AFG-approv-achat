@@ -1,4 +1,4 @@
-package afg.achat.afgApprovAchat.model;
+package afg.achat.afgApprovAchat.DTO;
 
 
 import lombok.*;
@@ -8,7 +8,7 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
-public class ArticleModificationDto {
+public class ArticleModificationDTO {
     private String codeArticle;
     private String designation;
     private Integer idUdm;
