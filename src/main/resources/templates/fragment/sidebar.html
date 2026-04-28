@@ -263,7 +263,45 @@
                                 Unité de mesure
                             </a>
                         </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
+        <!-- GESTION UTILISATEURS -->
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN')">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseUtilisateur"
+                        aria-expanded="false"
+                        aria-controls="collapseUtilisateur"
+                        th:classappend="${currentUri.contains('/user') ? '' : 'collapsed'}">
+                    <i class="fas fa-users me-3"></i> Gestion des utilisateurs
+                </button>
+            </h2>
+            <div id="collapseUtilisateur"
+                 class="accordion-collapse collapse"
+                 aria-labelledby="headingUtilisateur"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/user') ? 'show' : ''}">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/user/add}"
+                               th:classappend="${currentUri == '/user/add' ? 'active' : ''}">
+                                <i class="fas fa-user-plus me-2"></i> Insérer un utilisateur
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/utilisateurs/liste}"
+                               th:classappend="${currentUri == '/utilisateurs/liste' ? 'active' : ''}">
+                                <i class="fas fa-list me-2"></i> Liste des utilisateurs
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </div>
