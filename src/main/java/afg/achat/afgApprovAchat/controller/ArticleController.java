@@ -51,7 +51,7 @@ public class ArticleController {
             @RequestParam(defaultValue = "codeArticle") String sort,
             @RequestParam(defaultValue = "asc") String dir
     ) {
-        // ✅ sécuriser le sort (important)
+        // sécuriser le sort (important)
         if (!Set.of("codeArticle", "designation", "seuilMin").contains(sort)) {
             sort = "codeArticle";
         }
@@ -220,7 +220,7 @@ public class ArticleController {
 
             // Message de succès
             redirectAttributes.addFlashAttribute("ok",
-                    "✅ Article <strong>" + articleModifie.getCodeArticle() + "</strong> modifié avec succès !");
+                    "Article <strong>" + articleModifie.getCodeArticle() + "</strong> modifié avec succès !");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("ko",
                     "Erreur de validation : " + e.getMessage());

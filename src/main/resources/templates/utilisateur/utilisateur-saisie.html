@@ -2,29 +2,528 @@
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Ajout utilisateur</title>
+    <title>Ajouter un nouvel utilisateur</title>
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
-    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+    <!-- Select2 JS (après jQuery) -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <meta name="context-path" th:content="@{/}" />
 </head>
+
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
+
 <div class="main-content">
     <section>
-        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <!-- En-tête -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="fw-bold text-gradient-blue">
-                <i class="fas fa-plus-circle me-3 icon-gradient-blue"></i> Ajout d'un utilisateur
+                <i class="fas fa-user-plus me-3 icon-gradient-blue"></i> Ajouter un nouvel utilisateur
             </h1>
+            <div>
+                <a th:href="@{/utilisateur/list}" class="btn btn-gradient-blue me-2">
+                    <i class="fas fa-users me-2"></i>Liste des utilisateurs
+                </a>
+            </div>
         </div>
-        
+
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <!-- Carte formulaire -->
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold text-gradient-blue">
+                    <i class="fas fa-file-alt me-2 icon-gradient-blue"></i> Formulaire de création
+                </h5>
+                <p class="text-muted mb-0 mt-1">Remplissez tous les champs obligatoires pour ajouter un nouvel utilisateur</p>
+            </div>
+
+            <div class="card-body">
+                <form th:action="@{/utilisateur/save}" method="post" th:object="${utilisateur}" id="utilisateurForm"
+                      class="needs-validation" novalidate>
+
+                    <!-- Section 1 : Identité -->
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-id-card me-2 icon-gradient-blue"></i> Identité
+                        </h6>
+
+                        <div class="row">
+                            <!-- Nom -->
+                            <div class="col-md-4 mb-3">
+                                <label for="nom" class="form-label fw-bold required-field">Nom</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-user icon-gradient-blue"></i>
+                                    </span>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="nom"
+                                           th:field="*{nom}"
+                                           placeholder="Ex: Rakoto"
+                                           required
+                                           minlength="2"
+                                           maxlength="100">
+                                </div>
+                                <div th:if="${#fields.hasErrors('nom')}" class="text-danger mt-1">
+                                    <small th:errors="*{nom}"></small>
+                                </div>
+                            </div>
+
+                            <!-- Prénom -->
+                            <div class="col-md-4 mb-3">
+                                <label for="prenom" class="form-label fw-bold required-field">Prénom</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-user icon-gradient-blue"></i>
+                                    </span>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="prenom"
+                                           th:field="*{prenom}"
+                                           placeholder="Ex: Jean"
+                                           required
+                                           minlength="2"
+                                           maxlength="100">
+                                </div>
+                                <div th:if="${#fields.hasErrors('prenom')}" class="text-danger mt-1">
+                                    <small th:errors="*{prenom}"></small>
+                                </div>
+                            </div>
+
+                            <!-- Contact -->
+                            <div class="col-md-4 mb-3">
+                                <label for="contact" class="form-label fw-bold">Contact</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-phone icon-gradient-blue"></i>
+                                    </span>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="contact"
+                                           th:field="*{contact}"
+                                           placeholder="Ex: +261 34 00 000 00">
+                                </div>
+                                <div th:if="${#fields.hasErrors('contact')}" class="text-danger mt-1">
+                                    <small th:errors="*{contact}"></small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="mail" class="form-label fw-bold required-field">Adresse e-mail</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-envelope icon-gradient-blue"></i>
+                                    </span>
+                                    <input type="email"
+                                           class="form-control"
+                                           id="mail"
+                                           th:field="*{mail}"
+                                           placeholder="Ex: jean.rakoto@afgbank.mg"
+                                           required>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Sera utilisée comme identifiant de connexion
+                                </div>
+                                <div th:if="${#fields.hasErrors('mail')}" class="text-danger mt-1">
+                                    <small th:errors="*{mail}"></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2 : Organisation -->
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-sitemap me-2 icon-gradient-blue"></i> Organisation
+                        </h6>
+
+                        <div class="row">
+                            <!-- Poste -->
+                            <div class="col-md-4 mb-3">
+                                <label for="posteId" class="form-label fw-bold">Poste</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-briefcase icon-gradient-blue"></i>
+                                    </span>
+                                    <select class="select2 w-100"
+                                            id="posteId"
+                                            name="posteId"
+                                            th:field="*{posteId}"
+                                            data-placeholder="Sélectionnez un poste...">
+                                        <option value=""></option>
+                                        <option th:each="p : ${postes}"
+                                                th:value="${p.getId()}"
+                                                th:text="${p.getPoste()}">
+                                        </option>
+                                    </select>
+                                </div>
+                                <div th:if="${#fields.hasErrors('posteId')}" class="text-danger mt-1">
+                                    <small th:errors="*{posteId}"></small>
+                                </div>
+                            </div>
+
+                            <!-- Service -->
+                            <div class="col-md-4 mb-3">
+                                <label for="serviceId" class="form-label fw-bold">Service</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-building icon-gradient-blue"></i>
+                                    </span>
+                                    <select class="select2 w-100"
+                                            id="serviceId"
+                                            name="serviceId"
+                                            th:field="*{serviceId}"
+                                            data-placeholder="Sélectionnez un service...">
+                                        <option value=""></option>
+                                        <option th:each="s : ${services}"
+                                                th:value="${s.getId()}"
+                                                th:text="${s.getLibelle()}">
+                                        </option>
+                                    </select>
+                                </div>
+                                <div th:if="${#fields.hasErrors('serviceId')}" class="text-danger mt-1">
+                                    <small th:errors="*{serviceId}"></small>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="row">
+                            <!-- Supérieur hiérarchique -->
+                            <div class="col-md-6 mb-3">
+                                <label for="superieurHierarchiqueId" class="form-label fw-bold">Supérieur hiérarchique</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-user-tie icon-gradient-blue"></i>
+                                    </span>
+                                    <select class="select2 w-100"
+                                            id="superieurHierarchiqueId"
+                                            name="superieurHierarchiqueId"
+                                            th:field="*{superieurHierarchiqueId}"
+                                            data-placeholder="Recherchez un supérieur...">
+                                        <option value=""></option>
+                                        <option th:each="u : ${utilisateurs}"
+                                                th:value="${u.getId()}"
+                                                th:text="${u.getNom() + ' ' + u.getPrenom()}">
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Laisser vide si aucun supérieur direct
+                                </div>
+                                <div th:if="${#fields.hasErrors('superieurHierarchiqueId')}" class="text-danger mt-1">
+                                    <small th:errors="*{superieurHierarchiqueId}"></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3 : Rôles et validateurs -->
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-shield-alt me-2 icon-gradient-blue"></i> Droits & Validation
+                        </h6>
+
+                        <div class="row">
+                            <!-- Rôles (multi-select) -->
+                            <div class="col-md-6 mb-3">
+                                <label for="roles" class="form-label fw-bold required-field">Rôles</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-user-shield icon-gradient-blue"></i>
+                                    </span>
+                                    <select class="select2 w-100"
+                                            id="roles"
+                                            name="roles"
+                                            data-placeholder="Sélectionnez un ou plusieurs rôles..."
+                                            multiple
+                                            required>
+                                        <option th:each="r : ${roles}"
+                                                th:value="${r.getId()}"
+                                                th:text="${r.getRole()}"
+                                                th:selected="${utilisateur.getRoleIds() != null and utilisateur.getRoleIds().contains(r)}">
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Plusieurs rôles peuvent être assignés
+                                </div>
+                            </div>
+
+                            <!-- Validateurs (multi-select) -->
+                            <div class="col-md-6 mb-3">
+                                <label for="validateurs" class="form-label fw-bold">Validateurs</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-check-double icon-gradient-blue"></i>
+                                    </span>
+                                    <select class="select2 w-100"
+                                            id="validateurs"
+                                            name="validateurs"
+                                            data-placeholder="Recherchez et sélectionnez des validateurs..."
+                                            multiple>
+                                        <option th:each="u : ${utilisateurs}"
+                                                th:value="${u.getId()}"
+                                                th:text="${u.getNom() + ' ' + u.getPrenom()}">
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Utilisateurs autorisés à valider ses demandes
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bouton action -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button"
+                                class="btn btn-gradient-green px-4 py-2"
+                                id="btnPreview">
+                            <i class="fas fa-eye me-2"></i>Aperçu & confirmer
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        <!-- Informations additionnelles -->
+        <div class="mt-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h6 class="mb-0 fw-bold text-gradient-blue">
+                        <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations importantes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-flex mb-3">
+                                <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-3">
+                                    <i class="fas fa-key fa-lg icon-gradient-blue"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Mot de passe</h6>
+                                    <p class="text-muted mb-0">Généré automatiquement et envoyé par e-mail</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex mb-3">
+                                <div class="rounded-circle bg-success bg-opacity-10 p-2 me-3">
+                                    <i class="fas fa-user-check fa-lg icon-gradient-blue"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Compte actif</h6>
+                                    <p class="text-muted mb-0">L'utilisateur est actif dès sa création</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex mb-3">
+                                <div class="rounded-circle bg-warning bg-opacity-10 p-2 me-3">
+                                    <i class="fas fa-users fa-lg icon-gradient-blue"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Multi-rôles</h6>
+                                    <p class="text-muted mb-0">Un utilisateur peut avoir plusieurs rôles simultanément</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex mb-3">
+                                <div class="rounded-circle bg-danger bg-opacity-10 p-2 me-3">
+                                    <i class="fas fa-asterisk fa-lg icon-gradient-blue"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Champs obligatoires</h6>
+                                    <p class="text-muted mb-0">Tous les champs marqués d'un astérisque (*)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </section>
 </div>
-<script th:inline="javascript">
-    /*<![CDATA[*/
 
+<!-- Modal Aperçu -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title" id="previewModalLabel">
+                    <i class="fas fa-eye me-2 icon-gradient-blue"></i>Aperçu avant enregistrement
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-borderless align-middle mb-0">
+                        <tbody>
+                        <tr>
+                            <th class="text-muted w-30">
+                                <i class="fas fa-user me-2 icon-gradient-blue"></i>Nom complet
+                            </th>
+                            <td id="pvNomComplet" class="fw-semibold"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-envelope me-2 icon-gradient-blue"></i>Email
+                            </th>
+                            <td id="pvMail"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-phone me-2 icon-gradient-blue"></i>Contact
+                            </th>
+                            <td id="pvContact"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-briefcase me-2 icon-gradient-blue"></i>Poste
+                            </th>
+                            <td id="pvPoste"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-building me-2 icon-gradient-blue"></i>Service
+                            </th>
+                            <td id="pvService"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-user-tie me-2 icon-gradient-blue"></i>Supérieur hiérarchique
+                            </th>
+                            <td id="pvSuperieur"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-user-shield me-2 icon-gradient-blue"></i>Rôles
+                            </th>
+                            <td id="pvRoles"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-check-double me-2 icon-gradient-blue"></i>Validateurs
+                            </th>
+                            <td id="pvValidateurs"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Ceci est un aperçu des informations qui seront enregistrées.
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-pen me-1"></i>Modifier
+                </button>
+                <button type="submit" class="btn btn-gradient-green" form="utilisateurForm">
+                    <i class="fas fa-save me-1"></i>Confirmer et enregistrer
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<script th:inline="none">
+    /*<![CDATA[*/
+    $(document).ready(function () {
+
+        // ── Select2 ────────────────────────────────────────────────────────────────
+        $('.select2').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            allowClear: true,
+            language: 'fr',
+            placeholder: function () {
+                return $(this).data('placeholder');
+            }
+        });
+
+        const form = document.getElementById('utilisateurForm');
+
+        /**
+         * Retourne le texte de l'option sélectionnée pour un <select> simple.
+         */
+        function getSelectedText(selectId) {
+            const el = document.getElementById(selectId);
+            if (!el) return '---';
+            const text = el.options[el.selectedIndex]?.text;
+            return (text && text.trim() && text.trim() !== '') ? text.trim() : '---';
+        }
+
+        /**
+         * Retourne la liste des textes sélectionnés pour un <select multiple>.
+         */
+        function getMultiSelectedTexts(selectId) {
+            const el = document.getElementById(selectId);
+            if (!el) return '---';
+            const selected = Array.from(el.selectedOptions).map(o => o.text.trim());
+            return selected.length > 0 ? selected.join(', ') : '---';
+        }
+
+        document.getElementById('btnPreview').addEventListener('click', function (e) {
+
+            // Validation HTML5 native
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                form.reportValidity();
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
+            // Rôles : au moins un requis
+            const rolesSelect = document.getElementById('roles');
+            if (!rolesSelect || rolesSelect.selectedOptions.length === 0) {
+                rolesSelect.setCustomValidity('Veuillez sélectionner au moins un rôle.');
+                form.classList.add('was-validated');
+                form.reportValidity();
+                return;
+            } else {
+                rolesSelect.setCustomValidity('');
+            }
+
+            // Remplissage de l'aperçu
+            const nom    = document.getElementById('nom').value || '';
+            const prenom = document.getElementById('prenom').value || '';
+
+            document.getElementById('pvNomComplet').textContent   = (nom + ' ' + prenom).trim() || '-';
+            document.getElementById('pvMail').textContent         = document.getElementById('mail').value || '-';
+            document.getElementById('pvContact').textContent      = document.getElementById('contact').value || '-';
+            document.getElementById('pvPoste').textContent        = getSelectedText('posteId');
+            document.getElementById('pvService').textContent      = getSelectedText('serviceId');
+            document.getElementById('pvSuperieur').textContent    = getSelectedText('superieurHierarchiqueId');
+            document.getElementById('pvRoles').textContent        = getMultiSelectedTexts('roles');
+            document.getElementById('pvValidateurs').textContent  = getMultiSelectedTexts('validateurs');
+
+            // Ouvrir modal
+            window.bootstrap.Modal.getOrCreateInstance(document.getElementById('previewModal')).show();
+        });
+    });
     /*]]>*/
 </script>
+
 </body>
 </html>
