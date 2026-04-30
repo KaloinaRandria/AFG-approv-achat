@@ -1,10 +1,378 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Liste des Utilisateurs</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+
+    <meta name="context-path" th:content="@{/}" />
 </head>
+
 <body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+
+<div class="main-content">
+    <section>
+        <!-- En-tête avec icônes en dégradé bleu -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-users me-3 icon-gradient-blue"></i> Liste des Utilisateurs
+            </h1>
+            <div>
+                <a th:href="@{/user/add}" sec:authorize="hasRole('ADMIN')" class="btn btn-gradient-green">
+                    <i class="fas fa-plus-circle me-1"></i>Nouvel utilisateur
+                </a>
+            </div>
+        </div>
+
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <!-- Formulaire de filtrage -->
+        <div class="card shadow-lg border-0 mb-3">
+            <div class="card-body">
+                <form method="get" th:action="@{/user/list}" class="row g-2 align-items-end">
+                    <input type="hidden" name="sort" th:value="${sort}">
+                    <input type="hidden" name="dir" th:value="${dir}">
+
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Nom</label>
+                        <input class="form-control" type="text" name="nom"
+                               th:value="${nom}" placeholder="Rakoto..." />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Prénom</label>
+                        <input class="form-control" type="text" name="prenom"
+                               th:value="${prenom}" placeholder="Jean..." />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Email</label>
+                        <input class="form-control" type="email" name="mail"
+                               th:value="${mail}" placeholder="user@afgbank.mg" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Service</label>
+                        <input class="form-control" type="text" name="service"
+                               th:value="${service}" placeholder="IT..." />
+                    </div>
+
+                    <div class="col-md-1">
+                        <label class="form-label mb-1">Taille</label>
+                        <select class="form-select" name="size">
+                            <option th:value="10" th:selected="${size == 10}">10</option>
+                            <option th:value="25" th:selected="${size == 25}">25</option>
+                            <option th:value="50" th:selected="${size == 50}">50</option>
+                            <option th:value="100" th:selected="${size == 100}">100</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-12 d-flex gap-2 mt-2">
+                        <button class="btn btn-gradient-blue" type="submit">
+                            <i class="fas fa-filter me-1"></i>Filtrer
+                        </button>
+                        <a class="btn btn-outline-secondary" th:href="@{/user/list}">
+                            Réinitialiser
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tableau des utilisateurs -->
+        <div class="card shadow-lg border-0">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover table-bordered dt-head-gradient">
+                        <thead>
+                        <tr>
+                            <th>
+                                <i class="fas fa-user me-2 icon-gradient-light-blue"></i>Nom Complet
+                            </th>
+
+                            <th>
+                                <i class="fas fa-envelope me-2 icon-gradient-light-blue"></i>Email
+                            </th>
+
+                            <th>
+                                <i class="fas fa-phone me-2 icon-gradient-light-blue"></i>Contact
+                            </th>
+
+                            <th>
+                                <i class="fas fa-building me-2 icon-gradient-light-blue"></i>Service
+                            </th>
+
+                            <th>
+                                <i class="fas fa-briefcase me-2 icon-gradient-light-blue"></i>Poste
+                            </th>
+
+                            <th>
+                                <i class="fas fa-user-tie me-2 icon-gradient-light-blue"></i>Supérieur
+                            </th>
+
+                            <th>
+                                <i class="fas fa-user-shield me-2 icon-gradient-light-blue"></i>Rôles
+                            </th>
+
+                            <th>
+                                <i class="fas fa-cogs me-2 icon-gradient-light-blue"></i>Actions
+                            </th>
+
+                        </tr>
+                        </thead>
+
+                        <tbody>
+                        <!-- Liste des utilisateurs -->
+                        <tr th:each="u : ${utilisateurs}">
+                            <td class="fw-semibold">
+                                <i class="fas fa-user-circle me-2 text-primary"></i>
+                                <span th:text="${u.nom + ' ' + u.prenom}"></span>
+                            </td>
+                            <td th:text="${u.mail}"></td>
+                            <td th:text="${u.contact != null ? u.contact : '---'}"></td>
+                            <td th:text="${u.service != null ? u.service.libelle : '---'}"></td>
+                            <td th:text="${u.poste != null ? u.poste.poste : '---'}"></td>
+                            <td th:text="${u.superieurHierarchique != null ? u.superieurHierarchique.nom + ' ' + u.superieurHierarchique.prenom : '---'}"></td>
+                            <td>
+                                <span th:each="role : ${u.roles}" class="badge bg-gradient-blue me-1">
+                                    <i class="fas fa-shield-alt me-1"></i><span th:text="${role.getRole()}"></span>
+                                </span>
+                            </td>
+
+                            <td>
+                                <button type="button"
+                                        class="btn btn-sm edit-btn"
+                                        sec:authorize="hasRole('ADMIN')"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modifierModal"
+                                        th:data-id="${u.id}"
+                                        th:data-nom="${u.nom}"
+                                        th:data-prenom="${u.prenom}"
+                                        th:data-mail="${u.mail}"
+                                        th:data-contact="${u.contact}"
+                                        th:data-serviceid="${u.service != null ? u.service.id : ''}"
+                                        th:data-posteid="${u.poste != null ? u.poste.id : ''}"
+                                        title="Modifier utilisateur">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+
+                                <button type="button"
+                                        class="btn btn-sm delete-btn"
+                                        sec:authorize="hasRole('ADMIN')"
+                                        th:data-id="${u.id}"
+                                        th:data-nom="${u.nom}"
+                                        th:data-prenom="${u.prenom}"
+                                        title="Supprimer utilisateur">
+                                    <i class="fas fa-trash-alt text-danger"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                        <tr th:if="${#lists.isEmpty(utilisateurs)}">
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-2x mb-2"></i>
+                                <p>Aucun utilisateur trouvé.</p>
+                            </td>
+                        </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <nav th:if="${utilisateurPage != null and utilisateurPage.totalPages > 1}" class="mt-3" aria-label="Pagination utilisateurs">
+                    <ul class="pagination justify-content-center mb-0">
+
+                        <!-- Précédente -->
+                        <li class="page-item" th:classappend="${utilisateurPage.first} ? 'disabled'">
+                            <a class="page-link"
+                               th:href="@{/user/list(page=${utilisateurPage.number - 1}, size=${size},
+                               nom=${nom}, prenom=${prenom}, mail=${mail}, service=${service},
+                               sort=${sort}, dir=${dir})}">
+                                Précédente
+                            </a>
+                        </li>
+
+                        <!-- Pages autour -->
+                        <th:block th:with="
+                            start=${T(java.lang.Math).max(0, utilisateurPage.number - 2)},
+                            end=${T(java.lang.Math).min(utilisateurPage.totalPages - 1, utilisateurPage.number + 2)}
+                        ">
+                            <li class="page-item"
+                                th:each="p : ${#numbers.sequence(start, end)}"
+                                th:classappend="${p == utilisateurPage.number} ? 'active'">
+                                <a class="page-link"
+                                   th:href="@{/user/list(page=${p}, size=${size},
+                                   nom=${nom}, prenom=${prenom}, mail=${mail}, service=${service},
+                                   sort=${sort}, dir=${dir})}"
+                                   th:text="${p + 1}">
+                                </a>
+                            </li>
+                        </th:block>
+
+                        <!-- Suivante -->
+                        <li class="page-item" th:classappend="${utilisateurPage.last} ? 'disabled'">
+                            <a class="page-link"
+                               th:href="@{/user/list(page=${utilisateurPage.number + 1}, size=${size},
+                               nom=${nom}, prenom=${prenom}, mail=${mail}, service=${service},
+                               sort=${sort}, dir=${dir})}">
+                                Suivante
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="text-center text-muted small mt-2">
+                        Page <span th:text="${utilisateurPage.number + 1}"></span> /
+                        <span th:text="${utilisateurPage.totalPages}"></span>
+                        — Total: <span th:text="${utilisateurPage.totalElements}"></span>
+                    </div>
+                </nav>
+
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Modal pour la modification d'utilisateur -->
+<div class="modal fade" id="modifierModal" tabindex="-1" aria-labelledby="modifierModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title" id="modifierModalLabel">
+                    <i class="fas fa-edit me-2 icon-gradient-blue"></i>Modifier l'utilisateur
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+            <form th:action="@{/user/modifier}" method="post" id="utilisateurForm">
+                <div class="modal-body">
+                    <input type="hidden" id="modalId" name="id">
+                    <div class="mb-3">
+                        <label for="modalNom" class="form-label">
+                            <i class="fas fa-user me-2 icon-gradient-blue"></i>Nom *
+                        </label>
+                        <input type="text" class="form-control" id="modalNom" name="nom" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalPrenom" class="form-label">
+                            <i class="fas fa-user me-2 icon-gradient-blue"></i>Prénom *
+                        </label>
+                        <input type="text" class="form-control" id="modalPrenom" name="prenom" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalMail" class="form-label">
+                            <i class="fas fa-envelope me-2 icon-gradient-blue"></i>Email *
+                        </label>
+                        <input type="email" class="form-control" id="modalMail" name="mail" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalContact" class="form-label">
+                            <i class="fas fa-phone me-2 icon-gradient-blue"></i>Contact
+                        </label>
+                        <input type="text" class="form-control" id="modalContact" name="contact">
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalService" class="form-label">
+                            <i class="fas fa-building me-2 icon-gradient-blue"></i>Service
+                        </label>
+                        <select class="form-control" id="modalService" name="serviceId">
+                            <option value="">Sélectionner un service</option>
+                            <option th:each="s : ${services}" th:value="${s.id}"
+                                    th:text="${s.libelle}"></option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalPoste" class="form-label">
+                            <i class="fas fa-briefcase me-2 icon-gradient-blue"></i>Poste
+                        </label>
+                        <select class="form-control" id="modalPoste" name="posteId">
+                            <option value="">Sélectionner un poste</option>
+                            <option th:each="p : ${postes}" th:value="${p.id}"
+                                    th:text="${p.poste}"></option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </button>
+                    <button type="submit" class="btn btn-gradient-blue">
+                        <i class="fas fa-save me-1"></i>Modifier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="suppressionModal" tabindex="-1" aria-labelledby="suppressionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header btn-danger">
+                <h5 class="modal-title" id="suppressionModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer l'utilisateur <strong id="suppressionNomUtilisateur"></strong> ?</p>
+                <p class="text-warning small">
+                    <i class="fas fa-info-circle me-1"></i> Cette action est irréversible.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Annuler
+                </button>
+                <form th:action="@{/user/supprimer}" method="post" style="display: inline;" id="suppressionForm">
+                    <input type="hidden" id="suppressionId" name="id">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt me-1"></i>Supprimer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="none">
+    /*<![CDATA[*/
+    document.addEventListener('DOMContentLoaded', function () {
+        // Modal pour modifier
+        $('#modifierModal').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget);
+            $('#modalId').val(button.data('id'));
+            $('#modalNom').val(button.data('nom'));
+            $('#modalPrenom').val(button.data('prenom'));
+            $('#modalMail').val(button.data('mail'));
+            $('#modalContact').val(button.data('contact') || '');
+            $('#modalService').val(button.data('serviceid') || '');
+            $('#modalPoste').val(button.data('posteid') || '');
+            $('#modifierModalLabel').text('Modifier l\'utilisateur: ' + button.data('nom') + ' ' + button.data('prenom'));
+        });
+        $('#modifierModal').on('hidden.bs.modal', function () {
+            $('#utilisateurForm')[0].reset();
+        });
+
+        // Boutons de suppression
+        $('.delete-btn').on('click', function () {
+            var id = $(this).data('id');
+            var nom = $(this).data('nom');
+            var prenom = $(this).data('prenom');
+            $('#suppressionId').val(id);
+            $('#suppressionNomUtilisateur').text(nom + ' ' + prenom);
+            var suppressionModal = new bootstrap.Modal(document.getElementById('suppressionModal'));
+            suppressionModal.show();
+        });
+    });
+    /*]]>*/
+</script>
 
 </body>
 </html>

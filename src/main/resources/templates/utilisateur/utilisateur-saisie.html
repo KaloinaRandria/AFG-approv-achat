@@ -5,11 +5,8 @@
     <title>Ajouter un nouvel utilisateur</title>
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
-    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>    <!-- Select2 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
 
-    <!-- Select2 JS (après jQuery) -->
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <meta name="context-path" th:content="@{/}" />
 </head>
 
@@ -25,7 +22,7 @@
                 <i class="fas fa-user-plus me-3 icon-gradient-blue"></i> Ajouter un nouvel utilisateur
             </h1>
             <div>
-                <a th:href="@{/utilisateur/list}" class="btn btn-gradient-blue me-2">
+                <a th:href="@{/user/list}" class="btn btn-gradient-blue me-2">
                     <i class="fas fa-users me-2"></i>Liste des utilisateurs
                 </a>
             </div>
@@ -43,7 +40,7 @@
             </div>
 
             <div class="card-body">
-                <form th:action="@{/utilisateur/save}" method="post" th:object="${utilisateur}" id="utilisateurForm"
+                <form th:action="@{/user/save}" method="post" th:object="${utilisateur}" id="utilisateurForm"
                       class="needs-validation" novalidate>
 
                     <!-- Section 1 : Identité -->
@@ -150,9 +147,6 @@
                             <div class="col-md-4 mb-3">
                                 <label for="posteId" class="form-label fw-bold">Poste</label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light">
-                                        <i class="fas fa-briefcase icon-gradient-blue"></i>
-                                    </span>
                                     <select class="select2 w-100"
                                             id="posteId"
                                             name="posteId"
@@ -174,9 +168,6 @@
                             <div class="col-md-4 mb-3">
                                 <label for="serviceId" class="form-label fw-bold">Service</label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light">
-                                        <i class="fas fa-building icon-gradient-blue"></i>
-                                    </span>
                                     <select class="select2 w-100"
                                             id="serviceId"
                                             name="serviceId"
@@ -201,9 +192,6 @@
                             <div class="col-md-6 mb-3">
                                 <label for="superieurHierarchiqueId" class="form-label fw-bold">Supérieur hiérarchique</label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light">
-                                        <i class="fas fa-user-tie icon-gradient-blue"></i>
-                                    </span>
                                     <select class="select2 w-100"
                                             id="superieurHierarchiqueId"
                                             name="superieurHierarchiqueId"
@@ -236,23 +224,18 @@
                             <!-- Rôles (multi-select) -->
                             <div class="col-md-6 mb-3">
                                 <label for="roles" class="form-label fw-bold required-field">Rôles</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light">
-                                        <i class="fas fa-user-shield icon-gradient-blue"></i>
-                                    </span>
-                                    <select class="select2 w-100"
-                                            id="roles"
-                                            name="roles"
-                                            data-placeholder="Sélectionnez un ou plusieurs rôles..."
-                                            multiple
-                                            required>
-                                        <option th:each="r : ${roles}"
-                                                th:value="${r.getId()}"
-                                                th:text="${r.getRole()}"
-                                                th:selected="${utilisateur.getRoleIds() != null and utilisateur.getRoleIds().contains(r)}">
-                                        </option>
-                                    </select>
-                                </div>
+                                <select class="select2 w-100"
+                                        id="roles"
+                                        name="roles"
+                                        data-placeholder="Sélectionnez un ou plusieurs rôles..."
+                                        multiple
+                                        required>
+                                    <option th:each="r : ${roles}"
+                                            th:value="${r.getId()}"
+                                            th:text="${r.getRole()}"
+                                            th:selected="${utilisateur.getRoleIds() != null and utilisateur.getRoleIds().contains(r)}">
+                                    </option>
+                                </select>
                                 <div class="form-text text-muted mt-1">
                                     <i class="fas fa-info-circle me-1"></i> Plusieurs rôles peuvent être assignés
                                 </div>
@@ -261,21 +244,16 @@
                             <!-- Validateurs (multi-select) -->
                             <div class="col-md-6 mb-3">
                                 <label for="validateurs" class="form-label fw-bold">Validateurs</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light">
-                                        <i class="fas fa-check-double icon-gradient-blue"></i>
-                                    </span>
-                                    <select class="select2 w-100"
-                                            id="validateurs"
-                                            name="validateurs"
-                                            data-placeholder="Recherchez et sélectionnez des validateurs..."
-                                            multiple>
-                                        <option th:each="u : ${utilisateurs}"
-                                                th:value="${u.getId()}"
-                                                th:text="${u.getNom() + ' ' + u.getPrenom()}">
-                                        </option>
-                                    </select>
-                                </div>
+                                <select class="select2 w-100"
+                                        id="validateurs"
+                                        name="validateurs"
+                                        data-placeholder="Recherchez et sélectionnez des validateurs..."
+                                        multiple>
+                                    <option th:each="u : ${utilisateurs}"
+                                            th:value="${u.getId()}"
+                                            th:text="${u.getNom() + ' ' + u.getPrenom()}">
+                                    </option>
+                                </select>
                                 <div class="form-text text-muted mt-1">
                                     <i class="fas fa-info-circle me-1"></i> Utilisateurs autorisés à valider ses demandes
                                 </div>
@@ -293,65 +271,6 @@
                     </div>
 
                 </form>
-            </div>
-        </div>
-
-        <!-- Informations additionnelles -->
-        <div class="mt-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-light border-0">
-                    <h6 class="mb-0 fw-bold text-gradient-blue">
-                        <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations importantes
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="d-flex mb-3">
-                                <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-3">
-                                    <i class="fas fa-key fa-lg icon-gradient-blue"></i>
-                                </div>
-                                <div>
-                                    <h6 class="fw-bold mb-1">Mot de passe</h6>
-                                    <p class="text-muted mb-0">Généré automatiquement et envoyé par e-mail</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d-flex mb-3">
-                                <div class="rounded-circle bg-success bg-opacity-10 p-2 me-3">
-                                    <i class="fas fa-user-check fa-lg icon-gradient-blue"></i>
-                                </div>
-                                <div>
-                                    <h6 class="fw-bold mb-1">Compte actif</h6>
-                                    <p class="text-muted mb-0">L'utilisateur est actif dès sa création</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d-flex mb-3">
-                                <div class="rounded-circle bg-warning bg-opacity-10 p-2 me-3">
-                                    <i class="fas fa-users fa-lg icon-gradient-blue"></i>
-                                </div>
-                                <div>
-                                    <h6 class="fw-bold mb-1">Multi-rôles</h6>
-                                    <p class="text-muted mb-0">Un utilisateur peut avoir plusieurs rôles simultanément</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d-flex mb-3">
-                                <div class="rounded-circle bg-danger bg-opacity-10 p-2 me-3">
-                                    <i class="fas fa-asterisk fa-lg icon-gradient-blue"></i>
-                                </div>
-                                <div>
-                                    <h6 class="fw-bold mb-1">Champs obligatoires</h6>
-                                    <p class="text-muted mb-0">Tous les champs marqués d'un astérisque (*)</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
 

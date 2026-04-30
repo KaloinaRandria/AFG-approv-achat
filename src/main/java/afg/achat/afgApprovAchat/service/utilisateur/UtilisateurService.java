@@ -10,7 +10,13 @@ import afg.achat.afgApprovAchat.repository.util.ServiceRepo;
 import afg.achat.afgApprovAchat.repository.utilisateur.PdpRepo;
 import afg.achat.afgApprovAchat.repository.utilisateur.PosteRepo;
 import afg.achat.afgApprovAchat.repository.utilisateur.UtilisateurRepo;
+import afg.achat.afgApprovAchat.repository.utilisateur.UtilisateurSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -174,5 +180,74 @@ public class UtilisateurService {
         }
 
         return sauvegarde;
+    }
+
+    /**
+     * PAGINATION - Recherche les utilisateurs avec filtres avancés
+     * Utilise les Specifications pour une approche scalable
+     *
+     * @param nom         Filtre sur le nom (optionnel)
+     * @param prenom      Filtre sur le prénom (optionnel)
+     * @param mail        Filtre sur l'email (optionnel)
+     * @param service     Filtre sur le service (optionnel)
+     * @param page        Numéro de page (0-indexed)
+     * @param size        Taille de la page
+     * @param sortBy      Champ de tri (ex: "nom", "mail", etc.)
+     * @param direction   Direction du tri ("ASC" ou "DESC")
+     * @return Page d'utilisateurs
+     */
+    @Transactional(readOnly = true)
+    public Page<Utilisateur> rechercherUtilisateurs(
+            String nom,
+            String prenom,
+            String mail,
+            String service,
+            int page,
+            int size,
+            String sortBy,
+            String direction) {
+
+        // Validations des paramètres
+        if (page < 0) page = 0;
+        if (size <= 0 || size > 100) size = 10; // Limite max de 100 pour éviter les abus
+        if (sortBy == null || sortBy.isEmpty()) sortBy = "nom";
+
+        // Créer la pagination avec tri
+        Sort.Direction sortDirection = "DESC".equalsIgnoreCase(direction)
+                ? Sort.Direction.DESC
+                : Sort.Direction.ASC;
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+
+        // Construire la spécification de recherche
+        Specification<Utilisateur> spec = UtilisateurSpecification.filterBy(nom, prenom, mail, service);
+
+        // Exécuter la recherche
+        return utilisateurRepo.findAll(spec, pageable);
+    }
+
+    /**
+     * Recherche textuelle simple sur nom, prénom ou email
+     */
+    @Transactional(readOnly = true)
+    public Page<Utilisateur> searchUtilisateurs(String searchTerm, int page, int size) {
+        if (page < 0) page = 0;
+        if (size <= 0 || size > 100) size = 10;
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "nom"));
+        Specification<Utilisateur> spec = UtilisateurSpecification.searchTerm(searchTerm);
+        return utilisateurRepo.findAll(spec, pageable);
+    }
+
+    /**
+     * Récupère tous les utilisateurs paginés (sans filtre)
+     */
+    @Transactional(readOnly = true)
+    public Page<Utilisateur> getAllUtilisateurs(int page, int size) {
+        if (page < 0) page = 0;
+        if (size <= 0 || size > 100) size = 10;
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "nom"));
+        return utilisateurRepo.findAll(pageable);
     }
 }
