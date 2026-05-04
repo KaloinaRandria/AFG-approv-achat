@@ -11,6 +11,7 @@ import afg.achat.afgApprovAchat.repository.utilisateur.PdpRepo;
 import afg.achat.afgApprovAchat.repository.utilisateur.PosteRepo;
 import afg.achat.afgApprovAchat.repository.utilisateur.UtilisateurRepo;
 import afg.achat.afgApprovAchat.repository.utilisateur.UtilisateurSpecification;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -249,5 +250,54 @@ public class UtilisateurService {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "nom"));
         return utilisateurRepo.findAll(pageable);
+    }
+
+    /**
+     * Ajoute un validateur à un utilisateur.
+     */
+    @Transactional
+    public Utilisateur ajouterValidateur(int utilisateurId, int validateurId) {
+        if (utilisateurId == validateurId) {
+            throw new IllegalArgumentException("Un utilisateur ne peut pas être son propre validateur.");
+        }
+
+        Utilisateur utilisateur = utilisateurRepo.findById(utilisateurId)
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur introuvable : id=" + utilisateurId));
+
+        Utilisateur validateur = utilisateurRepo.findById(validateurId)
+                .orElseThrow(() -> new EntityNotFoundException("Validateur introuvable : id=" + validateurId));
+
+        utilisateur.getValidateurs().add(validateur);
+        return utilisateurRepo.save(utilisateur);
+    }
+
+    /**
+     * Retire un validateur d'un utilisateur.
+     */
+    @Transactional
+    public Utilisateur retirerValidateur(int utilisateurId, int validateurId) {
+        Utilisateur utilisateur = utilisateurRepo.findById(utilisateurId)
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur introuvable : id=" + utilisateurId));
+
+        Utilisateur validateur = utilisateurRepo.findById(validateurId)
+                .orElseThrow(() -> new EntityNotFoundException("Validateur introuvable : id=" + validateurId));
+
+        boolean removed = utilisateur.getValidateurs().remove(validateur);
+        if (!removed) {
+            throw new IllegalStateException(
+                    "Le validateur id=" + validateurId + " n'est pas assigné à l'utilisateur id=" + utilisateurId);
+        }
+
+        return utilisateurRepo.save(utilisateur);
+    }
+
+    /**
+     * Retourne les validateurs d'un utilisateur.
+     */
+    @Transactional(readOnly = true)
+    public Set<Utilisateur> getValidateurs(int utilisateurId) {
+        Utilisateur utilisateur = utilisateurRepo.findById(utilisateurId)
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur introuvable : id=" + utilisateurId));
+        return utilisateur.getValidateurs();
     }
 }

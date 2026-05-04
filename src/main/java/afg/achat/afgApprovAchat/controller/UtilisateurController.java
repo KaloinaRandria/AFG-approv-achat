@@ -8,8 +8,10 @@ import afg.achat.afgApprovAchat.repository.utilisateur.UtilisateurRepo;
 import afg.achat.afgApprovAchat.repository.util.RoleRepo;
 import afg.achat.afgApprovAchat.repository.util.ServiceRepo;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,6 +20,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/user")
@@ -179,5 +182,77 @@ public class UtilisateurController {
         model.addAttribute("postes", posteRepo.findAll());
 
         return "utilisateur/utilisateur-liste";
+    }
+
+    // -------------------------------------------------------
+    // GESTION DES VALIDATEURS
+    // -------------------------------------------------------
+
+    /**
+     * POST /user/{id}/validateurs/{validateurId}/ajouter
+     * Ajoute un validateur à un utilisateur — appelé depuis un bouton/modal.
+     * Redirige vers la liste avec un message flash.
+     */
+    @PostMapping("/{id}/validateurs/{validateurId}/ajouter")
+    public String ajouterValidateur(
+            @PathVariable int id,
+            @PathVariable int validateurId,
+            RedirectAttributes redirectAttributes) {
+        try {
+            Utilisateur u = utilisateurService.ajouterValidateur(id, validateurId);
+            redirectAttributes.addFlashAttribute("ok",
+                    "Validateur ajouté à " + u.getPrenom() + " " + u.getNom() + " avec succès.");
+        } catch (EntityNotFoundException | IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("ko", "Erreur inattendue : " + e.getMessage());
+        }
+        return "redirect:/user/list";
+    }
+
+    /**
+     * POST /user/{id}/validateurs/{validateurId}/retirer
+     * Retire un validateur d'un utilisateur — appelé depuis un bouton/modal.
+     * Redirige vers la liste avec un message flash.
+     */
+    @PostMapping("/{id}/validateurs/{validateurId}/retirer")
+    public String retirerValidateur(
+            @PathVariable int id,
+            @PathVariable int validateurId,
+            RedirectAttributes redirectAttributes) {
+        try {
+            Utilisateur u = utilisateurService.retirerValidateur(id, validateurId);
+            redirectAttributes.addFlashAttribute("ok",
+                    "Validateur retiré de " + u.getPrenom() + " " + u.getNom() + " avec succès.");
+        } catch (EntityNotFoundException | IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("ko", "Erreur inattendue : " + e.getMessage());
+        }
+        return "redirect:/user/list";
+    }
+
+    /**
+     * GET /user/{id}/validateurs (REST/JSON)
+     * Retourne la liste des validateurs d'un utilisateur en JSON.
+     * Utile pour alimenter dynamiquement un select2 ou une modal AJAX.
+     */
+    @GetMapping("/{id}/validateurs")
+    @ResponseBody
+    public ResponseEntity<?> getValidateurs(@PathVariable int id) {
+        try {
+            return ResponseEntity.ok(
+                    utilisateurService.getValidateurs(id).stream()
+                            .map(v -> Map.of(
+                                    "id",     v.getId(),
+                                    "nom",    v.getNom(),
+                                    "prenom", v.getPrenom(),
+                                    "mail",   v.getMail()
+                            ))
+                            .toList()
+            );
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }
