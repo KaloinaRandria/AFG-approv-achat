@@ -1,4 +1,4 @@
-package afg.achat.afgApprovAchat.model;
+package afg.achat.afgApprovAchat.DTO;
 
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import lombok.AllArgsConstructor;

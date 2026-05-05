@@ -1,10 +1,9 @@
 package afg.achat.afgApprovAchat.repository.util;
 
-import afg.achat.afgApprovAchat.model.util.Udm;
+import afg.achat.afgApprovAchat.model.util.Service;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface UdmRepo extends JpaRepository<Udm, Integer> {
-    boolean existsByAcronyme(String acronyme);
+public interface ServiceRepo extends JpaRepository<Service,Integer> {
 }

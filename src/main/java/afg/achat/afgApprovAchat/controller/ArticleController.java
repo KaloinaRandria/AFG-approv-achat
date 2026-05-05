@@ -1,7 +1,7 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.Article;
-import afg.achat.afgApprovAchat.model.ArticleModificationDto;
+import afg.achat.afgApprovAchat.DTO.ArticleModificationDTO;
 import afg.achat.afgApprovAchat.model.Famille;
 import afg.achat.afgApprovAchat.model.util.Udm;
 import afg.achat.afgApprovAchat.service.ArticleService;
@@ -21,7 +21,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.List;
 import java.util.Set;
 
 @Controller
@@ -52,7 +51,7 @@ public class ArticleController {
             @RequestParam(defaultValue = "codeArticle") String sort,
             @RequestParam(defaultValue = "asc") String dir
     ) {
-        // ✅ sécuriser le sort (important)
+        // sécuriser le sort (important)
         if (!Set.of("codeArticle", "designation", "seuilMin").contains(sort)) {
             sort = "codeArticle";
         }
@@ -78,7 +77,7 @@ public class ArticleController {
 
         model.addAttribute("udms", udmService.getAllUdms());
         model.addAttribute("familles", familleService.getAllFamilles());
-        model.addAttribute("articleDto", new ArticleModificationDto());
+        model.addAttribute("articleDto", new ArticleModificationDTO());
 
         return "article/article-liste";
     }
@@ -221,7 +220,7 @@ public class ArticleController {
 
             // Message de succès
             redirectAttributes.addFlashAttribute("ok",
-                    "✅ Article <strong>" + articleModifie.getCodeArticle() + "</strong> modifié avec succès !");
+                    "Article <strong>" + articleModifie.getCodeArticle() + "</strong> modifié avec succès !");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("ko",
                     "Erreur de validation : " + e.getMessage());

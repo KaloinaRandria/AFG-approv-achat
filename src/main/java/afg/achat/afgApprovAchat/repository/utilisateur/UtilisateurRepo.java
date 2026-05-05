@@ -2,6 +2,7 @@ package afg.achat.afgApprovAchat.repository.utilisateur;
 
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface UtilisateurRepo extends JpaRepository<Utilisateur,Integer> {
+public interface UtilisateurRepo extends JpaRepository<Utilisateur, Integer>, JpaSpecificationExecutor<Utilisateur> {
     List<Utilisateur> findBySuperieurHierarchique_Id(int superieurId);
 
     @Query("select u.id from Utilisateur u where u.superieurHierarchique.id = :superieurId")

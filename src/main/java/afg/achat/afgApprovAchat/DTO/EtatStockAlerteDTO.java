@@ -1,5 +1,6 @@
-package afg.achat.afgApprovAchat.model;
+package afg.achat.afgApprovAchat.DTO;
 
+import afg.achat.afgApprovAchat.model.VEtatStock;
 import afg.achat.afgApprovAchat.model.stock.StockAlerte;
 import lombok.Getter;
 import lombok.Setter;
