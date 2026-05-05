@@ -21,6 +21,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Controller
 @RequestMapping("/user")
@@ -251,6 +252,36 @@ public class UtilisateurController {
                             ))
                             .toList()
             );
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * GET /user/{id}/validateurs/disponibles
+     * Retourne tous les utilisateurs qui ne sont PAS encore validateurs de cet utilisateur.
+     */
+    @GetMapping("/{id}/validateurs/disponibles")
+    @ResponseBody
+    public ResponseEntity<?> getValidateursDispo(@PathVariable int id) {
+        try {
+            Set<Utilisateur> validateursActuels = utilisateurService.getValidateurs(id);
+            Set<Integer> idsValidateurs = validateursActuels.stream()
+                    .map(Utilisateur::getId)
+                    .collect(java.util.stream.Collectors.toSet());
+
+            List<Map<String, Object>> disponibles = utilisateurRepo.findAll().stream()
+                    .filter(u -> u.getId() != id)                    // exclure lui-même
+                    .filter(u -> !idsValidateurs.contains(u.getId())) // exclure validateurs déjà assignés
+                    .map(u -> Map.<String, Object>of(
+                            "id",     u.getId(),
+                            "nom",    u.getNom(),
+                            "prenom", u.getPrenom(),
+                            "mail",   u.getMail()
+                    ))
+                    .toList();
+
+            return ResponseEntity.ok(disponibles);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.notFound().build();
         }

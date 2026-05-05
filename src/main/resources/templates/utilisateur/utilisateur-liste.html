@@ -355,9 +355,9 @@
                     <label class="form-label fw-semibold">
                         <i class="fas fa-users me-1 text-primary"></i>Validateurs actuels
                     </label>
-                    <div id="validateurActuelsList" class="d-flex flex-wrap gap-2 p-2 border rounded bg-light min-height-50">
-                        <!-- Rempli dynamiquement par JS -->
-                        <span class="text-muted fst-italic" id="noValidateurMsg">Aucun validateur assigné.</span>
+                    <div id="validateurActuelsList" class="d-flex flex-wrap gap-2 p-2 border rounded bg-light" style="min-height: 50px;">
+
+                        <span class="text-muted fst-italic" id="noValidateurMsg">Chargement...</span>
                     </div>
                 </div>
 
@@ -372,17 +372,20 @@
                             <i class="fas fa-user-plus me-1 text-success"></i>
                             Ajouter un ou plusieurs validateurs
                         </label>
+
+                        <!-- Spinner chargement -->
+                        <div id="spinnerAjout" class="text-center py-2" style="display:none;">
+                            <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+                            <span class="ms-2 text-muted">Chargement des utilisateurs disponibles...</span>
+                        </div>
+
                         <select id="validateurSelectAjout"
                                 name="validateurId"
-                                class="form-select select2-validateur"
                                 multiple="multiple"
                                 style="width: 100%;">
-                            <option th:each="u : ${utilisateurs}"
-                                    th:value="${u.id}"
-                                    th:text="${u.nom + ' ' + u.prenom + ' (' + u.mail + ')'}">
-                            </option>
                         </select>
-                        <div class="form-text text-muted">
+
+                        <div class="form-text text-muted mt-1">
                             <i class="fas fa-lightbulb me-1"></i>
                             Recherchez par nom, prénom ou email. Plusieurs sélections possibles.
                         </div>
@@ -406,9 +409,9 @@
                         </label>
                         <select id="validateurSelectRetirer"
                                 name="validateurId"
-                                class="form-select select2-validateur"
                                 style="width: 100%;">
                             <option value="">-- Sélectionner un validateur à retirer --</option>
+                            <!-- Rempli dynamiquement via AJAX -->
                         </select>
                     </div>
 
@@ -433,7 +436,10 @@
 <script th:inline="none">
     /*<![CDATA[*/
     document.addEventListener('DOMContentLoaded', function () {
-        // Modal pour modifier
+
+        // -------------------------------------------------------
+        // Modal MODIFIER
+        // -------------------------------------------------------
         $('#modifierModal').on('show.bs.modal', function (event) {
             var button = $(event.relatedTarget);
             $('#modalId').val(button.data('id'));
@@ -445,40 +451,34 @@
             $('#modalPoste').val(button.data('posteid') || '');
             $('#modifierModalLabel').text('Modifier l\'utilisateur: ' + button.data('nom') + ' ' + button.data('prenom'));
         });
+
         $('#modifierModal').on('hidden.bs.modal', function () {
             $('#utilisateurForm')[0].reset();
         });
 
+        // -------------------------------------------------------
         // Boutons de suppression
+        // -------------------------------------------------------
         $('.delete-btn').on('click', function () {
-            var id = $(this).data('id');
-            var nom = $(this).data('nom');
+            var id     = $(this).data('id');
+            var nom    = $(this).data('nom');
             var prenom = $(this).data('prenom');
             $('#suppressionId').val(id);
             $('#suppressionNomUtilisateur').text(nom + ' ' + prenom);
             var suppressionModal = new bootstrap.Modal(document.getElementById('suppressionModal'));
             suppressionModal.show();
         });
-    });
 
-    document.addEventListener('DOMContentLoaded', function () {
-
-        // Initialise Select2 sur les selects du modal
-        $('.select2-validateur').select2({
-            dropdownParent: $('#validateurModal'),
-            placeholder: 'Rechercher un utilisateur...',
-            allowClear: true,
-            language: 'fr'
-        });
-
-        // Données CSRF
+        // -------------------------------------------------------
+        // CSRF
+        // -------------------------------------------------------
         const csrfToken  = /*[[${_csrf.token}]]*/ '';
         const csrfHeader = /*[[${_csrf.headerName}]]*/ 'X-CSRF-TOKEN';
 
         let currentUserId = null;
 
         // -------------------------------------------------------
-        // Ouverture du modal → chargement des validateurs via AJAX
+        // Ouverture du modal VALIDATEURS
         // -------------------------------------------------------
         document.querySelectorAll('.validateur-btn').forEach(btn => {
             btn.addEventListener('click', function () {
@@ -486,97 +486,128 @@
                 const nom     = this.dataset.nom;
 
                 document.getElementById('validateurModalNom').textContent = nom;
-                document.getElementById('ajoutUtilisateurId').value    = currentUserId;
-                document.getElementById('retirerUtilisateurId').value  = currentUserId;
+                document.getElementById('ajoutUtilisateurId').value   = currentUserId;
+                document.getElementById('retirerUtilisateurId').value = currentUserId;
 
-                // Réinitialise les selects
-                $('#validateurSelectAjout').val(null).trigger('change');
-                $('#validateurSelectRetirer').empty().append('<option value="">-- Sélectionner --</option>');
+                // Réinitialise l'affichage pendant le chargement
+                document.getElementById('validateurActuelsList').innerHTML =
+                    '<span class="text-muted fst-italic">Chargement...</span>';
 
                 chargerValidateurs(currentUserId);
             });
         });
 
         // -------------------------------------------------------
-        // Chargement AJAX des validateurs actuels
+        // Chargement AJAX : validateurs actuels + disponibles
         // -------------------------------------------------------
         function chargerValidateurs(userId) {
+
+            // 1. Validateurs actuels → badges + select Retirer
             fetch(`/user/${userId}/validateurs`, {
                 headers: { [csrfHeader]: csrfToken }
             })
                 .then(r => r.json())
                 .then(validateurs => {
                     const listDiv   = document.getElementById('validateurActuelsList');
-                    const noMsg     = document.getElementById('noValidateurMsg');
                     const selectRet = document.getElementById('validateurSelectRetirer');
 
-                    // Reset
-                    listDiv.innerHTML = '';
+                    listDiv.innerHTML   = '';
                     selectRet.innerHTML = '<option value="">-- Sélectionner un validateur à retirer --</option>';
 
                     if (validateurs.length === 0) {
                         listDiv.innerHTML = '<span class="text-muted fst-italic">Aucun validateur assigné.</span>';
-                        return;
+                    } else {
+                        validateurs.forEach(v => {
+                            const badge = document.createElement('span');
+                            badge.className = 'badge bg-primary fs-6 d-flex align-items-center gap-1 px-3 py-2';
+                            badge.innerHTML = `<i class="fas fa-user-shield"></i> ${v.prenom} ${v.nom}`;
+                            listDiv.appendChild(badge);
+
+                            const opt = document.createElement('option');
+                            opt.value       = v.id;
+                            opt.textContent = `${v.nom} ${v.prenom} (${v.mail})`;
+                            selectRet.appendChild(opt);
+                        });
                     }
-
-                    validateurs.forEach(v => {
-                        // Badge dans la liste
-                        const badge = document.createElement('span');
-                        badge.className = 'badge bg-primary fs-6 d-flex align-items-center gap-1 px-3 py-2';
-                        badge.innerHTML = `<i class="fas fa-user-shield"></i> ${v.prenom} ${v.nom}`;
-                        listDiv.appendChild(badge);
-
-                        // Option dans le select "Retirer"
-                        const opt = document.createElement('option');
-                        opt.value = v.id;
-                        opt.textContent = `${v.nom} ${v.prenom} (${v.mail})`;
-                        selectRet.appendChild(opt);
-                    });
-
-                    // Refresh Select2
                     $('#validateurSelectRetirer').trigger('change');
                 })
                 .catch(() => {
                     document.getElementById('validateurActuelsList').innerHTML =
                         '<span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Erreur de chargement.</span>';
                 });
+
+            // 2. Disponibles → select Ajout (exclut déjà validateurs assignés)
+            const spinner = document.getElementById('spinnerAjout');
+            if (spinner) spinner.style.display = 'block';
+
+            fetch(`/user/${userId}/validateurs/disponibles`, {
+                headers: { [csrfHeader]: csrfToken }
+            })
+                .then(r => r.json())
+                .then(disponibles => {
+                    if (spinner) spinner.style.display = 'none';
+
+                    const selectAjout = document.getElementById('validateurSelectAjout');
+
+                    // Détruire Select2 avant de vider
+                    if ($.fn.select2 && $(selectAjout).data('select2')) {
+                        $(selectAjout).select2('destroy');
+                    }
+
+                    selectAjout.innerHTML = '';
+
+                    disponibles.forEach(u => {
+                        const opt       = document.createElement('option');
+                        opt.value       = u.id;
+                        opt.textContent = `${u.nom} ${u.prenom} (${u.mail})`;
+                        selectAjout.appendChild(opt);
+                    });
+
+                    $(selectAjout).select2({
+                        dropdownParent: $('#validateurModal'),
+                        placeholder:    'Rechercher un utilisateur...',
+                        allowClear:     true,
+                        language:       'fr'
+                    });
+                })
+                .catch(() => {
+                    if (spinner) spinner.style.display = 'none';
+                    console.error('Erreur chargement utilisateurs disponibles');
+                });
         }
 
         // -------------------------------------------------------
-        // AJOUTER — appels séquentiels pour chaque validateur choisi
+        // AJOUTER plusieurs validateurs
         // -------------------------------------------------------
         document.getElementById('btnAjouterValidateurs').addEventListener('click', function () {
-            const selectedIds = $('#validateurSelectAjout').val(); // tableau d'ids
+            const selectedIds = $('#validateurSelectAjout').val();
 
             if (!selectedIds || selectedIds.length === 0) {
                 alert('Veuillez sélectionner au moins un validateur.');
                 return;
             }
 
-            // Envoi séquentiel (Promise chain) pour chaque id sélectionné
-            const promises = selectedIds.map(validateurId =>
-                fetch(`/user/${currentUserId}/validateurs/${validateurId}/ajouter`, {
-                    method: 'POST',
-                    headers: { [csrfHeader]: csrfToken }
-                })
-            );
-
-            Promise.all(promises)
+            Promise.all(
+                selectedIds.map(validateurId =>
+                    fetch(`/user/${currentUserId}/validateurs/${validateurId}/ajouter`, {
+                        method:  'POST',
+                        headers: { [csrfHeader]: csrfToken }
+                    })
+                )
+            )
                 .then(responses => {
-                    const allOk = responses.every(r => r.ok);
-                    if (allOk) {
-                        chargerValidateurs(currentUserId); // Refresh liste
-                        $('#validateurSelectAjout').val(null).trigger('change');
+                    if (responses.every(r => r.ok)) {
+                        chargerValidateurs(currentUserId);
                         afficherToast('Validateur(s) ajouté(s) avec succès.', 'success');
                     } else {
-                        afficherToast('Certains validateurs n\'ont pas pu être ajoutés.', 'danger');
+                        afficherToast("Certains validateurs n'ont pas pu être ajoutés.", 'danger');
                     }
                 })
-                .catch(() => afficherToast('Erreur réseau lors de l\'ajout.', 'danger'));
+                .catch(() => afficherToast("Erreur réseau lors de l'ajout.", 'danger'));
         });
 
         // -------------------------------------------------------
-        // RETIRER — un seul validateur à la fois
+        // RETIRER un validateur
         // -------------------------------------------------------
         document.getElementById('btnRetirerValidateur').addEventListener('click', function () {
             const validateurId = document.getElementById('validateurSelectRetirer').value;
@@ -589,7 +620,7 @@
             if (!confirm('Confirmer le retrait de ce validateur ?')) return;
 
             fetch(`/user/${currentUserId}/validateurs/${validateurId}/retirer`, {
-                method: 'POST',
+                method:  'POST',
                 headers: { [csrfHeader]: csrfToken }
             })
                 .then(r => {
@@ -600,25 +631,30 @@
                         afficherToast('Impossible de retirer ce validateur.', 'danger');
                     }
                 })
-                .catch(() => afficherToast('Erreur réseau lors du retrait.', 'danger'));
+                .catch(() => afficherToast("Erreur réseau lors du retrait.", 'danger'));
         });
 
         // -------------------------------------------------------
-        // Toast Bootstrap (feedback discret sans rechargement)
+        // Toast Bootstrap
         // -------------------------------------------------------
         function afficherToast(message, type) {
             const toastContainer = document.getElementById('toastContainer')
                 || creerToastContainer();
 
             const id = 'toast_' + Date.now();
-            const html = `
-            <div id="${id}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            toastContainer.insertAdjacentHTML('beforeend', `
+            <div id="${id}" class="toast align-items-center text-white bg-${type} border-0"
+                 role="alert" aria-live="assertive" aria-atomic="true">
                 <div class="d-flex">
-                    <div class="toast-body"><i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}</div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    <div class="toast-body">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                            data-bs-dismiss="toast"></button>
                 </div>
-            </div>`;
-            toastContainer.insertAdjacentHTML('beforeend', html);
+            </div>`
+            );
             const toastEl = new bootstrap.Toast(document.getElementById(id), { delay: 3500 });
             toastEl.show();
             document.getElementById(id).addEventListener('hidden.bs.toast', () =>
@@ -627,13 +663,14 @@
         }
 
         function creerToastContainer() {
-            const div = document.createElement('div');
-            div.id = 'toastContainer';
-            div.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            const div       = document.createElement('div');
+            div.id          = 'toastContainer';
+            div.className   = 'toast-container position-fixed bottom-0 end-0 p-3';
             div.style.zIndex = '1100';
             document.body.appendChild(div);
             return div;
         }
+
     });
     /*]]>*/
 </script>
