@@ -363,6 +363,9 @@
 </div>
 <script th:inline="none">
     /*<![CDATA[*/
+    const CONTEXT_PATH = document
+        .querySelector('meta[name="context-path"]')
+        .getAttribute('content');
     document.addEventListener('DOMContentLoaded', function () {
         // Modal pour modifier
         $('#modifierModal').on('show.bs.modal', function (event) {
@@ -402,7 +405,6 @@
             </td>
         </tr>
     `);
-        const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
         // URL du contrôleur - NOTEZ LE CHANGEMENT ICI !
         // Le contrôleur utilise @GetMapping("/article/{codeArticle}")
         // Donc l'URL doit être: /admin/api/historique/article/CODE_ARTICLE
@@ -537,15 +539,21 @@
                 // Afficher le spinner
                 document.getElementById('searchSpinner').classList.remove('d-none');
 
-                fetch('/article/list/ajax?' + params.toString(), {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                fetch(`${CONTEXT_PATH}article/list/ajax?${params.toString()}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
                 })
                     .then(res => res.json())
                     .then(data => {
                         renderTable(data);
                         renderPagination(data, params);
                         // Mettre à jour l'URL sans recharger la page
-                        window.history.replaceState({}, '', '/article/list?' + params.toString());
+                        window.history.replaceState(
+                            {},
+                            '',
+                            `${CONTEXT_PATH}article/list?${params.toString()}`
+                        );
                     })
                     .catch(err => console.error('Erreur recherche:', err))
                     .finally(() => {
