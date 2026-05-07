@@ -37,37 +37,38 @@
 
         <div class="card shadow-lg border-0 mb-3">
             <div class="card-body">
-                <form method="get" th:action="@{/article/list}" class="row g-2 align-items-end">
-                    <input type="hidden" name="sort" th:value="${sort}">
-                    <input type="hidden" name="dir" th:value="${dir}">
+                <div class="row g-2 align-items-end">
+                    <input type="hidden" id="hiddenSort" th:value="${sort}">
+                    <input type="hidden" id="hiddenDir" th:value="${dir}">
+                    <input type="hidden" id="hiddenSize" th:value="${size}">
 
                     <div class="col-md-3">
                         <label class="form-label mb-1">Code</label>
-                        <input class="form-control" type="text" name="code"
+                        <input class="form-control search-input" type="text" id="inputCode"
                                th:value="${code}" placeholder="CONS0001..." />
                     </div>
 
                     <div class="col-md-4">
                         <label class="form-label mb-1">Désignation</label>
-                        <input class="form-control" type="text" name="designation"
+                        <input class="form-control search-input" type="text" id="inputDesignation"
                                th:value="${designation}" placeholder="Papier, Encre..." />
                     </div>
 
                     <div class="col-md-2">
                         <label class="form-label mb-1">Famille</label>
-                        <input class="form-control" type="text" name="famille"
+                        <input class="form-control search-input" type="text" id="inputFamille"
                                th:value="${famille}" placeholder="Informatique..." />
                     </div>
 
                     <div class="col-md-2">
                         <label class="form-label mb-1">UDM</label>
-                        <input class="form-control" type="text" name="udm"
+                        <input class="form-control search-input" type="text" id="inputUdm"
                                th:value="${udm}" placeholder="PCS, KG..." />
                     </div>
 
                     <div class="col-md-1">
                         <label class="form-label mb-1">Taille</label>
-                        <select class="form-select" name="size">
+                        <select class="form-select" id="inputSize">
                             <option th:value="10" th:selected="${size == 10}">10</option>
                             <option th:value="25" th:selected="${size == 25}">25</option>
                             <option th:value="50" th:selected="${size == 50}">50</option>
@@ -75,15 +76,17 @@
                         </select>
                     </div>
 
-                    <div class="col-md-12 d-flex gap-2 mt-2">
-                        <button class="btn btn-gradient-blue" type="submit">
-                            <i class="fas fa-filter me-1"></i>Filtrer
-                        </button>
-                        <a class="btn btn-outline-secondary" th:href="@{/article/list}">
-                            Réinitialiser
+                    <!-- Indicateur de chargement + bouton reset -->
+                    <div class="col-md-12 d-flex gap-2 align-items-center mt-2">
+                <span id="searchSpinner" class="d-none">
+                    <span class="spinner-border spinner-border-sm text-primary me-1"></span>
+                    <small class="text-muted">Recherche...</small>
+                </span>
+                        <a class="btn btn-outline-secondary btn-sm" href="/article/list">
+                            <i class="fas fa-times me-1"></i>Réinitialiser
                         </a>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
 
@@ -121,7 +124,7 @@
                         </thead>
 
                         <tbody>
-                        <!-- ✅ CHANGEMENT IMPORTANT: articlesPage.content -->
+                        <!-- CHANGEMENT IMPORTANT: articlesPage.content -->
                         <tr th:each="a : ${articlesPage.content}">
                             <td th:text="${a.codeArticle}"></td>
                             <td th:text="${a.designation}"></td>
@@ -171,7 +174,7 @@
                     </table>
                 </div>
 
-                <!-- ✅ PAGINATION -->
+                <!-- PAGINATION -->
                 <nav th:if="${articlesPage.totalPages > 1}" class="mt-3" aria-label="Pagination articles">
                     <ul class="pagination justify-content-center mb-0">
 
@@ -360,6 +363,9 @@
 </div>
 <script th:inline="none">
     /*<![CDATA[*/
+    const CONTEXT_PATH = document
+        .querySelector('meta[name="context-path"]')
+        .getAttribute('content');
     document.addEventListener('DOMContentLoaded', function () {
         // Modal pour modifier
         $('#modifierModal').on('show.bs.modal', function (event) {
@@ -399,7 +405,6 @@
             </td>
         </tr>
     `);
-        const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
         // URL du contrôleur - NOTEZ LE CHANGEMENT ICI !
         // Le contrôleur utilise @GetMapping("/article/{codeArticle}")
         // Donc l'URL doit être: /admin/api/historique/article/CODE_ARTICLE
@@ -508,6 +513,147 @@
         if (typeLower.includes('suppression')) return 'bg-danger';
         return 'bg-warning text-dark';
     }
+
+    (function () {
+        let debounceTimer = null;
+        const DELAY = 400; // ms d'attente après la dernière frappe
+
+        function getCurrentParams(page) {
+            return new URLSearchParams({
+                code:        document.getElementById('inputCode').value.trim(),
+                designation: document.getElementById('inputDesignation').value.trim(),
+                famille:     document.getElementById('inputFamille').value.trim(),
+                udm:         document.getElementById('inputUdm').value.trim(),
+                size:        document.getElementById('inputSize').value,
+                sort:        document.getElementById('hiddenSort').value,
+                dir:         document.getElementById('hiddenDir').value,
+                page:        page || 0
+            });
+        }
+
+        function doSearch(page) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () {
+                const params = getCurrentParams(page);
+
+                // Afficher le spinner
+                document.getElementById('searchSpinner').classList.remove('d-none');
+
+                fetch(`${CONTEXT_PATH}article/list/ajax?${params.toString()}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        renderTable(data);
+                        renderPagination(data, params);
+                        // Mettre à jour l'URL sans recharger la page
+                        window.history.replaceState(
+                            {},
+                            '',
+                            `${CONTEXT_PATH}article/list?${params.toString()}`
+                        );
+                    })
+                    .catch(err => console.error('Erreur recherche:', err))
+                    .finally(() => {
+                        document.getElementById('searchSpinner').classList.add('d-none');
+                    });
+            }, DELAY);
+        }
+
+        function renderTable(data) {
+            const tbody = document.querySelector('tbody');
+            if (data.content.length === 0) {
+                tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        Aucun article trouvé.
+                    </td>
+                </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.content.map(a => `
+            <tr>
+                <td>${a.codeArticle || ''}</td>
+                <td>${a.designation || ''}</td>
+                <td>${a.famille?.description ?? '---'}</td>
+                <td class="text-end">${a.seuilMin ?? ''}</td>
+                <td>${a.udm?.description ?? '---'}</td>
+                <td>
+                    <button type="button" class="btn btn-sm edit-btn"
+                        data-bs-toggle="modal" data-bs-target="#modifierModal"
+                        data-codearticle="${a.codeArticle}"
+                        data-designation="${a.designation}"
+                        data-seuilminimum="${a.seuilMin}"
+                        data-idudm="${a.udm?.id ?? ''}"
+                        data-idfamille="${a.famille?.id ?? ''}"
+                        title="Modifier l'article">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm historique-btn"
+                        data-bs-toggle="modal" data-bs-target="#historiqueModal"
+                        data-codearticle="${a.codeArticle}"
+                        data-designation="${a.designation}"
+                        title="Voir l'historique">
+                        <i class="fas fa-history"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        }
+
+        function renderPagination(data, params) {
+            const nav = document.querySelector('nav[aria-label="Pagination articles"]');
+            if (!nav) return;
+
+            if (data.totalPages <= 1) {
+                nav.style.display = 'none';
+                return;
+            }
+            nav.style.display = '';
+
+            const current = data.number;
+            const total   = data.totalPages;
+            const start   = Math.max(0, current - 2);
+            const end     = Math.min(total - 1, current + 2);
+
+            let pages = '';
+            for (let p = start; p <= end; p++) {
+                pages += `<li class="page-item ${p === current ? 'active' : ''}">
+                <a class="page-link page-btn" data-page="${p}">${p + 1}</a>
+            </li>`;
+            }
+
+            nav.querySelector('ul').innerHTML = `
+            <li class="page-item ${data.first ? 'disabled' : ''}">
+                <a class="page-link page-btn" data-page="${current - 1}">Précédente</a>
+            </li>
+            ${pages}
+            <li class="page-item ${data.last ? 'disabled' : ''}">
+                <a class="page-link page-btn" data-page="${current + 1}">Suivante</a>
+            </li>`;
+
+            // Relier les clics de pagination
+            nav.querySelectorAll('.page-btn').forEach(btn => {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    doSearch(parseInt(this.dataset.page));
+                });
+            });
+
+            nav.querySelector('.text-center').textContent =
+                `Page ${current + 1} / ${total} — Total: ${data.totalElements}`;
+        }
+
+        // Écouter les champs de recherche
+        document.querySelectorAll('.search-input').forEach(input => {
+            input.addEventListener('input', () => doSearch(0));
+        });
+        document.getElementById('inputSize').addEventListener('change', () => doSearch(0));
+
+    })();
 
     /*]]>*/
 </script>

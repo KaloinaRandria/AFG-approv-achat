@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.controller;
 
+import afg.achat.afgApprovAchat.DTO.ArticleDTO;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.DTO.ArticleModificationDTO;
 import afg.achat.afgApprovAchat.model.Famille;
@@ -237,5 +238,22 @@ public class ArticleController {
         }
 
         return "redirect:/article/list";
+    }
+
+    @GetMapping("/list/ajax")
+    @ResponseBody
+    public Page<ArticleDTO> listArticlesAjax(
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String designation,
+            @RequestParam(required = false) String famille,
+            @RequestParam(required = false) String udm,
+            @RequestParam(defaultValue = "0")  int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "codeArticle") String sort,
+            @RequestParam(defaultValue = "asc") String dir
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return articleService.searchArticlesMulti(code, designation, famille, udm, pageable)
+                .map(ArticleDTO::from);
     }
 }
