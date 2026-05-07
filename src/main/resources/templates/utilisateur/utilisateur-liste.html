@@ -435,6 +435,9 @@
 
 <script th:inline="none">
     /*<![CDATA[*/
+    const CONTEXT_PATH = document
+        .querySelector('meta[name="context-path"]')
+        .getAttribute('content');
     document.addEventListener('DOMContentLoaded', function () {
 
         // -------------------------------------------------------
@@ -503,7 +506,7 @@
         function chargerValidateurs(userId) {
 
             // 1. Validateurs actuels → badges + select Retirer
-            fetch(`/user/${userId}/validateurs`, {
+            fetch(`${CONTEXT_PATH}user/${userId}/validateurs`, {
                 headers: { [csrfHeader]: csrfToken }
             })
                 .then(r => r.json())
@@ -540,7 +543,7 @@
             const spinner = document.getElementById('spinnerAjout');
             if (spinner) spinner.style.display = 'block';
 
-            fetch(`/user/${userId}/validateurs/disponibles`, {
+            fetch(`${CONTEXT_PATH}user/${userId}/validateurs/disponibles`, {
                 headers: { [csrfHeader]: csrfToken }
             })
                 .then(r => r.json())
@@ -589,7 +592,7 @@
 
             Promise.all(
                 selectedIds.map(validateurId =>
-                    fetch(`/user/${currentUserId}/validateurs/${validateurId}/ajouter`, {
+                    fetch(`${CONTEXT_PATH}user/${currentUserId}/validateurs/${validateurId}/ajouter`, {
                         method:  'POST',
                         headers: { [csrfHeader]: csrfToken }
                     })
@@ -619,7 +622,7 @@
 
             if (!confirm('Confirmer le retrait de ce validateur ?')) return;
 
-            fetch(`/user/${currentUserId}/validateurs/${validateurId}/retirer`, {
+            fetch(`${CONTEXT_PATH} user/${currentUserId}/validateurs/${validateurId}/retirer`, {
                 method:  'POST',
                 headers: { [csrfHeader]: csrfToken }
             })
