@@ -12,6 +12,7 @@ import afg.achat.afgApprovAchat.model.util.MontantCalculator;
 import afg.achat.afgApprovAchat.model.util.PrixArticle;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
+import afg.achat.afgApprovAchat.repository.demande.DemandeMereSpec;
 import afg.achat.afgApprovAchat.repository.stock.StockFilleRepo;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.BonSortieService;
@@ -279,161 +280,146 @@ public class DemandeController {
 
 
     @GetMapping("/list")
-    public String listDemandePage(Model model,
-                                  HttpServletRequest request,
-                                  @RequestParam(defaultValue = "0") int page,
-                                  @RequestParam(defaultValue = "10") int size,
-                                  @RequestParam(defaultValue = "dateDemande") String sort,
-                                  @RequestParam(defaultValue = "desc") String dir,
-                                  @RequestParam(required = false) Integer statut,
-                                  @RequestParam(required = false) String priorite,
-                                  @RequestParam(required = false) String motif,
-                                  @RequestParam(required = false) String num,
-                                  @RequestParam(required = false) String demandeur,
-                                  @RequestParam(required = false) String type,
-                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
-                                  @RequestParam(required = false, defaultValue = "ALL") String scope) {
+    public String listDemandePage(
+            Model model,
+            HttpServletRequest request,
+            @RequestParam(defaultValue = "0")           int page,
+            @RequestParam(defaultValue = "10")          int size,
+            @RequestParam(defaultValue = "dateDemande") String sort,
+            @RequestParam(defaultValue = "desc")        String dir,
+            @RequestParam(required = false)             Integer  statut,
+            @RequestParam(required = false)             String   priorite,
+            @RequestParam(required = false)             String   motif,
+            @RequestParam(required = false)             String   num,
+            @RequestParam(required = false)             String   demandeur,
+            @RequestParam(required = false)             String   type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(required = false, defaultValue = "ALL") String scope) {
 
-        // ── 1. Contexte utilisateur ──────────────────────────────────────────────
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        Utilisateur principal = (Utilisateur) auth.getPrincipal();
-        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+        // ── 1. Utilisateur courant ───────────────────────────────────────────────
+        Authentication auth    = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal  = (Utilisateur) auth.getPrincipal();
+        Utilisateur current    = utilisateurService.getUtilisateurByMail(principal.getMail());
 
         boolean isAdmin      = hasRole(auth, "ROLE_ADMIN");
         boolean isMG         = hasRole(auth, "ROLE_MOYENS_GENERAUX");
         boolean isControleur = hasRole(auth, "ROLE_CONTROLEUR");
         boolean isDFC        = hasRole(auth, "ROLE_DFC");
         boolean isSG         = hasRole(auth, "ROLE_SG");
+        boolean isBackoffice = isAdmin || isMG || isControleur || isDFC || isSG;
 
-        boolean isBackofficeValidator = isAdmin || isMG || isControleur || isDFC;
-
-        // ── 2. Visibilité hiérarchique + validateurs assignés ───────────────────
-        List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
-
-        //Récupérer les IDs des utilisateurs que current doit valider
+        // ── 2. IDs visibles : hiérarchie + validateurs assignés ─────────────────
+        List<Integer> visibleIds  = utilisateurService.getIdsUtilisateurVisible(current.getId());
         List<Integer> idsAValider = utilisateurService.getIdsUtilisateursAValider(current.getId());
 
-        //Fusionner les deux listes
-        Set<Integer> allVisibleIdsSet = new HashSet<>(visibleIds);
-        allVisibleIdsSet.addAll(idsAValider);
-        List<Integer> allVisibleIds = new ArrayList<>(allVisibleIdsSet);
+        Set<Integer>  allVisibleSet  = new HashSet<>(visibleIds);
+        allVisibleSet.addAll(idsAValider);
+        List<Integer> allVisibleIds  = new ArrayList<>(allVisibleSet);
+        boolean       hasChildren    = allVisibleIds.size() > 1;
 
-        boolean hasChildren = allVisibleIds.size() > 1;
-
-        // Scope (filtre portée pour les managers non-backoffice)
-        List<Integer> idsToUse = resolveScope(scope, current, allVisibleIds, isAdmin || isMG || isControleur);
-
-        // ── 3. Statuts autorisés selon le rôle ──────────────────────────────────
+        // ── 3. Filtre statut normalisé ───────────────────────────────────────────
         Integer statutFilter = (statut == null || statut == 0) ? null : statut;
-        List<Integer> statutsAutorises = resolveStatutsAutorises(
-                isAdmin, isMG, isControleur, isDFC, isSG, statutFilter
-        );
 
-        // ── 4. Requête principale ────────────────────────────────────────────────
-        Page<DemandeMere> demandesMeres;
+        // ── 4. Construction du SearchCriteria selon le rôle ─────────────────────
+        DemandeMereSpec.SearchCriteria.Builder criteriaBuilder = DemandeMereSpec.SearchCriteria.builder()
+                .num(num)
+                .demandeur(demandeur)
+                .type(type)
+                .priorite(priorite)
+                .motif(motif)
+                .statut(statutFilter)
+                .dateFrom(DemandeMereService.toFrom(dateFrom))
+                .dateTo(DemandeMereService.toTo(dateTo));
 
         if (isAdmin) {
-            // Admin : voit tout, pagination native
-            demandesMeres = demandeMereService.searchDemandes(
-                    num, demandeur, type, statutFilter, priorite, motif,
-                    dateFrom, dateTo, page, size, sort, dir
-            );
+            // Admin : aucune restriction sur les demandeurs ni sur les statuts
 
         } else if (isMG || isControleur || isDFC || isSG) {
-            // Backoffice : statuts autorisés globalement
-            demandesMeres = demandeMereService.searchDemandesBackoffice(
-                    num, demandeur, type,
-                    statutsAutorises, statutFilter,
-                    priorite,motif, dateFrom, dateTo,
-                    allVisibleIds,  //Utiliser la liste complète
-                    page, size, sort, dir
-            );
+            // Backoffice : voit les demandes dans ses statuts autorisés
+            //              OU ses propres demandes (tous statuts)
+            List<Integer> roleStatuts = resolveStatutsAutorises(
+                    isMG, isControleur, isDFC, isSG, statutFilter);
+            criteriaBuilder
+                    .roleStatuts(roleStatuts)
+                    .myStatut(statutFilter)
+                    .myVisibleIds(allVisibleIds.isEmpty() ? List.of(-1) : allVisibleIds);
 
         } else {
-            // Utilisateur simple : ses demandes + demandes à valider
-            demandesMeres = demandeMereService.searchDemandesVisibleParUtilisateur(
-                    num, demandeur, type, statutFilter, priorite, motif,
-                    dateFrom, dateTo,
-                    idsToUse.isEmpty() ? List.of(-1) : idsToUse,
-                    page, size, sort, dir
-            );
+            // Utilisateur simple : uniquement ses demandes + celles qu'il doit valider
+            List<Integer> idsToUse = resolveScope(scope, current, allVisibleIds);
+            criteriaBuilder.demandeurIds(idsToUse.isEmpty() ? List.of(-1) : idsToUse);
         }
 
-        // ── 5. Model ─────────────────────────────────────────────────────────────
-        populateModel(model, demandesMeres, statut, priorite, num, demandeur,
-                type, dateFrom, dateTo, scope, size, sort, dir,
-                isBackofficeValidator, hasChildren,
-                isMG, isControleur, isDFC, isSG, isAdmin);
+        // ── 5. Exécution de la recherche ─────────────────────────────────────────
+        Page<DemandeMere> demandesMeres = demandeMereService.search(
+                criteriaBuilder.build(), page, size, sort, dir);
 
-        model.addAttribute("motif", motif);
+        // ── 6. Alimentation du modèle Thymeleaf ──────────────────────────────────
+        populateModel(
+                model, demandesMeres,
+                statut, priorite, motif, num, demandeur, type,
+                dateFrom, dateTo, scope,
+                size, sort, dir,
+                isBackoffice, hasChildren,
+                isMG, isControleur, isDFC, isSG, isAdmin
+        );
 
-        // Ajouter des attributs pour l'interface
-        model.addAttribute("nbUtilisateursAValider", idsAValider.size());
-        model.addAttribute("hasDemandesAValider", !idsAValider.isEmpty());
-        model.addAttribute("StatutValide", StatutDemande.VALIDE);
+        model.addAttribute("motif",                  motif);
+        model.addAttribute("nbUtilisateursAValider",  idsAValider.size());
+        model.addAttribute("hasDemandesAValider",     !idsAValider.isEmpty());
+        model.addAttribute("StatutValide",            StatutDemande.VALIDE);
 
         return "demande/demande-liste";
     }
 
 // ── Helpers privés ───────────────────────────────────────────────────────────
 
+    // ── Helpers privés ────────────────────────────────────────────────────────
+
     private boolean hasRole(Authentication auth, String role) {
         return auth.getAuthorities().stream().anyMatch(a -> role.equals(a.getAuthority()));
     }
 
     private List<Integer> resolveScope(String scope, Utilisateur current,
-                                       List<Integer> visibleIds, boolean isPrivileged) {
-        if (isPrivileged) return visibleIds;
-        if ("ME".equalsIgnoreCase(scope))       return List.of(current.getId());
-        if ("CHILDREN".equalsIgnoreCase(scope)) return visibleIds.stream()
-                .filter(id -> !id.equals(current.getId())).toList();
-        return visibleIds; // ALL
+                                       List<Integer> allVisibleIds) {
+        return switch (scope == null ? "ALL" : scope.toUpperCase()) {
+            case "ME"       -> List.of(current.getId());
+            case "CHILDREN" -> allVisibleIds.stream()
+                    .filter(id -> !id.equals(current.getId()))
+                    .toList();
+            default         -> allVisibleIds;
+        };
     }
 
-    private List<Integer> resolveStatutsAutorises(boolean isAdmin, boolean isMG,
-                                                  boolean isControleur, boolean isDFC,
-                                                  boolean isSG, Integer statutFilter) {
+    private List<Integer> resolveStatutsAutorises(boolean isMG, boolean isControleur,
+                                                  boolean isDFC, boolean isSG,
+                                                  Integer statutFilter) {
         List<Integer> base;
-
-        if (isAdmin) {
-            return null; // pas de restriction
-        } else if (isMG) {
-            base = List.of(
-                    StatutDemande.VALIDATION_N1, StatutDemande.VALIDATION_N2,
+        if (isMG) {
+            base = List.of(StatutDemande.VALIDATION_N1, StatutDemande.VALIDATION_N2,
                     StatutDemande.VALIDATION_N3, StatutDemande.VALIDATION_N4,
-                    StatutDemande.DECISION_CODEP, StatutDemande.VALIDE, StatutDemande.REFUSE
-            );
+                    StatutDemande.DECISION_CODEP, StatutDemande.VALIDE, StatutDemande.REFUSE);
         } else if (isControleur) {
-            base = List.of(
-                    StatutDemande.VALIDATION_N2, StatutDemande.VALIDATION_N3,
+            base = List.of(StatutDemande.VALIDATION_N2, StatutDemande.VALIDATION_N3,
                     StatutDemande.VALIDATION_N4, StatutDemande.DECISION_CODEP,
-                    StatutDemande.VALIDE, StatutDemande.REFUSE
-            );
+                    StatutDemande.VALIDE, StatutDemande.REFUSE);
         } else if (isDFC) {
-            base = List.of(
-                    StatutDemande.VALIDATION_N3, StatutDemande.VALIDATION_N4,
-                    StatutDemande.DECISION_CODEP, StatutDemande.VALIDE, StatutDemande.REFUSE
-            );
-        } else if (isSG) {
-            base = List.of(
-                    StatutDemande.VALIDATION_N4, StatutDemande.DECISION_CODEP,
-                    StatutDemande.VALIDE, StatutDemande.REFUSE
-            );
-        } else {
-            return null;
+            base = List.of(StatutDemande.VALIDATION_N3, StatutDemande.VALIDATION_N4,
+                    StatutDemande.DECISION_CODEP, StatutDemande.VALIDE, StatutDemande.REFUSE);
+        } else { // isSG
+            base = List.of(StatutDemande.VALIDATION_N4, StatutDemande.DECISION_CODEP,
+                    StatutDemande.VALIDE, StatutDemande.REFUSE);
         }
 
-        // Appliquer le filtre statut sélectionné par l'utilisateur
         if (statutFilter != null) {
             return base.contains(statutFilter) ? List.of(statutFilter) : List.of();
         }
-
-        return new ArrayList<>(base);
+        return new java.util.ArrayList<>(base);
     }
 
     private void populateModel(Model model, Page<DemandeMere> demandesMeres,
-                               Integer statut, String priorite, String num,
+                               Integer statut, String priorite, String motif, String num,
                                String demandeur, String type,
                                LocalDate dateFrom, LocalDate dateTo,
                                String scope, int size, String sort, String dir,
@@ -496,9 +482,9 @@ public class DemandeController {
         prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P0), "P0");
         model.addAttribute("prioriteFiltre", prioriteFiltre);
 
-        // Colonnes visibilité
-        model.addAttribute("showDemandeurColumn",       isBackofficeValidator || hasChildren);
-        model.addAttribute("showDemandeurScopeFilter",  hasChildren && !isBackofficeValidator);
+        // Visibilité colonnes
+        model.addAttribute("showDemandeurColumn",      isBackofficeValidator || hasChildren);
+        model.addAttribute("showDemandeurScopeFilter", hasChildren && !isBackofficeValidator);
 
         // Flags de vue
         model.addAttribute("isMGOnly",         isMG && !isAdmin);
@@ -506,13 +492,19 @@ public class DemandeController {
         model.addAttribute("isDFCOnly",        isDFC && !isAdmin);
         model.addAttribute("isSGOnly",         isSG && !isAdmin);
 
-        // Données pagination / filtres
+        // Colspan calculé (évite l'expression #authorization fragile dans Thymeleaf)
+        int colCount = 5; // id + date + motif + priorité + statut
+        if (isBackofficeValidator || hasChildren) colCount++;
+        model.addAttribute("tableColCount", colCount);
+
+        // Données pagination et filtres actifs
         model.addAttribute("demandesMeres", demandesMeres);
-        model.addAttribute("statut",    (statut == null) ? 0 : statut);
-        model.addAttribute("priorite",  priorite == null ? "" : priorite);
-        model.addAttribute("num",       num == null ? "" : num);
+        model.addAttribute("statut",    statut == null ? 0 : statut);
+        model.addAttribute("priorite",  priorite  == null ? "" : priorite);
+        model.addAttribute("motif",     motif     == null ? "" : motif);
+        model.addAttribute("num",       num       == null ? "" : num);
         model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
-        model.addAttribute("type",      type == null ? "" : type);
+        model.addAttribute("type",      type      == null ? "" : type);
         model.addAttribute("dateFrom",  dateFrom);
         model.addAttribute("dateTo",    dateTo);
         model.addAttribute("scope",     scope);
