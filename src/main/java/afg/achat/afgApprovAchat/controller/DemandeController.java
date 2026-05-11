@@ -265,6 +265,35 @@ public class DemandeController {
                 ess.sendEmail(mailSup);
             }
 
+            // ── Mail 3 : notification aux validateurs ────────────────────────────────
+            Set<Utilisateur> validateurs = utilisateur.getValidateurs();
+
+            if (validateurs != null && !validateurs.isEmpty()) {
+                for (Utilisateur validateur : validateurs) {
+                    if (validateur == null || validateur.getMail() == null) continue;
+
+                    Map<String, Object> propsValidateur = new HashMap<>();
+                    propsValidateur.put("id",           demandeMere.getId());
+                    propsValidateur.put("demandeur",    demandeMere.getDemandeur());
+                    propsValidateur.put("destinataire", validateur);
+                    propsValidateur.put("validateur",   demandeMere.getDemandeur());
+                    propsValidateur.put("etape",        StatutDemande.getLibelle(StatutDemande.CREE));
+                    propsValidateur.put("dateDemande",  LocalDateTime.now()
+                            .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+                    String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
+                    String lienValidation = baseUrl + "/demande/fiche/" + demandeMere.getId();
+                    propsValidateur.put("lienValidation", lienValidation);
+
+                    Mail mailValidateur = new Mail(
+                            "validSup",
+                            validateur.getMail(),
+                            "[AFG Bank - Demande Achat] - Action requise : Validation de la demande N°" + demandeMere.getId(),
+                            propsValidateur
+                    );
+                    ess.sendEmail(mailValidateur);
+                }
+            }
+
 
             redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
             return "redirect:/demande/list";

@@ -1,6 +1,7 @@
 // DemandeMereService.java
 package afg.achat.afgApprovAchat.service.demande;
 
+import afg.achat.afgApprovAchat.DTO.ServiceDemandeDTO;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
@@ -47,6 +48,10 @@ public class DemandeMereService {
                                     String sort, String dir) {
         Pageable pageable = buildPageable(page, size, sort, dir);
         return demandeMereRepo.findAll(DemandeMereSpec.build(criteria), pageable);
+    }
+
+    public List<ServiceDemandeDTO> getDemandesParService() {
+        return demandeMereRepo.countDemandesByService();
     }
 
     // ── Écriture ─────────────────────────────────────────────────────────────

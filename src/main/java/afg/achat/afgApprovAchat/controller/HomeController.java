@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.controller;
 
+import afg.achat.afgApprovAchat.DTO.ServiceDemandeDTO;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
@@ -237,6 +238,10 @@ public class HomeController {
                 .filter(d -> d.getStatut() == StatutDemande.CREE)
                 .filter(d -> d.getDemandeur() != null && childrenIds.contains(d.getDemandeur().getId()))
                 .count();
+
+        List<ServiceDemandeDTO> demandeByService = demandeMereService.getDemandesParService();
+        model.addAttribute("demandesParService", demandeByService);
+
 
         model.addAttribute("mesDemandesAValider", mesDemandesAValider);
         model.addAttribute("demandesValidateurAssigné", demandesValidateurAssigné);
