@@ -1,7 +1,8 @@
 package afg.achat.afgApprovAchat.controller;
 
+import afg.achat.afgApprovAchat.DTO.ArticleDTO;
 import afg.achat.afgApprovAchat.model.Article;
-import afg.achat.afgApprovAchat.model.ArticleModificationDto;
+import afg.achat.afgApprovAchat.DTO.ArticleModificationDTO;
 import afg.achat.afgApprovAchat.model.Famille;
 import afg.achat.afgApprovAchat.model.util.Udm;
 import afg.achat.afgApprovAchat.service.ArticleService;
@@ -21,7 +22,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.List;
 import java.util.Set;
 
 @Controller
@@ -52,7 +52,7 @@ public class ArticleController {
             @RequestParam(defaultValue = "codeArticle") String sort,
             @RequestParam(defaultValue = "asc") String dir
     ) {
-        // ✅ sécuriser le sort (important)
+        // sécuriser le sort (important)
         if (!Set.of("codeArticle", "designation", "seuilMin").contains(sort)) {
             sort = "codeArticle";
         }
@@ -63,7 +63,6 @@ public class ArticleController {
 
         Page<Article> articlesPage = articleService.searchArticlesMulti(code, designation, famille, udm, pageable);
 
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("articlesPage", articlesPage);
 
         model.addAttribute("page", page);
@@ -71,7 +70,7 @@ public class ArticleController {
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
 
-        // ✅ garder valeurs dans inputs
+        //garder valeurs dans inputs
         model.addAttribute("code", code == null ? "" : code);
         model.addAttribute("designation", designation == null ? "" : designation);
         model.addAttribute("famille", famille == null ? "" : famille);
@@ -79,7 +78,7 @@ public class ArticleController {
 
         model.addAttribute("udms", udmService.getAllUdms());
         model.addAttribute("familles", familleService.getAllFamilles());
-        model.addAttribute("articleDto", new ArticleModificationDto());
+        model.addAttribute("articleDto", new ArticleModificationDTO());
 
         return "article/article-liste";
     }
@@ -87,7 +86,6 @@ public class ArticleController {
     @GetMapping("/entree-saisie/{codeArticle}")
     public String entreeArticle(@PathVariable String codeArticle, Model model, HttpServletRequest request) {
         Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("article", article);
         return "stock/entree-saisie";
     }
@@ -95,7 +93,6 @@ public class ArticleController {
     @GetMapping("/sortie-saisie/{codeArticle}")
     public String sortieArticle(@PathVariable String codeArticle, Model model, HttpServletRequest request) {
         Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("article", article);
         return "stock/sortie-saisie";
     }
@@ -108,7 +105,6 @@ public class ArticleController {
         if (!model.containsAttribute("article")) {
             model.addAttribute("article", new Article());
         }
-        model.addAttribute("currentUri", request.getRequestURI());
 
         // Toujours ajouter les listes de données
         model.addAttribute("unites", udmService.getAllUdms());
@@ -225,7 +221,7 @@ public class ArticleController {
 
             // Message de succès
             redirectAttributes.addFlashAttribute("ok",
-                    "✅ Article <strong>" + articleModifie.getCodeArticle() + "</strong> modifié avec succès !");
+                    "Article <strong>" + articleModifie.getCodeArticle() + "</strong> modifié avec succès !");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("ko",
                     "Erreur de validation : " + e.getMessage());
@@ -242,5 +238,22 @@ public class ArticleController {
         }
 
         return "redirect:/article/list";
+    }
+
+    @GetMapping("/list/ajax")
+    @ResponseBody
+    public Page<ArticleDTO> listArticlesAjax(
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String designation,
+            @RequestParam(required = false) String famille,
+            @RequestParam(required = false) String udm,
+            @RequestParam(defaultValue = "0")  int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "codeArticle") String sort,
+            @RequestParam(defaultValue = "asc") String dir
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return articleService.searchArticlesMulti(code, designation, famille, udm, pageable)
+                .map(ArticleDTO::from);
     }
 }

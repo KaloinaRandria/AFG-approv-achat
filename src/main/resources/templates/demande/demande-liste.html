@@ -57,6 +57,16 @@
                         </div>
                     </div>
 
+                    <!-- Motif évoqué -->
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Motif évoqué</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-comment-alt"></i></span>
+                            <input class="form-control" type="text" name="motif"
+                                   th:value="${motif}" placeholder="Motif..." />
+                        </div>
+                    </div>
+
                     <!-- Type -->
                     <div class="col-md-2">
                         <label class="form-label mb-1">Type</label>
@@ -210,7 +220,8 @@
                             <th th:if="${showDemandeurColumn}">
                                 <i class="far fa-user me-2 icon-gradient-light-blue"></i>Demandeur
                             </th>
-                            <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"><i class="fas fa-tags me-2 icon-gradient-light-blue"></i>Type de demande</th>
+                            <th>Motif évoqué</th>
+<!--                            <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"><i class="fas fa-tags me-2 icon-gradient-light-blue"></i>Type de demande</th>-->
                             <th>Priorité</th>
                             <th>Statut</th>
                         </tr>
@@ -220,7 +231,7 @@
                         <!-- Pageable -->
                         <tr th:each="demande : ${demandesMeres.content}"
                             class="clickable-row"
-                            th:attr="data-href=@{/demande/fiche/{id}(id=${demande.id})}">
+                            th:attr="data-href=@{/demande/fiche/{id}(id=${demande.id}, returnUrl=${returnUrl})}">
 
                             <td th:text="${demande.id}"></td>
                             <td th:text="${#temporals.format(demande.dateDemande, 'dd/MM/yyyy HH:mm')}"></td>
@@ -245,24 +256,49 @@
                                 <span th:if="${demande.demandeur == null}">-</span>
                             </td>
 
-
-                            <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
-                                class="td-nature-demande"
-                                th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">
+                            <td th:text="${#strings.length(demande.motifEvoque) > 50
+                            ? #strings.substring(demande.motifEvoque, 0, 50) + '...'
+                            : demande.motifEvoque}">
                             </td>
+
+<!--                            <td sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"-->
+<!--                                class="td-nature-demande"-->
+<!--                                th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">-->
+<!--                            </td>-->
                             <td th:text="${demande.priorite != null ? demande.priorite : '-'}"></td>
                             <td>
-                              <span class="badge-status"
-                                    th:classappend="${badgeClasses[demande.statut] ?: 'badge-info'}">
+                                <!-- Cas VALIDE + SOLDEE -->
+                                <span th:if="${demande.statut == StatutValide and demande.etatLivraison?.name() == 'SOLDEE'}"
+                                      class="badge-status badge-success">
+                                    <i class="fas fa-check-double"></i>
+                                    <span>Validée &amp; Soldée</span>
+                                </span>
 
-                                <i class="fas"
-                                   th:classappend="${badgeIcons[demande.statut] ?: 'fa-info-circle'}">
-                                </i>
+                                <!-- Cas VALIDE + EN_COURS_SORTIE -->
+                                <span th:if="${demande.statut == StatutValide and demande.etatLivraison?.name() == 'EN_COURS_SORTIE'}"
+                                      class="badge-status badge-warning">
+                                    <i class="fas fa-truck"></i>
+                                    <span>Validée — En cours</span>
+                                </span>
 
-                                <span th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></span>
-                              </span>
+                                <!-- Cas VALIDE + NON_LIVREE (ou etatLivraison null) -->
+                                <span th:if="${demande.statut == StatutValide
+                                              and (demande.etatLivraison == null or demande.etatLivraison?.name() == 'NON_LIVREE')}"
+                                                                  class="badge-status badge-info">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Validée</span>
+                                </span>
+
+                                <!-- Tous les autres statuts -->
+                                <span th:if="${demande.statut != StatutValide}"
+                                      class="badge-status"
+                                      th:classappend="${badgeClasses[demande.statut] ?: 'badge-info'}">
+                                    <i class="fas"
+                                       th:classappend="${badgeIcons[demande.statut] ?: 'fa-info-circle'}">
+                                    </i>
+                                    <span th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></span>
+                                </span>
                             </td>
-                        </tr>
 
                         <tr th:if="${demandesMeres.totalElements == 0}">
                             <td class="text-center text-muted py-4"

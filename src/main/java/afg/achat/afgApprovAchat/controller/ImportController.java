@@ -20,7 +20,6 @@ public class ImportController {
 
     @GetMapping("/import-saisie-page")
     public String importPage(Model model, HttpServletRequest request) {
-        model.addAttribute("currentUri",  request.getRequestURI());
         return "util/import-saisie";
     }
 

@@ -1,5 +1,138 @@
 @charset "UTF-8";
 
+/* ──────────────────────────────────────────────────────────── */
+/* Styles Select2 - Design amélioré */
+/* ──────────────────────────────────────────────────────────── */
+
+/* Conteneur Select2 */
+.select2-container {
+    width: 100% !important;
+}
+
+.select2-container--open .select2-dropdown {
+    border-color: #86b7fe;
+}
+
+/* Selection simple */
+.select2-selection--single {
+    height: 38px !important;
+    border: 1px solid #dee2e6 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.select2-selection--single .select2-selection__rendered {
+    padding: 0.375rem 0.75rem !important;
+    line-height: 1.5 !important;
+}
+
+/* Selection multiple - Tags styling */
+.select2-selection--multiple {
+    border: 1px solid #dee2e6 !important;
+    border-radius: 0.375rem !important;
+    min-height: 38px !important;
+    padding: 0.375rem 0.75rem !important;
+}
+
+/* Tags individuels */
+.select2-selection--multiple .select2-selection__choice {
+    background-color: #e7f1ff !important;
+    border: 1px solid #b6d4fe !important;
+    border-radius: 0.25rem !important;
+    color: #0d6efd !important;
+    padding: 0.25rem 0.5rem !important;
+    margin-right: 0.25rem !important;
+    margin-top: 0.25rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+}
+
+.select2-selection--multiple .select2-selection__choice__remove {
+    color: #0d6efd !important;
+    font-weight: bold !important;
+    margin-left: 0.25rem !important;
+    cursor: pointer !important;
+}
+
+.select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: #0a58ca !important;
+}
+
+/* Zone de saisie dans le multi-select */
+.select2-selection--multiple .select2-search--inline .select2-search__field {
+    padding: 0.375rem 0.75rem !important;
+    font-size: 1rem !important;
+}
+
+/* Focus state */
+.select2-container--focus .select2-selection {
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+
+.select2-container--open .select2-selection {
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+/* Dropdown */
+.select2-dropdown {
+    border: 1px solid #dee2e6;
+    border-top: none !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+}
+
+.select2-dropdown .select2-results__options {
+    padding: 0.5rem 0;
+}
+
+/* Options dans le dropdown */
+.select2-results__option {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.95rem !important;
+}
+
+.select2-results__option--highlighted {
+    background-color: #e7f1ff !important;
+    color: #0d6efd !important;
+}
+
+.select2-results__option[aria-selected="true"] {
+    background-color: #e7f1ff !important;
+    color: #0d6efd !important;
+}
+
+/* Search dans le dropdown */
+.select2-dropdown .select2-search__field {
+    padding: 0.5rem 0.75rem !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 0.375rem !important;
+    margin: 0.5rem 0.75rem !important;
+    min-height: 38px !important;
+}
+
+/* Messages vides */
+.select2-results__message {
+    color: #6c757d !important;
+    padding: 0.75rem !important;
+}
+
+/* Input group avec Select2 */
+.input-group .select2-container {
+    flex: 1 1 auto !important;
+}
+
+/* Icônes input-group */
+.input-group-text {
+    display: flex !important;
+    align-items: center !important;
+    height: 38px !important;
+    padding: 0.375rem 0.75rem !important;
+}
+
 /*DASHBOARD*/
 /* ===== STAT CARDS ===== */
 .stat-card {
@@ -173,7 +306,7 @@
 /*}*/
 
 
-    /* Dropdown global (fixe, jamais coupé par overflow) */
+/* Dropdown global (fixe, jamais coupé par overflow) */
 #articleAutocompletePortal{
     position: fixed;
     z-index: 999999;
@@ -277,27 +410,83 @@
 .clickable-row { cursor: pointer; }
 .clickable-row:hover td { background: rgba(0,0,0,.03); }
 
-.badge-status{
-    display:inline-flex;
-    align-items:center;
-    gap:.45rem;
-    padding:.35rem .65rem;
-    border-radius:999px;
-    font-weight:700;
-    font-size:.78rem;
-    letter-spacing:.2px;
-    border:1px solid rgba(0,0,0,.08);
-    white-space:nowrap;
+.badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .35rem .65rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: .78rem;
+    letter-spacing: .2px;
+    border: 1px solid rgba(0,0,0,.08);
+    white-space: nowrap;
 }
 
-.badge-wait{ background:#fff7ed; color:#9a3412; border-color:rgba(154,52,18,.18); }     /* orange */
-.badge-info{ background:#eff6ff; color:#1d4ed8; border-color:rgba(29,78,216,.18); }     /* bleu */
-.badge-purple{ background:#f5f3ff; color:#6d28d9; border-color:rgba(109,40,217,.18);}   /* violet */
-.badge-success{ background:#ecfdf5; color:#047857; border-color:rgba(4,120,87,.18);}    /* vert */
-.badge-danger{ background:#fef2f2; color:#b91c1c; border-color:rgba(185,28,28,.18);}    /* rouge */
+/* 🩶 CREE */
+.badge-grey {
+    background:#E6E6E6;
+    color:#333;
+    border-color:rgba(0,0,0,.15);
+}
 
-.badge-status i{ font-size:.9em; opacity:.9; }
+/* 🔵 VALIDATION (progression) */
+.badge-blue {
+    background:#e6ebf5;
+    color:#000A31;
+    border-color:rgba(0,10,49,.2);
+}
 
+.badge-blue-light {
+    background:#ccd6eb;
+    color:#000A31;
+    border-color:rgba(0,10,49,.2);
+}
+
+.badge-blue-soft {
+    background:#b3c2e0;
+    color:#000A31;
+    border-color:rgba(0,10,49,.2);
+}
+
+/* 🔷 VALIDATION N4 */
+.badge-light-blue {
+    background:#667097;
+    color:#fff;
+    border-color:rgba(102,112,151,.4);
+}
+
+/* 🔵 DECISION CODEP */
+.badge-dark-blue {
+    background:#000A31;
+    color:#fff;
+    border-color:rgba(0,10,49,.5);
+}
+
+/* 🟢 VALIDE */
+.badge-green {
+    background:#9ECD95;
+    color:#004500;
+    border-color:rgba(0,69,0,.3);
+}
+
+/* 🔴 REFUSE */
+.badge-red {
+    background:#F39999;
+    color:#5A0000;
+    border-color:rgba(90,0,0,.3);
+}
+/* 🟠 CODEP = décision comité */
+.badge-orange {
+    background:#fff4e6;
+    color:#b45309;
+    border-color:rgba(180,83,9,.25);
+}
+
+.badge-status i {
+    font-size: .9em;
+    opacity: .9;
+}
 .bl-footer{
     border-top: 1px solid rgba(0,0,0,.15);
     margin-top: 18px;

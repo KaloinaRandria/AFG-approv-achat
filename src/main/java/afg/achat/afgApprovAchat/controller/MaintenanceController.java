@@ -14,7 +14,6 @@ public class MaintenanceController {
     @GetMapping("")
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE) // renvoie 503
     public String maintenance(Model model, HttpServletRequest request) {
-        model.addAttribute("currentUri", request.getRequestURI());
         return "error/maintenance";
     }
 }

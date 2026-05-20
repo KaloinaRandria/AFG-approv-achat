@@ -28,6 +28,7 @@ public final class StatutDemande {
             case VALIDATION_N3 -> "Validation DFC";
             case VALIDATION_N4 -> "Validation SG";
             case DECISION_CODEP -> "Décision CODEP";
+            case VALIDE -> "Validée";
             case REFUSE        -> "Refusée";
             default            -> "Étape inconnue";
         };

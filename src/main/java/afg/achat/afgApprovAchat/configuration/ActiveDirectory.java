@@ -53,56 +53,65 @@ public class ActiveDirectory {
 
     public boolean authentify(String userName, String password) throws NamingException {
         boolean isAuthenticated = false;
-        LdapContext ctx = null;
+        LdapContext context = null;
 
         try {
-            // Configuration pour l'utilisateur technique (comme dans getUser)
-            Hashtable<String, String> env = new Hashtable<>();
-            env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-            env.put(Context.PROVIDER_URL, "ldap://"+ldap_serverName);
-            env.put(Context.SECURITY_PRINCIPAL, "CN="+ldap_username.split("\\.")[0]+" "+ldap_username.split("\\.")[1]+",OU=Service,OU=User Accounts,OU=Madagascar,DC=afgbank,DC=com");
-            env.put(Context.SECURITY_CREDENTIALS, ldap_password);
-            env.put(Context.SECURITY_AUTHENTICATION, "simple");
+            // 🔧 Config identique à getUsers()
+            Hashtable<String, String> props = new Hashtable<>();
+            props.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
+            props.put(Context.PROVIDER_URL, "ldap://" + ldap_serverName);
+            props.put(Context.SECURITY_PRINCIPAL, ldap_username + "@afgbank.com");
+            props.put(Context.SECURITY_CREDENTIALS, ldap_password);
+            props.put(Context.SECURITY_AUTHENTICATION, "simple");
+            props.put(Context.REFERRAL, "follow"); // ⭐ IMPORTANT pour multi-domain
 
-            // Connexion avec l'utilisateur technique
-            ctx = new InitialLdapContext(env, null);
+            context = new InitialLdapContext(props, null);
 
-            // Recherche du DN de l'utilisateur à authentifier
-            String baseDN = "DC=afgbank,DC=com";
-            String filter = "(userPrincipalName=" + userName + ")";
+            // 🔍 Recherche utilisateur comme dans getUsers()
+            String searchBase = "DC=afgbank,DC=com";
+
+            // sécurisation basique
+            String safeUser = userName.replace("\\", "\\\\")
+                                      .replace("*", "\\*")
+                                      .replace("(", "\\(")
+                                      .replace(")", "\\)")
+                                      .replace("\0", "");
+
+            String filter = "(|(userPrincipalName=" + safeUser + ")(sAMAccountName=" + safeUser + "))";
+
             SearchControls controls = new SearchControls();
             controls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-            NamingEnumeration<SearchResult> results = ctx.search(baseDN, filter, controls);
+            controls.setCountLimit(1); // on veut un seul utilisateur
+
+            NamingEnumeration<SearchResult> results = context.search(searchBase, filter, controls);
 
             if (results.hasMore()) {
                 SearchResult result = results.next();
                 String userDN = result.getNameInNamespace();
 
-                // Tentative de connexion avec le DN de l'utilisateur et son mot de passe
+                // 🔐 Test du mot de passe (bind utilisateur)
                 Hashtable<String, String> userEnv = new Hashtable<>();
                 userEnv.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-                userEnv.put(Context.PROVIDER_URL, "ldap://"+ldap_serverName);
+                userEnv.put(Context.PROVIDER_URL, "ldap://" + ldap_serverName);
                 userEnv.put(Context.SECURITY_PRINCIPAL, userDN);
                 userEnv.put(Context.SECURITY_CREDENTIALS, password);
                 userEnv.put(Context.SECURITY_AUTHENTICATION, "simple");
+                userEnv.put(Context.REFERRAL, "follow");
 
-                // Authentification directe avec le DN trouvé
                 LdapContext userCtx = new InitialLdapContext(userEnv, null);
                 userCtx.close();
+
                 isAuthenticated = true;
             } else {
-                System.out.println("Utilisateur LDAP non trouvé : " + userName);
+                System.out.println("Utilisateur non trouvé : " + userName);
             }
 
-        } catch (CommunicationException e) {
-            System.err.println("Erreur de communication avec le serveur LDAP");
-            e.printStackTrace();
         } catch (NamingException e) {
-            System.err.println("Échec d'authentification pour l'utilisateur : " + userName);
-            //e.printStackTrace();
+            System.err.println("Échec d'authentification : " + userName);
+            System.err.println("Détail : " + e.getMessage());
         } finally {
-            if (ctx != null) {
-                ctx.close();
+            if (context != null) {
+                context.close();
             }
         }
 
@@ -119,6 +128,7 @@ public class ActiveDirectory {
             env.put(Context.SECURITY_PRINCIPAL, "CN="+ldap_username.split("\\.")[0]+" "+ldap_username.split("\\.")[1]+",OU=Service,OU=User Accounts,OU=Madagascar,DC=afgbank,DC=com");
             env.put(Context.SECURITY_CREDENTIALS, ldap_password);
             env.put(Context.SECURITY_AUTHENTICATION, "simple");
+            
 
             context = new InitialLdapContext(env, null);
             System.out.println("Connexion LDAP établie.");
@@ -161,22 +171,23 @@ public class ActiveDirectory {
         }
     }
 
-   /* public static User[] getUsers() throws NamingException {
+    public User[] getUsers() throws NamingException {
         List<User> users = new ArrayList<>();
 
-        String ldapURL = "ldap://10.25.10.10";
-        String bindUserDN = "CN=glpi mada,OU=Service,OU=User Accounts,OU=Madagascar,DC=afgbank,DC=com";
-        String bindPassword = "Services!2024";
 
-        String searchBase = "OU=Enabled Users,OU=User Accounts,OU=Madagascar,dc=afgbank,dc=com";
+       // String searchBase = "OU=Enabled Users,OU=User Accounts,OU=Madagascar,OU=Côte d'Ivoire,dc=afgbank,dc=com";
+        String searchBase = "DC=afgbank,DC=com";
         String filter = "(objectClass=user)";
+        //String filter = "(&(objectClass=user)(|(distinguishedName=*OU=Madagascar*)(distinguishedName=*OU=Cote d'Ivoire*)))";
 
         Hashtable<String, String> props = new Hashtable<>();
         props.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-        props.put(Context.PROVIDER_URL, ldapURL);
-        props.put(Context.SECURITY_PRINCIPAL, bindUserDN);
-        props.put(Context.SECURITY_CREDENTIALS, bindPassword);
+        props.put(Context.PROVIDER_URL, "ldap://"+ldap_serverName);
+        //props.put(Context.SECURITY_PRINCIPAL, "CN="+ldap_username.split("\\.")[0]+" "+ldap_username.split("\\.")[1]+",OU=Service,OU=User Accounts,OU=Madagascar,OU=Côte d'Ivoire,DC=afgbank,DC=com");
+        props.put(Context.SECURITY_PRINCIPAL, ldap_username + "@afgbank.com");
+        props.put(Context.SECURITY_CREDENTIALS, ldap_password);
         props.put(Context.SECURITY_AUTHENTICATION, "simple");
+
 
         LdapContext context = null;
         try {
@@ -211,7 +222,7 @@ public class ActiveDirectory {
         }
 
         return users.toArray(new User[0]);
-    }*/
+    }
 
 
     private static String toDC(String domainName) {

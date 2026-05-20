@@ -8,7 +8,9 @@ import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 
 import java.util.List;
 
@@ -28,18 +30,21 @@ public class WebSecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-            	.requestMatchers(
-            			"/login",
-                        "/login-error",
-                        "/webjars/**",
-                        "/img/**",
-                        "/static/**",
-                        "/select2/**",
-                        "/js/**",
-                        "/css/**",
-                        "/assets/**",
-                        "/jqueryFiler/**")
-                    .permitAll()
+                    .requestMatchers(
+                            "/login",
+                            "/login-error",
+                            "/error",
+                            "/error/**",
+                            "/webjars/**",
+                            "/img/**",
+                            "/static/**",
+                            "/select2/**",
+                            "/js/**",
+                            "/css/**",
+                            "/assets/**",
+                            "/jqueryFiler/**",
+                            "/fileUpload/**"
+                    ).permitAll()
                 .anyRequest().authenticated()
 
             )
@@ -64,8 +69,10 @@ public class WebSecurityConfig {
             .sessionManagement(session -> session
                 .maximumSessions(1)
                 .expiredUrl("/login")
+            )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
             );
-
 
 
         return http.build();

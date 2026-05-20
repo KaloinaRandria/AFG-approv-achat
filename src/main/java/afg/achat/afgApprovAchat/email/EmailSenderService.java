@@ -87,26 +87,115 @@ public class EmailSenderService {
     }
 
     public void envoyerMailValidation(DemandeMere demande,
-                                       Utilisateur validateur,
-                                       String commentaire,
-                                       int etapeCourante,
-                                       int prochaineEtape) {
+                                      Utilisateur validateur,
+                                      String commentaire,
+                                      int etapeCourante,
+                                      int prochaineEtape,
+                                      Utilisateur prochainValidateur) {
+        System.out.println(">>> Mail demandeur");
+        System.out.println("    to            : " + demande.getDemandeur().getMail());
+        System.out.println("    etape         : " + StatutDemande.getLibelle(etapeCourante));
+        System.out.println("    prochaineEtape: " + StatutDemande.getLibelle(prochaineEtape));
+        System.out.println("    validateur    : " + validateur.getNom());
+
+        String dateDecision = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+
+        // ── Mail 1 : demandeur informé de la validation ──────────────────────
+        Map<String, Object> propsDemandeur = new HashMap<>();
+        propsDemandeur.put("id",             demande.getId());
+        propsDemandeur.put("demandeur",      demande.getDemandeur());
+        propsDemandeur.put("validateur",     validateur);
+        propsDemandeur.put("commentaire",    commentaire);
+        propsDemandeur.put("dateDecision",   dateDecision);
+        propsDemandeur.put("etape",          StatutDemande.getLibelle(etapeCourante));
+        propsDemandeur.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
+
+        this.sendEmail(new Mail(
+                "demandeValid",
+                demande.getDemandeur().getMail(),
+                "[AFG Bank - Demande Achat] - Votre demande a été validée",
+                propsDemandeur
+        ));
+
+        // ── Mail 2 : prochain validateur notifié ─────────────────────────────
+        if (prochainValidateur != null && prochainValidateur.getMail() != null) {
+            Map<String, Object> propsValidateur = new HashMap<>();
+            propsValidateur.put("id",             demande.getId());
+            propsValidateur.put("demandeur",      demande.getDemandeur());
+            propsValidateur.put("validateur",     validateur);
+            propsValidateur.put("destinataire",   prochainValidateur);
+            propsValidateur.put("dateDecision",   dateDecision);
+            propsValidateur.put("etape",          StatutDemande.getLibelle(etapeCourante));
+            propsValidateur.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
+            String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
+//                String baseUrl = "http://localhost:8080";
+
+            String lienValidation = baseUrl + "/demande/fiche/" + demande.getId();
+            propsValidateur.put("lienValidation", lienValidation);
+
+            this.sendEmail(new Mail(
+                    "notificationValidateur",
+                    prochainValidateur.getMail(),
+                    "[AFG Bank - Demande Achat] - Demande en attente de votre validation",
+                    propsValidateur
+            ));
+        }
+    }
+
+    // Mail unique au demandeur
+    public void envoyerMailDemandeur(DemandeMere demande,
+                                     Utilisateur validateur,
+                                     String commentaire,
+                                     int etapeCourante,
+                                     int prochaineEtape) {
+        String dateDecision = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+
         Map<String, Object> props = new HashMap<>();
-        props.put("id",            demande.getId());
-        props.put("demandeur",     demande.getDemandeur());
-        props.put("validateur",    validateur);
-        props.put("commentaire",   commentaire);
-        props.put("dateDecision",  LocalDateTime.now()
-                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
-        props.put("etape",         StatutDemande.getLibelle(etapeCourante));
+        props.put("id",             demande.getId());
+        props.put("demandeur",      demande.getDemandeur());
+        props.put("validateur",     validateur);
+        props.put("commentaire",    commentaire);
+        props.put("dateDecision",   dateDecision);
+        props.put("etape",          StatutDemande.getLibelle(etapeCourante));
         props.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
 
-        Mail mail = new Mail(
-                "validationDemande",
+        this.sendEmail(new Mail(
+                "demandeValid",
                 demande.getDemandeur().getMail(),
-                "[AFG/MADA] - Votre demande a été validée",
+                "[AFG Bank - Demande Achat] - Votre demande a été validée",
                 props
-        );
-        this.sendEmail(mail);
+        ));
+    }
+
+    // Mail individuel au validateur suivant (pas de mail demandeur)
+    public void envoyerMailValidateur(DemandeMere demande,
+                                      Utilisateur validateur,
+                                      int etapeCourante,
+                                      int prochaineEtape,
+                                      Utilisateur prochainValidateur) {
+        if (prochainValidateur == null || prochainValidateur.getMail() == null) return;
+
+        String dateDecision = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
+
+        Map<String, Object> props = new HashMap<>();
+        props.put("id",             demande.getId());
+        props.put("demandeur",      demande.getDemandeur());
+        props.put("validateur",     validateur);
+        props.put("destinataire",   prochainValidateur);
+        props.put("dateDecision",   dateDecision);
+        props.put("etape",          StatutDemande.getLibelle(etapeCourante));
+        props.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
+        props.put("lienValidation", baseUrl + "/demande/fiche/" + demande.getId());
+
+        this.sendEmail(new Mail(
+                "notificationValidateur",
+                prochainValidateur.getMail(),
+                "[AFG Bank - Demande Achat] - Demande en attente de votre validation",
+                props
+        ));
     }
 }

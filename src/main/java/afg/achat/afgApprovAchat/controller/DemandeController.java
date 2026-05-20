@@ -4,15 +4,24 @@ import afg.achat.afgApprovAchat.email.EmailSenderService;
 import afg.achat.afgApprovAchat.email.Mail;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
+import afg.achat.afgApprovAchat.DTO.LigneRestanteDTO;
+import afg.achat.afgApprovAchat.DTO.ScinderDTO;
 import afg.achat.afgApprovAchat.model.demande.*;
 import afg.achat.afgApprovAchat.model.util.CommentaireFinance;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
+import afg.achat.afgApprovAchat.model.util.PrixArticle;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
+import afg.achat.afgApprovAchat.repository.demande.DemandeMereSpec;
+import afg.achat.afgApprovAchat.repository.stock.StockFilleRepo;
 import afg.achat.afgApprovAchat.service.ArticleService;
+import afg.achat.afgApprovAchat.service.BonSortieService;
 import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
+import afg.achat.afgApprovAchat.service.stock.LotStockService;
 import afg.achat.afgApprovAchat.service.util.CommentaireFinanceService;
+import afg.achat.afgApprovAchat.service.util.PrixArticleService;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
@@ -21,14 +30,12 @@ import afg.achat.afgApprovAchat.upload.StorageService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -72,16 +79,28 @@ public class DemandeController {
     private CommentaireFinanceService commentaireFinanceService;
     @Autowired
     private EmailSenderService ess;
+    @Autowired
+    PrixArticleService prixArticleService;
+    @Autowired
+    BonSortieService bonSortieService;
+    @Autowired
+    private StockFilleRepo stockFilleRepo;
+    @Autowired
+    LotStockService lotStockService;
 
     @GetMapping("/add")
-    public String addDemandePage(Model model, HttpServletRequest request) {
-        model.addAttribute("currentUri", request.getRequestURI());
+    public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
+
+        // Token anti double-soumission
+        String token = UUID.randomUUID().toString();
+        session.setAttribute("submissionToken", token);
+        model.addAttribute("submissionToken", token);
+
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
-        model.addAttribute("ligneBudgetaires",centreBudgetaireService.getAllCentreBudgetaires() );
+        model.addAttribute("ligneBudgetaires", centreBudgetaireService.getAllCentreBudgetaires());
 
         return "demande/demande-saisie";
     }
-
     @PostMapping("/save")
     public String insertDemande(@RequestParam(name = "dateSortie") String dateSortie,
                                 @RequestParam(name = "motif") String motif,
@@ -90,7 +109,21 @@ public class DemandeController {
                                 @RequestParam(name = "quantite[]") List<String> quantite,
                                 @RequestParam(name = "priorite") String priorite,
                                 @RequestParam(name = "piecesJointes") MultipartFile[] piecesJointes,
+                                @RequestParam(name = "submissionToken") String submissionToken,
+                                HttpSession session,
                                 RedirectAttributes redirectAttributes) {
+        // ── Vérification token anti double-soumission ────────────────────────────
+        String sessionToken = (String) session.getAttribute("submissionToken");
+
+        if (sessionToken == null || !sessionToken.equals(submissionToken)) {
+            redirectAttributes.addFlashAttribute("warningMessage",
+                    "Cette demande a déjà été soumise. Veuillez vérifier la liste des demandes.");
+            return "redirect:/demande/list";
+        }
+
+        // Consommer le token immédiatement — toute soumission suivante sera bloquée
+        session.removeAttribute("submissionToken");
+
 
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
@@ -111,52 +144,50 @@ public class DemandeController {
             }
 
             double totalGeneral = 0.0;
+            List<DemandeFille> lignes = new ArrayList<>();
 
+// Boucle unique — calcul total + préparation des lignes
             for (int i = 0; i < articleCodes.size(); i++) {
-
                 String code = articleCodes.get(i);
-
                 Article article = articleService.getArticleByCodeArticle(code)
                         .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + code));
 
                 double qte = MontantCalculator.parseDoubleSafe(quantite.get(i));
-                if (qte <= 0) continue; // ou throw si tu veux obligatoire
+                if (qte <= 0) continue;
 
-                double prix = (article.getPrixUnitaire() == null) ? 0.0 : article.getPrixUnitaire();
+                // Prix issu de PrixArticle (dernier BL reçu pour cet article)
+                double prix = prixArticleService.getDernierPrixByArticle(code)
+                        .map(PrixArticle::getPrixUnitaire)
+                        .orElse(0.0);
 
-                totalGeneral += (qte * prix);
+                totalGeneral += qte * prix;
+
+                DemandeFille demandeFille = new DemandeFille();
+                demandeFille.setArticle(article);
+                demandeFille.setQuantite(quantite.get(i));
+                demandeFille.setStatut(1);
+                demandeFille.setPrixUnitaire(prix); // snapshot issu de PrixArticle
+                lignes.add(demandeFille);
             }
 
-            // (ton contrôle quantité > 0 tu peux le garder ici avant save)
 
             DemandeMere demandeMere = new DemandeMere();
             demandeMere.setId(idGenerator);
             demandeMere.setDateDemande(String.valueOf(LocalDateTime.now()));
-            demandeMere.setDateSortie(dateSortie);
+            demandeMere.setDateSortie(dateSortie + "T00:00");
             demandeMere.setPriorite(DemandeMere.PrioriteDemande.valueOf(priorite.trim()));
             demandeMere.setMotifEvoque(motif);
             demandeMere.setDemandeur(utilisateur);
             demandeMere.setDescription(description);
             demandeMere.setStatut(1);
-            demandeMere.setTotalPrix(totalGeneral);
-
-            // 1) Save la demande (pour avoir la ref)
+            demandeMere.setTotalPrix(totalGeneral); //total basé sur PrixArticle
             this.demandeMereService.saveDemandeMere(demandeMere);
 
-            // 2) Save les lignes
-            for (int i = 0; i < articleCodes.size(); i++) {
-                DemandeFille demandeFille = new DemandeFille();
-                demandeFille.setDemandeMere(demandeMere);
-
-                String code = articleCodes.get(i);
-                demandeFille.setArticle(articleService.getArticleByCodeArticle(code)
-                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + code)));
-
-                demandeFille.setQuantite(quantite.get(i));
-                demandeFille.setStatut(1);
-                this.demandeFilleService.saveDemandeFille(demandeFille);
+            // Save les lignes (après demandeMere pour que la FK soit valide)
+            for (DemandeFille ligne : lignes) {
+                ligne.setDemandeMere(demandeMere); //FK settée après persist
+                this.demandeFilleService.saveDemandeFille(ligne);
             }
-
             if (piecesJointes != null) {
                 for (MultipartFile f : piecesJointes) {
                     if (f == null || f.isEmpty()) continue;
@@ -189,16 +220,79 @@ public class DemandeController {
                 }
             }
 
-            Map<String,Object> props = new HashMap<>();
-            props.put("id",demandeMere.getId());
-            props.put("demandeur", demandeMere.getDemandeur());
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-            props.put("dateDemande", demandeMere.getDateDemande().format(formatter));
-            Mail mail = new Mail("demandeSaved", demandeMere.getDemandeur().getMail(),"[AFG/MADA]- Demande enregistrée", props);
+            // ── Mail 1 : confirmation au demandeur ──────────────────────────────────
+            Map<String, Object> propsDemandeur = new HashMap<>();
+            propsDemandeur.put("id",          demandeMere.getId());
+            propsDemandeur.put("demandeur",   demandeMere.getDemandeur());
+            propsDemandeur.put("dateDemande", LocalDateTime.now()
+                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+            propsDemandeur.put("Validateur", demandeMere.getDemandeur().getSuperieurHierarchique());
+
+            Mail mail = new Mail(
+                    "demandeSaved",
+                    demandeMere.getDemandeur().getMail(),
+                    "[AFG Bank - Demande Achat] - Demande N°" + demandeMere.getId() + " en cours de validation",
+                    propsDemandeur
+            );
             ess.sendEmail(mail);
 
-            Mail mailSup = new Mail("validSup", demandeMere.getDemandeur().getSuperieurHierarchique().getMail(),"[AFG/MADA]- Demande d'achat en attente de validation", props);
-            ess.sendEmail(mailSup);
+// ── Mail 2 : notification au N+1 pour validation ────────────────────────
+            Utilisateur superieur = demandeMere.getDemandeur().getSuperieurHierarchique();
+
+            if (superieur != null && superieur.getMail() != null) {
+                Map<String, Object> propsSup = new HashMap<>();
+                propsSup.put("id",           demandeMere.getId());
+                propsSup.put("demandeur",    demandeMere.getDemandeur());
+                propsSup.put("destinataire", superieur);
+                propsSup.put("validateur",   demandeMere.getDemandeur());
+                propsSup.put("etape",        StatutDemande.getLibelle(StatutDemande.CREE));
+                propsSup.put("dateDemande", LocalDateTime.now()
+                        .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+                String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
+//                String baseUrl = "http://localhost:8080";
+
+
+
+                String lienValidation = baseUrl + "/demande/fiche/" + demandeMere.getId();
+                propsSup.put("lienValidation", lienValidation);
+
+                Mail mailSup = new Mail(
+                        "validSup",
+                        superieur.getMail(),
+                        "[AFG Bank - Demande Achat] - Action requise : Validation de la demande N°" + demandeMere.getId(),
+                        propsSup
+                );
+                ess.sendEmail(mailSup);
+            }
+
+            // ── Mail 3 : notification aux validateurs ────────────────────────────────
+            Set<Utilisateur> validateurs = utilisateur.getValidateurs();
+
+            if (validateurs != null && !validateurs.isEmpty()) {
+                for (Utilisateur validateur : validateurs) {
+                    if (validateur == null || validateur.getMail() == null) continue;
+
+                    Map<String, Object> propsValidateur = new HashMap<>();
+                    propsValidateur.put("id",           demandeMere.getId());
+                    propsValidateur.put("demandeur",    demandeMere.getDemandeur());
+                    propsValidateur.put("destinataire", validateur);
+                    propsValidateur.put("validateur",   demandeMere.getDemandeur());
+                    propsValidateur.put("etape",        StatutDemande.getLibelle(StatutDemande.CREE));
+                    propsValidateur.put("dateDemande",  LocalDateTime.now()
+                            .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+                    String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
+                    String lienValidation = baseUrl + "/demande/fiche/" + demandeMere.getId();
+                    propsValidateur.put("lienValidation", lienValidation);
+
+                    Mail mailValidateur = new Mail(
+                            "validSup",
+                            validateur.getMail(),
+                            "[AFG Bank - Demande Achat] - Action requise : Validation de la demande N°" + demandeMere.getId(),
+                            propsValidateur
+                    );
+                    ess.sendEmail(mailValidateur);
+                }
+            }
 
 
             redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
@@ -215,288 +309,192 @@ public class DemandeController {
 
 
     @GetMapping("/list")
-    public String listDemandePage(Model model,
-                                  HttpServletRequest request,
-                                  @RequestParam(defaultValue = "0") int page,
-                                  @RequestParam(defaultValue = "10") int size,
-                                  @RequestParam(defaultValue = "dateDemande") String sort,
-                                  @RequestParam(defaultValue = "desc") String dir,
-                                  @RequestParam(required = false) Integer statut,
-                                  @RequestParam(required = false) String priorite,
-                                  @RequestParam(required = false) String num,
-                                  @RequestParam(required = false) String demandeur,
-                                  @RequestParam(required = false) String type,
-                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
-                                  @RequestParam(required = false, defaultValue = "ALL") String scope) {
+    public String listDemandePage(
+            Model model,
+            HttpServletRequest request,
+            @RequestParam(defaultValue = "0")           int page,
+            @RequestParam(defaultValue = "10")          int size,
+            @RequestParam(defaultValue = "dateDemande") String sort,
+            @RequestParam(defaultValue = "desc")        String dir,
+            @RequestParam(required = false)             Integer  statut,
+            @RequestParam(required = false)             String   priorite,
+            @RequestParam(required = false)             String   motif,
+            @RequestParam(required = false)             String   num,
+            @RequestParam(required = false)             String   demandeur,
+            @RequestParam(required = false)             String   type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(required = false, defaultValue = "ALL") String scope) {
 
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        Utilisateur principal = (Utilisateur) auth.getPrincipal();
-        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+        // ── 1. Utilisateur courant ───────────────────────────────────────────────
+        Authentication auth    = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal  = (Utilisateur) auth.getPrincipal();
+        Utilisateur current    = utilisateurService.getUtilisateurByMail(principal.getMail());
 
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        boolean isMG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
-        boolean isControleur = auth.getAuthorities().stream().anyMatch(a -> "ROLE_CONTROLEUR".equals(a.getAuthority()));
-        boolean isDFC = auth.getAuthorities().stream().anyMatch(a -> "ROLE_DFC".equals(a.getAuthority()));
-        boolean isSG = auth.getAuthorities().stream().anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
+        boolean isAdmin      = hasRole(auth, "ROLE_ADMIN");
+        boolean isMG         = hasRole(auth, "ROLE_MOYENS_GENERAUX");
+        boolean isControleur = hasRole(auth, "ROLE_CONTROLEUR");
+        boolean isDFC        = hasRole(auth, "ROLE_DFC");
+        boolean isSG         = hasRole(auth, "ROLE_SG");
+        boolean isBackoffice = isAdmin || isMG || isControleur || isDFC || isSG;
 
+        // ── 2. IDs visibles : hiérarchie + validateurs assignés ─────────────────
+        List<Integer> visibleIds  = utilisateurService.getIdsUtilisateurVisible(current.getId());
+        List<Integer> idsAValider = utilisateurService.getIdsUtilisateursAValider(current.getId());
 
-        boolean isAdminOrMGOrControleur = isAdmin || isMG || isControleur;
-        boolean isBackofficeValidator = isAdmin || isMG || isControleur || isDFC;
+        Set<Integer>  allVisibleSet  = new HashSet<>(visibleIds);
+        allVisibleSet.addAll(idsAValider);
+        List<Integer> allVisibleIds  = new ArrayList<>(allVisibleSet);
+        boolean       hasChildren    = allVisibleIds.size() > 1;
 
-        //Labels (table)
-        Map<Integer, String> statutLabels = Map.of(
-                StatutDemande.CREE, "En attente N+1",
-                StatutDemande.VALIDATION_N1, "En attente M.G.",
-                StatutDemande.VALIDATION_N2, "En attente Contrôle de gestion",
-                StatutDemande.VALIDATION_N3, "En attente D.F.C.",
-                StatutDemande.VALIDATION_N4,  "En attente S.G.",
-                StatutDemande.DECISION_CODEP,"En attente CODEP",
-                StatutDemande.VALIDE, "VALIDÉE",
-                StatutDemande.REFUSE, "REFUSÉE"
-        );
-
-        //Filtre (select)
-        Map<Integer, String> statutFiltre = new LinkedHashMap<>();
-        statutFiltre.put(StatutDemande.CREE, "En attente N+1");
-        statutFiltre.put(StatutDemande.VALIDATION_N1, "En attente M.G.");
-        statutFiltre.put(StatutDemande.VALIDATION_N2,"En attente Contrôle de gestion");
-        statutFiltre.put(StatutDemande.VALIDATION_N3, "En attente D.F.C.");
-        statutFiltre.put(StatutDemande.VALIDATION_N4,  "En attente S.G.");
-        statutFiltre.put(StatutDemande.DECISION_CODEP,"En attente CODEP");
-        statutFiltre.put(StatutDemande.VALIDE, "VALIDÉE");
-        statutFiltre.put(StatutDemande.REFUSE, "REFUSÉE");
-        model.addAttribute("statutFiltre", statutFiltre);
-
-        //Normalisation (0/null => pas de filtre)
+        // ── 3. Filtre statut normalisé ───────────────────────────────────────────
         Integer statutFilter = (statut == null || statut == 0) ? null : statut;
 
-        //Visibilité (moi + enfants)
-        List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
-        boolean hasChildren = visibleIds.size() > 1;
+        // ── 4. Construction du SearchCriteria selon le rôle ─────────────────────
+        DemandeMereSpec.SearchCriteria.Builder criteriaBuilder = DemandeMereSpec.SearchCriteria.builder()
+                .num(num)
+                .demandeur(demandeur)
+                .type(type)
+                .priorite(priorite)
+                .motif(motif)
+                .statut(statutFilter)
+                .dateFrom(DemandeMereService.toFrom(dateFrom))
+                .dateTo(DemandeMereService.toTo(dateTo));
 
-        boolean showDemandeurColumn = isBackofficeValidator || hasChildren;
-        model.addAttribute("showDemandeurColumn", showDemandeurColumn);
+        if (isAdmin) {
+            // Admin : aucune restriction sur les demandeurs ni sur les statuts
 
-        boolean showScopeFilter = hasChildren && !isBackofficeValidator;
-        model.addAttribute("showDemandeurScopeFilter", showScopeFilter);
+        } else if (isMG || isControleur || isDFC || isSG) {
+            // Backoffice : voit les demandes dans ses statuts autorisés
+            //              OU ses propres demandes (tous statuts)
+            List<Integer> roleStatuts = resolveStatutsAutorises(
+                    isMG, isControleur, isDFC, isSG, statutFilter);
+            criteriaBuilder
+                    .roleStatuts(roleStatuts)
+                    .myStatut(statutFilter)
+                    .myVisibleIds(allVisibleIds.isEmpty() ? List.of(-1) : allVisibleIds);
 
-        List<Integer> idsToUse = visibleIds;
-        if (!isAdminOrMGOrControleur) {
-            if ("ME".equalsIgnoreCase(scope)) {
-                idsToUse = List.of(current.getId());
-            } else if ("CHILDREN".equalsIgnoreCase(scope)) {
-                idsToUse = visibleIds.stream()
-                        .filter(idU -> !idU.equals(current.getId()))
-                        .toList();
-            }
+        } else {
+            // Utilisateur simple : uniquement ses demandes + celles qu'il doit valider
+            List<Integer> idsToUse = resolveScope(scope, current, allVisibleIds);
+            criteriaBuilder.demandeurIds(idsToUse.isEmpty() ? List.of(-1) : idsToUse);
         }
 
-        Page<DemandeMere> demandesMeres;
+        // ── 5. Exécution de la recherche ─────────────────────────────────────────
+        Page<DemandeMere> demandesMeres = demandeMereService.search(
+                criteriaBuilder.build(), page, size, sort, dir);
 
-// Cas MG : voit tout ce qui est déjà validé par N+1 (N1 -> VALIDE)
-        if (isMG && !isAdmin) {
+        // ── 6. Alimentation du modèle Thymeleaf ──────────────────────────────────
+        populateModel(
+                model, demandesMeres,
+                statut, priorite, motif, num, demandeur, type,
+                dateFrom, dateTo, scope,
+                size, sort, dir,
+                isBackoffice, hasChildren,
+                isMG, isControleur, isDFC, isSG, isAdmin
+        );
+        String returnUrl = buildReturnUrl(page, size, sort, dir, statut, priorite, motif, num, demandeur, type, dateFrom, dateTo, scope);
+        model.addAttribute("returnUrl", returnUrl);
 
-            List<Integer> mgStatuses = new ArrayList<>(List.of(
-                    StatutDemande.VALIDATION_N1,
-                    StatutDemande.VALIDATION_N2,
-                    StatutDemande.VALIDATION_N3,
-                    StatutDemande.VALIDATION_N4,
-                    StatutDemande.DECISION_CODEP,
-                    StatutDemande.VALIDE,
-                    StatutDemande.REFUSE
-            ));
+        model.addAttribute("motif",                  motif);
+        model.addAttribute("nbUtilisateursAValider",  idsAValider.size());
+        model.addAttribute("hasDemandesAValider",     !idsAValider.isEmpty());
+        model.addAttribute("StatutValide",            StatutDemande.VALIDE);
 
-            // appliquer le filtre statut AVANT la boucle
-            if (statutFilter != null) {
-                mgStatuses = mgStatuses.contains(statutFilter) ? List.of(statutFilter) : List.of();
-            }
+        return "demande/demande-liste";
+    }
 
-            List<DemandeMere> merged = new ArrayList<>();
+// ── Helpers privés ───────────────────────────────────────────────────────────
 
-            for (Integer st : mgStatuses) {
-                Page<DemandeMere> p = demandeMereService.searchDemandes(
-                        num, demandeur, type,
-                        st,
-                        priorite,
-                        dateFrom, dateTo,
-                        0, Integer.MAX_VALUE,
-                        sort, dir
-                );
-                merged.addAll(p.getContent());
-            }
+    // ── Helpers privés ────────────────────────────────────────────────────────
 
-            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
+    private boolean hasRole(Authentication auth, String role) {
+        return auth.getAuthorities().stream().anyMatch(a -> role.equals(a.getAuthority()));
+    }
 
-            Pageable pageable = PageRequest.of(page, size);
-            int start = (int) pageable.getOffset();
-            int end = Math.min(start + pageable.getPageSize(), merged.size());
+    private List<Integer> resolveScope(String scope, Utilisateur current,
+                                       List<Integer> allVisibleIds) {
+        return switch (scope == null ? "ALL" : scope.toUpperCase()) {
+            case "ME"       -> List.of(current.getId());
+            case "CHILDREN" -> allVisibleIds.stream()
+                    .filter(id -> !id.equals(current.getId()))
+                    .toList();
+            default         -> allVisibleIds;
+        };
+    }
 
-            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
-            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
-
-            // pour que la valeur sélectionnée reste affichée dans le select
-            model.addAttribute("statut", (statut == null) ? 0 : statut);
+    private List<Integer> resolveStatutsAutorises(boolean isMG, boolean isControleur,
+                                                  boolean isDFC, boolean isSG,
+                                                  Integer statutFilter) {
+        List<Integer> base;
+        if (isMG) {
+            base = List.of(StatutDemande.VALIDATION_N1, StatutDemande.VALIDATION_N2,
+                    StatutDemande.VALIDATION_N3, StatutDemande.VALIDATION_N4,
+                    StatutDemande.DECISION_CODEP, StatutDemande.VALIDE, StatutDemande.REFUSE);
+        } else if (isControleur) {
+            base = List.of(StatutDemande.VALIDATION_N2, StatutDemande.VALIDATION_N3,
+                    StatutDemande.VALIDATION_N4, StatutDemande.DECISION_CODEP,
+                    StatutDemande.VALIDE, StatutDemande.REFUSE);
+        } else if (isDFC) {
+            base = List.of(StatutDemande.VALIDATION_N3, StatutDemande.VALIDATION_N4,
+                    StatutDemande.DECISION_CODEP, StatutDemande.VALIDE, StatutDemande.REFUSE);
+        } else { // isSG
+            base = List.of(StatutDemande.VALIDATION_N4, StatutDemande.DECISION_CODEP,
+                    StatutDemande.VALIDE, StatutDemande.REFUSE);
         }
 
-
-        else if (isControleur && !isAdmin) {
-
-            List<Integer> controleurStatuses = new ArrayList<>(List.of(
-                    StatutDemande.VALIDATION_N2,
-                    StatutDemande.VALIDATION_N3,
-                    StatutDemande.DECISION_CODEP,
-                    StatutDemande.VALIDATION_N4,
-                    StatutDemande.VALIDE,
-                    StatutDemande.REFUSE
-            ));
-
-            if (statutFilter != null) {
-                controleurStatuses = controleurStatuses.contains(statutFilter) ? List.of(statutFilter) : List.of();
-            }
-
-            List<DemandeMere> merged = new ArrayList<>();
-
-            for (Integer st : controleurStatuses) {
-                Page<DemandeMere> p = demandeMereService.searchDemandes(
-                        num, demandeur, type,
-                        st,
-                        priorite,
-                        dateFrom, dateTo,
-                        0, Integer.MAX_VALUE,
-                        sort, dir
-                );
-                merged.addAll(p.getContent());
-            }
-
-            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
-
-            Pageable pageable = PageRequest.of(page, size);
-            int start = (int) pageable.getOffset();
-            int end = Math.min(start + pageable.getPageSize(), merged.size());
-
-            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
-            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
-
-            model.addAttribute("statut", (statut == null) ? 0 : statut);
+        if (statutFilter != null) {
+            return base.contains(statutFilter) ? List.of(statutFilter) : List.of();
         }
+        return new java.util.ArrayList<>(base);
+    }
 
-// Cas SG : voit uniquement N3 (En attente S.G.)
-        else if (isDFC && !isAdmin) {
+    private void populateModel(Model model, Page<DemandeMere> demandesMeres,
+                               Integer statut, String priorite, String motif, String num,
+                               String demandeur, String type,
+                               LocalDate dateFrom, LocalDate dateTo,
+                               String scope, int size, String sort, String dir,
+                               boolean isBackofficeValidator, boolean hasChildren,
+                               boolean isMG, boolean isControleur,
+                               boolean isDFC, boolean isSG, boolean isAdmin) {
 
-            List<Integer> dfcStatuses = new ArrayList<>(List.of(
-                    StatutDemande.VALIDATION_N3,
-                    StatutDemande.VALIDATION_N4,
-                    StatutDemande.DECISION_CODEP,
-                    StatutDemande.VALIDE,
-                    StatutDemande.REFUSE
-            ));
+        // Statut labels (tableau)
+        model.addAttribute("statutLabels", Map.of(
+                StatutDemande.CREE,           "En attente N+1",
+                StatutDemande.VALIDATION_N1,  "En attente M.G.",
+                StatutDemande.VALIDATION_N2,  "En attente Contrôle de gestion",
+                StatutDemande.VALIDATION_N3,  "En attente D.F.C.",
+                StatutDemande.VALIDATION_N4,  "En attente S.G.",
+                StatutDemande.DECISION_CODEP, "En attente CODEP",
+                StatutDemande.VALIDE,         "VALIDÉE",
+                StatutDemande.REFUSE,         "REFUSÉE"
+        ));
 
-            if (statutFilter != null) {
-                dfcStatuses = dfcStatuses.contains(statutFilter) ? List.of(statutFilter) : List.of();
-            }
+        // Statut filtre (select)
+        Map<Integer, String> statutFiltre = new LinkedHashMap<>();
+        statutFiltre.put(StatutDemande.CREE,           "En attente N+1");
+        statutFiltre.put(StatutDemande.VALIDATION_N1,  "En attente M.G.");
+        statutFiltre.put(StatutDemande.VALIDATION_N2,  "En attente Contrôle de gestion");
+        statutFiltre.put(StatutDemande.VALIDATION_N3,  "En attente D.F.C.");
+        statutFiltre.put(StatutDemande.VALIDATION_N4,  "En attente S.G.");
+        statutFiltre.put(StatutDemande.DECISION_CODEP, "En attente CODEP");
+        statutFiltre.put(StatutDemande.VALIDE,         "VALIDÉE");
+        statutFiltre.put(StatutDemande.REFUSE,         "REFUSÉE");
+        model.addAttribute("statutFiltre", statutFiltre);
 
-            List<DemandeMere> merged = new ArrayList<>();
-
-            for (Integer st : dfcStatuses) {
-                Page<DemandeMere> p = demandeMereService.searchDemandes(
-                        num, demandeur, type,
-                        st,
-                        priorite,
-                        dateFrom, dateTo,
-                        0, Integer.MAX_VALUE,
-                        sort, dir
-                );
-                merged.addAll(p.getContent());
-            }
-
-            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
-
-            Pageable pageable = PageRequest.of(page, size);
-            int start = (int) pageable.getOffset();
-            int end = Math.min(start + pageable.getPageSize(), merged.size());
-
-            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
-            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
-
-            model.addAttribute("statut", (statut == null) ? 0 : statut);
-        }
-
-        else if (isSG && !isAdmin) {
-
-            List<Integer> sgStatuses = new ArrayList<>(List.of(
-                    StatutDemande.VALIDATION_N4,
-                    StatutDemande.DECISION_CODEP,
-                    StatutDemande.VALIDE,
-                    StatutDemande.REFUSE
-            ));
-
-            if (statutFilter != null) {
-                sgStatuses = sgStatuses.contains(statutFilter) ? List.of(statutFilter) : List.of();
-            }
-
-            List<DemandeMere> merged = new ArrayList<>();
-            for (Integer st : sgStatuses) {
-                Page<DemandeMere> p = demandeMereService.searchDemandes(
-                        num, demandeur, type, st, priorite,
-                        dateFrom, dateTo, 0, Integer.MAX_VALUE, sort, dir
-                );
-                merged.addAll(p.getContent());
-            }
-
-            merged.sort(Comparator.comparing(DemandeMere::getDateDemande).reversed());
-
-            Pageable pageable = PageRequest.of(page, size);
-            int start = (int) pageable.getOffset();
-            int end = Math.min(start + pageable.getPageSize(), merged.size());
-            List<DemandeMere> slice = (start >= merged.size()) ? List.of() : merged.subList(start, end);
-            demandesMeres = new PageImpl<>(slice, pageable, merged.size());
-
-            model.addAttribute("statut", (statut == null) ? 0 : statut);
-        }
-
-// Cas normal / admin
-        else {
-            if (isBackofficeValidator) {
-                demandesMeres = demandeMereService.searchDemandes(
-                        num, demandeur, type,
-                        statutFilter,
-                        priorite,
-                        dateFrom, dateTo,
-                        page, size,
-                        sort, dir
-                );
-            } else {
-                demandesMeres = idsToUse.isEmpty()
-                        ? demandeMereService.searchDemandesVisibleParUtilisateur(
-                        num, demandeur, type, statutFilter, priorite,
-                        dateFrom, dateTo,
-                        List.of(-1),
-                        page, size,
-                        sort, dir
-                )
-                        : demandeMereService.searchDemandesVisibleParUtilisateur(
-                        num, demandeur, type, statutFilter, priorite,
-                        dateFrom, dateTo,
-                        idsToUse,
-                        page, size,
-                        sort, dir
-                );
-            }
-            model.addAttribute("statut", (statut == null) ? 0 : statut);
-        }
-
-        // À ajouter dans listDemandePage, avant le return
+        // Badge classes
         Map<Integer, String> badgeClasses = new HashMap<>();
-        badgeClasses.put(StatutDemande.CREE,           "badge-wait");
-        badgeClasses.put(StatutDemande.VALIDATION_N1,  "badge-info");
-        badgeClasses.put(StatutDemande.VALIDATION_N2,  "badge-purple");
-        badgeClasses.put(StatutDemande.VALIDATION_N3,  "badge-warning");
-        badgeClasses.put(StatutDemande.VALIDATION_N4,  "badge-teal");
-        badgeClasses.put(StatutDemande.DECISION_CODEP, "badge-codep");
-        badgeClasses.put(StatutDemande.VALIDE,         "badge-success");
-        badgeClasses.put(StatutDemande.REFUSE,         "badge-danger");
+        badgeClasses.put(StatutDemande.CREE,           "badge-grey");
+        badgeClasses.put(StatutDemande.VALIDATION_N1,  "badge-blue");
+        badgeClasses.put(StatutDemande.VALIDATION_N2,  "badge-light-blue");
+        badgeClasses.put(StatutDemande.VALIDATION_N3,  "badge-purple");
+        badgeClasses.put(StatutDemande.VALIDATION_N4,  "badge-green-soft");
+        badgeClasses.put(StatutDemande.DECISION_CODEP, "badge-orange");
+        badgeClasses.put(StatutDemande.VALIDE,         "badge-green");
+        badgeClasses.put(StatutDemande.REFUSE,         "badge-red");
+        model.addAttribute("badgeClasses", badgeClasses);
 
+        // Badge icons
         Map<Integer, String> badgeIcons = new HashMap<>();
         badgeIcons.put(StatutDemande.CREE,           "fa-user-clock");
         badgeIcons.put(StatutDemande.VALIDATION_N1,  "fa-clipboard-check");
@@ -506,43 +504,69 @@ public class DemandeController {
         badgeIcons.put(StatutDemande.DECISION_CODEP, "fa-landmark");
         badgeIcons.put(StatutDemande.VALIDE,         "fa-check-circle");
         badgeIcons.put(StatutDemande.REFUSE,         "fa-times-circle");
-
-        model.addAttribute("badgeClasses", badgeClasses);
         model.addAttribute("badgeIcons", badgeIcons);
+
+        // Priorité filtre
         Map<String, String> prioriteFiltre = new LinkedHashMap<>();
         prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P2), "P2");
         prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P1), "P1");
         prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P0), "P0");
         model.addAttribute("prioriteFiltre", prioriteFiltre);
 
-        // Model commun
-        model.addAttribute("currentUri", request.getRequestURI());
-        model.addAttribute("demandesMeres", demandesMeres);
+        // Visibilité colonnes
+        model.addAttribute("showDemandeurColumn",      isBackofficeValidator || hasChildren);
+        model.addAttribute("showDemandeurScopeFilter", hasChildren && !isBackofficeValidator);
 
-        model.addAttribute("page", page);
-        model.addAttribute("size", size);
-        model.addAttribute("sort", sort);
-        model.addAttribute("dir", dir);
-        model.addAttribute("priorite", priorite == null ? "" : priorite);
-
-        model.addAttribute("num", num == null ? "" : num);
-        model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
-        model.addAttribute("type", type == null ? "" : type);
-        model.addAttribute("dateFrom", dateFrom);
-        model.addAttribute("dateTo", dateTo);
-        model.addAttribute("scope", scope);
-
-        model.addAttribute("natures", DemandeMere.NatureDemande.values());
-        model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
-        model.addAttribute("statutLabels", statutLabels);
-
-        // flags de vue
-        model.addAttribute("isMGOnly", isMG && !isAdmin);
+        // Flags de vue
+        model.addAttribute("isMGOnly",         isMG && !isAdmin);
         model.addAttribute("isControleurOnly", isControleur && !isAdmin);
-        model.addAttribute("isDFCOnly", isDFC && !isAdmin);
-        model.addAttribute("isSGOnly", isSG && !isAdmin);
+        model.addAttribute("isDFCOnly",        isDFC && !isAdmin);
+        model.addAttribute("isSGOnly",         isSG && !isAdmin);
 
-        return "demande/demande-liste";
+        // Colspan calculé (évite l'expression #authorization fragile dans Thymeleaf)
+        int colCount = 5; // id + date + motif + priorité + statut
+        if (isBackofficeValidator || hasChildren) colCount++;
+        model.addAttribute("tableColCount", colCount);
+
+        // Données pagination et filtres actifs
+        model.addAttribute("demandesMeres", demandesMeres);
+        model.addAttribute("statut",    statut == null ? 0 : statut);
+        model.addAttribute("priorite",  priorite  == null ? "" : priorite);
+        model.addAttribute("motif",     motif     == null ? "" : motif);
+        model.addAttribute("num",       num       == null ? "" : num);
+        model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
+        model.addAttribute("type",      type      == null ? "" : type);
+        model.addAttribute("dateFrom",  dateFrom);
+        model.addAttribute("dateTo",    dateTo);
+        model.addAttribute("scope",     scope);
+        model.addAttribute("page",      demandesMeres.getNumber());
+        model.addAttribute("size",      size);
+        model.addAttribute("sort",      sort);
+        model.addAttribute("dir",       dir);
+
+        model.addAttribute("natures",   DemandeMere.NatureDemande.values());
+        model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
+    }
+
+    private String buildReturnUrl(int page, int size, String sort, String dir,
+                                  Integer statut, String priorite, String motif,
+                                  String num, String demandeur, String type,
+                                  LocalDate dateFrom, LocalDate dateTo, String scope) {
+        StringBuilder sb = new StringBuilder("/demande/list?");
+        sb.append("page=").append(page);
+        sb.append("&size=").append(size);
+        sb.append("&sort=").append(sort);
+        sb.append("&dir=").append(dir);
+        if (statut  != null)    sb.append("&statut=").append(statut);
+        if (priorite != null)   sb.append("&priorite=").append(priorite);
+        if (motif   != null)    sb.append("&motif=").append(motif);
+        if (num     != null)    sb.append("&num=").append(num);
+        if (demandeur != null)  sb.append("&demandeur=").append(demandeur);
+        if (type    != null)    sb.append("&type=").append(type);
+        if (dateFrom != null)   sb.append("&dateFrom=").append(dateFrom);
+        if (dateTo  != null)    sb.append("&dateTo=").append(dateTo);
+        if (scope   != null)    sb.append("&scope=").append(scope);
+        return sb.toString();
     }
 
     @PostMapping("/fiche/{id}/type-demande")
@@ -617,6 +641,41 @@ public class DemandeController {
                     .body(Map.of("error", "La quantité doit être supérieure à 0"));
         }
 
+        // VÉRIFICATION STOCK POUR LES LIGNES STOCK
+        if (ligne.getTypeApprovisionnement() == DemandeFille.TypeApprovisionnement.STOCK) {
+            String codeArticle = ligne.getArticle().getCodeArticle();
+            double stockDisponible = lotStockService.getStockDisponible(codeArticle);
+
+            // Récupérer la demande mère pour connaître les autres lignes du même article
+            DemandeMere demande = ligne.getDemandeMere();
+            List<DemandeFille> autresLignesStock = demandeFilleService.getDemandeFilleByDemandeMere(demande)
+                    .stream()
+                    .filter(l -> l.getId() != ligneId)  // Exclure la ligne en cours
+                    .filter(l -> l.getTypeApprovisionnement() == DemandeFille.TypeApprovisionnement.STOCK)
+                    .filter(l -> l.getArticle().getCodeArticle().equals(codeArticle))
+                    .toList();
+
+            // Calculer la quantité totale déjà réservée par d'autres lignes stock du même article
+            double totalReserveAutres = autresLignesStock.stream()
+                    .mapToDouble(DemandeFille::getQuantite)
+                    .sum();
+
+            // Stock réellement disponible pour CETTE ligne
+            double stockReelDisponible = stockDisponible - totalReserveAutres;
+
+            if (quantite > stockReelDisponible) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", String.format(
+                                "Stock insuffisant pour l'article %s - %s. " +
+                                        "Stock disponible : %.2f, Demandé : %.2f",
+                                ligne.getArticle().getCodeArticle(),
+                                ligne.getArticle().getDesignation(),
+                                stockReelDisponible,
+                                quantite
+                        )));
+            }
+        }
+
         // Garder l'ancienne quantité pour l'historique
         double ancienneQuantite = ligne.getQuantite();
 
@@ -627,21 +686,30 @@ public class DemandeController {
         // Recalculer le total de la demande mère
         DemandeMere demande = ligne.getDemandeMere();
         List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
-        double newTotal = lignes.stream()
+
+        // Recalcul du montantEstime de la ligne modifiée
+        if (ligne.getPrixUnitaire() != null && ligne.getPrixUnitaire() > 0) {
+            ligne.setMontantEstime(quantite * ligne.getPrixUnitaire());
+        } else {
+            ligne.setMontantEstime(null);
+        }
+        demandeFilleService.saveDemandeFille(ligne);
+
+        // Recalcul du totalEstime sur la demande mère
+        double newTotalEstime = lignes.stream()
+                .filter(l -> l.getPrixUnitaire() != null && l.getPrixUnitaire() > 0)
                 .mapToDouble(l -> {
-                    double qte = 0;
-                    try { qte = l.getQuantite(); } catch (Exception ignored) {}
-                    double prix = (l.getArticle().getPrixUnitaire() == null) ? 0 : l.getArticle().getPrixUnitaire();
-                    return qte * prix;
+                    double qte = (l.getId() == ligneId) ? quantite : l.getQuantite();
+                    return qte * l.getPrixUnitaire();
                 })
                 .sum();
 
-        demande.setTotalPrix(newTotal);
+        demande.setTotalEstime(newTotalEstime > 0 ? newTotalEstime : null);
         demandeMereService.saveDemandeMere(demande);
 
-        //Historique de la modification
-        String designation  = ligne.getArticle() != null ? ligne.getArticle().getDesignation()  : "Article inconnu";
-        String codeArticle  = ligne.getArticle() != null ? ligne.getArticle().getCodeArticle()  : "N/A";
+        // Historique de la modification
+        String designation = ligne.getArticle() != null ? ligne.getArticle().getDesignation() : "Article inconnu";
+        String codeArticle = ligne.getArticle() != null ? ligne.getArticle().getCodeArticle() : "N/A";
 
         ValidationDemande historique = new ValidationDemande();
         historique.setDemandeMere(demande);
@@ -659,18 +727,22 @@ public class DemandeController {
 
         return ResponseEntity.ok(Map.of(
                 "quantite", quantite,
-                "newTotal", newTotal
+                "totalEstime", newTotalEstime
         ));
     }
     @GetMapping("/fiche/{id}")
     public String demandeFiche(@PathVariable("id") String id,
                                Model model,
-                               HttpServletRequest request,
-                               RedirectAttributes redirectAttributes) {
+                               @RequestParam(required = false, defaultValue = "/demande/list") String returnUrl,
+                               RedirectAttributes redirectAttributes, HttpSession session) {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
         Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        String decisionToken = UUID.randomUUID().toString();
+        session.setAttribute("decisionToken_" + id, decisionToken);
+        model.addAttribute("decisionToken", decisionToken);
 
         boolean isAdmin = auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
@@ -694,17 +766,29 @@ public class DemandeController {
             redirectAttributes.addFlashAttribute("ko", "Demande introuvable : " + id);
             return "redirect:/demande/list";
         }
-        Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
 
+        Integer demandeurId = (demande.getDemandeur() != null) ? demande.getDemandeur().getId() : null;
+        Utilisateur demandeur = demande.getDemandeur();
+
+        // Récupérer tous les IDs visibles (hiérarchie + validateurs assignés)
         List<Integer> visibleIds = utilisateurService.getIdsUtilisateurVisible(current.getId());
+        List<Integer> idsAValider = utilisateurService.getIdsUtilisateursAValider(current.getId());
+
+        // Fusionner les deux listes pour l'accès
+        Set<Integer> allAccessibleIds = new HashSet<>(visibleIds);
+        allAccessibleIds.addAll(idsAValider);
+
+        // Vérifier si l'utilisateur est validateur assigné pour ce demandeur
+        boolean estValidateurAssigne = demandeur != null && idsAValider.contains(demandeur.getId());
+
         if (!isAdminOrSpecial) {
-            if (demandeurId == null || !visibleIds.contains(demandeurId)) {
+            if (demandeurId == null || !allAccessibleIds.contains(demandeurId)) {
                 redirectAttributes.addFlashAttribute("ko", "Accès refusé à cette demande.");
                 return "redirect:/demande/list";
             }
         }
 
-        // Enfants directs (sans moi)
+        // Enfants directs (sans moi) - pour la hiérarchie
         List<Integer> childrenIds = visibleIds.stream()
                 .filter(x -> !x.equals(current.getId()))
                 .toList();
@@ -712,16 +796,51 @@ public class DemandeController {
         // N+1 du demandeur = la demande appartient à un de mes enfants
         boolean isViewerNplus1OfDemandeur = (demandeurId != null) && childrenIds.contains(demandeurId);
 
-        // Droits de décision par niveau
-        boolean canDecisionN1 = isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.CREE;
+        // Droits de décision par niveau - MODIFIÉ pour inclure les validateurs assignés
+        boolean canDecisionN1 = demande.getStatut() == StatutDemande.CREE
+                && (isViewerNplus1OfDemandeur || estValidateurAssigne);
+
         boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
         boolean canDecisionControleur = isControleur && demande.getStatut() == StatutDemande.VALIDATION_N2;
         boolean canDecisionDFC = isDFC && demande.getStatut() == StatutDemande.VALIDATION_N3;
-        boolean canDecisionSG   = isSG  && demande.getStatut() == StatutDemande.VALIDATION_N4;
+        boolean canDecisionSG = isSG && demande.getStatut() == StatutDemande.VALIDATION_N4;
         boolean isCodepWorkflow = Boolean.TRUE.equals(demande.getViaCodep());
         boolean canDecisionCodep = isMG && demande.getStatut() == StatutDemande.DECISION_CODEP;
 
         boolean isValidatedCodep = demande.getStatut() == StatutDemande.VALIDE && demande.getDecisionViaCodep(isCodepWorkflow);
+
+        // Message spécifique pour les validateurs assignés
+        String statutHint = null;
+
+        if (estValidateurAssigne && demande.getStatut() == StatutDemande.CREE) {
+            statutHint = "Vous êtes validateur assigné pour cette demande. Action requise.";
+        } else if (isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.VALIDATION_N1) {
+            statutHint = "Vous avez validé — en attente de traitement par les Moyens Généraux.";
+        } else if (isMG) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N1) {
+                statutHint = "Demande en attente de votre validation (Moyens Généraux).";
+            } else if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
+                statutHint = "Vous avez validé — en attente de traitement par le contrôleur de gestion.";
+            }
+        } else if (isControleur) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
+                statutHint = "Demande en attente de votre validation (contrôleur de gestion).";
+            } else if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
+                statutHint = "Vous avez validé — en attente de validation finale (D.F.C.).";
+            }
+        } else if (isDFC) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
+                statutHint = "Demande en attente de votre validation (D.F.C.).";
+            } else if (demande.getStatut() == StatutDemande.VALIDATION_N4) {
+                statutHint = "Vous avez validé — en attente de validation finale (S.G.).";
+            }
+        } else if (isSG) {
+            if (demande.getStatut() == StatutDemande.VALIDATION_N4) {
+                statutHint = "Demande en attente de votre validation finale (S.G.).";
+            } else if (demande.getStatut() == StatutDemande.VALIDE) {
+                statutHint = "Demande finalisée.";
+            }
+        }
 
         // Lignes
         List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
@@ -812,50 +931,6 @@ public class DemandeController {
 
 
 
-        // statutHint (UI) : message adapté au viewer
-        String statutHint = null;
-
-        // N+1 a validé (donc la demande est passée à N1)
-        if (isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.VALIDATION_N1) {
-            statutHint = "Vous avez validé — en attente de traitement par les Moyens Généraux.";
-        }
-
-        // MG : soit en attente de MG (N1), soit déjà traité par MG (N2)
-        if (isMG) {
-            if (demande.getStatut() == StatutDemande.VALIDATION_N1) {
-                statutHint = "Demande en attente de votre validation (Moyens Généraux).";
-            } else if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
-                statutHint = "Vous avez validé — en attente de traitement par le contrôleur de gestion.";
-            }
-        }
-
-
-        if (isControleur) {
-            if (demande.getStatut() == StatutDemande.VALIDATION_N2) {
-                statutHint = "Demande en attente de votre validation (contrôleur de gestion).";
-            } else if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
-                statutHint = "Vous avez validé — en attente de validation finale (D.F.C.).";
-            }
-        }
-
-
-        if (isDFC) {
-            if (demande.getStatut() == StatutDemande.VALIDATION_N3) {
-                statutHint = "Demande en attente de votre validation (D.F.C.).";
-            } else if (demande.getStatut() == StatutDemande.VALIDATION_N4) {
-                statutHint = "Vous avez validé — en attente de validation finale (S.G.).";
-            }
-        }
-
-
-        if (isSG) {
-            if (demande.getStatut() == StatutDemande.VALIDATION_N4) {
-                statutHint = "Demande en attente de votre validation finale (S.G.).";
-            } else if (demande.getStatut() == StatutDemande.VALIDE) {
-                statutHint = "Demande finalisée.";
-            }
-        }
-
         List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
         List<CodepPieceJointe> codepPiecesJointes = codepPieceJointeService.listByDemandeId(demande.getId());
         CommentaireFinance commentaireFinance = commentaireFinanceService.getCommentaireFinanceByIdDemande(demande); // ← AJOUTER
@@ -890,6 +965,9 @@ public class DemandeController {
         List<ValidationDemande> historiques = validationDemandeService.getHistorique(demande);
         CentreBudgetaire[] ligneBudgetaires = centreBudgetaireService.getAllCentreBudgetaires();
 
+        boolean canVoirPrix = isAdminOrSpecial || isViewerNplus1OfDemandeur;
+        model.addAttribute("canVoirPrix", canVoirPrix);
+
         model.addAttribute("steps", steps);
         model.addAttribute("historiques", historiques);
         model.addAttribute("piecesJointes", piecesJointes);
@@ -902,7 +980,6 @@ public class DemandeController {
         model.addAttribute("histoLabels", histoLabels);
 
         // Model (IMPORTANT : toujours envoyer les booléens)
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("demande", demande);
         model.addAttribute("lignes", lignes);
 
@@ -925,6 +1002,40 @@ public class DemandeController {
         model.addAttribute("ligneBudgetaires", ligneBudgetaires);
         model.addAttribute("commentaireFinance", commentaireFinance);
 
+        model.addAttribute("estValidateurAssigne", estValidateurAssigne);
+        model.addAttribute("isViewerNplus1OfDemandeur", isViewerNplus1OfDemandeur);
+        model.addAttribute("returnUrl", returnUrl);
+
+        // ── Bon de sortie ────────────────────────────────────────────────────────
+        boolean canCreateBS = demande.getStatut() == StatutDemande.VALIDE
+                && isMG
+                && demande.getEtatLivraison() != DemandeMere.EtatLivraison.SOLDEE;
+
+        model.addAttribute("canCreateBS", canCreateBS);
+        model.addAttribute("bonsSortie", bonSortieService.getBonSortieByDemande(demande));
+
+        if (canCreateBS) {
+            List<LigneRestanteDTO> lignesRestantes = demandeFilleService
+                    .getDemandeFilleByDemandeMere(demande)
+                    .stream()
+                    .filter(df -> df.getStatut() != StatutDemande.REFUSE)
+                    .map(df -> {
+                        double restant         = bonSortieService.getQuantiteRestante(df);
+                        double totalSorti      = df.getQuantite() - restant;
+                        double stockDisponible = stockFilleRepo.getStockDisponible(
+                                df.getArticle().getCodeArticle()
+                        ); // ← SUM(entree) - SUM(sortie)
+                        return new LigneRestanteDTO(df, totalSorti, restant, stockDisponible);
+                    })
+                    .filter(l -> l.getRestant() > 0)
+                    .toList();
+
+            model.addAttribute("lignesRestantes", lignesRestantes);
+        }
+        // ── Fin Bon de sortie ────────────────────────────────────────────────────
+
+
+
         return "demande/demande-fiche";
     }
 
@@ -939,7 +1050,19 @@ public class DemandeController {
                            @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                            @RequestParam(name = "ligneBudgetaire", required = false) String ligneBudgetaire,
                            @RequestParam(name = "commentaireControleur" , required = false) String commentaireControleur,
+                           @RequestParam(value = "submissionToken") String submissionToken,
+                           HttpSession session,
                            RedirectAttributes redirectAttributes, HttpServletRequest request)  {
+        // ── Token anti double-soumission ────────────────────────────────────────
+        String sessionKey   = "decisionToken_" + id;
+        String sessionToken = (String) session.getAttribute(sessionKey);
+
+        if (sessionToken == null || !sessionToken.equals(submissionToken)) {
+            redirectAttributes.addFlashAttribute("warningMessage",
+                    "Cette décision a déjà été soumise. Veuillez vérifier l'état de la demande.");
+            return "redirect:/demande/fiche/" + id;
+        }
+        session.removeAttribute(sessionKey); // consommer immédiatement
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
@@ -977,9 +1100,20 @@ public class DemandeController {
                 .toList();
 
         // Autorisations par niveau
-        boolean canDecisionN1 = demandeurId != null
-                && childrenIds.contains(demandeurId)
-                && demande.getStatut() == StatutDemande.CREE;
+        boolean canDecisionN1 = false;
+        if (demandeurId != null && demande.getStatut() == StatutDemande.CREE) {
+            Utilisateur demandeur = utilisateurService.getUtilisateurById(demandeurId);
+            if (demandeur != null) {
+                // Vérifier si le current user est N+1
+                boolean estNPlusUn = childrenIds.contains(demandeurId);
+
+                // Vérifier si le current user est dans les validateurs assignés
+                boolean estValidateurAssigné = demandeur.getValidateurs().stream()
+                        .anyMatch(v -> v.getId() == current.getId());
+
+                canDecisionN1 = estNPlusUn || estValidateurAssigné;
+            }
+        }
 
         boolean canDecisionMG = isMG && demande.getStatut() == StatutDemande.VALIDATION_N1;
         boolean canDecisionControleur = isControleur && demande.getStatut() == StatutDemande.VALIDATION_N2;
@@ -1074,7 +1208,16 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N1);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
-                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N1);
+                List<Utilisateur> mgs = utilisateurService.getUtilisateursByRole("MOYENS_GENERAUX");
+                System.out.println("Nombre de MG trouvés : " + mgs.size());
+                //Mail demandeur : une seule fois, sans prochainValidateur
+                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N1);
+
+                //Mail MGs : une fois par MG, sans re-notifier le demandeur
+                for (Utilisateur mg : mgs) {
+                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N1, mg);
+                }
+
                 redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1142,6 +1285,19 @@ public class DemandeController {
 
             if (canDecisionMG) {
                 int etape = demande.getStatut();
+                List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
+                List<String> lignesSansPrix = lignes.stream()
+                        .filter(l -> l.getStatut() != StatutDemande.REFUSE)
+                        .filter(l -> l.getPrixUnitaire() == null || l.getPrixUnitaire() <= 0)
+                        .map(l -> l.getArticle().getCodeArticle() + " - " + l.getArticle().getDesignation())
+                        .toList();
+
+                if (!lignesSansPrix.isEmpty()) {
+                    redirectAttributes.addFlashAttribute("ko",
+                            "Impossible de valider : les articles suivants n'ont pas de prix unitaire : "
+                                    + String.join(", ", lignesSansPrix));
+                    return "redirect:/demande/fiche/" + id;
+                }
                 List<String> pjAjoutees = sauvegarderPiecesJointesDecision(piecesJointes, demande, "PJ_MG", redirectAttributes);
                 if (!pjAjoutees.isEmpty()) {
                     String listePj = pjAjoutees.stream()
@@ -1191,7 +1347,7 @@ public class DemandeController {
                             histoPriorite.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
                             histoPriorite.setCommentaire(
                                     "Modification de priorité : " + anciennePriorite
-                                            + " → " + nouvellePriorite.name()
+                                            + " -> " + nouvellePriorite.name()
                             );
                             histoPriorite.setDateAction(String.valueOf(LocalDateTime.now()));
                             validationDemandeService.logAction(histoPriorite);
@@ -1207,7 +1363,14 @@ public class DemandeController {
 
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
-                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N2);
+                List<Utilisateur> controleurs = utilisateurService.getUtilisateursByRole("CONTROLEUR");
+                // Mail demandeur : une seule fois, sans prochainValidateur
+                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N2);
+
+                // Mail controleurs : une fois par MG, sans re-notifier le demandeur
+                for (Utilisateur controleur : controleurs) {
+                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N2, controleur);
+                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1250,7 +1413,14 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
-                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N3);
+                List<Utilisateur> dfcs = utilisateurService.getUtilisateursByRole("DFC");
+                // Mail demandeur : une seule fois, sans prochainValidateur
+                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N3);
+
+                // Mail controleurs : une fois par MG, sans re-notifier le demandeur
+                for (Utilisateur dfc : dfcs) {
+                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N3, dfc);
+                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le contrôleur de gestion (N3).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1274,7 +1444,14 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N4);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
-                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDATION_N4);
+                List<Utilisateur> sgs = utilisateurService.getUtilisateursByRole("SG");
+// Mail demandeur : une seule fois, sans prochainValidateur
+                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N4);
+
+                // Mail controleurs : une fois par MG, sans re-notifier le demandeur
+                for (Utilisateur sg : sgs) {
+                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N4, sg);
+                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par la D.F.C., transmise au S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1296,7 +1473,10 @@ public class DemandeController {
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
-                ess.envoyerMailValidation(demande, current, cmt, etape, StatutDemande.VALIDE);
+
+                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDE);
+
+                ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDE, null);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1304,12 +1484,12 @@ public class DemandeController {
             // Admin : si tu veux le laisser forcer la suite même s'il n'est pas le bon rôle
             if (isAdmin) {
                 int next = switch (demande.getStatut()) {
-                        case StatutDemande.CREE          -> StatutDemande.VALIDATION_N1;
-                        case StatutDemande.VALIDATION_N1 -> StatutDemande.VALIDATION_N2;
-                        case StatutDemande.VALIDATION_N2 -> StatutDemande.VALIDATION_N3;
-                        case StatutDemande.VALIDATION_N3 -> StatutDemande.VALIDATION_N4;
-                        case StatutDemande.VALIDATION_N4 -> StatutDemande.VALIDE;
-                        default -> demande.getStatut();
+                    case StatutDemande.CREE          -> StatutDemande.VALIDATION_N1;
+                    case StatutDemande.VALIDATION_N1 -> StatutDemande.VALIDATION_N2;
+                    case StatutDemande.VALIDATION_N2 -> StatutDemande.VALIDATION_N3;
+                    case StatutDemande.VALIDATION_N3 -> StatutDemande.VALIDATION_N4;
+                    case StatutDemande.VALIDATION_N4 -> StatutDemande.VALIDE;
+                    default -> demande.getStatut();
                 };
                 int etape = demande.getStatut();
                 demandeMereService.appliquerDecisionGlobale(demande, next);
@@ -1321,6 +1501,79 @@ public class DemandeController {
         System.out.println(">>> decision reçue = [" + decision + "]");
         redirectAttributes.addFlashAttribute("ko", "Décision invalide.");
         return "redirect:/demande/fiche/" + id;
+    }
+
+    @PostMapping("/fiche/{id}/prix")
+    @ResponseBody
+    public ResponseEntity<?> savePrix(
+            @PathVariable("id") String id,
+            @RequestBody Map<String, Double> prix,
+            HttpServletRequest request) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        boolean isMG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        if (!isMG && !isAdmin) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Accès refusé."));
+        }
+
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Demande introuvable."));
+        }
+
+        if (demande.getStatut() != StatutDemande.VALIDATION_N1) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "La saisie des prix n'est autorisée qu'à l'étape Validation MG."));
+        }
+
+        // Mise à jour des prix ligne par ligne
+        List<String> erreurs = new ArrayList<>();
+        for (Map.Entry<String, Double> entry : prix.entrySet()) {
+            int ligneId;
+            try {
+                ligneId = Integer.parseInt(entry.getKey());
+            } catch (NumberFormatException e) {
+                erreurs.add("ID invalide : " + entry.getKey());
+                continue;
+            }
+            Double valeur = entry.getValue();
+            if (valeur == null || valeur <= 0) {
+                erreurs.add("Prix invalide pour la ligne " + ligneId);
+                continue;
+            }
+            DemandeFille ligne = demandeFilleService.getDemandeFilleById(ligneId);
+            if (ligne == null || !ligne.getDemandeMere().getId().equals(id)) {
+                erreurs.add("Ligne introuvable : " + ligneId);
+                continue;
+            }
+            ligne.setPrixUnitaire(valeur); // déclenche aussi setMontantEstime via le setter
+            demandeFilleService.saveDemandeFille(ligne);
+        }
+
+        // Recalcul du total estimé sur la DemandeMere
+        List<DemandeFille> toutesLignes = demandeFilleService.getDemandeFilleByDemandeMere(demandeMereService.getDemandeMereById(id).orElseThrow());
+        double total = toutesLignes.stream()
+                .filter(l -> l.getPrixUnitaire() != null && l.getPrixUnitaire() > 0)
+                .mapToDouble(DemandeFille::getMontantEstime)
+                .sum();
+        demande.setTotalEstime(total);
+        demandeMereService.saveDemandeMere(demande);
+
+        if (!erreurs.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                    .body(Map.of("warning", erreurs, "totalEstime", total));
+        }
+
+        return ResponseEntity.ok(Map.of("ok", "Prix enregistrés.", "totalEstime", total));
     }
 
     @PostMapping("/fiche/{id}/send-codep")
@@ -1509,5 +1762,250 @@ public class DemandeController {
         return nomsAjoutes;
     }
 
+    @PostMapping("/fiche/{id}/pieces-jointes-mg")
+    @ResponseBody
+    public ResponseEntity<?> savePiecesJointesMG(
+            @PathVariable("id") String id,
+            @RequestParam("piecesJointes") MultipartFile[] piecesJointes,
+            HttpServletRequest request) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        boolean isMG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        if (!isMG && !isAdmin) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Accès refusé."));
+        }
+
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Demande introuvable."));
+        }
+
+        if (demande.getStatut() != StatutDemande.VALIDATION_N1) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "L'ajout de pièces jointes n'est autorisé qu'à l'étape Validation MG."));
+        }
+
+        if (piecesJointes == null || piecesJointes.length == 0) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Aucun fichier reçu."));
+        }
+
+        List<String> nomsSauvegardes = new ArrayList<>();
+        List<String> erreurs = new ArrayList<>();
+
+        //APRÈS — logAction une seule fois après la boucle
+        for (MultipartFile f : piecesJointes) {
+            if (f == null || f.isEmpty()) continue;
+
+            String contentType = f.getContentType();
+            if (contentType == null ||
+                    (!contentType.startsWith("image/") && !contentType.equals("application/pdf"))) {
+                erreurs.add("Format refusé : " + f.getOriginalFilename() + " (PDF et images uniquement).");
+                continue;
+            }
+
+            String safeDate = LocalDateTime.now()
+                    .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String ref = "PJ_MG"
+                    + "_" + demande.getId()
+                    + "_" + demande.getDemandeur().getNom()
+                    + "_" + demande.getDemandeur().getPrenom()
+                    + "_" + safeDate;
+
+            String storedName = storageService.store(f, ref);
+
+            DemandePieceJointe pj = new DemandePieceJointe();
+            pj.setDemande(demande);
+            pj.setOriginalName(f.getOriginalFilename());
+            pj.setStoredName(storedName);
+            pj.setContentType(contentType);
+            pj.setSize(f.getSize());
+            pj.setUploadedAt(LocalDateTime.now());
+
+            demandePieceJointeService.insert(pj);
+            nomsSauvegardes.add(f.getOriginalFilename()); // ← collecte seulement
+        }
+
+//Une seule entrée d'historique pour tous les fichiers
+        if (!nomsSauvegardes.isEmpty()) {
+            String listePj = nomsSauvegardes.stream()
+                    .map(n -> "• " + n)
+                    .collect(Collectors.joining("\n"));
+
+            ValidationDemande histo = new ValidationDemande();
+            histo.setDemandeMere(demande);
+            histo.setValidateur(current);
+            histo.setEtape(demande.getStatut());
+            histo.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+            histo.setCommentaire(nomsSauvegardes.size() + " pièce(s) jointe(s) MG ajoutée(s) :\n" + listePj);
+            histo.setDateAction(String.valueOf(LocalDateTime.now()));
+            validationDemandeService.logAction(histo);
+        }
+
+        if (!erreurs.isEmpty() && nomsSauvegardes.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", String.join(", ", erreurs)));
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("ok", true);
+        result.put("sauvegardes", nomsSauvegardes);
+        if (!erreurs.isEmpty()) result.put("warnings", erreurs);
+
+        return ResponseEntity.ok(result);
+    }
+
+
+
+    @GetMapping("/stock/disponible/{codeArticle}")
+    @ResponseBody
+    public ResponseEntity<?> getStockDisponible(
+            @PathVariable String codeArticle,
+            @RequestParam(required = false) String demandeId) {
+
+        // Utiliser LotStock au lieu de StockFille
+        double stockPhysique = lotStockService.getStockDisponible(codeArticle);
+
+        double quantiteReservee = 0;
+        if (demandeId != null && !demandeId.isBlank()) {
+            Double reserved = demandeFilleService
+                    .getQuantiteStockReserveePourDemande(demandeId, codeArticle);
+            quantiteReservee = (reserved != null) ? reserved : 0;
+        }
+
+        double stockDisponible = Math.max(0, stockPhysique - quantiteReservee);
+
+        // Prix FIFO : prix du premier lot disponible
+        double prixFifo = 0;
+        try {
+            if (stockDisponible > 0) {
+                prixFifo = lotStockService.getPrixFifo(codeArticle, 1);
+            }
+        } catch (Exception e) {
+            // Fallback sur le dernier prix connu
+            prixFifo = prixArticleService
+                    .getDernierPrixByArticle(codeArticle)
+                    .map(PrixArticle::getPrixUnitaire)
+                    .orElse(0.0);
+        }
+
+        System.out.println(">>> [STOCK FIFO] code=" + codeArticle
+                + " | stockPhysique=" + stockPhysique
+                + " | reserved=" + quantiteReservee
+                + " | disponible=" + stockDisponible
+                + " | prixFifo=" + prixFifo);
+
+        return ResponseEntity.ok(Map.of(
+                "stockDisponible",  stockDisponible,
+                "quantiteReservee", quantiteReservee,
+                "dernierPrix",      prixFifo
+        ));
+    }
+
+    @PostMapping("/ligne/{id}/scinder")
+    @ResponseBody
+    public ResponseEntity<?> scinderLigne(
+            @PathVariable int id,
+            @RequestBody ScinderDTO dto) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isMG = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
+        if (!isMG)
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Accès refusé."));
+
+        DemandeFille ligneOriginale = demandeFilleService.getDemandeFilleById(id);
+        if (ligneOriginale == null)
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Ligne introuvable."));
+
+        double qteTotale = ligneOriginale.getQuantite();
+        double qteStock  = dto.getQteStock();
+        double qteAchat  = qteTotale - qteStock;
+
+        // Correction : > au lieu de >=
+        if (qteStock <= 0 || qteStock > qteTotale)
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Quantité stock invalide."));
+
+        double prixFifo;
+        try {
+            prixFifo = lotStockService.getPrixFifo(
+                    ligneOriginale.getArticle().getCodeArticle(), qteStock
+            );
+        } catch (Exception e) {
+            prixFifo = dto.getPrixStock(); // fallback sur le prix envoyé par le JS
+        }
+
+        // Cas conversion totale
+        if (qteStock == qteTotale) {
+            ligneOriginale.setTypeApprovisionnement(DemandeFille.TypeApprovisionnement.STOCK);
+            ligneOriginale.setPrixUnitaire(prixFifo);
+            demandeFilleService.saveDemandeFille(ligneOriginale);
+            demandeMereService.recalculerTotal(ligneOriginale.getDemandeMere());
+            return ResponseEntity.ok(Map.of("ok", true));
+        }
+
+        // Scission normale
+        ligneOriginale.setQuantite(String.valueOf(qteAchat));
+        ligneOriginale.setTypeApprovisionnement(DemandeFille.TypeApprovisionnement.ACHAT);
+        demandeFilleService.saveDemandeFille(ligneOriginale);
+
+        DemandeFille ligneStock = new DemandeFille();
+        ligneStock.setDemandeMere(ligneOriginale.getDemandeMere());
+        ligneStock.setArticle(ligneOriginale.getArticle());
+        ligneStock.setQuantite(String.valueOf(qteStock));
+        ligneStock.setPrixUnitaire(prixFifo);
+        ligneStock.setStatut(ligneOriginale.getStatut());
+        ligneStock.setTypeApprovisionnement(DemandeFille.TypeApprovisionnement.STOCK);
+        demandeFilleService.saveDemandeFille(ligneStock);
+
+        demandeMereService.recalculerTotal(ligneOriginale.getDemandeMere());
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    @GetMapping("/ligne/{ligneId}/stock-disponible")
+    @ResponseBody
+    public ResponseEntity<?> getStockDisponiblePourLigne(@PathVariable Integer ligneId) {
+        DemandeFille ligne = demandeFilleService.getDemandeFilleById(ligneId);
+        if (ligne == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (ligne.getTypeApprovisionnement() != DemandeFille.TypeApprovisionnement.STOCK) {
+            return ResponseEntity.ok(Map.of("stockDisponible", Double.MAX_VALUE));
+        }
+
+        String codeArticle = ligne.getArticle().getCodeArticle();
+        double stockPhysique = lotStockService.getStockDisponible(codeArticle);
+
+        // Récupérer toutes les lignes stock du même article dans la même demande
+        DemandeMere demande = ligne.getDemandeMere();
+        double totalReserveAutres = demandeFilleService.getDemandeFilleByDemandeMere(demande)
+                .stream()
+                .filter(l -> l.getId() != ligneId)
+                .filter(l -> l.getTypeApprovisionnement() == DemandeFille.TypeApprovisionnement.STOCK)
+                .filter(l -> l.getArticle().getCodeArticle().equals(codeArticle))
+                .mapToDouble(DemandeFille::getQuantite)
+                .sum();
+
+        double stockDisponible = Math.max(0, stockPhysique - totalReserveAutres);
+
+        return ResponseEntity.ok(Map.of(
+                "stockDisponible", stockDisponible,
+                "stockPhysique", stockPhysique,
+                "totalReserveAutres", totalReserveAutres
+        ));
+    }
 
 }
