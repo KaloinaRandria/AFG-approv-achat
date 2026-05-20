@@ -30,9 +30,9 @@ public class LoginSuccessHandler extends SavedRequestAwareAuthenticationSuccessH
         HttpSession session = request.getSession(false);
         if (session != null) {
             Object savedRequest = session.getAttribute("SPRING_SECURITY_SAVED_REQUEST");
-            System.out.println("=== SAVED REQUEST: " + savedRequest);
+//            System.out.println("=== SAVED REQUEST: " + savedRequest);
         }
-        System.out.println("=== TARGET URL: " + determineTargetUrl(request, response, authentication));
+//        System.out.println("=== TARGET URL: " + determineTargetUrl(request, response, authentication));
 
         super.onAuthenticationSuccess(request, response, authentication);
     }

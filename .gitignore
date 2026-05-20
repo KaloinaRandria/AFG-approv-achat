@@ -35,4 +35,5 @@ build/
 ### propreties ###
 #src/main/resources/application.properties
 #pieces/*
+lucene-index/*
 

@@ -9,7 +9,13 @@ import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.ArticleRepo;
 import afg.achat.afgApprovAchat.service.util.ArticleHistoriqueService;
 import afg.achat.afgApprovAchat.service.util.UdmService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
+import org.hibernate.Session;
+import org.hibernate.search.engine.search.query.SearchResult;
+import org.hibernate.search.mapper.orm.Search;
+import org.hibernate.search.mapper.orm.session.SearchSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +37,9 @@ public class ArticleService {
     FamilleService familleService;
     @Autowired
     ArticleHistoriqueService articleHistoriqueService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public Article[] getAllArticles() {
         return articleRepo.findAll().toArray(new Article[0]);
@@ -168,7 +177,69 @@ public class ArticleService {
         String f = (famille == null) ? "" : famille.trim();
         String u = (udm == null) ? "" : udm.trim();
 
-        return articleRepo.searchMulti(c, d, f, u, pageable);
+        SearchSession session = Search.session((Session) entityManager);
+
+        // Calcul offset/limit depuis le Pageable Spring
+        int offset = (int) pageable.getOffset();
+        int limit  = pageable.getPageSize();
+
+        SearchResult<Article> result = session
+                .search(Article.class)
+                .where(factory -> factory.bool(b -> {
+
+                    // Si aucun critère → retourne tout
+                    boolean aucunCritere = c.isEmpty() && d.isEmpty() && f.isEmpty() && u.isEmpty();
+                    if (aucunCritere) {
+                        b.must(factory.matchAll());
+                        return;
+                    }
+
+                    // Code article
+                    if (!c.isEmpty()) {
+                        b.must(factory.wildcard()
+                                .field("codeArticle_kw")
+                                .matching("*" + c.toLowerCase() + "*"));
+                    }
+
+                    // Désignation
+                    if (!d.isEmpty()) {
+                        b.must(factory.match()
+                                .field("designation")
+                                .matching(d)
+                                .fuzzy(1));  // tolère 1 faute de frappe
+                    }
+
+                    // Famille
+                    if (!f.isEmpty()) {
+                        b.must(factory.match()
+                                .field("famille.description")
+                                .matching(f)
+                                .fuzzy(1));
+                    }
+
+                    // UDM — cherche dans description ET acronyme
+                    if (!u.isEmpty()) {
+                        b.must(factory.bool(inner -> inner
+                                .should(factory.match()
+                                        .field("udm.description")
+                                        .matching(u)
+                                        .fuzzy(1))
+                                .should(factory.wildcard()
+                                        .field("udm.acronyme")
+                                        .matching("*" + u.toLowerCase() + "*"))
+                        ));
+                    }
+                }))
+                .sort(f2 -> f2.score())   // tri par pertinence
+                .fetch(offset, limit);
+
+        // Reconstruire un Page<Article> Spring compatible
+        long total = result.total().hitCount();
+        return new org.springframework.data.domain.PageImpl<>(
+                result.hits(),
+                pageable,
+                total
+        );
     }
 
 

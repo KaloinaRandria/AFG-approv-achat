@@ -44,6 +44,7 @@
                         <h6 class="form-section-title">
                             <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations générales
                         </h6>
+                        <input type="hidden" name="submissionToken" th:value="${submissionToken}" />
 
                         <div class="row">
 
@@ -150,8 +151,8 @@
                                             ou cliquez pour sélectionner
                                         </p>
                                         <span class="badge bg-light text-dark border">
-                PDF · Images (JPG, PNG, GIF, WEBP)
-            </span>
+                                            PDF · Images (JPG, PNG, GIF, WEBP)
+                                        </span>
                                     </div>
                                 </div>
 
@@ -353,7 +354,10 @@
                     <i class="fas fa-pen me-1"></i>Modifier
                 </button>
 
-                <button type="submit" class="btn btn-gradient-green" form="demandeForm">
+                <button type="submit"
+                        class="btn btn-gradient-green"
+                        form="demandeForm"
+                        id="btnSubmitDemande">
                     <i class="fas fa-save me-1"></i>Confirmer et soumettre
                 </button>
             </div>
@@ -365,6 +369,33 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+
+    document.getElementById('btnSubmitDemande').addEventListener('click', function (e) {
+        e.preventDefault();
+
+        const form = document.getElementById('demandeForm');
+        const btn  = this;
+
+        // Validation HTML5
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        // Désactiver le bouton immédiatement
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Envoi en cours...';
+
+        // Sécurité : réactiver après 15s si le serveur ne répond pas
+        // (évite de bloquer l'utilisateur en cas de timeout réseau)
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save me-1"></i>Confirmer et soumettre';
+        }, 15000);
+
+        form.submit();
+    });
+
     (() => {
         "use strict";
 

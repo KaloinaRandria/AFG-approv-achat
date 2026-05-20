@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.configuration;
 
+import afg.achat.afgApprovAchat.configuration.ActiveDirectory.User;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +32,8 @@ public class MyAuthenticationProvider implements AuthenticationProvider{
 		String email = arg0.getName().trim() ;
 		String password = arg0.getCredentials().toString().trim() ;
 		try {
-
+			
+			//System.out.println("------------");
 			/*if(email.startsWith("test") && password.equals(email)) {
 				Collaborateur user = ur.findByEmailActif(email);
 				return new UsernamePasswordAuthenticationToken(user, null,
@@ -124,14 +126,14 @@ public class MyAuthenticationProvider implements AuthenticationProvider{
 //                return new UsernamePasswordAuthenticationToken(user, null, authorities);
 //            }
 //
-//			if(email.equals("s.dago@atlantic-group.net") && password.equals("mdp")) {
-//				Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-//                Collection<GrantedAuthority> authorities = user.getRoles().stream()
-//                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
-//                        .toList();
-//
-//                return new UsernamePasswordAuthenticationToken(user, null, authorities);
-//			}
+			if(email.equals("s.dago@atlantic-group.net") && password.equals("P@ssword01")) {
+				Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+                        .toList();
+
+                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+			}
 			if(activeDir.authentify(email, password)) {
                 Utilisateur user = utilisateurService.getUtilisateurByMail(email);
                 if (user == null) {
