@@ -393,6 +393,8 @@ public class DemandeController {
                 isBackoffice, hasChildren,
                 isMG, isControleur, isDFC, isSG, isAdmin
         );
+        String returnUrl = buildReturnUrl(page, size, sort, dir, statut, priorite, motif, num, demandeur, type, dateFrom, dateTo, scope);
+        model.addAttribute("returnUrl", returnUrl);
 
         model.addAttribute("motif",                  motif);
         model.addAttribute("nbUtilisateursAValider",  idsAValider.size());
@@ -544,6 +546,27 @@ public class DemandeController {
 
         model.addAttribute("natures",   DemandeMere.NatureDemande.values());
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
+    }
+
+    private String buildReturnUrl(int page, int size, String sort, String dir,
+                                  Integer statut, String priorite, String motif,
+                                  String num, String demandeur, String type,
+                                  LocalDate dateFrom, LocalDate dateTo, String scope) {
+        StringBuilder sb = new StringBuilder("/demande/list?");
+        sb.append("page=").append(page);
+        sb.append("&size=").append(size);
+        sb.append("&sort=").append(sort);
+        sb.append("&dir=").append(dir);
+        if (statut  != null)    sb.append("&statut=").append(statut);
+        if (priorite != null)   sb.append("&priorite=").append(priorite);
+        if (motif   != null)    sb.append("&motif=").append(motif);
+        if (num     != null)    sb.append("&num=").append(num);
+        if (demandeur != null)  sb.append("&demandeur=").append(demandeur);
+        if (type    != null)    sb.append("&type=").append(type);
+        if (dateFrom != null)   sb.append("&dateFrom=").append(dateFrom);
+        if (dateTo  != null)    sb.append("&dateTo=").append(dateTo);
+        if (scope   != null)    sb.append("&scope=").append(scope);
+        return sb.toString();
     }
 
     @PostMapping("/fiche/{id}/type-demande")
@@ -711,6 +734,7 @@ public class DemandeController {
     public String demandeFiche(@PathVariable("id") String id,
                                Model model,
                                HttpServletRequest request,
+                               @RequestParam(required = false, defaultValue = "/demande/list") String returnUrl,
                                RedirectAttributes redirectAttributes, HttpSession session) {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
@@ -981,6 +1005,7 @@ public class DemandeController {
 
         model.addAttribute("estValidateurAssigne", estValidateurAssigne);
         model.addAttribute("isViewerNplus1OfDemandeur", isViewerNplus1OfDemandeur);
+        model.addAttribute("returnUrl", returnUrl);
 
         // ── Bon de sortie ────────────────────────────────────────────────────────
         boolean canCreateBS = demande.getStatut() == StatutDemande.VALIDE
