@@ -231,7 +231,7 @@
                         <!-- Pageable -->
                         <tr th:each="demande : ${demandesMeres.content}"
                             class="clickable-row"
-                            th:attr="data-href=@{/demande/fiche/{id}(id=${demande.id})}">
+                            th:attr="data-href=@{/demande/fiche/{id}(id=${demande.id}, returnUrl=${returnUrl})}">
 
                             <td th:text="${demande.id}"></td>
                             <td th:text="${#temporals.format(demande.dateDemande, 'dd/MM/yyyy HH:mm')}"></td>
