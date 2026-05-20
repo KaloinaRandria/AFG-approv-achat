@@ -1,28 +1,36 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
+import afg.achat.afgApprovAchat.model.demande.DemandeFille;
+import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.stock.StockFille;
 import afg.achat.afgApprovAchat.model.stock.StockMere;
 import afg.achat.afgApprovAchat.model.util.Devise;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
+import afg.achat.afgApprovAchat.model.util.PrixArticle;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonFilleService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
+import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
+import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
+import afg.achat.afgApprovAchat.service.stock.LotStockService;
 import afg.achat.afgApprovAchat.service.stock.StockFilleService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
+import afg.achat.afgApprovAchat.service.util.PrixArticleService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -30,6 +38,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
 @Controller
@@ -51,11 +60,18 @@ public class BonLivraisonController {
     StockFilleService stockFilleService;
     @Autowired
     IdGenerator idGenerator;
+    @Autowired
+    PrixArticleService prixArticleService;
+    @Autowired
+    LotStockService lotStockService;
 
 
     @GetMapping("/add")
-    public String addBonLivraisonPage(Model model, HttpServletRequest request) {
-        model.addAttribute("currentUri", request.getRequestURI());
+    public String addBonLivraisonPage(Model model, HttpServletRequest request, HttpSession session) {
+        // Token anti double-soumission
+        String token = UUID.randomUUID().toString();
+        session.setAttribute("submissionToken", token);
+        model.addAttribute("submissionToken", token);
 
         model.addAttribute("fournisseurs", fournisseurService.getAllFournisseurs());
         model.addAttribute("devises", deviseService.getAllDevises());
@@ -72,7 +88,20 @@ public class BonLivraisonController {
                                      @RequestParam("quantiteDemande[]") List<String> qteDemandes,
                                      @RequestParam("quantiteRecu[]") List<String> qteRecues,
                                      @RequestParam("prixUnitaire[]") List<String> prixUnitaires,
+                                     @RequestParam(name = "submissionToken") String submissionToken,
+                                     HttpSession session,
                                      RedirectAttributes redirectAttributes) {
+        // ── Vérification token anti double-soumission ────────────────────────────
+        String sessionToken = (String) session.getAttribute("submissionToken");
+
+        if (sessionToken == null || !sessionToken.equals(submissionToken)) {
+            redirectAttributes.addFlashAttribute("warningMessage",
+                    "Ce bon de livraison a déjà été soumis. Veuillez vérifier la liste.");
+            return "redirect:/bonlivraison/list";
+        }
+
+        // Consommer le token immédiatement
+        session.removeAttribute("submissionToken");
         try {
             if (fournisseurId == null || fournisseurId.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "Veuillez sélectionner un fournisseur.");
@@ -104,19 +133,36 @@ public class BonLivraisonController {
 
 //            Enregistrement des bons de livraison filles
             List<BonLivraisonFille> bonLivraisonFilles = new ArrayList<>();
+            // Enregistrement des bons de livraison filles
             for (int i = 0; i < articleCodes.size(); i++) {
                 BonLivraisonFille bonLivraisonFille = new BonLivraisonFille();
                 bonLivraisonFille.setBonLivraisonMere(bonLivraisonMere);
+
                 int finalI = i;
-                bonLivraisonFille.setArticle(articleService.getArticleByCodeArticle(articleCodes.get(i))
-                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable avec le code: " + articleCodes.get(finalI))));
+                Article article = articleService.getArticleByCodeArticle(articleCodes.get(i))
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "Article introuvable avec le code: " + articleCodes.get(finalI)));
+
+                bonLivraisonFille.setArticle(article);
                 bonLivraisonFille.setQuantiteDemande(qteDemandes.get(i));
                 bonLivraisonFille.setQuantiteRecu(qteRecues.get(i));
                 bonLivraisonFille.setPrixUnitaire(prixUnitaires.get(i));
 
-                articleService.updatePrixUnitaire(articleCodes.get(i), prixUnitaires.get(i));
-                bonLivraisonFilles.add(bonLivraisonFille);
                 this.bonLivraisonFilleService.insertBonLivraisonFilleList(bonLivraisonFille);
+
+                //Historique du prix au lieu d'écraser l'article
+                PrixArticle prixArticle = new PrixArticle();
+                prixArticle.setArticle(article);
+                prixArticle.setBonLivraisonMere(bonLivraisonMere);
+                prixArticle.setPrixUnitaire(Double.parseDouble(prixUnitaires.get(i)));
+                prixArticle.setDatePrix(LocalDate.from(bonLivraisonMere.getDateReception()));
+                prixArticleService.insert(prixArticle);
+
+                double qteRecue = Double.parseDouble(qteRecues.get(i));
+                double prixUnit = Double.parseDouble(prixUnitaires.get(i));
+                if (qteRecue > 0) {
+                    lotStockService.creerLot(article, bonLivraisonMere, qteRecue, prixUnit);
+                }
             }
 
 //            Entree en Stock
@@ -208,7 +254,6 @@ public class BonLivraisonController {
                 num, fournisseur, devise, dateFrom, dateTo, page, size, sort, dir
         );
 
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("bonLivraisonMeres", result);
 
         model.addAttribute("page", page);
@@ -216,7 +261,7 @@ public class BonLivraisonController {
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
 
-        // ✅ pour afficher la valeur dans les inputs
+        // pour afficher la valeur dans les inputs
         model.addAttribute("num", num == null ? "" : num);
         model.addAttribute("fournisseur", fournisseur == null ? "" : fournisseur);
         model.addAttribute("devise", devise == null ? "" : devise);

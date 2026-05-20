@@ -1,6 +1,9 @@
 package afg.achat.afgApprovAchat.controller;
 
-import afg.achat.afgApprovAchat.model.*;
+import afg.achat.afgApprovAchat.DTO.ArticleDemandeDTO;
+import afg.achat.afgApprovAchat.DTO.ArticleLivraisonDTO;
+import afg.achat.afgApprovAchat.DTO.BonLivraisonDetailDTO;
+import afg.achat.afgApprovAchat.DTO.DemandeDetailDTO;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
@@ -105,7 +108,7 @@ public class ApiController {
                 demandeMere.getNatureDemande() != null ? demandeMere.getNatureDemande().toString() : "-"
         );
 
-        // ✅ Statut (libellé)
+        //Statut (libellé)
         Map<Integer, String> statutLabels = Map.of(
                 StatutDemande.CREE, "CREE",
                 StatutDemande.VALIDATION_N1, "EN_VALIDATION",

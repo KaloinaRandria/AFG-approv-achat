@@ -19,4 +19,17 @@ public class UdmService {
     public Optional<Udm> getUdmById(int id) {
         return udmRepo.findById(id);
     }
+
+    public void insertUdm(Udm udm) {
+        if (udm.getAcronyme() == null || udm.getAcronyme().isBlank()) {
+            throw new IllegalArgumentException("L'acronyme de l'unité de mesure est obligatoire.");
+        }
+        if (udm.getDescription() == null || udm.getDescription().isBlank()) {
+            throw new IllegalArgumentException("La description de l'unité de mesure est obligatoire.");
+        }
+        if (udmRepo.existsByAcronyme(udm.getAcronyme())) {
+            throw new IllegalArgumentException("Une unité de mesure avec cet acronyme existe déjà.");
+        }
+        udmRepo.save(udm);
+    }
 }

@@ -39,6 +39,17 @@ public class Utilisateur {
     Poste poste;
     @ManyToOne @JoinColumn(name = "id_service", referencedColumnName = "id_service", nullable = true)
     Service service;
+    @ManyToMany
+    @JoinTable(
+            name = "utilisateur_validateur",
+            joinColumns = @JoinColumn(name = "id_utilisateur"),
+            inverseJoinColumns = @JoinColumn(name = "id_validateur")
+    )
+    private Set<Utilisateur> validateurs = new HashSet<>();
+
+
+    @ManyToMany(mappedBy = "validateurs")
+    private Set<Utilisateur> utilisateursAValider = new HashSet<>();
 
     public Utilisateur(String nom, String prenom, String mail, Set<Role> roles, Utilisateur superieurHierarchique, String contact) {
         this.setNom(nom);

@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr"
       xmlns:th="http://www.thymeleaf.org">
 <head>
@@ -6,6 +6,7 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <meta name="context-path" th:content="@{/}" />
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
@@ -43,10 +44,11 @@
                         <h6 class="form-section-title">
                             <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations générales
                         </h6>
+                        <input type="hidden" name="submissionToken" th:value="${submissionToken}" />
 
                         <div class="row">
 
-<!--                            Date prevue livraison-->
+                            <!--                            Date prevue livraison-->
                             <div class="col-md-6 mb-3">
                                 <label for="dateSortie" class="form-label fw-bold required-field">
                                     Date prévue pour la livraison
@@ -55,7 +57,7 @@
                                     <span class="input-group-text bg-light">
                                         <i class="fas fa-calendar-alt icon-gradient-blue"></i>
                                     </span>
-                                    <input type="datetime-local"
+                                    <input type="date"
                                            class="form-control"
                                            id="dateSortie"
                                            name="dateSortie"
@@ -86,7 +88,7 @@
                                 </div>
                             </div>
 
-<!--                            Motif evoque -->
+                            <!--                            Motif evoque -->
                             <div class="col-md-6 mb-3">
                                 <label for="motif" class="form-label fw-bold required-field">
                                     Motif evoqué
@@ -149,8 +151,8 @@
                                             ou cliquez pour sélectionner
                                         </p>
                                         <span class="badge bg-light text-dark border">
-                PDF · Images (JPG, PNG, GIF, WEBP)
-            </span>
+                                            PDF · Images (JPG, PNG, GIF, WEBP)
+                                        </span>
                                     </div>
                                 </div>
 
@@ -197,7 +199,7 @@
                                 <strong>Moyens Généraux</strong> pour ajout.
                             </div>
                         </div>
-                        
+
                         <div class="table-responsive">
                             <table class="table table-bordered align-middle">
                                 <thead class="table-light">
@@ -209,37 +211,37 @@
                                 </tr>
                                 </thead>
                                 <tbody id="demandeFilleBody">
-                                    <tr>
-                                        <td style="position: relative;">
-                                            <input type="text"
-                                                   class="form-control article-input"
-                                                   placeholder="Code ou désignation"
-                                                   autocomplete="off"
-                                                   required>
-                                            <input type="hidden"
-                                                   name="articleCodes[]">
-                                            <div class="autocomplete-list list-group position-absolute w-100"></div>
-                                        </td>
+                                <tr>
+                                    <td style="position: relative;">
+                                        <input type="text"
+                                               class="form-control article-input"
+                                               placeholder="Code ou désignation"
+                                               autocomplete="off"
+                                               required>
+                                        <input type="hidden"
+                                               name="articleCodes[]">
+                                        <div class="autocomplete-list list-group position-absolute w-100"></div>
+                                    </td>
 
-                                        <td>
-                                            <input type="text"
-                                                   class="form-control quantite-input text-end"
-                                                   inputmode="decimal"
-                                                   autocomplete="off"
-                                                   required>
+                                    <td>
+                                        <input type="text"
+                                               class="form-control quantite-input text-end"
+                                               inputmode="decimal"
+                                               autocomplete="off"
+                                               required>
 
-                                            <input type="hidden"
-                                                   name="quantite[]">
-                                        </td>
-                                        <td class="text-center align-middle">
-                                            <span class="udm-label">—</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <button type="button" class="btn btn-outline-danger btn-sm">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
+                                        <input type="hidden"
+                                               name="quantite[]">
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <span class="udm-label">—</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-outline-danger btn-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -254,13 +256,13 @@
         </div>
     </section>
     <!-- Barre d’action globale -->
-<!--    <div class="d-flex justify-content-end gap-2 mt-4 px-4">-->
-<!--        <button type="submit"-->
-<!--                form="demandeForm"-->
-<!--                class="btn btn-gradient-green px-4">-->
-<!--            <i class="fas fa-save me-2"></i> Soumettre la demande-->
-<!--        </button>-->
-<!--    </div>-->
+    <!--    <div class="d-flex justify-content-end gap-2 mt-4 px-4">-->
+    <!--        <button type="submit"-->
+    <!--                form="demandeForm"-->
+    <!--                class="btn btn-gradient-green px-4">-->
+    <!--            <i class="fas fa-save me-2"></i> Soumettre la demande-->
+    <!--        </button>-->
+    <!--    </div>-->
 
     <div class="d-flex justify-content-end gap-2 mt-4 px-4">
         <button type="button" id="btnPreviewDemande" class="btn btn-gradient-green px-4">
@@ -352,7 +354,10 @@
                     <i class="fas fa-pen me-1"></i>Modifier
                 </button>
 
-                <button type="submit" class="btn btn-gradient-green" form="demandeForm">
+                <button type="submit"
+                        class="btn btn-gradient-green"
+                        form="demandeForm"
+                        id="btnSubmitDemande">
                     <i class="fas fa-save me-1"></i>Confirmer et soumettre
                 </button>
             </div>
@@ -364,6 +369,33 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+
+    document.getElementById('btnSubmitDemande').addEventListener('click', function (e) {
+        e.preventDefault();
+
+        const form = document.getElementById('demandeForm');
+        const btn  = this;
+
+        // Validation HTML5
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        // Désactiver le bouton immédiatement
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Envoi en cours...';
+
+        // Sécurité : réactiver après 15s si le serveur ne répond pas
+        // (évite de bloquer l'utilisateur en cas de timeout réseau)
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save me-1"></i>Confirmer et soumettre';
+        }, 15000);
+
+        form.submit();
+    });
+
     (() => {
         "use strict";
 
@@ -384,11 +416,11 @@
 
         function pad(n) { return String(n).padStart(2, "0"); }
 
-        function formatDateTimeFR(dateTimeValue) {
+        function formatDateFR(dateTimeValue) {
             if (!dateTimeValue) return "-";
             const d = new Date(dateTimeValue);
             if (isNaN(d.getTime())) return "-";
-            return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
         }
 
         function mark(el) {
@@ -544,7 +576,8 @@
                     .filter(Boolean);
 
                 try {
-                    const res = await fetch(`/api/articles/search?keyword=${encodeURIComponent(keyword)}`, {
+                    const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
+                    const res = await fetch(`${CONTEXT_PATH}api/articles/search?keyword=${encodeURIComponent(keyword)}`, {
                         signal: abortController.signal
                     });
                     if (!res.ok) throw new Error("HTTP " + res.status);
@@ -745,8 +778,8 @@
                 $("#pvPriorite").textContent = $("#priorite option:checked")?.textContent || "---";
                 $("#pvMotif").textContent = $("#motif")?.value || "-";
 
-                const rawDate = $("#dateSortie")?.value; // ✅ ton champ réel
-                if (pvDate) pvDate.textContent = formatDateTimeFR(rawDate);
+                const rawDate = $("#dateSortie")?.value;
+                if (pvDate) pvDate.textContent = formatDateFR(rawDate);
 
                 if (pvDesc) pvDesc.textContent = $("#description")?.value || "-";
 

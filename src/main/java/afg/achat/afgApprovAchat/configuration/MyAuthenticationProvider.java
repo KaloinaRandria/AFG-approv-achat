@@ -32,6 +32,7 @@ public class MyAuthenticationProvider implements AuthenticationProvider{
 		String password = arg0.getCredentials().toString().trim() ;
 		try {
 
+			//System.out.println("------------");
 			/*if(email.startsWith("test") && password.equals(email)) {
 				Collaborateur user = ur.findByEmailActif(email);
 				return new UsernamePasswordAuthenticationToken(user, null,
@@ -48,83 +49,83 @@ public class MyAuthenticationProvider implements AuthenticationProvider{
 				return new UsernamePasswordAuthenticationToken(user, null,
 				        Collections.singletonList(new SimpleGrantedAuthority("ROLE_"+user.getRole().getLibelle())));
 			}*/
-            if(email.equals("famien.yao@afgbank.ci") && password.equals("mdp")) {
-                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-                Collection<GrantedAuthority> authorities = user.getRoles().stream()
-                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
-                        .toList();
-
-                return new UsernamePasswordAuthenticationToken(user, null, authorities);
-            }
-            if(email.equals("miangola.rabenja@afgbank.mg") && password.equals("mdp")) {
-                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-                Collection<GrantedAuthority> authorities = user.getRoles().stream()
-                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
-                        .toList();
-
-                return new UsernamePasswordAuthenticationToken(user, null, authorities);
-            }
-
-            if(email.equals("andrianina.rakotomalala@afgbank.mg") && password.equals("mdp")) {
-                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-                Collection<GrantedAuthority> authorities = user.getRoles().stream()
-                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
-                        .toList();
-
-                return new UsernamePasswordAuthenticationToken(user, null, authorities);
-			}
-
-            if(email.equals("suzy.ratovonkery@afgbank.mg") && password.equals("mdp")) {
-                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-                Collection<GrantedAuthority> authorities = user.getRoles().stream()
-                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
-                        .toList();
-
-                return new UsernamePasswordAuthenticationToken(user, null, authorities);
-            }
-            if(email.equals("jao.razanajaonarijery@afgbank.mg") && password.equals("mdp")) {
-                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-                Collection<GrantedAuthority> authorities = user.getRoles().stream()
-                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
-                        .toList();
-
-                return new UsernamePasswordAuthenticationToken(user, null, authorities);
-            }
-			if(email.equals("yves.rakotondrazaka@afgbank.mg") && password.equals("mdp")) {
-				Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-                Collection<GrantedAuthority> authorities = user.getRoles().stream()
-                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
-                        .toList();
-
-                return new UsernamePasswordAuthenticationToken(user, null, authorities);
-			}
-
-            if(email.equals("kaloina.randriambololona@afgbank.mg") && password.equals("mdp")) {
-                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-                Collection<GrantedAuthority> authorities = user.getRoles().stream()
-                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
-                        .toList();
-
-                return new UsernamePasswordAuthenticationToken(user, null, authorities);
-            }
-            if(email.equals("larissa.randriamialivony@afgbank.mg") && password.equals("mdp")) {
-                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-                Collection<GrantedAuthority> authorities = user.getRoles().stream()
-                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
-                        .toList();
-
-                return new UsernamePasswordAuthenticationToken(user, null, authorities);
-            }
-            if(email.equals("mialy.rasamimanana@afgbank.mg") && password.equals("mdp")) {
-                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-                Collection<GrantedAuthority> authorities = user.getRoles().stream()
-                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
-                        .toList();
-
-                return new UsernamePasswordAuthenticationToken(user, null, authorities);
-            }
-
-			if(email.equals("s.dago@atlantic-group.net") && password.equals("mdp")) {
+//            if(email.equals("famien.yao@afgbank.ci") && password.equals("mdp")) {
+//                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+//                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+//                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+//                        .toList();
+//
+//                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+//            }
+//            if(email.equals("maria.razafinandraina@afgbank.mg") && password.equals("mdp")) {
+//                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+//                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+//                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+//                        .toList();
+//
+//                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+//            }
+//
+//            if(email.equals("andrianina.rakotomalala@afgbank.mg") && password.equals("mdp")) {
+//                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+//                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+//                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+//                        .toList();
+//
+//                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+//			}
+//
+//            if(email.equals("suzy.ratovonkery@afgbank.mg") && password.equals("mdp")) {
+//                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+//                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+//                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+//                        .toList();
+//
+//                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+//            }
+//            if(email.equals("jao.razanajaonarijery@afgbank.mg") && password.equals("mdp")) {
+//                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+//                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+//                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+//                        .toList();
+//
+//                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+//            }
+//			if(email.equals("yves.rakotondrazaka@afgbank.mg") && password.equals("mdp")) {
+//				Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+//                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+//                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+//                        .toList();
+//
+//                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+//			}
+//
+//            if(email.equals("kaloina.randriambololona@afgbank.mg") && password.equals("mdp")) {
+//                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+//                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+//                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+//                        .toList();
+//
+//                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+//            }
+//            if(email.equals("larissa.randriamialivony@afgbank.mg") && password.equals("mdp")) {
+//                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+//                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+//                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+//                        .toList();
+//
+//                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+//            }
+//            if(email.equals("mialy.rasamimanana@afgbank.mg") && password.equals("mdp")) {
+//                Utilisateur user = utilisateurService.getUtilisateurByMail(email);
+//                Collection<GrantedAuthority> authorities = user.getRoles().stream()
+//                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+//                        .toList();
+//
+//                return new UsernamePasswordAuthenticationToken(user, null, authorities);
+//            }
+//
+			if(email.equals("s.dago@atlantic-group.net") && password.equals("P@ssword01")) {
 				Utilisateur user = utilisateurService.getUtilisateurByMail(email);
                 Collection<GrantedAuthority> authorities = user.getRoles().stream()
                         .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))

@@ -20,7 +20,6 @@ public class DeviseController {
 
     @GetMapping("/devise-pages")
     public String goToDevisePage(Model model, HttpServletRequest request) {
-        model.addAttribute("currentUri", request.getRequestURI());
 
         Devise[] listeDevises = deviseService.getAllDevises();
         model.addAttribute("devises", listeDevises);

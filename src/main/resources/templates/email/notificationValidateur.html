@@ -3,17 +3,24 @@
 <head><meta charset="UTF-8" /></head>
 <body>
 <div class="container">
-    <p>Bonjour <span th:text="${destinataire.prenom + ' ' + destinataire.nom}"></span>,</p>
+    <p>Bonjour <span th:text="${demandeur.prenom + ' ' + demandeur.nom}"></span>,</p>
     <p>
-        La demande <strong th:text="${id}"></strong> de
-        <span th:text="${demandeur.prenom + ' ' + demandeur.nom}"></span>
-        vient d'être validée à l'étape <strong th:text="${etape}"></strong>
-        par <span th:text="${validateur.prenom + ' ' + validateur.nom}"></span>
+        Votre demande <strong th:text="${id}"></strong> a été validée
+        lors de l'étape <strong th:text="${etape}"></strong> par
+        <span th:text="${validateur.prenom + ' ' + validateur.nom}"></span>
         le <span th:text="${dateDecision}"></span>.
         <br/>
-        Elle est désormais en attente de votre validation : <strong th:text="${prochaineEtape}"></strong>.
+        Elle passe désormais à l'étape : <strong th:text="${prochaineEtape}"></strong>.
+    </p>
+    <p th:if="${commentaire != null and !#strings.isEmpty(commentaire)}">
+        Commentaire : <em th:text="${commentaire}"></em>
     </p>
     <br/>
+    <p>
+        <a th:href="${lienValidation}">
+            Ouvrir la demande à valider
+        </a>
+    </p>
     <p>Cordialement,</p>
     <p><img src="cid:signature-image" /></p>
 </div>

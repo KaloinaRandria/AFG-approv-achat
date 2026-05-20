@@ -1,20 +1,36 @@
 <!DOCTYPE html>
 <html lang="fr"
-      xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+      xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
 <body>
 <div class="container">
-    <p>Bonjour <span th:text="${demandeur.prenom} +' '+ ${demandeur.nom}"></span>,</p>
-    <p> Votre demande <span th:text="${id}"></span> du <span th:text="${dateDemande}"></span> a bien été reçue. Statut actuel : en attente de validation de votre n+1.”
+
+    <p>Bonjour,</p>
+
+    <p>
+        Votre demande d'achat, enregistrée sous la référence
+        <strong th:text="${id}"></strong>
+        le
+        <strong th:text="${dateDemande}"></strong>,
+        a été transmise à
+        <strong th:text="${Validateur.prenom + ' ' + Validateur.nom}"></strong>
+        pour validation.
+    </p>
+
+    <p>
+        Vous serez informé(e) dès qu'une décision sera prise.
+    </p>
+
     <br>
+
     <p>Cordialement,</p>
+
     <br>
-    <p><img src="cid:signature-image"> </p>
+
+    <p><img src="cid:signature-image"></p>
+
 </div>
 </body>
 </html>

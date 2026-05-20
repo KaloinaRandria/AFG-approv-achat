@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class DemandeFilleService {
@@ -90,6 +91,32 @@ public class DemandeFilleService {
 
     public List<DemandeFille> getDemandeFilleValideeByDemandeMere(DemandeMere demandeMere) {
         return demandeFilleRepo.findByDemandeMereAndStatutValidee(demandeMere);
+    }
+
+    public List<DemandeFille> getDemandeFilleByArticleCodeAndPrixNull(String codeArticle) {
+        return demandeFilleRepo.findByArticleCodeAndPrixNull(codeArticle);
+    }
+
+    public Optional<Double> getPrixByDemandeAndArticle(String demandeId, String codeArticle) {
+        return demandeFilleRepo
+                .findByDemandeMereIdAndArticleCodeArticle(demandeId, codeArticle)
+                .map(DemandeFille::getPrixUnitaire);
+    }
+
+    /**
+     * Récupère la quantité totale réservée en stock pour un article dans une demande
+     * @param demandeId L'ID de la demande mère
+     * @param codeArticle Le code article
+     * @return La quantité réservée en stock
+     */
+    public double getQuantiteStockReserveePourDemande(String demandeId, String codeArticle) {
+        Double quantite = demandeFilleRepo.getQuantiteStockReserveePourDemande(
+                demandeId,
+                codeArticle,
+                DemandeFille.TypeApprovisionnement.STOCK,
+                StatutDemande.REFUSE
+        );
+        return quantite != null ? quantite : 0.0;
     }
 
 }

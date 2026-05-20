@@ -5,7 +5,7 @@
      style="width: 250px; background-color: #0A1A44; overflow-y: auto;" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
     <!-- LOGO -->
-    <a th:href="@{/maintenance}"
+    <a th:href="@{/dashboard}"
        class="d-flex align-items-center justify-content-center mb-4 text-decoration-none py-4 border-bottom">
         <img th:src="@{/img/logo_afg.png}" alt="Logo" height="60">
     </a>
@@ -231,6 +231,77 @@
                         <!--                                Alertes de stock-->
                         <!--                            </a>-->
                         <!--                        </li>-->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- OPERATION UTILISATEUR -->
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseOperation"
+                        aria-expanded="false"
+                        aria-controls="collapseOperation"
+                        th:classappend="${currentUri.contains('/udm') or currentUri.contains('/message') ? '' : 'collapsed'}">
+                    <i class="fas fa-cogs me-3"></i> Paramétrage des opérations
+                </button>
+            </h2>
+            <div id="collapseOperation"
+                 class="accordion-collapse collapse"
+                 aria-labelledby="headingOperation"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/udm') ? 'show' : ''}">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/udm/udm-pages}"
+                               th:classappend="${currentUri == '/udm/udm-pages' ? 'active' : ''}">
+                                Unité de mesure
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- GESTION UTILISATEURS -->
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN')">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseUtilisateur"
+                        aria-expanded="false"
+                        aria-controls="collapseUtilisateur"
+                        th:classappend="${currentUri.contains('/user') ? '' : 'collapsed'}">
+                    <i class="fas fa-users me-3"></i> Gestion des utilisateurs
+                </button>
+            </h2>
+            <div id="collapseUtilisateur"
+                 class="accordion-collapse collapse"
+                 aria-labelledby="headingUtilisateur"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/user') ? 'show' : ''}">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/user/add}"
+                               th:classappend="${currentUri == '/user/add' ? 'active' : ''}">
+                                <i class="fas fa-user-plus me-2"></i> Insérer un utilisateur
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/user/list}"
+                               th:classappend="${currentUri == '/user/list' ? 'active' : ''}">
+                                <i class="fas fa-list me-2"></i> Liste des utilisateurs
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </div>

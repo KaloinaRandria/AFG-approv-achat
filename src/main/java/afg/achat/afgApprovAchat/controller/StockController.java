@@ -1,7 +1,7 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.Article;
-import afg.achat.afgApprovAchat.model.EtatStockAlerteDTO;
+import afg.achat.afgApprovAchat.DTO.EtatStockAlerteDTO;
 import afg.achat.afgApprovAchat.model.VEtatStock;
 import afg.achat.afgApprovAchat.model.stock.StockAlerte;
 import afg.achat.afgApprovAchat.model.stock.StockFille;
@@ -21,11 +21,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/stock")
@@ -153,7 +151,6 @@ public class StockController {
         long ruptureCount = alertes.stream().filter(a -> "RUPTURE".equals(a.getTypeAlerte())).count();
         long seuilCount   = alertes.stream().filter(a -> "SEUIL".equals(a.getTypeAlerte())).count();
 
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("etatStocks", etatStocks);
 
         model.addAttribute("page", page);
