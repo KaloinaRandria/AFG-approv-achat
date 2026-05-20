@@ -29,7 +29,7 @@ public interface DemandeMereRepo
             LEFT JOIN dm.demandeur u
             LEFT JOIN u.service s
             GROUP BY s.id
-            ORDER BY COUNT(dm) DESC
+            ORDER BY COUNT(dm) DESC limit 5
             """)
     List<ServiceDemandeDTO> countDemandesByService();
 
