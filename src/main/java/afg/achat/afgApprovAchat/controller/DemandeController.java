@@ -733,7 +733,6 @@ public class DemandeController {
     @GetMapping("/fiche/{id}")
     public String demandeFiche(@PathVariable("id") String id,
                                Model model,
-                               HttpServletRequest request,
                                @RequestParam(required = false, defaultValue = "/demande/list") String returnUrl,
                                RedirectAttributes redirectAttributes, HttpSession session) {
 
