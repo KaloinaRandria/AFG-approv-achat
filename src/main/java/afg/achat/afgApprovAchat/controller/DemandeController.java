@@ -7,10 +7,7 @@ import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.DTO.LigneRestanteDTO;
 import afg.achat.afgApprovAchat.DTO.ScinderDTO;
 import afg.achat.afgApprovAchat.model.demande.*;
-import afg.achat.afgApprovAchat.model.util.CommentaireFinance;
-import afg.achat.afgApprovAchat.model.util.MontantCalculator;
-import afg.achat.afgApprovAchat.model.util.PrixArticle;
-import afg.achat.afgApprovAchat.model.util.StatutDemande;
+import afg.achat.afgApprovAchat.model.util.*;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereSpec;
 import afg.achat.afgApprovAchat.repository.stock.StockFilleRepo;
@@ -20,8 +17,10 @@ import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
 import afg.achat.afgApprovAchat.service.stock.LotStockService;
 import afg.achat.afgApprovAchat.service.util.CommentaireFinanceService;
+import afg.achat.afgApprovAchat.service.util.ModeTraitementService;
 import afg.achat.afgApprovAchat.service.util.PrixArticleService;
 import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
@@ -54,39 +53,42 @@ import java.util.stream.Collectors;
 @Slf4j
 @Controller
 @RequestMapping("/demande")
+@RequiredArgsConstructor
 public class DemandeController {
-    @Autowired
-    DemandeMereService demandeMereService;
-    @Autowired
-    DemandeFilleService demandeFilleService;
-    @Autowired
-    ArticleService articleService;
-    @Autowired
-    UtilisateurService utilisateurService;
-    @Autowired
-    IdGenerator idGenerator;
-    @Autowired
-    CentreBudgetaireService centreBudgetaireService;
-    @Autowired
-    StorageService storageService;
-    @Autowired
-    DemandePieceJointeService demandePieceJointeService;
-    @Autowired
-    ValidationDemandeService validationDemandeService;
-    @Autowired
-    CodepPieceJointeService codepPieceJointeService;
-    @Autowired
-    private CommentaireFinanceService commentaireFinanceService;
-    @Autowired
-    private EmailSenderService ess;
-    @Autowired
-    PrixArticleService prixArticleService;
-    @Autowired
-    BonSortieService bonSortieService;
-    @Autowired
-    private StockFilleRepo stockFilleRepo;
-    @Autowired
-    LotStockService lotStockService;
+
+    private final DemandeMereService demandeMereService;
+
+    private final DemandeFilleService demandeFilleService;
+
+    private final ArticleService articleService;
+
+    private final UtilisateurService utilisateurService;
+
+    private final IdGenerator idGenerator;
+
+    private final CentreBudgetaireService centreBudgetaireService;
+
+    private final StorageService storageService;
+
+    private final DemandePieceJointeService demandePieceJointeService;
+
+    private final ValidationDemandeService validationDemandeService;
+
+    private final CodepPieceJointeService codepPieceJointeService;
+
+    private final  CommentaireFinanceService commentaireFinanceService;
+
+    private final EmailSenderService ess;
+
+    private final PrixArticleService prixArticleService;
+
+    private final BonSortieService bonSortieService;
+
+    private final StockFilleRepo stockFilleRepo;
+
+    private final LotStockService lotStockService;
+
+    private final ModeTraitementService modeTraitementService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
@@ -234,7 +236,7 @@ public class DemandeController {
                     "[AFG Bank - Demande Achat] - Demande N°" + demandeMere.getId() + " en cours de validation",
                     propsDemandeur
             );
-            ess.sendEmail(mail);
+//            ess.sendEmail(mail);
 
 // ── Mail 2 : notification au N+1 pour validation ────────────────────────
             Utilisateur superieur = demandeMere.getDemandeur().getSuperieurHierarchique();
@@ -262,7 +264,7 @@ public class DemandeController {
                         "[AFG Bank - Demande Achat] - Action requise : Validation de la demande N°" + demandeMere.getId(),
                         propsSup
                 );
-                ess.sendEmail(mailSup);
+//                ess.sendEmail(mailSup);
             }
 
             // ── Mail 3 : notification aux validateurs ────────────────────────────────
@@ -290,7 +292,7 @@ public class DemandeController {
                             "[AFG Bank - Demande Achat] - Action requise : Validation de la demande N°" + demandeMere.getId(),
                             propsValidateur
                     );
-                    ess.sendEmail(mailValidateur);
+//                    ess.sendEmail(mailValidateur);
                 }
             }
 
@@ -964,7 +966,7 @@ public class DemandeController {
 
         List<ValidationDemande> historiques = validationDemandeService.getHistorique(demande);
         CentreBudgetaire[] ligneBudgetaires = centreBudgetaireService.getAllCentreBudgetaires();
-
+        ModeTraitement[] modeTraitements = modeTraitementService.getAllTraitements();
         boolean canVoirPrix = isAdminOrSpecial || isViewerNplus1OfDemandeur;
         model.addAttribute("canVoirPrix", canVoirPrix);
 
@@ -999,6 +1001,7 @@ public class DemandeController {
 
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
+        model.addAttribute("modeTraitement", modeTraitements);
         model.addAttribute("ligneBudgetaires", ligneBudgetaires);
         model.addAttribute("commentaireFinance", commentaireFinance);
 
@@ -1046,6 +1049,7 @@ public class DemandeController {
     public String decision(@PathVariable("id") String id,
                            @RequestParam("decision") String decision,
                            @RequestParam(value = "typeDemande", required = false) String typeDemande,
+                           @RequestParam(value = "modeTraitement", required = false) String modeTraitement,
                            @RequestParam(value = "commentaire", required = false) String commentaire,
                            @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                            @RequestParam(name = "ligneBudgetaire", required = false) String ligneBudgetaire,
@@ -1179,7 +1183,7 @@ public class DemandeController {
                     "[AFG/MADA] - Votre demande a été refusée",
                     props
             );
-            ess.sendEmail(mail);
+//            ess.sendEmail(mail);
 
             redirectAttributes.addFlashAttribute("ok", "Demande rejetée.");
             return "redirect:/demande/fiche/" + id;
@@ -1211,12 +1215,12 @@ public class DemandeController {
                 List<Utilisateur> mgs = utilisateurService.getUtilisateursByRole("MOYENS_GENERAUX");
                 System.out.println("Nombre de MG trouvés : " + mgs.size());
                 //Mail demandeur : une seule fois, sans prochainValidateur
-                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N1);
+//                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N1);
 
                 //Mail MGs : une fois par MG, sans re-notifier le demandeur
-                for (Utilisateur mg : mgs) {
-                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N1, mg);
-                }
+//                for (Utilisateur mg : mgs) {
+//                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N1, mg);
+//                }
 
                 redirectAttributes.addFlashAttribute("ok", "Demande envoyée en validation N1 (MG).");
                 return "redirect:/demande/fiche/" + id;
@@ -1359,18 +1363,38 @@ public class DemandeController {
                         return "redirect:/demande/fiche/" + id;
                     }
                 }
+                if (modeTraitement != null && !modeTraitement.isBlank()) {
+                    try {
+                        ModeTraitement mt = modeTraitementService.getModeTraitementById(Integer.parseInt(modeTraitement));
+                        demande.setModeTraitement(mt);
+
+                        ValidationDemande histoMt = new ValidationDemande();
+                        histoMt.setDemandeMere(demande);
+                        histoMt.setValidateur(current);
+                        histoMt.setEtape(demande.getStatut());
+                        histoMt.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                        histoMt.setCommentaire("Ajout du mode de traitement : " + mt.getLibelle());
+                        histoMt.setDateAction(String.valueOf(LocalDateTime.now()));
+                        validationDemandeService.logAction(histoMt);
+
+                    } catch (NoSuchElementException ex) {
+                        redirectAttributes.addFlashAttribute("ko",
+                                "Mode de traitement invalide : " + modeTraitement);
+                        return "redirect:/demande/fiche/" + id;
+                    }
+                }
 
 
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
                 List<Utilisateur> controleurs = utilisateurService.getUtilisateursByRole("CONTROLEUR");
                 // Mail demandeur : une seule fois, sans prochainValidateur
-                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N2);
+//                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N2);
 
                 // Mail controleurs : une fois par MG, sans re-notifier le demandeur
-                for (Utilisateur controleur : controleurs) {
-                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N2, controleur);
-                }
+//                for (Utilisateur controleur : controleurs) {
+//                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N2, controleur);
+//                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par les Moyens Généraux (N2).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1415,12 +1439,12 @@ public class DemandeController {
                 validationDemandeService.logValidation(demande, current, cmt , etape);
                 List<Utilisateur> dfcs = utilisateurService.getUtilisateursByRole("DFC");
                 // Mail demandeur : une seule fois, sans prochainValidateur
-                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N3);
+//                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N3);
 
                 // Mail controleurs : une fois par MG, sans re-notifier le demandeur
-                for (Utilisateur dfc : dfcs) {
-                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N3, dfc);
-                }
+//                for (Utilisateur dfc : dfcs) {
+//                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N3, dfc);
+//                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le contrôleur de gestion (N3).");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1446,12 +1470,12 @@ public class DemandeController {
                 validationDemandeService.logValidation(demande, current, cmt, etape);
                 List<Utilisateur> sgs = utilisateurService.getUtilisateursByRole("SG");
 // Mail demandeur : une seule fois, sans prochainValidateur
-                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N4);
+//                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDATION_N4);
 
                 // Mail controleurs : une fois par MG, sans re-notifier le demandeur
-                for (Utilisateur sg : sgs) {
-                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N4, sg);
-                }
+//                for (Utilisateur sg : sgs) {
+//                    ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDATION_N4, sg);
+//                }
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par la D.F.C., transmise au S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
@@ -1474,9 +1498,9 @@ public class DemandeController {
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
 
-                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDE);
+//                ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDE);
 
-                ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDE, null);
+//                ess.envoyerMailValidateur(demande, current, etape, StatutDemande.VALIDE, null);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée et finalisée par le S.G.");
                 return "redirect:/demande/fiche/" + id;
             }
