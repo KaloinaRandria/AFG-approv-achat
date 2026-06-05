@@ -1382,6 +1382,9 @@ public class DemandeController {
                                 "Mode de traitement invalide : " + modeTraitement);
                         return "redirect:/demande/fiche/" + id;
                     }
+                } else {
+                    redirectAttributes.addFlashAttribute("ko", "Le mode de traitement est obligatoire.");
+                    return "redirect:/demande/fiche/" + id;
                 }
 
 
@@ -1427,10 +1430,10 @@ public class DemandeController {
 
                     commentaireFinanceService.insertCommentaireFinance(commentaireFinance);
                 } catch (IllegalArgumentException ex) {
-                    if (ligneBudgetaire.isEmpty() || ligneBudgetaire.isBlank()) {
+                    if (ligneBudgetaire.isBlank()) {
                         redirectAttributes.addFlashAttribute("ko", "ligne budgetaire obligatoire pour le contrôleur de gestion.");
                     }
-                    if (commentaireControleur.isEmpty() || commentaireControleur.isBlank()) {
+                    if (commentaireControleur.isBlank()) {
                         redirectAttributes.addFlashAttribute("ko", "Le commentaire du contrôleur de gestion est obligatoire.");
                     }
                     return "redirect:/demande/fiche/" + id;

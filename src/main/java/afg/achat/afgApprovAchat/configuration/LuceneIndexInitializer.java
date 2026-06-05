@@ -24,6 +24,5 @@ public class LuceneIndexInitializer implements ApplicationRunner {
         searchSession.massIndexer(Article.class)
                 .threadsToLoadObjects(4)
                 .startAndWait();
-        System.out.println("Index Lucene initialisé.");
     }
 }

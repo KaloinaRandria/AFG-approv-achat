@@ -871,7 +871,7 @@
                                         <select class="form-select from-select-sm"
                                         name="modeTraitement"
                                         required>
-                                            <option>-- Choisir --</option>
+                                            <option value="">-- Choisir --</option>
                                             <option th:each="m : ${modeTraitement}"
                                             th:value="${m.getId()}"
                                             th:text="${m.getLibelle()}">
