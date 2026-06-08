@@ -1062,7 +1062,7 @@ public class DemandeController {
         String sessionToken = (String) session.getAttribute(sessionKey);
 
         if (sessionToken == null || !sessionToken.equals(submissionToken)) {
-            redirectAttributes.addFlashAttribute("warningMessage",
+            redirectAttributes.addFlashAttribute("ko",
                     "Cette décision a déjà été soumise. Veuillez vérifier l'état de la demande.");
             return "redirect:/demande/fiche/" + id;
         }
