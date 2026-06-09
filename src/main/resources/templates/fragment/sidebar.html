@@ -237,7 +237,9 @@
         </div>
 
         <!-- OPERATION UTILISATEUR -->
-        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+        <div class="accordion-item bg-transparent border-0"
+             sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','CONTROLEUR','DFC')">
+
             <h2 class="accordion-header">
                 <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
                         type="button"
@@ -245,31 +247,37 @@
                         data-bs-target="#collapseOperation"
                         aria-expanded="false"
                         aria-controls="collapseOperation"
-                        th:classappend="${currentUri.contains('/udm') or currentUri.contains('/message') ? '' : 'collapsed'}">
+                        th:classappend="${currentUri.contains('/udm') or currentUri.contains('/ligne-budgetaire') ? '' : 'collapsed'}">
                     <i class="fas fa-cogs me-3"></i> Paramétrage des opérations
                 </button>
             </h2>
+
             <div id="collapseOperation"
                  class="accordion-collapse collapse"
                  aria-labelledby="headingOperation"
                  data-bs-parent="#sidebarAccordion"
-                 th:classappend="${currentUri.contains('/udm') ? 'show' : ''}">
+                 th:classappend="${currentUri.contains('/udm') or currentUri.contains('/ligne-budgetaire') ? 'show' : ''}">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
-                        <li>
+
+                        <!-- ADMIN + MOYENS GENERAUX -->
+                        <li sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/udm/udm-pages}"
                                th:classappend="${currentUri == '/udm/udm-pages' ? 'active' : ''}">
                                 Unité de mesure
                             </a>
                         </li>
-                        <li>
+
+                        <!-- DFC + CONTROLEUR -->
+                        <li sec:authorize="hasAnyRole('ADMIN','DFC','CONTROLEUR')">
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/ligne-budgetaire/ligne-budgetaire-pages}"
                                th:classappend="${currentUri == '/ligne-budgetaire/ligne-budgetaire-pages' ? 'active' : ''}">
                                 Ligne budgétaire
                             </a>
                         </li>
+
                     </ul>
                 </div>
             </div>

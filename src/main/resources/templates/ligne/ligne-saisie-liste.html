@@ -29,9 +29,9 @@
                     <table id="centreTable" class="table table-striped table-hover">
                         <thead>
                         <tr>
-                            <th>
-                                <i class="fas fa-hashtag me-2 icon-gradient-light-blue"></i>ID
-                            </th>
+<!--                            <th>-->
+<!--                                <i class="fas fa-hashtag me-2 icon-gradient-light-blue"></i>ID-->
+<!--                            </th>-->
 
                             <th>
                                 <i class="fas fa-barcode me-2 icon-gradient-light-blue"></i>Code Ligne
@@ -40,39 +40,39 @@
                             <th>
                                 <i class="fas fa-align-left me-2 icon-gradient-light-blue"></i>Description
                             </th>
-                            <th class="text-center">
-                                <i class="fas fa-cog me-2 icon-gradient-light-blue"></i>Actions
-                            </th>
+<!--                            <th class="text-center">-->
+<!--                                <i class="fas fa-cog me-2 icon-gradient-light-blue"></i>Actions-->
+<!--                            </th>-->
                         </tr>
                         </thead>
                         <tbody>
                         <tr th:each="centre : ${centreBudgetaires}">
-                            <td th:text="${centre.getId()}"></td>
+<!--                            <td th:text="${centre.getId()}"></td>-->
                             <td th:text="${centre.getCodeCentre()}"></td>
                             <td th:text="${centre.getDescription()}"></td>
-                            <td class="text-center">
-                                <!-- Modifier -->
-                                <button class="btn btn-sm edit-btn"
-                                        sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#modifierModal"
-                                        th:data-id="${centre.getId()}"
-                                        th:data-codecentre="${centre.getCodeCentre()}"
-                                        th:data-description="${centre.getDescription()}"
-                                        title="Modifier">
-                                    <i class="fas fa-edit"></i>
-                                </button>
+<!--                            <td class="text-center">-->
+<!--                                &lt;!&ndash; Modifier &ndash;&gt;-->
+<!--                                <button class="btn btn-sm edit-btn"-->
+<!--                                        sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"-->
+<!--                                        data-bs-toggle="modal"-->
+<!--                                        data-bs-target="#modifierModal"-->
+<!--                                        th:data-id="${centre.getId()}"-->
+<!--                                        th:data-codecentre="${centre.getCodeCentre()}"-->
+<!--                                        th:data-description="${centre.getDescription()}"-->
+<!--                                        title="Modifier">-->
+<!--                                    <i class="fas fa-edit"></i>-->
+<!--                                </button>-->
 
-                                <!-- Supprimer -->
-                                <button class="btn btn-sm delete-btn"
-                                        sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
-                                        th:data-id="${centre.getId()}"
-                                        th:data-codecentre="${centre.getCodeCentre()}"
-                                        th:data-description="${centre.getDescription()}"
-                                        title="Supprimer">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
+<!--                                &lt;!&ndash; Supprimer &ndash;&gt;-->
+<!--                                <button class="btn btn-sm delete-btn"-->
+<!--                                        sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"-->
+<!--                                        th:data-id="${centre.getId()}"-->
+<!--                                        th:data-codecentre="${centre.getCodeCentre()}"-->
+<!--                                        th:data-description="${centre.getDescription()}"-->
+<!--                                        title="Supprimer">-->
+<!--                                    <i class="fas fa-trash"></i>-->
+<!--                                </button>-->
+<!--                            </td>-->
                         </tr>
                         </tbody>
                     </table>
@@ -195,7 +195,7 @@
                 $('#centreTable thead tr').clone(true).appendTo('#centreTable thead');
 
                 $('#centreTable thead tr:eq(1) th').each(function (i) {
-                    if (i < 3) {
+                    if (i < 2) {
                         $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
 
                         $('input', this).on('keyup change', function () {
