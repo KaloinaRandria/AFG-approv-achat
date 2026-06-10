@@ -187,6 +187,12 @@
                                 <!-- Lecture seule -->
                                 <div th:text="${demande.priorite != null ? demande.priorite : '-'}">-</div>
                             </div>
+                            <div>
+                                <strong>Mode de traitement :</strong>
+
+                                <!-- Lecture seule -->
+                                <div th:text="${demande.modeTraitement != null ? demande.modeTraitement.libelle : '-'}">-</div>
+                            </div>
                         </div>
 
                         <!-- MOTIF & DESCRIPTION -->
@@ -855,7 +861,23 @@
                                             Obligatoire pour valider en Moyens Généraux.
                                         </div>
                                     </div>
+                                    <!-- ================= MODE DE TRAITEMENT (MG seulement en N1) ================= -->
+                                    <div class="mb-2"
+                                         th:if="${canDecisionMG and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
+                                        <label class="form-label mb-1">
+                                            Mode de traitement <span class="text-danger">*</span>
+                                        </label>
 
+                                        <select class="form-select from-select-sm"
+                                        name="modeTraitement"
+                                        required>
+                                            <option value="">-- Choisir --</option>
+                                            <option th:each="m : ${modeTraitement}"
+                                            th:value="${m.getId()}"
+                                            th:text="${m.getLibelle()}">
+                                            </option>
+                                        </select>
+                                    </div>
                                     <!-- ================= LIGNE BUDGETAIRE (Controleur seulement en N2) ================= -->
                                     <div class="mb-2"
                                          th:if="${canDecisionControleur and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N2}">

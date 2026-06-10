@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.model.demande;
 
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
+import afg.achat.afgApprovAchat.model.util.ModeTraitement;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
@@ -68,6 +69,9 @@ public class DemandeMere {
 
     @Column(name = "total_estime")
     Double totalEstime;
+
+    @ManyToOne @JoinColumn(name = "id_mode_traitement", referencedColumnName = "id_mode_traitement")
+    ModeTraitement modeTraitement;
 
 
     public enum PrioriteDemande {

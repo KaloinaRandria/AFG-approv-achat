@@ -7,10 +7,7 @@ import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.DTO.LigneRestanteDTO;
 import afg.achat.afgApprovAchat.DTO.ScinderDTO;
 import afg.achat.afgApprovAchat.model.demande.*;
-import afg.achat.afgApprovAchat.model.util.CommentaireFinance;
-import afg.achat.afgApprovAchat.model.util.MontantCalculator;
-import afg.achat.afgApprovAchat.model.util.PrixArticle;
-import afg.achat.afgApprovAchat.model.util.StatutDemande;
+import afg.achat.afgApprovAchat.model.util.*;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereSpec;
 import afg.achat.afgApprovAchat.repository.stock.StockFilleRepo;
@@ -20,8 +17,10 @@ import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
 import afg.achat.afgApprovAchat.service.stock.LotStockService;
 import afg.achat.afgApprovAchat.service.util.CommentaireFinanceService;
+import afg.achat.afgApprovAchat.service.util.ModeTraitementService;
 import afg.achat.afgApprovAchat.service.util.PrixArticleService;
 import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
@@ -54,39 +53,42 @@ import java.util.stream.Collectors;
 @Slf4j
 @Controller
 @RequestMapping("/demande")
+@RequiredArgsConstructor
 public class DemandeController {
-    @Autowired
-    DemandeMereService demandeMereService;
-    @Autowired
-    DemandeFilleService demandeFilleService;
-    @Autowired
-    ArticleService articleService;
-    @Autowired
-    UtilisateurService utilisateurService;
-    @Autowired
-    IdGenerator idGenerator;
-    @Autowired
-    CentreBudgetaireService centreBudgetaireService;
-    @Autowired
-    StorageService storageService;
-    @Autowired
-    DemandePieceJointeService demandePieceJointeService;
-    @Autowired
-    ValidationDemandeService validationDemandeService;
-    @Autowired
-    CodepPieceJointeService codepPieceJointeService;
-    @Autowired
-    private CommentaireFinanceService commentaireFinanceService;
-    @Autowired
-    private EmailSenderService ess;
-    @Autowired
-    PrixArticleService prixArticleService;
-    @Autowired
-    BonSortieService bonSortieService;
-    @Autowired
-    private StockFilleRepo stockFilleRepo;
-    @Autowired
-    LotStockService lotStockService;
+
+    private final DemandeMereService demandeMereService;
+
+    private final DemandeFilleService demandeFilleService;
+
+    private final ArticleService articleService;
+
+    private final UtilisateurService utilisateurService;
+
+    private final IdGenerator idGenerator;
+
+    private final CentreBudgetaireService centreBudgetaireService;
+
+    private final StorageService storageService;
+
+    private final DemandePieceJointeService demandePieceJointeService;
+
+    private final ValidationDemandeService validationDemandeService;
+
+    private final CodepPieceJointeService codepPieceJointeService;
+
+    private final  CommentaireFinanceService commentaireFinanceService;
+
+    private final EmailSenderService ess;
+
+    private final PrixArticleService prixArticleService;
+
+    private final BonSortieService bonSortieService;
+
+    private final StockFilleRepo stockFilleRepo;
+
+    private final LotStockService lotStockService;
+
+    private final ModeTraitementService modeTraitementService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
@@ -964,7 +966,7 @@ public class DemandeController {
 
         List<ValidationDemande> historiques = validationDemandeService.getHistorique(demande);
         CentreBudgetaire[] ligneBudgetaires = centreBudgetaireService.getAllCentreBudgetaires();
-
+        ModeTraitement[] modeTraitements = modeTraitementService.getAllTraitements();
         boolean canVoirPrix = isAdminOrSpecial || isViewerNplus1OfDemandeur;
         model.addAttribute("canVoirPrix", canVoirPrix);
 
@@ -999,6 +1001,7 @@ public class DemandeController {
 
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
+        model.addAttribute("modeTraitement", modeTraitements);
         model.addAttribute("ligneBudgetaires", ligneBudgetaires);
         model.addAttribute("commentaireFinance", commentaireFinance);
 
@@ -1046,6 +1049,7 @@ public class DemandeController {
     public String decision(@PathVariable("id") String id,
                            @RequestParam("decision") String decision,
                            @RequestParam(value = "typeDemande", required = false) String typeDemande,
+                           @RequestParam(value = "modeTraitement", required = false) String modeTraitement,
                            @RequestParam(value = "commentaire", required = false) String commentaire,
                            @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                            @RequestParam(name = "ligneBudgetaire", required = false) String ligneBudgetaire,
@@ -1058,7 +1062,7 @@ public class DemandeController {
         String sessionToken = (String) session.getAttribute(sessionKey);
 
         if (sessionToken == null || !sessionToken.equals(submissionToken)) {
-            redirectAttributes.addFlashAttribute("warningMessage",
+            redirectAttributes.addFlashAttribute("ko",
                     "Cette décision a déjà été soumise. Veuillez vérifier l'état de la demande.");
             return "redirect:/demande/fiche/" + id;
         }
@@ -1359,6 +1363,29 @@ public class DemandeController {
                         return "redirect:/demande/fiche/" + id;
                     }
                 }
+                if (modeTraitement != null && !modeTraitement.isBlank()) {
+                    try {
+                        ModeTraitement mt = modeTraitementService.getModeTraitementById(Integer.parseInt(modeTraitement));
+                        demande.setModeTraitement(mt);
+
+                        ValidationDemande histoMt = new ValidationDemande();
+                        histoMt.setDemandeMere(demande);
+                        histoMt.setValidateur(current);
+                        histoMt.setEtape(demande.getStatut());
+                        histoMt.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+                        histoMt.setCommentaire("Ajout du mode de traitement : " + mt.getLibelle());
+                        histoMt.setDateAction(String.valueOf(LocalDateTime.now()));
+                        validationDemandeService.logAction(histoMt);
+
+                    } catch (NoSuchElementException ex) {
+                        redirectAttributes.addFlashAttribute("ko",
+                                "Mode de traitement invalide : " + modeTraitement);
+                        return "redirect:/demande/fiche/" + id;
+                    }
+                } else {
+                    redirectAttributes.addFlashAttribute("ko", "Le mode de traitement est obligatoire.");
+                    return "redirect:/demande/fiche/" + id;
+                }
 
 
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
@@ -1403,10 +1430,10 @@ public class DemandeController {
 
                     commentaireFinanceService.insertCommentaireFinance(commentaireFinance);
                 } catch (IllegalArgumentException ex) {
-                    if (ligneBudgetaire.isEmpty() || ligneBudgetaire.isBlank()) {
+                    if (ligneBudgetaire.isBlank()) {
                         redirectAttributes.addFlashAttribute("ko", "ligne budgetaire obligatoire pour le contrôleur de gestion.");
                     }
-                    if (commentaireControleur.isEmpty() || commentaireControleur.isBlank()) {
+                    if (commentaireControleur.isBlank()) {
                         redirectAttributes.addFlashAttribute("ko", "Le commentaire du contrôleur de gestion est obligatoire.");
                     }
                     return "redirect:/demande/fiche/" + id;
