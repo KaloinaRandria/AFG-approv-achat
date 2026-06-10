@@ -84,7 +84,7 @@
         <!-- Section ajout ligne budgétaire -->
         <section>
             <div class="row">
-                <div class="col-lg-6" sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')">
+                <div class="col-lg-6" sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_CONTROLEUR', 'ROLE_DFC')">
                     <div class="card shadow">
                         <div class="card-header btn-gradient-green text-white">
                             <h5 class="mb-0">Ajouter une ligne budgétaire</h5>
