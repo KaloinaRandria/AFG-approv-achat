@@ -25,7 +25,12 @@ create sequence bon_sortie_mere_id_bon_sortie_mere_seq
     no minvalue
     no maxvalue
     cache 1;
-
+create sequence s_bc_mere
+    start with 1
+    increment by 1
+    no minvalue
+    no maxvalue
+    cache 1;
 
 -- View Pour afficher l'état du stock
 CREATE OR REPLACE VIEW v_etat_stock AS
