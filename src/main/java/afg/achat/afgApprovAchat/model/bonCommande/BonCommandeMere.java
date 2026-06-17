@@ -43,9 +43,13 @@ public class BonCommandeMere {
     @ManyToOne @JoinColumn(name = "id_demande_mere" , referencedColumnName = "id_demande_mere")
     DemandeMere demandeMere;
 
+    @Column(name = "montant_ht")
     double montantHT;
+    @Column(name = "montant_ttc")
     double montantTTC;
+    @Column(name = "taux_tva")
     double tauxTVA;
+    @Column(name = "remise")
     double remise;
 
 
