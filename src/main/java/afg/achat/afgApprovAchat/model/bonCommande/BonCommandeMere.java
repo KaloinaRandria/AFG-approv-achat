@@ -52,7 +52,16 @@ public class BonCommandeMere {
     @Column(name = "remise")
     double remise;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "statut")
+    StatutBonCommande statut;
 
+    public enum StatutBonCommande {
+        BROUILLON,
+        EN_ATTENTE_VALIDATION,
+        VALIDE,
+        ANNULE
+    }
 
     public void setId(IdGenerator idGenerator) {
         this.id = idGenerator.generateId("BC","s_bc_mere");

@@ -1009,6 +1009,12 @@ public class DemandeController {
         model.addAttribute("isViewerNplus1OfDemandeur", isViewerNplus1OfDemandeur);
         model.addAttribute("returnUrl", returnUrl);
 
+        //Bon de Commande Creation
+        boolean canCreateBC = demande.getStatut() == StatutDemande.VALIDE
+                && isMG;
+        model.addAttribute("canCreateBC", canCreateBC);
+
+
         // ── Bon de sortie ────────────────────────────────────────────────────────
         boolean canCreateBS = demande.getStatut() == StatutDemande.VALIDE
                 && isMG
