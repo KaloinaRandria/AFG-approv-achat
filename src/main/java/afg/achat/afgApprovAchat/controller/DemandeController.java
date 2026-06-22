@@ -1010,8 +1010,7 @@ public class DemandeController {
         model.addAttribute("returnUrl", returnUrl);
 
         //Bon de Commande Creation
-        boolean canCreateBC = demande.getStatut() == StatutDemande.VALIDE
-                && isMG;
+        boolean canCreateBC = demandeMereService.peutCreerBonCommande(demande,isMG);
         model.addAttribute("canCreateBC", canCreateBC);
 
 

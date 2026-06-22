@@ -4,11 +4,13 @@ package afg.achat.afgApprovAchat.service.demande;
 import afg.achat.afgApprovAchat.DTO.ServiceDemandeDTO;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.model.util.ModeTraitement;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.repository.demande.DemandeFilleRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereSpec;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereSpec.SearchCriteria;
+import afg.achat.afgApprovAchat.repository.util.ModeTraitementRepo;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class DemandeMereService {
     private final DemandeMereRepo   demandeMereRepo;
     private final DemandeFilleRepo  demandeFilleRepo;
     private final IdGenerator       idGenerator;
+    private final ModeTraitementRepo modeTraitementRepo;
 
     // ── Lecture ──────────────────────────────────────────────────────────────
 
@@ -107,5 +110,20 @@ public class DemandeMereService {
 
     public static LocalDateTime toTo(LocalDate d) {
         return d == null ? LocalDateTime.of(2999, 12, 31, 23, 59, 59) : d.atTime(23, 59, 59);
+    }
+
+    public boolean peutCreerBonCommande(DemandeMere demandeMere, boolean isMG) {
+        if (demandeMere.getStatut() != StatutDemande.VALIDE) {
+            return false;
+        }
+        if(!isMG) {
+            return false;
+        }
+        ModeTraitement mode = demandeMere.getModeTraitement();
+        if(mode == null) {
+            return false;
+        }
+
+        return mode.isNecessiteBonCommande();
     }
 }
