@@ -1158,6 +1158,117 @@
                             </div>
                         </div>
 
+                        <!-- ===================== BON DE COMMANDE ===================== -->
+                        <div class="px-3 pb-3 mt-3"
+                             th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE
+                                and canCreateBC}">
+                            <div class="p-3 border rounded bg-light">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div class="fw-bold">
+                                        <i class="fas fa-file-invoice me-2"></i> Bon de commande
+                                    </div>
+
+                                    <!-- Badge mode de traitement -->
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Mode : <span th:text="${demande.modeTraitement?.libelle}"></span>
+                                    </span>
+                                </div>
+
+                                <!-- Message si aucun bon de commande -->
+                                <div th:if="${bonsCommande == null or bonsCommande.isEmpty()}"
+                                     class="text-muted mb-3">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Aucun bon de commande créé pour cette demande.
+                                </div>
+
+                                <!-- ── HISTORIQUE DES BONS DE COMMANDE ── -->
+                                <div th:if="${bonsCommande != null and !bonsCommande.isEmpty()}"
+                                     class="mb-4">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-hover align-middle bg-white">
+                                            <thead class="table-light">
+                                            <tr>
+                                                <th>Numéro BC</th>
+                                                <th>Date création</th>
+                                                <th>Date confirmation</th>
+                                                <th>Créé par</th>
+                                                <th>Statut</th>
+                                                <th>Montant total</th>
+                                                <th class="text-center">Action</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr th:each="bc : ${bonsCommande}">
+                                                <td class="fw-semibold" th:text="${bc.numeroBc}"></td>
+                                                <td th:text="${#temporals.format(bc.dateCreation, 'dd/MM/yyyy HH:mm')}"></td>
+                                                <td th:text="${bc.dateConfirmation != null
+                                                  ? #temporals.format(bc.dateConfirmation, 'dd/MM/yyyy HH:mm')
+                                                  : '—'}">
+                                                </td>
+                                                <td th:text="${bc.creePar.nom + ' ' + bc.creePar.prenom}"></td>
+                                                <td>
+                                                <span th:switch="${bc.statut?.name()}">
+                                                    <span th:case="'BROUILLON'"
+                                                          class="badge bg-warning text-dark">
+                                                        <i class="fas fa-pencil me-1"></i>Brouillon
+                                                    </span>
+                                                    <span th:case="'CONFIRME'"
+                                                          class="badge bg-success">
+                                                        <i class="fas fa-check me-1"></i>Confirmé
+                                                    </span>
+                                                    <span th:case="'ANNULE'"
+                                                          class="badge bg-danger">
+                                                        <i class="fas fa-times me-1"></i>Annulé
+                                                    </span>
+                                                </span>
+                                                </td>
+                                                <td class="text-end fw-semibold"
+                                                    th:text="${bc.montantTotal != null
+                                                 ? #numbers.formatDecimal(bc.montantTotal, 1, 'DEFAULT', 2, 'DEFAULT')
+                                                 : '—'}">
+                                                </td>
+                                                <td class="text-center">
+                                                    <a th:href="@{/bon-commande/{id}(id=${bc.id})}"
+                                                       class="btn btn-sm btn-outline-gradient-blue"
+                                                       title="Voir le bon de commande">
+                                                        <i class="fas fa-eye me-1"></i> Voir
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <!-- ── BOUTON CREER BON DE COMMANDE ── -->
+                                <div th:if="${canCreateBC}">
+                                    <hr class="my-3">
+                                    <div class="d-flex gap-2">
+                                        <form th:action="@{/bon-commande/creer/{id}(id=${demande.id})}"
+                                              method="post"
+                                              id="formCreerBc">
+
+                                            <button type="submit"
+                                                    class="btn btn-gradient-purple">
+                                                <i class="fas fa-file-invoice me-1"></i>
+                                                Créer le bon de commande
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <!-- Informations supplémentaires -->
+                                    <div class="mt-3 small text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Le bon de commande sera créé avec les prix proforma saisis par les Moyens Généraux.
+                                        <span th:if="${demande.totalEstime != null and demande.totalEstime > 0}">
+                                            <br>
+                                            <strong>Total estimé :</strong>
+                                            <span th:text="${#numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')}"></span> MGA
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <!-- ===================== BON DE SORTIE ===================== -->
                         <!-- Section visible uniquement si demande VALIDE -->
                         <div class="px-3 pb-3 mt-3"
