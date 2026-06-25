@@ -32,6 +32,10 @@ public class FournisseurService {
         return fournisseurRepo.findById(id);
     }
 
+    public Fournisseur getById(int id) {
+        return fournisseurRepo.findById(id).orElse(null);
+    }
+
     public void saveFournisseurIfNotExists(Fournisseur fournisseur) {
 
         if (fournisseurRepo.existsFournisseurByNomIgnoreCase(fournisseur.getNom())) {

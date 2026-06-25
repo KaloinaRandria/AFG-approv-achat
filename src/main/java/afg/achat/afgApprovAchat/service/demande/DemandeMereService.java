@@ -37,6 +37,10 @@ public class DemandeMereService {
         return demandeMereRepo.findById(id);
     }
 
+    public DemandeMere getDemandeById(String id) {
+        return demandeMereRepo.findById(id).orElse(null);
+    }
+
     public DemandeMere[] getAllDemandesMeres() {
         return demandeMereRepo.findAll().toArray(new DemandeMere[0]);
     }

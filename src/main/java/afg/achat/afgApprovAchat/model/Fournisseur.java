@@ -21,6 +21,7 @@ public class Fournisseur {
     String nom;
     String acronyme;
     String description;
+    String adressePhysique;
 
     public Fournisseur(String contact, String mail, String nom, String acronyme) {
         this.setContact(contact);
