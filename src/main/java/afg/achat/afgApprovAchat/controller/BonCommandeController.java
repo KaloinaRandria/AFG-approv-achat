@@ -117,7 +117,7 @@ public class BonCommandeController {
         model.addAttribute("bonCommandeMere", bonCommandeMere);
         model.addAttribute("bonCommandeFilles", bonCommandeFilles);
         model.addAttribute("fournisseurs", fournisseurService.getAllFournisseurs());
-
+        model.addAttribute("utilisateurs", utilisateurService.getAllUtilisateurs());
         return "bc/bon-commande-saisie";
     }
 

@@ -42,7 +42,9 @@ public class UtilisateurService {
     public Utilisateur getUtilisateurByMail(String mail) {
         return utilisateurRepo.findByMail(mail);
     }
-
+    public List<Utilisateur> getAllUtilisateurs() {
+        return utilisateurRepo.findAll();
+    }
     public List<Integer> getIdsUtilisateurVisible(int userId) {
         List<Integer> ids = new ArrayList<>();
         ids.add(userId);
