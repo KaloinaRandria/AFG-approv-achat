@@ -37,6 +37,8 @@ public class BonCommandeMere {
     Utilisateur createur;
     @OneToMany(mappedBy = "bonCommandeMere", cascade = CascadeType.ALL, orphanRemoval = true)
     List<BcContact> contacts = new ArrayList<>();
+    @OneToMany(mappedBy = "bonCommandeMere", cascade = CascadeType.ALL, orphanRemoval = true)
+    List<BonCommandeFille> lignes = new ArrayList<>();
     LocalDateTime dateCreation;
     LocalDateTime dateLivraisonPrevue;
     String lieuLivraison;

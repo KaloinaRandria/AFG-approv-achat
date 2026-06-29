@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr"
       xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+>
 <head>
     <meta charset="UTF-8">
     <title>Saisie bon de commande</title>
@@ -14,8 +14,367 @@
 <div class="main-content">
     <section>
         <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
-        <h1 th:text="${demandeMereId}"></h1>
+
+        <div class="container mt-3">
+            <form th:action="@{/bon-commande/sauvegarder}" method="post" id="formSauvegarderBC">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 th:text="${bonCommandeMere.numero} ?: 'Nouveau bon de commande'"></h2>
+                    </div>
+                    <div class="card-body">
+                        <!-- Champ caché pour l'ID du BC -->
+                        <input type="hidden" name="idBcMere" th:value="${bonCommandeMere.id}">
+                        <!-- Champ caché pour la demande mère -->
+                        <input type="hidden" name="demandeMereId" th:value="${demandeMereId}">
+
+                        <div class="row mb-3">
+                            <!-- Fournisseur -->
+                            <div class="col-md-6 mb-3 position-relative">
+                                <label class="form-label fw-bold required-field">Fournisseur</label>
+                                <div class="input-group">
+                                    <input type="text"
+                                           class="form-control"
+                                           id="fournisseurInput"
+                                           placeholder="Rechercher un fournisseur..."
+                                           autocomplete="off"
+                                           required>
+                                    <input type="hidden" name="fournisseurs" id="fournisseurId">
+                                </div>
+                                <div id="fournisseurList"
+                                     class="list-group position-absolute w-100 shadow"
+                                     style="z-index: 1000;"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="referenceFournisseur" class="form-label"><strong>Référence fournisseur :</strong></label>
+                                <input type="text" class="form-control" id="referenceFournisseur" name="referenceFournisseur"
+                                       th:value="${bonCommandeMere.referenceFournisseur}">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="dateCreation" class="form-label"><strong>Date création :</strong></label>
+                                <input type="datetime-local"
+                                       class="form-control"
+                                       id="dateCreation"
+                                       th:value="${#temporals.format(bonCommandeMere.dateCreation, 'yyyy-MM-dd''T''HH:mm')}"
+                                       required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="dateLivraisonPrevue" class="form-label required-field"><strong>Date prévue pour la livraison :</strong></label>
+                                <input type="date" class="form-control" id="dateLivraisonPrevue" name="dateLivraisonPrevue"
+                                       th:value="${bonCommandeMere.dateLivraisonPrevue}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="lieuLivraison" class="form-label required-field"><strong>Lieu livraison :</strong></label>
+                                <input type="text" class="form-control" id="lieuLivraison" name="lieuLivraison"
+                                       th:value="${bonCommandeMere.lieuLivraison}" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="createur" class="form-label"><strong>Créateur :</strong></label>
+                                <input type="text" class="form-control" id="createur" disabled
+                                       th:value="${bonCommandeMere.createur != null ? (bonCommandeMere.createur.prenom + ' ' + bonCommandeMere.createur.nom) : ''}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="demandeMereIdDisplay" class="form-label"><strong>Demande liée :</strong></label>
+                                <input type="text" class="form-control" id="demandeMereIdDisplay" disabled th:value="${demandeMereId}">
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Tableau des lignes de commande -->
+                        <div class="mt-3">
+                            <div class="table-responsive">
+                                <table class="bl-table table table-hover align-middle">
+                                    <thead class="table-light">
+                                    <tr>
+                                        <th>Ref</th>
+                                        <th>Désignation article</th>
+                                        <th>Désignation fournisseur</th>
+                                        <th>QTE</th>
+                                        <th>Unité</th>
+                                        <th>Prix unitaire HT en MGA</th>
+                                        <th>Montant HT en MGA</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr th:each="bcf, stat : ${bonCommandeFilles}">
+                                        <td th:text="${bcf.article != null ? bcf.article.codeArticle : ''}"></td>
+                                        <td th:text="${bcf.article != null ? bcf.article.designation : ''}"></td>
+                                        <td>
+                                            <input type="hidden" th:name="'lignes[' + ${stat.index} + '].demandeFilleId'"
+                                                   th:value="${bcf.demandeFille.id}">
+                                            <input type="hidden" th:name="'lignes[' + ${stat.index} + '].articleId'"
+                                                   th:value="${bcf.article != null ? bcf.article.id : ''}">
+                                            <textarea class="form-control form-control-sm" aria-label="Désignation fournisseur"
+                                                      th:name="'lignes[' + ${stat.index} + '].designationFournisseur'"
+                                                      th:text="${bcf.designationFournisseur}"></textarea>
+                                        </td>
+                                        <td>
+                                            <span th:text="${bcf.quantiteCommandee}"></span>
+                                            <input type="hidden" th:name="'lignes[' + ${stat.index} + '].quantiteCommandee'"
+                                                   th:value="${bcf.quantiteCommandee}">
+                                        </td>
+                                        <td th:text="${bcf.article.getUdm().getDescription()}"></td>
+                                        <td>
+                                            <span th:text="${#numbers.formatDecimal(bcf.prixUnitaireHT, 1, 'DEFAULT', 2, 'DEFAULT')}"></span>
+                                            <input type="hidden" th:name="'lignes[' + ${stat.index} + '].prixUnitaireHT'"
+                                                   th:value="${bcf.prixUnitaireHT}">
+                                        </td>
+                                        <td>
+                                            <span th:text="${#numbers.formatDecimal(bcf.montantHT, 1, 'DEFAULT', 2, 'DEFAULT')}"></span>
+                                            <input type="hidden" th:name="'lignes[' + ${stat.index} + '].montantHT'"
+                                                   class="hidden-montant-ht" th:value="${bcf.montantHT}">
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <small class="text-muted">Les lignes de commande sont créées à partir des demandes liées.</small>
+                        </div>
+
+                        <hr>
+
+                        <!-- =====================================================
+                             SECTION RÉCAPITULATIF FINANCIER
+                             Inspiré du bon de commande Excel :
+                             Montant HT → Remise → Montant HT remisé → TVA → Montant TTC
+                             ===================================================== -->
+                        <div class="row justify-content-end mt-4">
+                            <div class="col-md-5">
+                                <table class="table table-sm table-bordered recap-financier">
+                                    <tbody>
+
+                                    <!-- Montant HT total (calculé automatiquement) -->
+                                    <tr>
+                                        <th class="text-end bg-light" style="width: 55%">Montant HT</th>
+                                        <td class="text-end fw-bold">
+                                            <span id="displayMontantHT">0,00</span> MGA
+                                            <input type="hidden" name="montantHT" id="montantHTInput"
+                                                   th:value="${bonCommandeMere.montantHT}">
+                                        </td>
+                                    </tr>
+
+                                    <!-- Remise (saisie manuelle en %) -->
+                                    <tr id="rowRemise">
+                                        <th class="text-end bg-light">
+                                            Remise
+                                            <input type="number"
+                                                   id="tauxRemise"
+                                                   name="tauxRemise"
+                                                   class="form-control form-control-sm d-inline-block ms-1"
+                                                   style="width: 70px;"
+                                                   min="0" max="100" step="0.01"
+                                                   placeholder="%"
+                                                   th:value="${bonCommandeMere.remise > 0 ? bonCommandeMere.remise : ''}">
+                                            <span class="text-muted small">%</span>
+                                        </th>
+                                        <td class="text-end text-danger" id="displayRemise">— MGA</td>
+                                    </tr>
+
+                                    <!-- Montant HT après remise (affiché seulement si remise > 0) -->
+                                    <tr id="rowMontantHTRemise" style="display: none;">
+                                        <th class="text-end bg-light">Montant HT remisé</th>
+                                        <td class="text-end fw-semibold">
+                                            <span id="displayMontantHTRemise">0,00</span> MGA
+                                        </td>
+                                    </tr>
+
+                                    <!-- TVA (saisie manuelle en %) -->
+                                    <tr>
+                                        <th class="text-end bg-light">
+                                            TVA
+                                            <input type="number"
+                                                   id="tauxTVA"
+                                                   name="tauxTVA"
+                                                   class="form-control form-control-sm d-inline-block ms-1"
+                                                   style="width: 70px;"
+                                                   min="0" max="100" step="0.01"
+                                                   placeholder="%"
+                                                   th:value="${bonCommandeMere.tauxTVA > 0 ? bonCommandeMere.tauxTVA : ''}">
+                                            <span class="text-muted small">%</span>
+                                        </th>
+                                        <td class="text-end" id="displayTVA">0,00 MGA</td>
+                                    </tr>
+
+                                    <!-- Montant TTC (calculé automatiquement) -->
+                                    <tr class="table-primary">
+                                        <th class="text-end">Montant TTC</th>
+                                        <td class="text-end fw-bold fs-5">
+                                            <span id="displayMontantTTC">0,00</span> MGA
+                                            <input type="hidden" name="montantTTC" id="montantTTCInput"
+                                                   th:value="${bonCommandeMere.montantTTC}">
+                                        </td>
+                                    </tr>
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- Fin section récapitulatif -->
+
+                    </div>
+
+                    <div class="card-footer text-end">
+                        <a href="/bon-commande/list" class="btn btn-secondary me-2">
+                            <i class="fas fa-times me-1"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i> Sauvegarder le bon de commande
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </section>
 </div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    // Global : accessible partout
+    const fournisseurs = [
+        /*[# th:each="f : ${fournisseurs}"]*/
+        { id: /*[[${f.id}]]*/, nom: /*[[${f.nom}]]*/ },
+        /*[/]*/
+    ];
+
+    // ── Autocomplete fournisseur ──────────────────────────────────────────────
+    (function () {
+        const input  = document.getElementById("fournisseurInput");
+        const list   = document.getElementById("fournisseurList");
+        const hidden = document.getElementById("fournisseurId");
+
+        if (!input || !list || !hidden) return;
+
+        function clearList() { list.innerHTML = ""; }
+
+        input.addEventListener("input", function () {
+            const q = this.value.toLowerCase().trim();
+            clearList();
+            hidden.value = "";
+            if (q.length < 2) return;
+
+            fournisseurs
+                .filter(f => (f.nom || "").toLowerCase().includes(q))
+                .slice(0, 10)
+                .forEach(f => {
+                    const item = document.createElement("button");
+                    item.type = "button";
+                    item.className = "list-group-item list-group-item-action";
+                    item.textContent = f.nom;
+                    item.addEventListener("click", () => {
+                        input.value = f.nom;
+                        hidden.value = f.id;
+                        clearList();
+                    });
+                    list.appendChild(item);
+                });
+        });
+
+        document.addEventListener("click", (e) => {
+            if (!input.contains(e.target) && !list.contains(e.target)) clearList();
+        });
+    })();
+
+    // ── Calcul des montants ───────────────────────────────────────────────────
+
+    /**
+     * Formate un nombre en format français avec 2 décimales.
+     * Ex : 11271000 → "11 271 000,00"
+     */
+    function formatMGA(value) {
+        return new Intl.NumberFormat('fr-FR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(value);
+    }
+
+    /**
+     * Calcule et met à jour tous les totaux du récapitulatif :
+     *   1. Montant HT = somme des lignes
+     *   2. Remise (si taux > 0) → déduite du HT
+     *   3. Montant HT remisé (affiché seulement si remise > 0)
+     *   4. TVA sur montant HT (après remise si applicable)
+     *   5. Montant TTC = HT remisé + TVA
+     */
+    function recalculerTotaux() {
+
+        // 1. Somme des montants HT de chaque ligne
+        let totalHT = 0;
+        document.querySelectorAll('input.hidden-montant-ht').forEach(function(input) {
+            const val = parseFloat(input.value) || 0;
+            totalHT += val;
+        });
+
+        document.getElementById('displayMontantHT').textContent = formatMGA(totalHT);
+        document.getElementById('montantHTInput').value = totalHT.toFixed(2);
+
+        // 2. Remise
+        const tauxRemise = parseFloat(document.getElementById('tauxRemise').value) || 0;
+        const montantRemise = totalHT * (tauxRemise / 100);
+        const rowRemise = document.getElementById('rowRemise');
+        const rowMontantHTRemise = document.getElementById('rowMontantHTRemise');
+        const displayRemise = document.getElementById('displayRemise');
+
+        if (tauxRemise > 0) {
+            displayRemise.textContent = '− ' + formatMGA(montantRemise) + ' MGA';
+            rowMontantHTRemise.style.display = '';
+        } else {
+            displayRemise.textContent = '— MGA';
+            rowMontantHTRemise.style.display = 'none';
+        }
+
+        // 3. Montant HT après remise
+        const montantHTRemise = totalHT - montantRemise;
+        document.getElementById('displayMontantHTRemise').textContent = formatMGA(montantHTRemise);
+
+        // 4. TVA calculée sur le montant HT (après remise)
+        const tauxTVA = parseFloat(document.getElementById('tauxTVA').value) || 0;
+        const montantTVA = montantHTRemise * (tauxTVA / 100);
+        document.getElementById('displayTVA').textContent = formatMGA(montantTVA) + ' MGA';
+
+        // 5. Montant TTC
+        const montantTTC = montantHTRemise + montantTVA;
+        document.getElementById('displayMontantTTC').textContent = formatMGA(montantTTC);
+        document.getElementById('montantTTCInput').value = montantTTC.toFixed(2);
+    }
+
+    // ── Initialisation au chargement ─────────────────────────────────────────
+    window.addEventListener('load', function () {
+
+        // Calcul des montantHT ligne par ligne depuis quantité × prix
+        document.querySelectorAll('tbody tr').forEach(function(row) {
+            const qteInput    = row.querySelector('input[name*="quantiteCommandee"]');
+            const prixInput   = row.querySelector('input[name*="prixUnitaireHT"]');
+            const montantInput = row.querySelector('input.hidden-montant-ht');
+
+            if (!qteInput || !prixInput || !montantInput) return;
+
+            const quantite   = parseFloat(qteInput.value)  || 0;
+            const prix       = parseFloat(prixInput.value) || 0;
+            const montantHT  = quantite * prix;
+
+            // Mettre à jour l'affichage de la cellule (span)
+            const spanMontant = row.querySelector('td:last-child span');
+            if (spanMontant) spanMontant.textContent = formatMGA(montantHT);
+
+            montantInput.value = montantHT;
+        });
+
+        // Puis calculer les totaux récapitulatifs
+        recalculerTotaux();
+    });
+
+    // Recalcul à chaque changement de taux de remise ou TVA
+    document.getElementById('tauxRemise').addEventListener('input', recalculerTotaux);
+    document.getElementById('tauxTVA').addEventListener('input',    recalculerTotaux);
+
+    /*]]>*/
+</script>
 </body>
 </html>
