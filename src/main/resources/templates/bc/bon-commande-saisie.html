@@ -19,13 +19,31 @@
             <form th:action="@{/bon-commande/sauvegarder}" method="post" id="formSauvegarderBC">
                 <div class="card">
                     <div class="card-header">
-                        <h2 th:text="${bonCommandeMere.numero} ?: 'Nouveau bon de commande'"></h2>
+                        <h2>BON DE COMMANDE</h2>
                     </div>
                     <div class="card-body">
                         <!-- Champ caché pour l'ID du BC -->
                         <input type="hidden" name="idBcMere" th:value="${bonCommandeMere.id}">
                         <!-- Champ caché pour la demande mère -->
                         <input type="hidden" name="demandeMereId" th:value="${demandeMereId}">
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="numero" class="form-label required-field"><strong>Numéro </strong></label>
+                                <input type="text" class="form-control" id="numero" name="numero"
+                                       th:value="${bonCommandeMere.numero}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="service" class="form-label"><strong>Service</strong></label>
+                                <input type="text" class="form-control" id="service" name="service"
+                                th:value="${bonCommandeMere.getContacts().get(0).getUtilisateur().getService().getLibelle()}" disabled>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="statut" class="form-label"><strong>Statut</strong></label>
+                                <input type="text" class="form-control" id="statut" name="statut"
+                                       th:value="${bonCommandeMere.statut}" disabled>
+                            </div>
+                        </div>
 
                         <div class="row mb-3">
                             <!-- Fournisseur -->
@@ -36,8 +54,7 @@
                                            class="form-control"
                                            id="fournisseurInput"
                                            placeholder="Rechercher un fournisseur..."
-                                           autocomplete="off"
-                                           required>
+                                           autocomplete="off">
                                     <input type="hidden" name="fournisseurs" id="fournisseurId">
                                 </div>
                                 <div id="fournisseurList"
@@ -45,7 +62,7 @@
                                      style="z-index: 1000;"></div>
                             </div>
                             <div class="col-md-6">
-                                <label for="referenceFournisseur" class="form-label"><strong>Référence fournisseur :</strong></label>
+                                <label for="referenceFournisseur" class="form-label"><strong>Référence fournisseur </strong></label>
                                 <input type="text" class="form-control" id="referenceFournisseur" name="referenceFournisseur"
                                        th:value="${bonCommandeMere.referenceFournisseur}">
                             </div>
@@ -63,12 +80,12 @@
                             <div class="col-md-4">
                                 <label for="dateLivraisonPrevue" class="form-label required-field"><strong>Date prévue pour la livraison :</strong></label>
                                 <input type="date" class="form-control" id="dateLivraisonPrevue" name="dateLivraisonPrevue"
-                                       th:value="${bonCommandeMere.dateLivraisonPrevue}" required>
+                                       th:value="${bonCommandeMere.dateLivraisonPrevue}">
                             </div>
                             <div class="col-md-4">
                                 <label for="lieuLivraison" class="form-label required-field"><strong>Lieu livraison :</strong></label>
                                 <input type="text" class="form-control" id="lieuLivraison" name="lieuLivraison"
-                                       th:value="${bonCommandeMere.lieuLivraison}" required>
+                                       th:value="${bonCommandeMere.lieuLivraison}">
                             </div>
                         </div>
 
@@ -79,10 +96,59 @@
                                        th:value="${bonCommandeMere.createur != null ? (bonCommandeMere.createur.prenom + ' ' + bonCommandeMere.createur.nom) : ''}">
                             </div>
                             <div class="col-md-6">
-                                <label for="demandeMereIdDisplay" class="form-label"><strong> Réference de la Demande :</strong></label>
-                                <input type="text" class="form-control" id="demandeMereIdDisplay" disabled th:value="${demandeMereId}">
+                                <label for="demandeMereIdDisplay" class="form-label">
+                                    <strong>Référence de la Demande :</strong>
+                                </label>
+
+                                <div class="input-group">
+                                    <input type="text"
+                                           class="form-control"
+                                           id="demandeMereIdDisplay"
+                                           disabled
+                                           th:value="${demandeMereId}">
+
+                                    <a class="btn btn-outline-gradient-blue"
+                                       th:href="@{/demande/fiche/{id}(id=${demandeMereId})}">
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                        Consulter
+                                    </a>
+                                </div>
                             </div>
                         </div>
+
+                        <hr>
+
+                        <!-- =========================
+                             Contacts du bon de commande
+                             ========================= -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label class="form-label">
+                                    <strong>Contacts</strong>
+                                </label>
+
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm align-middle">
+                                        <thead class="table-light">
+                                        <tr>
+                                            <th>Nom</th>
+                                            <th>EMAIL</th>
+                                            <th>TELEPHONE</th>
+                                        </tr>
+                                        </thead>
+
+                                        <tbody>
+                                        <tr th:each="contact : ${bonCommandeMere.contacts}">
+                                            <td th:text="${contact.utilisateur.nom +' '+ contact.utilisateur.prenom}"></td>
+                                            <td th:text="${contact.utilisateur.mail}"></td>
+                                            <td th:text="${contact.utilisateur.contact}"></td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
 
                         <hr>
 
@@ -102,6 +168,12 @@
                                     </tr>
                                     </thead>
                                     <tbody>
+                                    <tr th:if="${bonCommandeMere.description != null}">
+                                        <td colspan="7"
+                                            class="text-center align-middle fw-bold fs-5 bg-light py-3"
+                                            th:text="${bonCommandeMere.description}">
+                                        </td>
+                                    </tr>
                                     <tr th:each="bcf, stat : ${bonCommandeFilles}">
                                         <td th:text="${bcf.article != null ? bcf.article.codeArticle : ''}"></td>
                                         <td th:text="${bcf.article != null ? bcf.article.designation : ''}"></td>
@@ -221,9 +293,9 @@
 
                     <div class="card-footer text-end">
                         <a href="/bon-commande/list" class="btn btn-secondary me-2">
-                            <i class="fas fa-times me-1"></i> Annuler
+                            <i class="fas fa-times me-1"></i> Retour
                         </a>
-                        <button type="submit" class="btn btn-success">
+                        <button type="submit" class="btn btn-gradient-green">
                             <i class="fas fa-save me-1"></i> Sauvegarder le bon de commande
                         </button>
                     </div>

@@ -351,7 +351,7 @@
 
                                     <!-- PRIX -->
                                     <th th:if="${canVoirPrix}" class="text-end" style="width:25%">
-                                        PRIX UNITAIRE H.T.
+                                        PRIX UNITAIRE HT
                                         <span th:if="${canDecisionMG}"
                                               id="badgePrixManquants"
                                               class="badge bg-danger ms-1"
@@ -361,7 +361,7 @@
                                     </th>
 
                                     <th th:if="${canVoirPrix}" class="text-end" style="width:12%">
-                                        MONTANT
+                                        MONTANT HT
                                     </th>
 
                                     <!-- ACTION -->
@@ -552,7 +552,7 @@
                                     <th style="width:30%">DÉSIGNATION</th>
                                     <th class="text-end" style="width:10%">QUANTITÉ</th>
                                     <th class="text-end" style="width:8%">UDM</th>
-                                    <th class="text-end" style="width:12%">PRIX UNITAIRE H.T.</th>
+                                    <th class="text-end" style="width:12%">PRIX UNITAIRE HT</th>
                                     <th class="text-center" style="width:10%">TYPE</th>
                                     <th class="text-center" style="width:10%">STOCK DISPO</th>
                                     <th class="text-center" style="width:20%">ACTIONS</th>
@@ -1245,7 +1245,7 @@
                                     <hr class="my-3">
                                     <div class="d-flex gap-2">
                                         <form th:action="@{/bon-commande/creer/{id}(id=${demande.id})}"
-                                              method="post"
+                                              method="get"
                                               id="formCreerBc">
 
                                             <button type="submit"

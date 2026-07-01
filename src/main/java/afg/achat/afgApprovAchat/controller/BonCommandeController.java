@@ -1,12 +1,14 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.bonCommande.BcContact;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.FournisseurService;
+import afg.achat.afgApprovAchat.service.bonCommande.BcContactService;
 import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeService;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
@@ -38,6 +40,7 @@ public class BonCommandeController {
     private final DemandeFilleService demandeFilleService;
     private final FournisseurService fournisseurService;
     private final UtilisateurService utilisateurService;
+    private final BcContactService bcContactService;
     private final IdGenerator idGenerator;
 
     @GetMapping("")
@@ -50,7 +53,7 @@ public class BonCommandeController {
     public String bonCommandeList() {
         return "";
     }
-    @PostMapping("/creer/{id}")
+    @GetMapping("/creer/{id}")
     public String creeBonCommandeByDemande(@PathVariable(name = "id") String demandeMereId,
                                            String numero,
                                            String referenceFournisseur,
@@ -90,6 +93,11 @@ public class BonCommandeController {
 
         bonCommandeMere.setDemandeMere(demandeMere);
 
+        //Contact : Nonla - Maria
+        List<BcContact> bcContacts = bcContactService.getAllContacts();
+        bonCommandeMere.setContacts(bcContacts);
+
+
         // Créer les lignes du bon de commande à partir des demandes filles
         List<BonCommandeFille> bonCommandeFilles = new ArrayList<>();
         for (DemandeFille demandeFille : demandeFilles) {
@@ -117,7 +125,6 @@ public class BonCommandeController {
         model.addAttribute("bonCommandeMere", bonCommandeMere);
         model.addAttribute("bonCommandeFilles", bonCommandeFilles);
         model.addAttribute("fournisseurs", fournisseurService.getAllFournisseurs());
-        model.addAttribute("utilisateurs", utilisateurService.getAllUtilisateurs());
         return "bc/bon-commande-saisie";
     }
 
