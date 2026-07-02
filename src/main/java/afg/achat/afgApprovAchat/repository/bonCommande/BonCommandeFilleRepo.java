@@ -12,4 +12,6 @@ import java.util.List;
 public interface BonCommandeFilleRepo extends JpaRepository<BonCommandeFille, Integer> {
     @Query("select bcf from BonCommandeFille bcf where bcf.bonCommandeMere = :b")
     List<BonCommandeFille> findBonCommandeFillesByBonCommandeMere(BonCommandeMere b);
+
+    void deleteByBonCommandeMere(BonCommandeMere bonCommandeMere);
 }

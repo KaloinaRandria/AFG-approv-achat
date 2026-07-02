@@ -36,7 +36,7 @@
                             <div class="col-md-6">
                                 <label for="service" class="form-label"><strong>Service</strong></label>
                                 <input type="text" class="form-control" id="service" name="service"
-                                th:value="${bonCommandeMere.getContacts().get(0).getUtilisateur().getService().getLibelle()}" disabled>
+                                th:value="${bonCommandeMere.contacts != null and !bonCommandeMere.contacts.isEmpty() and bonCommandeMere.contacts.get(0).utilisateur != null and bonCommandeMere.contacts.get(0).utilisateur.service != null ? bonCommandeMere.contacts.get(0).utilisateur.service.libelle : ''}" disabled>
                             </div>
                             <div class="col-md-2">
                                 <label for="statut" class="form-label"><strong>Statut</strong></label>
@@ -54,8 +54,10 @@
                                            class="form-control"
                                            id="fournisseurInput"
                                            placeholder="Rechercher un fournisseur..."
-                                           autocomplete="off">
-                                    <input type="hidden" name="fournisseurs" id="fournisseurId">
+                                           autocomplete="off"
+                                           th:value="${bonCommandeMere.fournisseur != null ? bonCommandeMere.fournisseur.nom : ''}">
+                                    <input type="hidden" name="fournisseurs" id="fournisseurId"
+                                           th:value="${bonCommandeMere.fournisseur != null ? bonCommandeMere.fournisseur.id : ''}">
                                 </div>
                                 <div id="fournisseurList"
                                      class="list-group position-absolute w-100 shadow"
@@ -80,7 +82,7 @@
                             <div class="col-md-4">
                                 <label for="dateLivraisonPrevue" class="form-label required-field"><strong>Date prévue pour la livraison :</strong></label>
                                 <input type="date" class="form-control" id="dateLivraisonPrevue" name="dateLivraisonPrevue"
-                                       th:value="${bonCommandeMere.dateLivraisonPrevue}">
+                                       th:value="${bonCommandeMere.dateLivraisonPrevue != null ? #temporals.format(bonCommandeMere.dateLivraisonPrevue, 'yyyy-MM-dd') : ''}">
                             </div>
                             <div class="col-md-4">
                                 <label for="lieuLivraison" class="form-label required-field"><strong>Lieu livraison :</strong></label>
@@ -138,7 +140,7 @@
                                         </thead>
 
                                         <tbody>
-                                        <tr th:each="contact : ${bonCommandeMere.contacts}">
+                                        <tr th:each="contact : ${bcContacts}">
                                             <td th:text="${contact.utilisateur.nom +' '+ contact.utilisateur.prenom}"></td>
                                             <td th:text="${contact.utilisateur.mail}"></td>
                                             <td th:text="${contact.utilisateur.contact}"></td>
@@ -309,11 +311,7 @@
     /*<![CDATA[*/
 
     // Global : accessible partout
-    const fournisseurs = [
-        /*[# th:each="f : ${fournisseurs}"]*/
-        { id: /*[[${f.id}]]*/, nom: /*[[${f.nom}]]*/ },
-        /*[/]*/
-    ];
+    const fournisseurs = /*[[${fournisseurs}]]*/ [];
 
     // ── Autocomplete fournisseur ──────────────────────────────────────────────
     (function () {

@@ -14,6 +14,80 @@
 <div class="main-content">
     <section>
         <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <div class="container mt-3">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-file-invoice me-2"></i>
+                        Fiche bon de commande
+                    </h4>
+                    <a class="btn btn-outline-secondary"
+                       th:if="${bonCommandeMere.demandeMere != null}"
+                       th:href="@{/demande/fiche/{id}(id=${bonCommandeMere.demandeMere.id})}">
+                        <i class="fas fa-arrow-left me-1"></i> Retour demande
+                    </a>
+                </div>
+
+                <div class="card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Numero BC</label>
+                            <div th:text="${bonCommandeMere.numero != null && !#strings.isEmpty(bonCommandeMere.numero) ? bonCommandeMere.numero : bonCommandeMere.id}">-</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Statut</label>
+                            <div th:text="${bonCommandeMere.statut}">-</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Date creation</label>
+                            <div th:text="${bonCommandeMere.dateCreation != null ? #temporals.format(bonCommandeMere.dateCreation, 'dd/MM/yyyy HH:mm') : '—'}">-</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Date livraison prevue</label>
+                            <div th:text="${bonCommandeMere.dateLivraisonPrevue != null ? #temporals.format(bonCommandeMere.dateLivraisonPrevue, 'dd/MM/yyyy') : '—'}">-</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Fournisseur</label>
+                            <div th:text="${bonCommandeMere.fournisseur != null ? bonCommandeMere.fournisseur.nom : '—'}">-</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Lieu livraison</label>
+                            <div th:text="${bonCommandeMere.lieuLivraison != null && !#strings.isEmpty(bonCommandeMere.lieuLivraison) ? bonCommandeMere.lieuLivraison : '—'}">-</div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle bg-white">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Article</th>
+                                <th>Designation fournisseur</th>
+                                <th class="text-end">Quantite</th>
+                                <th class="text-end">Prix unitaire HT</th>
+                                <th class="text-end">Montant HT</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${lignes == null || lignes.isEmpty()}">
+                                <td colspan="5" class="text-center text-muted">Aucune ligne</td>
+                            </tr>
+                            <tr th:each="ligne : ${lignes}">
+                                <td th:text="${ligne.article != null ? ligne.article.codeArticle + ' - ' + ligne.article.designation : '—'}"></td>
+                                <td th:text="${ligne.designationFournisseur != null && !#strings.isEmpty(ligne.designationFournisseur) ? ligne.designationFournisseur : '—'}"></td>
+                                <td class="text-end" th:text="${#numbers.formatDecimal(ligne.quantiteCommandee, 1, 'DEFAULT', 2, 'DEFAULT')}"></td>
+                                <td class="text-end" th:text="${#numbers.formatDecimal(ligne.prixUnitaireHT, 1, 'DEFAULT', 2, 'DEFAULT')}"></td>
+                                <td class="text-end" th:text="${#numbers.formatDecimal(ligne.montantHT, 1, 'DEFAULT', 2, 'DEFAULT')}"></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </section>
 </div>
 </body>

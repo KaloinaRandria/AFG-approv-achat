@@ -1,7 +1,6 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.Fournisseur;
-import afg.achat.afgApprovAchat.model.bonCommande.BcContact;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
@@ -23,9 +22,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,106 +52,77 @@ public class BonCommandeController {
     }
     @GetMapping("/creer/{id}")
     public String creeBonCommandeByDemande(@PathVariable(name = "id") String demandeMereId,
-                                           String numero,
-                                           String referenceFournisseur,
-                                           String lieuLivraison,
-                                           String fournisseurId,
-                                           Model model) {
-        //Creation d'un Bon de commande a partir d'une demande d'achat
+                                           RedirectAttributes redirectAttributes) {
+        DemandeMere demandeMere = demandeMereService.getDemandeById(demandeMereId);
+        List<BonCommandeMere> bcExistants = bonCommandeService.getBonCommandesByDemande(demandeMere);
+        if (!bcExistants.isEmpty()) {
+            BonCommandeMere bcExistant = bcExistants.get(0);
+            redirectAttributes.addFlashAttribute("warningMessage",
+                    "Un bon de commande existe deja pour cette demande.");
+            return "redirect:/bon-commande/" + bcExistant.getId();
+        }
 
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
-        //Demande Mere
-        DemandeMere demandeMere = demandeMereService.getDemandeById(demandeMereId);
-        //Demande Fille
-        List<DemandeFille> demandeFilles = demandeFilleService.getDemandeFilleByDemandeMere(demandeMere);
+        BonCommandeMere bonCommandeMere = initialiserBonCommandeDepuisDemande(demandeMere, utilisateur);
 
-        //Creation du bon de commande
-        BonCommandeMere bonCommandeMere = new BonCommandeMere();
-        bonCommandeMere.setNumero(numero);
-        bonCommandeMere.setReferenceFournisseur(referenceFournisseur);
-        bonCommandeMere.setDateCreation(LocalDateTime.now());
-        bonCommandeMere.setLieuLivraison(lieuLivraison);
-
-        //Bon de commande Draft par defaut
-        bonCommandeMere.setStatut(BonCommandeMere.StatutBonCommande.BROUILLON);
-
-        //Description du bon de commande = motif evoque de la demande mere
-        bonCommandeMere.setDescription(demandeMere.getMotifEvoque());
-
-        //recuperation du fournisseur selectionne si fourni
-        if (fournisseurId != null && !fournisseurId.isEmpty()) {
-            Fournisseur fournisseur = fournisseurService.getById(Integer.parseInt(fournisseurId));
-            bonCommandeMere.setFournisseur(fournisseur);
+        BonCommandeMere bcSauvegardee = bonCommandeService.saveBonCommandeMere(bonCommandeMere);
+        List<BonCommandeFille> bonCommandeFilles = initialiserLignesBonCommande(demandeMere, bcSauvegardee);
+        for (BonCommandeFille bcFille : bonCommandeFilles) {
+            bonCommandeService.saveBonCommandeFille(bcFille);
         }
 
-        //Createur du Bon de commande
-        bonCommandeMere.setCreateur(utilisateur);
-
-        bonCommandeMere.setDemandeMere(demandeMere);
-
-        //Contact : Nonla - Maria
-        List<BcContact> bcContacts = bcContactService.getAllContacts();
-        bonCommandeMere.setContacts(bcContacts);
-
-
-        // Créer les lignes du bon de commande à partir des demandes filles
-        List<BonCommandeFille> bonCommandeFilles = new ArrayList<>();
-        for (DemandeFille demandeFille : demandeFilles) {
-            BonCommandeFille bcFille = new BonCommandeFille();
-            bcFille.setBonCommandeMere(bonCommandeMere);
-            bcFille.setDemandeFille(demandeFille);
-            bcFille.setArticle(demandeFille.getArticle());
-            bcFille.setQuantiteCommandee(demandeFille.getQuantite());
-            bcFille.setQuantiteRestante(demandeFille.getQuantite());
-
-            // Initialiser les prix et montants si disponibles
-            if (demandeFille.getPrixUnitaire() != null) {
-                bcFille.setPrixUnitaireHT(demandeFille.getPrixUnitaire());
-                bcFille.setMontantHT(demandeFille.getQuantite() * demandeFille.getPrixUnitaire());
-            }
-            if (demandeFille.getMontantEstime() != null) {
-                bcFille.setMontantTTC(demandeFille.getMontantEstime());
-            }
-
-            bonCommandeFilles.add(bcFille);
-        }
-
-        // Ajouter les objets nécessaires au template pour affichage et saisie des lignes
-        model.addAttribute("demandeMereId", demandeMereId);
-        model.addAttribute("bonCommandeMere", bonCommandeMere);
-        model.addAttribute("bonCommandeFilles", bonCommandeFilles);
-        model.addAttribute("fournisseurs", fournisseurService.getAllFournisseurs());
-        return "bc/bon-commande-saisie";
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Bon de commande cree en brouillon. Vous pouvez completer les informations.");
+        return "redirect:/bon-commande/" + bcSauvegardee.getId();
     }
 
     @PostMapping("/sauvegarder")
     public String sauvegarderBonCommande(
             @RequestParam(required = false) String idBcMere,
             @RequestParam String demandeMereId,
+            @RequestParam(required = false) String numero,
             @RequestParam(required = false) String dateLivraisonPrevue,
             @RequestParam(name = "fournisseurs", required = false) String fournisseurId,
             @RequestParam(required = false) String referenceFournisseur,
             @RequestParam(required = false) String lieuLivraison,
+            @RequestParam(required = false) Double montantHT,
+            @RequestParam(required = false) Double montantTTC,
+            @RequestParam(required = false) Double tauxTVA,
+            @RequestParam(required = false) Double remise,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
         try {
+            Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
+
             // Récupérer ou créer le BC
             BonCommandeMere bonCommandeMere;
             if (idBcMere == null || idBcMere.isEmpty()) {
                 bonCommandeMere = new BonCommandeMere();
                 bonCommandeMere.setId(idGenerator);
+                bonCommandeMere.setDateCreation(LocalDateTime.now());
+                bonCommandeMere.setCreateur(utilisateur);
+                bonCommandeMere.setStatut(BonCommandeMere.StatutBonCommande.BROUILLON);
             } else {
                 bonCommandeMere = bonCommandeService.getBonCommandeMereById(idBcMere)
                         .orElse(new BonCommandeMere());
                 if (bonCommandeMere.getId() == null) {
                     bonCommandeMere.setId(idGenerator);
+                    bonCommandeMere.setDateCreation(LocalDateTime.now());
+                    bonCommandeMere.setCreateur(utilisateur);
+                    bonCommandeMere.setStatut(BonCommandeMere.StatutBonCommande.BROUILLON);
                 }
             }
 
             // Mettre à jour les champs du BC
+            if (numero != null && !numero.isBlank()) {
+                bonCommandeMere.setNumero(numero.trim());
+            } else if (bonCommandeMere.getNumero() == null || bonCommandeMere.getNumero().isBlank()) {
+                bonCommandeMere.setNumero("BC-" + demandeMereId);
+            }
             if (dateLivraisonPrevue != null && !dateLivraisonPrevue.isEmpty()) {
-                bonCommandeMere.setDateLivraisonPrevue(LocalDateTime.parse(dateLivraisonPrevue));
+                bonCommandeMere.setDateLivraisonPrevue(LocalDate.parse(dateLivraisonPrevue).atStartOfDay());
             }
             if (fournisseurId != null && !fournisseurId.isEmpty()) {
                 Fournisseur fournisseur = fournisseurService.getById(Integer.parseInt(fournisseurId));
@@ -166,11 +134,30 @@ public class BonCommandeController {
             if (lieuLivraison != null && !lieuLivraison.isEmpty()) {
                 bonCommandeMere.setLieuLivraison(lieuLivraison);
             }
+            if (montantHT != null) {
+                bonCommandeMere.setMontantHT(montantHT);
+            }
+            if (montantTTC != null) {
+                bonCommandeMere.setMontantTTC(montantTTC);
+            }
+            if (tauxTVA != null) {
+                bonCommandeMere.setTauxTVA(tauxTVA);
+            }
+            if (remise != null) {
+                bonCommandeMere.setRemise(remise);
+            }
 
             bonCommandeMere.setDemandeMere(demandeMereService.getDemandeById(demandeMereId));
+            if (bonCommandeMere.getStatut() == null) {
+                bonCommandeMere.setStatut(BonCommandeMere.StatutBonCommande.BROUILLON);
+            }
+            if (bonCommandeMere.getContacts() == null || bonCommandeMere.getContacts().isEmpty()) {
+                bonCommandeMere.setContacts(bcContactService.getAllContacts());
+            }
 
             // Sauvegarder le BC mère
             BonCommandeMere bcSauvegardee = bonCommandeService.saveBonCommandeMere(bonCommandeMere);
+            bonCommandeService.deleteBonCommandeFillesByBonCommandeMere(bcSauvegardee);
 
             // Récupérer les lignes du formulaire et créer les BonCommandeFille
             String[] demandeFilleIds = request.getParameterValues("lignes[0].demandeFilleId");
@@ -227,7 +214,7 @@ public class BonCommandeController {
             }
 
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Bon de commande n° " + bcSauvegardee.getNumero() + " sauvegardé avec succès avec " +
+                    "Bon de commande n° " + (bcSauvegardee.getNumero() != null ? bcSauvegardee.getNumero() : bcSauvegardee.getId()) + " sauvegardé avec succès avec " +
                     (demandeFilleIds != null ? demandeFilleIds.length : 0) + " ligne(s).");
             return "redirect:/bon-commande/" + bcSauvegardee.getId();
         } catch (Exception e) {
@@ -243,8 +230,56 @@ public class BonCommandeController {
                 .orElseThrow(() -> new IllegalArgumentException("Bon de commande non trouvé"));
         List<BonCommandeFille> lignes = bonCommandeService.getBonCommandeFillesByBonCommandeMere(bonCommandeMere);
 
+        if (bonCommandeMere.getStatut() == BonCommandeMere.StatutBonCommande.BROUILLON) {
+            model.addAttribute("demandeMereId", bonCommandeMere.getDemandeMere().getId());
+            model.addAttribute("bonCommandeMere", bonCommandeMere);
+            model.addAttribute("bcContacts", bcContactService.getAllContacts());
+            model.addAttribute("bonCommandeFilles", lignes);
+            model.addAttribute("fournisseurs", fournisseurService.getAllFournisseurs());
+            return "bc/bon-commande-saisie";
+        }
+
         model.addAttribute("bonCommandeMere", bonCommandeMere);
         model.addAttribute("lignes", lignes);
         return "bc/bon-commande-fiche";
+    }
+
+    private BonCommandeMere initialiserBonCommandeDepuisDemande(DemandeMere demandeMere, Utilisateur utilisateur) {
+        BonCommandeMere bonCommandeMere = new BonCommandeMere();
+        bonCommandeMere.setNumero("BC-" + demandeMere.getId());
+        bonCommandeMere.setDateCreation(LocalDateTime.now());
+        bonCommandeMere.setLieuLivraison("");
+        bonCommandeMere.setReferenceFournisseur("");
+        bonCommandeMere.setStatut(BonCommandeMere.StatutBonCommande.BROUILLON);
+        bonCommandeMere.setDescription(demandeMere.getMotifEvoque());
+        bonCommandeMere.setCreateur(utilisateur);
+        bonCommandeMere.setDemandeMere(demandeMere);
+        bonCommandeMere.setContacts(bcContactService.getAllContacts());
+        return bonCommandeMere;
+    }
+
+    private List<BonCommandeFille> initialiserLignesBonCommande(DemandeMere demandeMere, BonCommandeMere bonCommandeMere) {
+        List<DemandeFille> demandeFilles = demandeFilleService.getDemandeFilleByDemandeMere(demandeMere);
+        List<BonCommandeFille> bonCommandeFilles = new ArrayList<>();
+
+        for (DemandeFille demandeFille : demandeFilles) {
+            BonCommandeFille bcFille = new BonCommandeFille();
+            bcFille.setBonCommandeMere(bonCommandeMere);
+            bcFille.setDemandeFille(demandeFille);
+            bcFille.setArticle(demandeFille.getArticle());
+            bcFille.setQuantiteCommandee(demandeFille.getQuantite());
+            bcFille.setQuantiteRestante(demandeFille.getQuantite());
+
+            if (demandeFille.getPrixUnitaire() != null) {
+                bcFille.setPrixUnitaireHT(demandeFille.getPrixUnitaire());
+                bcFille.setMontantHT(demandeFille.getQuantite() * demandeFille.getPrixUnitaire());
+            }
+            if (demandeFille.getMontantEstime() != null) {
+                bcFille.setMontantTTC(demandeFille.getMontantEstime());
+            }
+
+            bonCommandeFilles.add(bcFille);
+        }
+        return bonCommandeFilles;
     }
 }
