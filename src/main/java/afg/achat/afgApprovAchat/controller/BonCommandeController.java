@@ -1,16 +1,21 @@
 package afg.achat.afgApprovAchat.controller;
 
+import afg.achat.afgApprovAchat.DTO.FournisseurAutocompleteDTO;
 import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.model.fournisseur.Responsable;
+import afg.achat.afgApprovAchat.model.fournisseur.ResponsableFournisseur;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
-import afg.achat.afgApprovAchat.service.FournisseurService;
+import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonCommande.BcContactService;
 import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeService;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
+import afg.achat.afgApprovAchat.service.fournisseur.ResponsableFournisseurService;
+import afg.achat.afgApprovAchat.service.fournisseur.ResponsableService;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,6 +30,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @PreAuthorize("hasAnyRole('ADMIN', 'MOYENS_GENERAUX')")
@@ -38,6 +44,8 @@ public class BonCommandeController {
     private final FournisseurService fournisseurService;
     private final UtilisateurService utilisateurService;
     private final BcContactService bcContactService;
+    private final ResponsableFournisseurService responsableFournisseurService;
+    private final ResponsableService responsableService;
     private final IdGenerator idGenerator;
 
     @GetMapping("")
@@ -84,6 +92,10 @@ public class BonCommandeController {
             @RequestParam(required = false) String numero,
             @RequestParam(required = false) String dateLivraisonPrevue,
             @RequestParam(name = "fournisseurs", required = false) String fournisseurId,
+            @RequestParam(required = false) String responsableFournisseurId,
+            @RequestParam(required = false) String nouveauResponsableNom,
+            @RequestParam(required = false) String nouveauResponsablePrenom,
+            @RequestParam(required = false) String nouveauResponsableContact,
             @RequestParam(required = false) String referenceFournisseur,
             @RequestParam(required = false) String lieuLivraison,
             @RequestParam(required = false) Double montantHT,
@@ -127,6 +139,29 @@ public class BonCommandeController {
             if (fournisseurId != null && !fournisseurId.isEmpty()) {
                 Fournisseur fournisseur = fournisseurService.getById(Integer.parseInt(fournisseurId));
                 bonCommandeMere.setFournisseur(fournisseur);
+
+                if (responsableFournisseurId != null && !responsableFournisseurId.isEmpty()) {
+                    // Un responsable existant a été sélectionné
+                    responsableFournisseurService.getById(Long.parseLong(responsableFournisseurId))
+                            .ifPresent(bonCommandeMere::setResponsableFournisseur);
+
+                } else if (nouveauResponsableNom != null && !nouveauResponsableNom.isBlank()
+                        && nouveauResponsablePrenom != null && !nouveauResponsablePrenom.isBlank()) {
+                    // Aucun responsable affecté -> on le crée et on l'affecte au fournisseur
+                    Responsable responsable = new Responsable();
+                    responsable.setNom(nouveauResponsableNom.trim());
+                    responsable.setPrenom(nouveauResponsablePrenom.trim());
+                    responsable.setContact(nouveauResponsableContact != null ? nouveauResponsableContact.trim() : null);
+                    Responsable responsableSauvegarde = responsableService.save(responsable);
+
+                    ResponsableFournisseur rf = new ResponsableFournisseur();
+                    rf.setFournisseur(fournisseur);
+                    rf.setResponsable(responsableSauvegarde);
+                    rf.setDateAffectation(LocalDate.now());
+                    ResponsableFournisseur rfSauvegarde = responsableFournisseurService.save(rf);
+
+                    bonCommandeMere.setResponsableFournisseur(rfSauvegarde);
+                }
             }
             if (referenceFournisseur != null && !referenceFournisseur.isEmpty()) {
                 bonCommandeMere.setReferenceFournisseur(referenceFournisseur);
@@ -235,7 +270,27 @@ public class BonCommandeController {
             model.addAttribute("bonCommandeMere", bonCommandeMere);
             model.addAttribute("bcContacts", bcContactService.getAllContacts());
             model.addAttribute("bonCommandeFilles", lignes);
-            model.addAttribute("fournisseurs", fournisseurService.getAllFournisseurs());
+
+            // --- Fournisseurs enrichis avec leur responsable actuel ---
+            List<FournisseurAutocompleteDTO> fournisseursDTO = Arrays.stream(fournisseurService.getAllFournisseurs())
+                    .map(f -> {
+                        var respOpt = responsableFournisseurService.getResponsableActuel(f.getId());
+                        Integer respId = respOpt.map(rf -> rf.getResponsable().getId()).orElse(null);
+                        String respNom = respOpt
+                                .map(rf -> rf.getResponsable().getPrenom() + " " + rf.getResponsable().getNom())
+                                .orElse("");
+                        return new FournisseurAutocompleteDTO(f.getId(), f.getNom(), respId, respNom);
+                    })
+                    .toList();
+            model.addAttribute("fournisseurs", fournisseursDTO);
+
+            // --- Pré-remplissage du responsable si un fournisseur est déjà sélectionné ---
+            if (bonCommandeMere.getFournisseur() != null) {
+                responsableFournisseurService
+                        .getResponsableActuel(bonCommandeMere.getFournisseur().getId())
+                        .ifPresent(respActuel -> model.addAttribute("responsableFournisseurActuel", respActuel));
+            }
+
             return "bc/bon-commande-saisie";
         }
 

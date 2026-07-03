@@ -2,6 +2,7 @@ package afg.achat.afgApprovAchat.model.bonCommande;
 
 import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.model.fournisseur.ResponsableFournisseur;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.persistence.*;
@@ -34,6 +35,9 @@ public class BonCommandeMere {
     String referenceFournisseur;
     @ManyToOne @JoinColumn(name = "id_fournisseur" , referencedColumnName = "id_fournisseur")
     Fournisseur fournisseur;
+    @ManyToOne
+    @JoinColumn(name = "id_responsable_fournisseur", referencedColumnName = "id" )
+    private ResponsableFournisseur responsableFournisseur;
     @ManyToOne @JoinColumn(name = "id_createur" , referencedColumnName = "id_utilisateur")
     Utilisateur createur;
     @OneToMany(mappedBy = "bonCommandeMere", cascade = CascadeType.ALL, orphanRemoval = true)

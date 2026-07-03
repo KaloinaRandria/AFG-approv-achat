@@ -1,4 +1,4 @@
-package afg.achat.afgApprovAchat.repository;
+package afg.achat.afgApprovAchat.repository.fournisseur;
 
 import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import org.springframework.data.jpa.repository.JpaRepository;

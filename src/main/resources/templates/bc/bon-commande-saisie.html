@@ -25,7 +25,7 @@
                         <!-- Champ caché pour l'ID du BC -->
                         <input type="hidden" name="idBcMere" th:value="${bonCommandeMere.id}">
                         <!-- Champ caché pour la demande mère -->
-                        <input type="hidden" name="demandeMereId" th:value="${demandeMereId}">
+                        <input type="hidden" name="demandeMereI" th:value="${demandeMereId}">
 
                         <div class="row mb-3">
                             <div class="col-md-4">
@@ -36,7 +36,7 @@
                             <div class="col-md-6">
                                 <label for="service" class="form-label"><strong>Service</strong></label>
                                 <input type="text" class="form-control" id="service" name="service"
-                                th:value="${bcContacts.getFirst().utilisateur.service.libelle}" disabled>
+                                       th:value="${bcContacts.getFirst().utilisateur.service.libelle}" disabled>
                             </div>
                             <div class="col-md-2">
                                 <label for="statut" class="form-label"><strong>Statut</strong></label>
@@ -67,6 +67,49 @@
                                 <label for="referenceFournisseur" class="form-label"><strong>Référence fournisseur </strong></label>
                                 <input type="text" class="form-control" id="referenceFournisseur" name="referenceFournisseur"
                                        th:value="${bonCommandeMere.referenceFournisseur}">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <!-- Responsable fournisseur -->
+                            <div class="col-md-8">
+                                <label class="form-label"><strong>Responsable fournisseur</strong></label>
+
+                                <!-- Cas 1 : un responsable est déjà affecté -> affichage lecture seule -->
+                                <input type="text"
+                                       class="form-control"
+                                       id="responsableFournisseurInput"
+                                       disabled
+                                       th:style="${responsableFournisseurActuel != null} ? '' : 'display:none'"
+                                       th:value="${responsableFournisseurActuel != null ? (responsableFournisseurActuel.responsable.prenom + ' ' + responsableFournisseurActuel.responsable.nom) : ''}">
+                                <input type="hidden" name="responsableFournisseurId" id="responsableFournisseurIdInput"
+                                       th:value="${responsableFournisseurActuel != null ? responsableFournisseurActuel.id : ''}">
+
+                                <!-- Cas 2 : aucun responsable affecté -> saisie directe, sera créé et affecté à la sauvegarde -->
+                                <div id="nouveauResponsableBlock"
+                                     class="row g-2"
+                                     th:style="${bonCommandeMere.fournisseur != null and responsableFournisseurActuel == null} ? '' : 'display:none'">
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control form-control-sm"
+                                               id="nouveauResponsableNom" name="nouveauResponsableNom"
+                                               placeholder="Nom">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control form-control-sm"
+                                               id="nouveauResponsablePrenom" name="nouveauResponsablePrenom"
+                                               placeholder="Prénom">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="tel" class="form-control form-control-sm"
+                                               id="nouveauResponsableContact" name="nouveauResponsableContact"
+                                               placeholder="Contact">
+                                    </div>
+                                </div>
+                                <small class="text-muted"
+                                       id="responsableHint"
+                                       th:style="${bonCommandeMere.fournisseur != null and responsableFournisseurActuel == null} ? '' : 'display:none'">
+                                    Aucun responsable affecté à ce fournisseur — saisissez-le ci-dessus, il sera automatiquement créé et affecté.
+                                </small>
                             </div>
                         </div>
 
@@ -309,24 +352,109 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+    document.addEventListener("DOMContentLoaded", function () {
+        const form = document.getElementById("formSauvegarderBC");
+        const inputPhone = document.getElementById("nouveauResponsableContact");
+
+        const iti = window.intlTelInput(inputPhone, {
+            initialCountry: "mg",
+            separateDialCode: true,
+            nationalMode: true,
+            formatOnDisplay: true,
+            autoPlaceholder: "polite",
+            utilsScript: "https://unpkg.com/intl-tel-input@17.0.19/build/js/utils.js"
+        });
+
+        // ---------- Validation rouge/vert (inputs + textarea + téléphone) ----------
+        const fields = form.querySelectorAll("input, textarea");
+        fields.forEach(el => {
+            const evt = (el.type === "tel" || el.tagName === "SELECT") ? "change" : "input";
+            el.addEventListener(evt, function () {
+                if (this.checkValidity()) {
+                    this.classList.remove("is-invalid");
+                    this.classList.add("is-valid");
+                } else {
+                    this.classList.remove("is-valid");
+                    this.classList.add("is-invalid");
+                }
+            });
+        });
+
+        // Validation spécifique téléphone (intlTelInput)
+        function updatePhoneValidity() {
+            // iti.isValidNumber() gère les pays/format
+            const ok = inputPhone.value.trim().length > 0 && iti.isValidNumber();
+            if (ok) {
+                inputPhone.classList.remove("is-invalid");
+                inputPhone.classList.add("is-valid");
+            } else {
+                inputPhone.classList.remove("is-valid");
+                inputPhone.classList.add("is-invalid");
+            }
+            return ok;
+        }
+        inputPhone.addEventListener("blur", updatePhoneValidity);
+        inputPhone.addEventListener("keyup", updatePhoneValidity);
+        inputPhone.addEventListener("change", updatePhoneValidity);
+    });
 
     // Global : accessible partout
+    // Chaque élément attendu : { id, nom, responsableFournisseurId, responsableNom }
     const fournisseurs = /*[[${fournisseurs}]]*/ [];
 
     // ── Autocomplete fournisseur ──────────────────────────────────────────────
     (function () {
-        const input  = document.getElementById("fournisseurInput");
-        const list   = document.getElementById("fournisseurList");
-        const hidden = document.getElementById("fournisseurId");
+        const input      = document.getElementById("fournisseurInput");
+        const list       = document.getElementById("fournisseurList");
+        const hidden     = document.getElementById("fournisseurId");
+        const respInput  = document.getElementById("responsableFournisseurInput");
+        const respHidden = document.getElementById("responsableFournisseurIdInput");
+        const nouveauBlock   = document.getElementById("nouveauResponsableBlock");
+        const responsableHint = document.getElementById("responsableHint");
+        const nouveauNom      = document.getElementById("nouveauResponsableNom");
+        const nouveauPrenom   = document.getElementById("nouveauResponsablePrenom");
+        const nouveauContact  = document.getElementById("nouveauResponsableContact");
 
         if (!input || !list || !hidden) return;
 
         function clearList() { list.innerHTML = ""; }
 
+        /**
+         * Bascule l'affichage du bloc "Responsable fournisseur" :
+         *  - si un responsable est déjà affecté  -> champ lecture seule avec son nom
+         *  - sinon                                -> champs de saisie Nom / Prénom / Contact
+         */
+        function toggleResponsableUI(hasResponsable, nomAffiche) {
+            if (hasResponsable) {
+                if (respInput) {
+                    respInput.style.display = "";
+                    respInput.value = nomAffiche || "";
+                }
+                if (nouveauBlock) nouveauBlock.style.display = "none";
+                if (responsableHint) responsableHint.style.display = "none";
+                if (nouveauNom)     nouveauNom.value = "";
+                if (nouveauPrenom)  nouveauPrenom.value = "";
+                if (nouveauContact) nouveauContact.value = "";
+            } else {
+                if (respInput) {
+                    respInput.style.display = "none";
+                    respInput.value = "";
+                }
+                if (nouveauBlock) nouveauBlock.style.display = "";
+                if (responsableHint) responsableHint.style.display = "";
+                if (respHidden) respHidden.value = "";
+            }
+        }
+
         input.addEventListener("input", function () {
             const q = this.value.toLowerCase().trim();
             clearList();
             hidden.value = "";
+            if (respHidden) respHidden.value = "";
+            // Tant qu'aucun fournisseur n'est confirmé, on masque tout le bloc responsable
+            if (respInput) respInput.style.display = "none";
+            if (nouveauBlock) nouveauBlock.style.display = "none";
+            if (responsableHint) responsableHint.style.display = "none";
             if (q.length < 2) return;
 
             fournisseurs
@@ -340,6 +468,8 @@
                     item.addEventListener("click", () => {
                         input.value = f.nom;
                         hidden.value = f.id;
+                        if (respHidden) respHidden.value = f.responsableFournisseurId || "";
+                        toggleResponsableUI(!!f.responsableFournisseurId, f.responsableNom);
                         clearList();
                     });
                     list.appendChild(item);

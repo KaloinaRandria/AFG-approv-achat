@@ -18,7 +18,7 @@ public class ResponsableFournisseur {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private int id;
 
     @ManyToOne
     @JoinColumn(name = "id_fournisseur")
