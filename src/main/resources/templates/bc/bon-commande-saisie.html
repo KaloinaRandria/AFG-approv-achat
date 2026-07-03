@@ -36,7 +36,7 @@
                             <div class="col-md-6">
                                 <label for="service" class="form-label"><strong>Service</strong></label>
                                 <input type="text" class="form-control" id="service" name="service"
-                                th:value="${bonCommandeMere.contacts != null and !bonCommandeMere.contacts.isEmpty() and bonCommandeMere.contacts.get(0).utilisateur != null and bonCommandeMere.contacts.get(0).utilisateur.service != null ? bonCommandeMere.contacts.get(0).utilisateur.service.libelle : ''}" disabled>
+                                th:value="${bcContacts.getFirst().utilisateur.service.libelle}" disabled>
                             </div>
                             <div class="col-md-2">
                                 <label for="statut" class="form-label"><strong>Statut</strong></label>

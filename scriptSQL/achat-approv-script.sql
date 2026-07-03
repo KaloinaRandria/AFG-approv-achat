@@ -32,6 +32,19 @@ create sequence s_bc_mere
     no maxvalue
     cache 1;
 
+create sequence s_numero_bc
+start with 600
+increment by 1
+no minvalue
+no maxvalue
+cache 1;
+
+-- table pour generer les numero BC
+CREATE TABLE compteur_bc (
+                             annee INTEGER PRIMARY KEY,
+                             dernier_numero INTEGER NOT NULL
+);
+
 -- View Pour afficher l'état du stock
 CREATE OR REPLACE VIEW v_etat_stock AS
 SELECT

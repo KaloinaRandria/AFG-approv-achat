@@ -246,7 +246,7 @@ public class BonCommandeController {
 
     private BonCommandeMere initialiserBonCommandeDepuisDemande(DemandeMere demandeMere, Utilisateur utilisateur) {
         BonCommandeMere bonCommandeMere = new BonCommandeMere();
-        bonCommandeMere.setNumero("BC-" + demandeMere.getId());
+        bonCommandeMere.setNumero(idGenerator.generateNumeroBC());
         bonCommandeMere.setDateCreation(LocalDateTime.now());
         bonCommandeMere.setLieuLivraison("");
         bonCommandeMere.setReferenceFournisseur("");

@@ -28,6 +28,7 @@ import java.util.List;
 public class BonCommandeMere {
     @Id @Column(name = "id_bc_mere")
     String id;
+    @Column(unique = true)
     String numero;
     String description;
     String referenceFournisseur;
