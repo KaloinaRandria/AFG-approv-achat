@@ -1,7 +1,7 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.exception.FournisseurAlreadyExistsException;
-import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.service.FournisseurService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.access.prepost.PreAuthorize;

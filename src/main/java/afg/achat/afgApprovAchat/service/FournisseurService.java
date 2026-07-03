@@ -1,11 +1,10 @@
 package afg.achat.afgApprovAchat.service;
 
 import afg.achat.afgApprovAchat.exception.FournisseurAlreadyExistsException;
-import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.util.FournisseurHistorique;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.FournisseurRepo;
-import afg.achat.afgApprovAchat.service.util.DeviseService;
 import afg.achat.afgApprovAchat.service.util.FournisseurHistoriqueService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;

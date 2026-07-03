@@ -1,6 +1,6 @@
 package afg.achat.afgApprovAchat.controller;
 
-import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
