@@ -92,6 +92,7 @@ public class BonCommandeController {
             @RequestParam(required = false) String numero,
             @RequestParam(required = false) String dateLivraisonPrevue,
             @RequestParam(name = "fournisseurs", required = false) String fournisseurId,
+            @RequestParam(required = false) String actionResponsable, // "update", "new" ou vide
             @RequestParam(required = false) String responsableFournisseurId,
             @RequestParam(required = false) String nouveauResponsableNom,
             @RequestParam(required = false) String nouveauResponsablePrenom,
@@ -140,14 +141,49 @@ public class BonCommandeController {
                 Fournisseur fournisseur = fournisseurService.getById(Integer.parseInt(fournisseurId));
                 bonCommandeMere.setFournisseur(fournisseur);
 
-                if (responsableFournisseurId != null && !responsableFournisseurId.isEmpty()) {
-                    // Un responsable existant a été sélectionné
-                    responsableFournisseurService.getById(Long.parseLong(responsableFournisseurId))
+                boolean nouveauxChampsRenseignes = nouveauResponsableNom != null && !nouveauResponsableNom.isBlank()
+                        && nouveauResponsablePrenom != null && !nouveauResponsablePrenom.isBlank();
+
+                if ("update".equals(actionResponsable)
+                        && responsableFournisseurId != null && !responsableFournisseurId.isEmpty()
+                        && nouveauxChampsRenseignes) {
+                    // Cas : on corrige les infos du responsable déjà affecté (même personne)
+                    ResponsableFournisseur rfExistant = responsableFournisseurService
+                            .getById(Integer.parseInt(responsableFournisseurId))
+                            .orElseThrow(() -> new IllegalArgumentException("Affectation responsable introuvable"));
+
+                    Responsable responsable = rfExistant.getResponsable();
+                    responsable.setNom(nouveauResponsableNom.trim());
+                    responsable.setPrenom(nouveauResponsablePrenom.trim());
+                    if (nouveauResponsableContact != null && !nouveauResponsableContact.isBlank()) {
+                        responsable.setContact(nouveauResponsableContact.trim());
+                    }
+                    responsableService.save(responsable);
+                    bonCommandeMere.setResponsableFournisseur(rfExistant);
+
+                } else if ("new".equals(actionResponsable) && nouveauxChampsRenseignes) {
+                    // Cas : on affecte une toute nouvelle personne (nouvel historique d'affectation)
+                    Responsable responsable = new Responsable();
+                    responsable.setNom(nouveauResponsableNom.trim());
+                    responsable.setPrenom(nouveauResponsablePrenom.trim());
+                    responsable.setContact(nouveauResponsableContact != null ? nouveauResponsableContact.trim() : null);
+                    Responsable responsableSauvegarde = responsableService.save(responsable);
+
+                    ResponsableFournisseur rf = new ResponsableFournisseur();
+                    rf.setFournisseur(fournisseur);
+                    rf.setResponsable(responsableSauvegarde);
+                    rf.setDateAffectation(LocalDate.now());
+                    ResponsableFournisseur rfSauvegarde = responsableFournisseurService.save(rf);
+
+                    bonCommandeMere.setResponsableFournisseur(rfSauvegarde);
+
+                } else if (responsableFournisseurId != null && !responsableFournisseurId.isEmpty()) {
+                    // Cas normal : responsable existant sélectionné, aucune modification
+                    responsableFournisseurService.getById(Integer.parseInt(responsableFournisseurId))
                             .ifPresent(bonCommandeMere::setResponsableFournisseur);
 
-                } else if (nouveauResponsableNom != null && !nouveauResponsableNom.isBlank()
-                        && nouveauResponsablePrenom != null && !nouveauResponsablePrenom.isBlank()) {
-                    // Aucun responsable affecté -> on le crée et on l'affecte au fournisseur
+                } else if (nouveauxChampsRenseignes) {
+                    // Cas initial : aucun responsable affecté -> création (comportement existant)
                     Responsable responsable = new Responsable();
                     responsable.setNom(nouveauResponsableNom.trim());
                     responsable.setPrenom(nouveauResponsablePrenom.trim());
@@ -275,11 +311,12 @@ public class BonCommandeController {
             List<FournisseurAutocompleteDTO> fournisseursDTO = Arrays.stream(fournisseurService.getAllFournisseurs())
                     .map(f -> {
                         var respOpt = responsableFournisseurService.getResponsableActuel(f.getId());
+                        Integer rfId = respOpt.map(ResponsableFournisseur::getId).orElse(null);
                         Integer respId = respOpt.map(rf -> rf.getResponsable().getId()).orElse(null);
                         String respNom = respOpt
                                 .map(rf -> rf.getResponsable().getPrenom() + " " + rf.getResponsable().getNom())
                                 .orElse("");
-                        return new FournisseurAutocompleteDTO(f.getId(), f.getNom(), respId, respNom);
+                        return new FournisseurAutocompleteDTO(f.getId(), f.getNom(), rfId, respId, respNom);
                     })
                     .toList();
             model.addAttribute("fournisseurs", fournisseursDTO);

@@ -75,20 +75,42 @@
                             <div class="col-md-8">
                                 <label class="form-label"><strong>Responsable fournisseur</strong></label>
 
-                                <!-- Cas 1 : un responsable est déjà affecté -> affichage lecture seule -->
-                                <input type="text"
-                                       class="form-control"
-                                       id="responsableFournisseurInput"
-                                       disabled
-                                       th:style="${responsableFournisseurActuel != null} ? '' : 'display:none'"
-                                       th:value="${responsableFournisseurActuel != null ? (responsableFournisseurActuel.responsable.prenom + ' ' + responsableFournisseurActuel.responsable.nom) : ''}">
+                                <!-- Cas 1 : un responsable est déjà affecté -> affichage lecture seule + bouton Modifier -->
+                                <div id="responsableAffecteBlock"
+                                     class="input-group"
+                                     th:style="${responsableFournisseurActuel != null} ? '' : 'display:none'">
+                                    <input type="text"
+                                           class="form-control"
+                                           id="responsableFournisseurInput"
+                                           disabled
+                                           th:value="${responsableFournisseurActuel != null ? (responsableFournisseurActuel.responsable.prenom + ' ' + responsableFournisseurActuel.responsable.nom) : ''}">
+                                    <button type="button" class="btn btn-outline-secondary" id="btnModifierResponsable">
+                                        <i class="bi bi-pencil"></i> Modifier
+                                    </button>
+                                </div>
                                 <input type="hidden" name="responsableFournisseurId" id="responsableFournisseurIdInput"
                                        th:value="${responsableFournisseurActuel != null ? responsableFournisseurActuel.id : ''}">
+                                <!-- ID du responsable (personne) actuellement affecté, utile pour distinguer "mise à jour" vs "nouvelle personne" -->
+                                <input type="hidden" id="responsableActuelPersonneId"
+                                       th:value="${responsableFournisseurActuel != null ? responsableFournisseurActuel.responsable.id : ''}">
 
-                                <!-- Cas 2 : aucun responsable affecté -> saisie directe, sera créé et affecté à la sauvegarde -->
+                                <!-- Cas 2 : saisie/édition -> visible si pas de responsable, ou si "Modifier" cliqué -->
                                 <div id="nouveauResponsableBlock"
-                                     class="row g-2"
+                                     class="row g-2 mt-1"
                                      th:style="${bonCommandeMere.fournisseur != null and responsableFournisseurActuel == null} ? '' : 'display:none'">
+
+                                    <!-- Choix affiché seulement en mode "modification" d'un responsable existant -->
+                                    <div class="col-12" id="choixModeResponsable" style="display:none;">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="modeResponsable" id="modeCorrigerContact" value="update" checked>
+                                            <label class="form-check-label" for="modeCorrigerContact">Corriger les infos de ce responsable</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="modeResponsable" id="modeNouvelleAffectation" value="new">
+                                            <label class="form-check-label" for="modeNouvelleAffectation">Affecter une autre personne</label>
+                                        </div>
+                                    </div>
+
                                     <div class="col-md-4">
                                         <input type="text" class="form-control form-control-sm"
                                                id="nouveauResponsableNom" name="nouveauResponsableNom"
@@ -104,7 +126,14 @@
                                                id="nouveauResponsableContact" name="nouveauResponsableContact"
                                                placeholder="Contact">
                                     </div>
+                                    <div class="col-12" id="annulerModifBlock" style="display:none;">
+                                        <button type="button" class="btn btn-link btn-sm p-0" id="btnAnnulerModifResponsable">Annuler la modification</button>
+                                    </div>
                                 </div>
+
+                                <!-- Champ envoyé au contrôleur pour indiquer l'action voulue -->
+                                <input type="hidden" name="actionResponsable" id="actionResponsableInput" value="">
+
                                 <small class="text-muted"
                                        id="responsableHint"
                                        th:style="${bonCommandeMere.fournisseur != null and responsableFournisseurActuel == null} ? '' : 'display:none'">
@@ -402,11 +431,12 @@
     // Chaque élément attendu : { id, nom, responsableFournisseurId, responsableNom }
     const fournisseurs = /*[[${fournisseurs}]]*/ [];
 
-    // ── Autocomplete fournisseur ──────────────────────────────────────────────
+    // ── Autocomplete fournisseur + gestion responsable ────────────────────────
     (function () {
         const input      = document.getElementById("fournisseurInput");
         const list       = document.getElementById("fournisseurList");
         const hidden     = document.getElementById("fournisseurId");
+        const blockAffecte = document.getElementById("responsableAffecteBlock");
         const respInput  = document.getElementById("responsableFournisseurInput");
         const respHidden = document.getElementById("responsableFournisseurIdInput");
         const nouveauBlock   = document.getElementById("nouveauResponsableBlock");
@@ -414,20 +444,26 @@
         const nouveauNom      = document.getElementById("nouveauResponsableNom");
         const nouveauPrenom   = document.getElementById("nouveauResponsablePrenom");
         const nouveauContact  = document.getElementById("nouveauResponsableContact");
+        const choixMode      = document.getElementById("choixModeResponsable");
+        const annulerBlock   = document.getElementById("annulerModifBlock");
+        const actionInput    = document.getElementById("actionResponsableInput");
 
         if (!input || !list || !hidden) return;
 
         function clearList() { list.innerHTML = ""; }
 
-        /**
-         * Bascule l'affichage du bloc "Responsable fournisseur" :
-         *  - si un responsable est déjà affecté  -> champ lecture seule avec son nom
-         *  - sinon                                -> champs de saisie Nom / Prénom / Contact
-         */
+        function resetModeEdition() {
+            if (choixMode) choixMode.style.display = "none";
+            if (annulerBlock) annulerBlock.style.display = "none";
+            if (actionInput) actionInput.value = "";
+        }
+
         function toggleResponsableUI(hasResponsable, nomAffiche) {
+            resetModeEdition();
             if (hasResponsable) {
+                if (blockAffecte) blockAffecte.style.display = "";
                 if (respInput) {
-                    respInput.style.display = "";
+                    respInput.style.display = "";   // ← reset explicite, ne plus jamais laisser "none" traîner
                     respInput.value = nomAffiche || "";
                 }
                 if (nouveauBlock) nouveauBlock.style.display = "none";
@@ -436,10 +472,7 @@
                 if (nouveauPrenom)  nouveauPrenom.value = "";
                 if (nouveauContact) nouveauContact.value = "";
             } else {
-                if (respInput) {
-                    respInput.style.display = "none";
-                    respInput.value = "";
-                }
+                if (blockAffecte) blockAffecte.style.display = "none";
                 if (nouveauBlock) nouveauBlock.style.display = "";
                 if (responsableHint) responsableHint.style.display = "";
                 if (respHidden) respHidden.value = "";
@@ -451,10 +484,10 @@
             clearList();
             hidden.value = "";
             if (respHidden) respHidden.value = "";
-            // Tant qu'aucun fournisseur n'est confirmé, on masque tout le bloc responsable
-            if (respInput) respInput.style.display = "none";
+            if (blockAffecte) blockAffecte.style.display = "none";
             if (nouveauBlock) nouveauBlock.style.display = "none";
             if (responsableHint) responsableHint.style.display = "none";
+            resetModeEdition();
             if (q.length < 2) return;
 
             fournisseurs
@@ -478,6 +511,55 @@
 
         document.addEventListener("click", (e) => {
             if (!input.contains(e.target) && !list.contains(e.target)) clearList();
+        });
+    })();
+
+    // ── Bouton "Modifier" le responsable ──────────────────────────────────────
+    (function () {
+        const btnModifier   = document.getElementById("btnModifierResponsable");
+        const btnAnnuler    = document.getElementById("btnAnnulerModifResponsable");
+        const blockAffecte  = document.getElementById("responsableAffecteBlock");
+        const blockNouveau  = document.getElementById("nouveauResponsableBlock");
+        const choixMode     = document.getElementById("choixModeResponsable");
+        const annulerBlock  = document.getElementById("annulerModifBlock");
+        const inputNom      = document.getElementById("nouveauResponsableNom");
+        const inputPrenom   = document.getElementById("nouveauResponsablePrenom");
+        const inputContact  = document.getElementById("nouveauResponsableContact");
+        const actionInput   = document.getElementById("actionResponsableInput");
+        const respFournisseurInput = document.getElementById("responsableFournisseurInput");
+
+        if (!btnModifier) return;
+
+        btnModifier.addEventListener("click", function () {
+            const nomComplet = (respFournisseurInput.value || "").trim();
+            const parties = nomComplet.split(" ");
+            inputPrenom.value = parties[0] || "";
+            inputNom.value = parties.slice(1).join(" ") || "";
+
+            blockAffecte.style.display = "none";
+            blockNouveau.style.display = "";
+            choixMode.style.display = "";
+            annulerBlock.style.display = "";
+            actionInput.value = "update";
+        });
+
+        if (btnAnnuler) {
+            btnAnnuler.addEventListener("click", function () {
+                blockAffecte.style.display = "";
+                blockNouveau.style.display = "none";
+                choixMode.style.display = "none";
+                annulerBlock.style.display = "none";
+                actionInput.value = "";
+                inputNom.value = "";
+                inputPrenom.value = "";
+                inputContact.value = "";
+            });
+        }
+
+        document.querySelectorAll('input[name="modeResponsable"]').forEach(radio => {
+            radio.addEventListener("change", function () {
+                actionInput.value = this.value;
+            });
         });
     })();
 

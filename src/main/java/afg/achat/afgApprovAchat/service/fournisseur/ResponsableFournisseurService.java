@@ -17,7 +17,7 @@ public class ResponsableFournisseurService {
                 .findFirstByFournisseur_IdOrderByDateAffectationDesc(idFournisseur);
     }
 
-    public Optional<ResponsableFournisseur> getById(Long id) {
+    public Optional<ResponsableFournisseur> getById(int id) {
         return responsableFournisseurRepo.findById(id);
     }
 
