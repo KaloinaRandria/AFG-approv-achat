@@ -131,7 +131,7 @@ public class BonCommandeController {
             if (numero != null && !numero.isBlank()) {
                 bonCommandeMere.setNumero(numero.trim());
             } else if (bonCommandeMere.getNumero() == null || bonCommandeMere.getNumero().isBlank()) {
-                bonCommandeMere.setNumero("BC-" + demandeMereId);
+                bonCommandeMere.setNumero(idGenerator.generateNumeroBC());
             }
             if (dateLivraisonPrevue != null && !dateLivraisonPrevue.isEmpty()) {
                 bonCommandeMere.setDateLivraisonPrevue(LocalDate.parse(dateLivraisonPrevue).atStartOfDay());
@@ -248,7 +248,7 @@ public class BonCommandeController {
                 }
             }
 
-            redirectAttributes.addFlashAttribute("successMessage",
+            redirectAttributes.addFlashAttribute("ok",
                     "Bon de commande n° " + (bcSauvegardee.getNumero() != null ? bcSauvegardee.getNumero() : bcSauvegardee.getId()) + " sauvegardé avec succès avec " +
                     (demandeFilleIds != null ? demandeFilleIds.length : 0) + " ligne(s).");
             return "redirect:/bon-commande/" + bcSauvegardee.getId();
