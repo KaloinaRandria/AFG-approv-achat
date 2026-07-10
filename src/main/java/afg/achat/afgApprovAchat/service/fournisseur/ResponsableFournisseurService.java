@@ -22,6 +22,6 @@ public class ResponsableFournisseurService {
     }
 
     public ResponsableFournisseur save(ResponsableFournisseur responsableFournisseur) {
-        return responsableFournisseurRepo.save(responsableFournisseur);
+         return responsableFournisseurRepo.save(responsableFournisseur);
     }
 }

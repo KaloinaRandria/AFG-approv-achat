@@ -72,7 +72,7 @@
 
                         <div class="row mb-3">
                             <!-- Responsable fournisseur -->
-                            <div class="col-md-8">
+                            <div class="col-md-6">
                                 <label class="form-label"><strong>Responsable fournisseur</strong></label>
 
                                 <!-- Cas 1 : un responsable est déjà affecté -> affichage lecture seule + bouton Modifier -->
@@ -138,6 +138,60 @@
                                        id="responsableHint"
                                        th:style="${bonCommandeMere.fournisseur != null and responsableFournisseurActuel == null} ? '' : 'display:none'">
                                     Aucun responsable affecté à ce fournisseur — saisissez-le ci-dessus, il sera automatiquement créé et affecté.
+                                </small>
+                            </div>
+                            <!-- Adresse fournisseur -->
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>Adresse fournisseur</strong></label>
+
+                                <!-- Cas 1 : une adresse est déjà affectée -> lecture seule + bouton Modifier -->
+                                <div id="adresseAffecteeBlock"
+                                     class="input-group"
+                                     th:style="${adresseFournisseurActuel != null} ? '' : 'display:none'">
+                                    <input type="text"
+                                           class="form-control"
+                                           id="adresseFournisseurInput"
+                                           disabled
+                                           th:value="${adresseFournisseurActuel != null ? adresseFournisseurActuel.adresse.libelle : ''}">
+                                    <button type="button" class="btn btn-outline-secondary" id="btnModifierAdresse">
+                                        <i class="bi bi-pencil"></i> Modifier
+                                    </button>
+                                </div>
+                                <input type="hidden" name="adresseFournisseurId" id="adresseFournisseurIdInput"
+                                       th:value="${adresseFournisseurActuel != null ? adresseFournisseurActuel.id : ''}">
+
+                                <!-- Cas 2 : saisie/édition -->
+                                <div id="nouvelleAdresseBlock"
+                                     class="row g-2 mt-1"
+                                     th:style="${bonCommandeMere.fournisseur != null and adresseFournisseurActuel == null} ? '' : 'display:none'">
+
+                                    <div class="col-12" id="choixModeAdresse" style="display:none;">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="modeAdresse" id="modeCorrigerAdresse" value="update" checked>
+                                            <label class="form-check-label" for="modeCorrigerAdresse">Corriger cette adresse</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="modeAdresse" id="modeNouvelleAdresse" value="new">
+                                            <label class="form-check-label" for="modeNouvelleAdresse">Affecter une autre adresse</label>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-10">
+                                        <input type="text" class="form-control form-control-sm"
+                                               id="nouvelleAdresseLibelle" name="nouvelleAdresseLibelle"
+                                               placeholder="Adresse (libellé complet)">
+                                    </div>
+                                    <div class="col-12" id="annulerModifAdresseBlock" style="display:none;">
+                                        <button type="button" class="btn btn-link btn-sm p-0" id="btnAnnulerModifAdresse">Annuler la modification</button>
+                                    </div>
+                                </div>
+
+                                <input type="hidden" name="actionAdresse" id="actionAdresseInput" value="">
+
+                                <small class="text-muted"
+                                       id="adresseHint"
+                                       th:style="${bonCommandeMere.fournisseur != null and adresseFournisseurActuel == null} ? '' : 'display:none'">
+                                    Aucune adresse affectée à ce fournisseur — saisissez-la ci-dessus, elle sera automatiquement créée et affectée.
                                 </small>
                             </div>
                         </div>
@@ -447,6 +501,40 @@
         const choixMode      = document.getElementById("choixModeResponsable");
         const annulerBlock   = document.getElementById("annulerModifBlock");
         const actionInput    = document.getElementById("actionResponsableInput");
+        const blockAdresseAffectee = document.getElementById("adresseAffecteeBlock");
+        const adresseInput   = document.getElementById("adresseFournisseurInput");
+        const adresseHidden  = document.getElementById("adresseFournisseurIdInput");
+        const nouvelleAdresseBlock = document.getElementById("nouvelleAdresseBlock");
+        const adresseHint    = document.getElementById("adresseHint");
+        const champLibelle    = document.getElementById("nouvelleAdresseLibelle");
+        const choixModeAdresse   = document.getElementById("choixModeAdresse");
+        const annulerAdresseBlock = document.getElementById("annulerModifAdresseBlock");
+        const actionAdresseInput  = document.getElementById("actionAdresseInput");
+
+        function resetModeEditionAdresse() {
+            if (choixModeAdresse) choixModeAdresse.style.display = "none";
+            if (annulerAdresseBlock) annulerAdresseBlock.style.display = "none";
+            if (actionAdresseInput) actionAdresseInput.value = "";
+        }
+
+        function toggleAdresseUI(hasAdresse, libelleAffiche) {
+            resetModeEditionAdresse();
+            if (hasAdresse) {
+                if (blockAdresseAffectee) blockAdresseAffectee.style.display = "";
+                if (adresseInput) {
+                    adresseInput.style.display = "";
+                    adresseInput.value = libelleAffiche || "";
+                }
+                if (nouvelleAdresseBlock) nouvelleAdresseBlock.style.display = "none";
+                if (adresseHint) adresseHint.style.display = "none";
+                if (champLibelle) champLibelle.value = "";
+            } else {
+                if (blockAdresseAffectee) blockAdresseAffectee.style.display = "none";
+                if (nouvelleAdresseBlock) nouvelleAdresseBlock.style.display = "";
+                if (adresseHint) adresseHint.style.display = "";
+                if (adresseHidden) adresseHidden.value = "";
+            }
+        }
 
         if (!input || !list || !hidden) return;
 
@@ -488,6 +576,12 @@
             if (nouveauBlock) nouveauBlock.style.display = "none";
             if (responsableHint) responsableHint.style.display = "none";
             resetModeEdition();
+
+            if (adresseHidden) adresseHidden.value = "";
+            if (blockAdresseAffectee) blockAdresseAffectee.style.display = "none";
+            if (nouvelleAdresseBlock) nouvelleAdresseBlock.style.display = "none";
+            if (adresseHint) adresseHint.style.display = "none";
+            resetModeEditionAdresse();
             if (q.length < 2) return;
 
             fournisseurs
@@ -503,6 +597,9 @@
                         hidden.value = f.id;
                         if (respHidden) respHidden.value = f.responsableFournisseurId || "";
                         toggleResponsableUI(!!f.responsableFournisseurId, f.responsableNom);
+
+                        if (adresseHidden) adresseHidden.value = f.adresseFournisseurId || "";
+                        toggleAdresseUI(!!f.adresseFournisseurId, f.adresseLibelle);
                         clearList();
                     });
                     list.appendChild(item);
@@ -557,6 +654,48 @@
         }
 
         document.querySelectorAll('input[name="modeResponsable"]').forEach(radio => {
+            radio.addEventListener("change", function () {
+                actionInput.value = this.value;
+            });
+        });
+    })();
+
+    // ── Bouton "Modifier" l'adresse ────────────────────────────────────────────
+    (function () {
+        const btnModifier   = document.getElementById("btnModifierAdresse");
+        const btnAnnuler    = document.getElementById("btnAnnulerModifAdresse");
+        const blockAffectee = document.getElementById("adresseAffecteeBlock");
+        const blockNouvelle = document.getElementById("nouvelleAdresseBlock");
+        const choixMode     = document.getElementById("choixModeAdresse");
+        const annulerBlock  = document.getElementById("annulerModifAdresseBlock");
+        const champLibelle  = document.getElementById("nouvelleAdresseLibelle");
+        const actionInput   = document.getElementById("actionAdresseInput");
+        const adresseAffichee = document.getElementById("adresseFournisseurInput");
+
+        if (!btnModifier) return;
+
+        btnModifier.addEventListener("click", function () {
+            champLibelle.value = (adresseAffichee.value || "").trim();
+
+            blockAffectee.style.display = "none";
+            blockNouvelle.style.display = "";
+            choixMode.style.display = "";
+            annulerBlock.style.display = "";
+            actionInput.value = "update";
+        });
+
+        if (btnAnnuler) {
+            btnAnnuler.addEventListener("click", function () {
+                blockAffectee.style.display = "";
+                blockNouvelle.style.display = "none";
+                choixMode.style.display = "none";
+                annulerBlock.style.display = "none";
+                actionInput.value = "";
+                champLibelle.value = "";
+            });
+        }
+
+        document.querySelectorAll('input[name="modeAdresse"]').forEach(radio => {
             radio.addEventListener("change", function () {
                 actionInput.value = this.value;
             });

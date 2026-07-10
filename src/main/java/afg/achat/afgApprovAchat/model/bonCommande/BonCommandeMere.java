@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.model.bonCommande;
 
+import afg.achat.afgApprovAchat.model.fournisseur.AdresseFournisseur;
 import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.fournisseur.ResponsableFournisseur;
@@ -38,6 +39,9 @@ public class BonCommandeMere {
     @ManyToOne
     @JoinColumn(name = "id_responsable_fournisseur", referencedColumnName = "id" )
     private ResponsableFournisseur responsableFournisseur;
+    @ManyToOne
+    @JoinColumn(name = "id_adresse_fournisseur")
+    private AdresseFournisseur adresseFournisseur;
     @ManyToOne @JoinColumn(name = "id_createur" , referencedColumnName = "id_utilisateur")
     Utilisateur createur;
     @OneToMany(mappedBy = "bonCommandeMere", cascade = CascadeType.ALL, orphanRemoval = true)

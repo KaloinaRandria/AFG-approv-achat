@@ -1,21 +1,17 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.DTO.FournisseurAutocompleteDTO;
-import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
+import afg.achat.afgApprovAchat.model.fournisseur.*;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
-import afg.achat.afgApprovAchat.model.fournisseur.Responsable;
-import afg.achat.afgApprovAchat.model.fournisseur.ResponsableFournisseur;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
-import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
+import afg.achat.afgApprovAchat.service.fournisseur.*;
 import afg.achat.afgApprovAchat.service.bonCommande.BcContactService;
 import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeService;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
-import afg.achat.afgApprovAchat.service.fournisseur.ResponsableFournisseurService;
-import afg.achat.afgApprovAchat.service.fournisseur.ResponsableService;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,6 +41,8 @@ public class BonCommandeController {
     private final UtilisateurService utilisateurService;
     private final BcContactService bcContactService;
     private final ResponsableFournisseurService responsableFournisseurService;
+    private final AdresseFournisseurService adresseFournisseurService;
+    private final AdresseService adresseService;
     private final ResponsableService responsableService;
     private final IdGenerator idGenerator;
 
@@ -103,6 +101,9 @@ public class BonCommandeController {
             @RequestParam(required = false) Double montantTTC,
             @RequestParam(required = false) Double tauxTVA,
             @RequestParam(required = false) Double remise,
+            @RequestParam(required = false) String actionAdresse, // "update", "new" ou vide
+            @RequestParam(required = false) String adresseFournisseurId,
+            @RequestParam(required = false) String nouvelleAdresseLibelle,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
         try {
@@ -197,6 +198,55 @@ public class BonCommandeController {
                     ResponsableFournisseur rfSauvegarde = responsableFournisseurService.save(rf);
 
                     bonCommandeMere.setResponsableFournisseur(rfSauvegarde);
+                }
+
+                boolean nouvelleAdresseRenseignee = nouvelleAdresseLibelle != null && !nouvelleAdresseLibelle.isBlank();
+
+                if ("update".equals(actionAdresse)
+                        && adresseFournisseurId != null && !adresseFournisseurId.isEmpty()
+                        && nouvelleAdresseRenseignee) {
+                    // Cas : on corrige l'adresse déjà affectée
+                    AdresseFournisseur afExistante = adresseFournisseurService
+                            .getById(Integer.parseInt(adresseFournisseurId))
+                            .orElseThrow(() -> new IllegalArgumentException("Affectation adresse introuvable"));
+
+                    Adresse adresse = afExistante.getAdresse();
+                    adresse.setLibelle(nouvelleAdresseLibelle.trim());
+                    adresseService.save(adresse);
+                    bonCommandeMere.setAdresseFournisseur(afExistante);
+
+                } else if ("new".equals(actionAdresse) && nouvelleAdresseRenseignee) {
+                    // Cas : on affecte une toute nouvelle adresse (nouvel historique)
+                    Adresse adresse = new Adresse();
+                    adresse.setLibelle(nouvelleAdresseLibelle.trim());
+                    Adresse adresseSauvegardee = adresseService.save(adresse);
+
+                    AdresseFournisseur af = new AdresseFournisseur();
+                    af.setFournisseur(fournisseur);
+                    af.setAdresse(adresseSauvegardee);
+                    af.setDateAffectation(LocalDate.now());
+                    AdresseFournisseur afSauvegardee = adresseFournisseurService.save(af);
+
+                    bonCommandeMere.setAdresseFournisseur(afSauvegardee);
+
+                } else if (adresseFournisseurId != null && !adresseFournisseurId.isEmpty()) {
+                    // Cas normal : adresse existante sélectionnée, aucune modification
+                    adresseFournisseurService.getById(Integer.parseInt(adresseFournisseurId))
+                            .ifPresent(bonCommandeMere::setAdresseFournisseur);
+
+                } else if (nouvelleAdresseRenseignee) {
+                    // Cas initial : aucune adresse affectée -> création
+                    Adresse adresse = new Adresse();
+                    adresse.setLibelle(nouvelleAdresseLibelle.trim());
+                    Adresse adresseSauvegardee = adresseService.save(adresse);
+
+                    AdresseFournisseur af = new AdresseFournisseur();
+                    af.setFournisseur(fournisseur);
+                    af.setAdresse(adresseSauvegardee);
+                    af.setDateAffectation(LocalDate.now());
+                    AdresseFournisseur afSauvegardee = adresseFournisseurService.save(af);
+
+                    bonCommandeMere.setAdresseFournisseur(afSauvegardee);
                 }
             }
             if (referenceFournisseur != null && !referenceFournisseur.isEmpty()) {
@@ -316,10 +366,30 @@ public class BonCommandeController {
                         String respNom = respOpt
                                 .map(rf -> rf.getResponsable().getPrenom() + " " + rf.getResponsable().getNom())
                                 .orElse("");
-                        return new FournisseurAutocompleteDTO(f.getId(), f.getNom(), rfId, respId, respNom);
+
+                        var adrOpt = adresseFournisseurService.getAdresseActuel(f.getId());
+                        Integer afId = adrOpt.map(AdresseFournisseur::getId).orElse(null);
+                        Integer adrId = adrOpt.map(af -> af.getAdresse().getId()).orElse(null);
+                        String adrLibelle = adrOpt.map(af -> af.getAdresse().getLibelle()).orElse("");
+
+                        return new FournisseurAutocompleteDTO(
+                                f.getId(), f.getNom(),
+                                rfId, respId, respNom,
+                                afId, adrId, adrLibelle
+                        );
                     })
                     .toList();
             model.addAttribute("fournisseurs", fournisseursDTO);
+
+            if (bonCommandeMere.getFournisseur() != null) {
+                responsableFournisseurService
+                        .getResponsableActuel(bonCommandeMere.getFournisseur().getId())
+                        .ifPresent(respActuel -> model.addAttribute("responsableFournisseurActuel", respActuel));
+
+                adresseFournisseurService
+                        .getAdresseActuel(bonCommandeMere.getFournisseur().getId())
+                        .ifPresent(adrActuel -> model.addAttribute("adresseFournisseurActuel", adrActuel));
+            }
 
             // --- Pré-remplissage du responsable si un fournisseur est déjà sélectionné ---
             if (bonCommandeMere.getFournisseur() != null) {
