@@ -1,6 +1,5 @@
 package afg.achat.afgApprovAchat.configuration;
 
-import afg.achat.afgApprovAchat.configuration.ActiveDirectory.User;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +31,7 @@ public class MyAuthenticationProvider implements AuthenticationProvider{
 		String email = arg0.getName().trim() ;
 		String password = arg0.getCredentials().toString().trim() ;
 		try {
-			
+
 			//System.out.println("------------");
 			/*if(email.startsWith("test") && password.equals(email)) {
 				Collaborateur user = ur.findByEmailActif(email);
