@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.email;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Cipher;
@@ -17,12 +18,14 @@ public class PasswordCryptoUtil {
 
     private final SecretKeySpec secretKey;
 
-    public PasswordCryptoUtil() {
-        // Clé récupérée depuis une variable d'environnement système (JAMAIS commit dans le code)
-        String cle = System.getenv("MAIL_ENCRYPTION_KEY");
+    // La clé est désormais lue depuis application-secret.properties (fichier gitignoré,
+    // packagé dans le WAR au build). Voir application-secret.properties.example pour le modèle.
+    public PasswordCryptoUtil(@Value("${mail.encryption.key}") String cle) {
         if (cle == null || cle.length() != 32) {
             throw new IllegalStateException(
-                    "MAIL_ENCRYPTION_KEY doit être définie en variable d'environnement (32 caractères, AES-256)");
+                    "La propriété 'mail.encryption.key' doit faire exactement 32 caractères. " +
+                            "Vérifiez que application-secret.properties existe bien dans src/main/resources " +
+                            "(copiez-le depuis application-secret.properties.example) et contient une clé valide.");
         }
         this.secretKey = new SecretKeySpec(cle.getBytes(), "AES");
     }
