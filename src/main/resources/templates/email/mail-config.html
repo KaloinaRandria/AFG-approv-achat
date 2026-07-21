@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Configuration du mot de passe mail</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <meta name="context-path" th:content="@{/}" />
+</head>
+
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+
+<div class="main-content">
+    <section>
+        <!-- En-tête -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-key me-3 icon-gradient-blue"></i> Configuration du mot de passe mail
+            </h1>
+            <div>
+                <a th:href="@{/admin/mail-config}" class="btn btn-gradient-blue me-2">
+                    <i class="fas fa-sync me-2"></i>Actualiser
+                </a>
+            </div>
+        </div>
+
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <!-- Alerte succès -->
+        <div th:if="${param.succes}" class="alert alert-success d-flex align-items-center mb-4" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            Le mot de passe du compte mail a été mis à jour avec succès.
+        </div>
+
+        <!-- Alerte expiration proche -->
+        <div th:if="${expirationProche}" class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Le mot de passe approche de son échéance de renouvellement (rotation obligatoire tous les 3 mois).
+            Pensez à le mettre à jour prochainement.
+        </div>
+
+        <!-- Erreur -->
+        <div th:if="${erreur}" class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+            <i class="fas fa-times-circle me-2"></i>
+            <span th:text="${erreur}"></span>
+        </div>
+
+        <!-- Carte info dernière modification -->
+        <div class="card border-0 shadow-sm mb-4" th:if="${derniereModification != null}">
+            <div class="card-body d-flex align-items-center">
+                <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                    <i class="fas fa-clock fa-lg icon-gradient-blue"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-1">Dernière modification</h6>
+                    <p class="text-muted mb-0"
+                       th:text="${#temporals.format(derniereModification, 'dd/MM/yyyy à HH:mm')}"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Carte formulaire -->
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold text-gradient-blue">
+                    <i class="fas fa-lock me-2 icon-gradient-blue"></i> Nouveau mot de passe
+                </h5>
+                <p class="text-muted mb-0 mt-1">
+                    Le mot de passe du compte mail de notification doit être renouvelé tous les 3 mois pour
+                    des raisons de sécurité.
+                </p>
+            </div>
+
+            <div class="card-body">
+                <form th:action="@{/admin/mail-config/update}" method="post" id="mailConfigForm"
+                      class="needs-validation" novalidate>
+
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Compte mail
+                        </h6>
+
+                        <div class="row">
+                            <!-- Adresse mail -->
+                            <div class="col-md-12 mb-3">
+                                <label for="username" class="form-label fw-bold required-field">
+                                    Adresse mail
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-envelope icon-gradient-blue"></i>
+                                    </span>
+                                    <input type="email"
+                                           class="form-control"
+                                           id="username"
+                                           name="username"
+                                           value="mada_afgbank.alerts@afgbank.mg"
+                                           required>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> Compte utilisé pour l'envoi des
+                                    notifications
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-key me-2 icon-gradient-blue"></i> Nouveau mot de passe
+                        </h6>
+
+                        <div class="row">
+                            <!-- Nouveau mot de passe -->
+                            <div class="col-md-6 mb-3">
+                                <label for="nouveauMotDePasse" class="form-label fw-bold required-field">
+                                    Nouveau mot de passe
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-lock icon-gradient-blue"></i>
+                                    </span>
+                                    <input type="password"
+                                           class="form-control"
+                                           id="nouveauMotDePasse"
+                                           name="nouveauMotDePasse"
+                                           minlength="8"
+                                           required>
+                                    <span class="input-group-text bg-light toggle-password"
+                                          data-target="nouveauMotDePasse" style="cursor:pointer;">
+                                        <i class="fas fa-eye"></i>
+                                    </span>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i> 8 caractères minimum
+                                </div>
+                            </div>
+
+                            <!-- Confirmation -->
+                            <div class="col-md-6 mb-3">
+                                <label for="confirmationMotDePasse" class="form-label fw-bold required-field">
+                                    Confirmation
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-lock icon-gradient-blue"></i>
+                                    </span>
+                                    <input type="password"
+                                           class="form-control"
+                                           id="confirmationMotDePasse"
+                                           name="confirmationMotDePasse"
+                                           minlength="8"
+                                           required>
+                                    <span class="input-group-text bg-light toggle-password"
+                                          data-target="confirmationMotDePasse" style="cursor:pointer;">
+                                        <i class="fas fa-eye"></i>
+                                    </span>
+                                </div>
+                                <div class="form-text mt-1" id="matchFeedback">
+                                    <i class="fas fa-info-circle me-1"></i> Doit être identique au mot de passe saisi
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-gradient-green px-4 py-2" id="btnPreview">
+                            <i class="fas fa-eye me-2"></i>Aperçu & confirmer
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        <!-- Historique -->
+        <div class="mt-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h6 class="mb-0 fw-bold text-gradient-blue">
+                        <i class="fas fa-history me-2 icon-gradient-blue"></i> Historique des modifications
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th class="text-muted">Date</th>
+                                <th class="text-muted">Compte</th>
+                                <th class="text-muted">Modifié par</th>
+                                <th class="text-muted text-center">Statut</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="h : ${historique}">
+                                <td th:text="${#temporals.format(h.dateModification, 'dd/MM/yyyy HH:mm')}"></td>
+                                <td th:text="${h.username}"></td>
+                                <td th:text="${h.modifiePar != null ? h.modifiePar.nom + ' ' + h.modifiePar.prenom : '—'}"></td>
+                                <td class="text-center">
+                                        <span th:if="${h.actif}" class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Actif
+                                        </span>
+                                    <span th:unless="${h.actif}" class="badge bg-secondary">
+                                            Historique
+                                        </span>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(historique)}">
+                                <td colspan="4" class="text-center text-muted py-3">
+                                    Aucune modification enregistrée pour l'instant.
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations importantes -->
+        <div class="mt-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h6 class="mb-0 fw-bold text-gradient-blue">
+                        <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations importantes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-flex mb-3">
+                                <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-3">
+                                    <i class="fas fa-shield-alt fa-lg icon-gradient-blue"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Stockage sécurisé</h6>
+                                    <p class="text-muted mb-0">Le mot de passe est chiffré (AES-256) avant
+                                        enregistrement en base</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex mb-3">
+                                <div class="rounded-circle bg-success bg-opacity-10 p-2 me-3">
+                                    <i class="fas fa-bolt fa-lg icon-gradient-blue"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Application immédiate</h6>
+                                    <p class="text-muted mb-0">Aucun redémarrage du serveur n'est nécessaire</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex mb-3">
+                                <div class="rounded-circle bg-warning bg-opacity-10 p-2 me-3">
+                                    <i class="fas fa-calendar-alt fa-lg icon-gradient-blue"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Rotation périodique</h6>
+                                    <p class="text-muted mb-0">Renouvellement requis tous les 3 mois</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex mb-3">
+                                <div class="rounded-circle bg-danger bg-opacity-10 p-2 me-3">
+                                    <i class="fas fa-user-shield fa-lg icon-gradient-blue"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Accès restreint</h6>
+                                    <p class="text-muted mb-0">Réservé aux comptes ayant le rôle IT</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </section>
+</div>
+
+<!-- Modal Aperçu avant enregistrement -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title" id="previewModalLabel">
+                    <i class="fas fa-eye me-2 icon-gradient-blue"></i>Confirmer la mise à jour
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="table-responsive">
+                    <table class="table table-borderless align-middle mb-0">
+                        <tbody>
+                        <tr>
+                            <th class="text-muted w-25">
+                                <i class="fas fa-envelope me-2 icon-gradient-blue"></i>Adresse mail
+                            </th>
+                            <td id="pvUsername" class="fw-semibold"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">
+                                <i class="fas fa-key me-2 icon-gradient-blue"></i>Mot de passe
+                            </th>
+                            <td>
+                                <span class="text-muted">•••••••• (masqué pour votre sécurité)</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-warning mt-3 mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Cette action remplacera immédiatement le mot de passe utilisé pour l'envoi des notifications.
+                    Assurez-vous que le nouveau mot de passe est correct.
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-pen me-1"></i>Modifier
+                </button>
+                <button type="submit" class="btn btn-gradient-green" form="mailConfigForm">
+                    <i class="fas fa-save me-1"></i>Confirmer et mettre à jour
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script th:inline="none">
+    /*<![CDATA[*/
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('mailConfigForm');
+        const pwd = document.getElementById('nouveauMotDePasse');
+        const confirmPwd = document.getElementById('confirmationMotDePasse');
+        const matchFeedback = document.getElementById('matchFeedback');
+
+        function passwordsMatch() {
+            return pwd.value.length > 0 && pwd.value === confirmPwd.value;
+        }
+
+        function updateMatchFeedback() {
+            if (confirmPwd.value.length === 0) {
+                matchFeedback.className = 'form-text text-muted mt-1';
+                matchFeedback.innerHTML = '<i class="fas fa-info-circle me-1"></i> Doit être identique au mot de passe saisi';
+                confirmPwd.setCustomValidity('');
+                return;
+            }
+            if (passwordsMatch()) {
+                matchFeedback.className = 'form-text text-success mt-1';
+                matchFeedback.innerHTML = '<i class="fas fa-check-circle me-1"></i> Les mots de passe correspondent';
+                confirmPwd.setCustomValidity('');
+            } else {
+                matchFeedback.className = 'form-text text-danger mt-1';
+                matchFeedback.innerHTML = '<i class="fas fa-times-circle me-1"></i> Les mots de passe ne correspondent pas';
+                confirmPwd.setCustomValidity('Les mots de passe ne correspondent pas');
+            }
+        }
+
+        pwd.addEventListener('input', updateMatchFeedback);
+        confirmPwd.addEventListener('input', updateMatchFeedback);
+
+        // Affiche / masque le mot de passe
+        document.querySelectorAll('.toggle-password').forEach(function (icon) {
+            icon.addEventListener('click', function () {
+                const targetId = this.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                const iconEl = this.querySelector('i');
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    iconEl.classList.remove('fa-eye');
+                    iconEl.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    iconEl.classList.remove('fa-eye-slash');
+                    iconEl.classList.add('fa-eye');
+                }
+            });
+        });
+
+        document.getElementById('btnPreview').addEventListener('click', function (e) {
+
+            updateMatchFeedback();
+
+            if (!form.checkValidity() || !passwordsMatch()) {
+                form.classList.add('was-validated');
+                form.reportValidity();
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
+            document.getElementById('pvUsername').textContent =
+                document.getElementById('username').value || '-';
+
+            window.bootstrap.Modal.getOrCreateInstance(document.getElementById('previewModal')).show();
+        });
+    });
+    /*]]>*/
+</script>
+
+</body>
+</html>

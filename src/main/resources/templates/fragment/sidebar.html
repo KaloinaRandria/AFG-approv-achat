@@ -307,6 +307,37 @@
             </div>
         </div>
 
+        <!-- CONFIGURATION MAIL -->
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','IT')">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseMailConfig"
+                        aria-expanded="false"
+                        aria-controls="collapseMailConfig"
+                        th:classappend="${currentUri.contains('/admin/mail-config') ? '' : 'collapsed'}">
+                    <i class="fas fa-key me-3"></i> Configuration mail
+                </button>
+            </h2>
+            <div id="collapseMailConfig"
+                 class="accordion-collapse collapse"
+                 aria-labelledby="headingMailConfig"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/admin/mail-config') ? 'show' : ''}">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/admin/mail-config}"
+                               th:classappend="${currentUri == '/admin/mail-config' ? 'active' : ''}">
+                                <i class="fas fa-lock me-2"></i> Mot de passe mail
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="dropdown mt-auto p-3 border-top">
