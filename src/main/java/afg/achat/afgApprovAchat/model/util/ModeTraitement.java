@@ -16,4 +16,6 @@ public class ModeTraitement {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_mode_traitement")
     int id;
     String libelle;
+    @Column(name = "necessite_bon_commande")
+    boolean necessiteBonCommande = false;
 }

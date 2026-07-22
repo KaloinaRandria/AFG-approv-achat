@@ -13,6 +13,7 @@ import afg.achat.afgApprovAchat.repository.demande.DemandeMereSpec;
 import afg.achat.afgApprovAchat.repository.stock.StockFilleRepo;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.BonSortieService;
+import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeService;
 import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
 import afg.achat.afgApprovAchat.service.stock.LotStockService;
@@ -83,6 +84,8 @@ public class DemandeController {
     private final PrixArticleService prixArticleService;
 
     private final BonSortieService bonSortieService;
+
+    private final BonCommandeService bonCommandeService;
 
     private final StockFilleRepo stockFilleRepo;
 
@@ -1008,6 +1011,12 @@ public class DemandeController {
         model.addAttribute("estValidateurAssigne", estValidateurAssigne);
         model.addAttribute("isViewerNplus1OfDemandeur", isViewerNplus1OfDemandeur);
         model.addAttribute("returnUrl", returnUrl);
+
+        //Bon de Commande Creation
+        boolean canCreateBC = demandeMereService.peutCreerBonCommande(demande,isMG);
+        model.addAttribute("canCreateBC", canCreateBC);
+        model.addAttribute("bonsCommande", bonCommandeService.getBonCommandesByDemande(demande));
+
 
         // ── Bon de sortie ────────────────────────────────────────────────────────
         boolean canCreateBS = demande.getStatut() == StatutDemande.VALIDE

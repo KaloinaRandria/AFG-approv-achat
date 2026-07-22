@@ -1,11 +1,10 @@
-package afg.achat.afgApprovAchat.service;
+package afg.achat.afgApprovAchat.service.fournisseur;
 
 import afg.achat.afgApprovAchat.exception.FournisseurAlreadyExistsException;
-import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.util.FournisseurHistorique;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
-import afg.achat.afgApprovAchat.repository.FournisseurRepo;
-import afg.achat.afgApprovAchat.service.util.DeviseService;
+import afg.achat.afgApprovAchat.repository.fournisseur.FournisseurRepo;
 import afg.achat.afgApprovAchat.service.util.FournisseurHistoriqueService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +29,10 @@ public class FournisseurService {
 
     public Optional<Fournisseur> getFournisseurById(int id) {
         return fournisseurRepo.findById(id);
+    }
+
+    public Fournisseur getById(int id) {
+        return fournisseurRepo.findById(id).orElse(null);
     }
 
     public void saveFournisseurIfNotExists(Fournisseur fournisseur) {
