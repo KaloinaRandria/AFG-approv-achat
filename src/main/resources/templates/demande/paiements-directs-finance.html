@@ -38,9 +38,13 @@
                     <td>
                         <div class="d-flex gap-2">
                             <a class="btn btn-sm btn-primary" th:href="@{/demande/fiche/{id}(id=${demande.id})}">Ouvrir</a>
-                            <form method="post" th:action="@{/demande/fiche/{id}/payer-finance(id=${demande.id})}" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-success">Marquer payée</button>
-                            </form>
+                            <button type="button"
+                                    class="btn btn-sm btn-success"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#markPaidFinanceModal"
+                                    th:attr="data-demande-id=${demande.id},data-action-url=@{/demande/fiche/{id}/payer-finance(id=${demande.id})}">
+                                Marquer payée
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -52,5 +56,61 @@
         </div></div>
     </section>
 </div>
+
+<div class="modal fade" id="markPaidFinanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i> Marquer comme payée
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <form method="post" id="markPaidFinanceForm">
+                <div class="modal-body">
+                    <div class="alert alert-success mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Confirmez-vous le paiement de la demande <span class="fw-semibold" id="markPaidFinanceDemandeId"></span> ?
+                    </div>
+                    <label class="form-label fw-bold" for="commentairePaiement">Commentaire (facultatif)</label>
+                    <input type="text"
+                           name="commentaire"
+                           class="form-control"
+                           id="commentairePaiement"
+                           placeholder="Ex. Paiement effectué le ...">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check-circle me-1"></i> Confirmer le paiement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const modalEl = document.getElementById("markPaidFinanceModal");
+        if (!modalEl) return;
+
+        modalEl.addEventListener("show.bs.modal", function (event) {
+            const trigger = event.relatedTarget;
+            if (!trigger) return;
+
+            const demandeId = trigger.getAttribute("data-demande-id") || "";
+            const actionUrl = trigger.getAttribute("data-action-url") || "";
+
+            const form = document.getElementById("markPaidFinanceForm");
+            const demandeIdEl = document.getElementById("markPaidFinanceDemandeId");
+            const commentaireEl = document.getElementById("commentairePaiement");
+
+            if (form) form.setAttribute("action", actionUrl);
+            if (demandeIdEl) demandeIdEl.textContent = demandeId;
+            if (commentaireEl) commentaireEl.value = "";
+        });
+    });
+</script>
 </body>
 </html>

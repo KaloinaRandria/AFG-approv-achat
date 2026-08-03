@@ -18,6 +18,7 @@ import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
 import afg.achat.afgApprovAchat.service.stock.LotStockService;
 import afg.achat.afgApprovAchat.service.util.CommentaireFinanceService;
+import afg.achat.afgApprovAchat.service.util.HistoriqueFinanceDemandeService;
 import afg.achat.afgApprovAchat.service.util.ModeTraitementService;
 import afg.achat.afgApprovAchat.service.util.PrixArticleService;
 import jakarta.servlet.http.HttpSession;
@@ -78,6 +79,7 @@ public class DemandeController {
     private final CodepPieceJointeService codepPieceJointeService;
 
     private final  CommentaireFinanceService commentaireFinanceService;
+    private final HistoriqueFinanceDemandeService historiqueFinanceDemandeService;
 
     private final EmailSenderService ess;
 
@@ -419,8 +421,7 @@ public class DemandeController {
 
     private boolean hasFinanceAccess(Authentication auth) {
         return hasRole(auth, "ROLE_FINANCE")
-                || hasRole(auth, "ROLE_ADMIN")
-                || hasRole(auth, "ROLE_MOYENS_GENERAUX");
+                || hasRole(auth, "ROLE_ADMIN");
     }
 
     private List<Integer> resolveScope(String scope, Utilisateur current,
@@ -945,6 +946,7 @@ public class DemandeController {
         List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
         List<CodepPieceJointe> codepPiecesJointes = codepPieceJointeService.listByDemandeId(demande.getId());
         CommentaireFinance commentaireFinance = commentaireFinanceService.getCommentaireFinanceByIdDemande(demande); // ← AJOUTER
+        List<HistoriqueFinanceDemande> historiquesFinance = historiqueFinanceDemandeService.getHistoriqueByDemande(demande);
 
 
         int currentStep;
@@ -981,6 +983,7 @@ public class DemandeController {
 
         model.addAttribute("steps", steps);
         model.addAttribute("historiques", historiques);
+        model.addAttribute("historiquesFinance", historiquesFinance);
         model.addAttribute("piecesJointes", piecesJointes);
         model.addAttribute("codepPiecesJointes", codepPiecesJointes);
         model.addAttribute("currentStep", currentStep);
@@ -1023,10 +1026,7 @@ public class DemandeController {
         model.addAttribute("canCreateBC", canCreateBC);
         boolean canTransmitFinance = isMG
                 && demande.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE;
-        boolean canMarkAsPaid = hasFinanceAccess(auth)
-                && demande.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE;
         model.addAttribute("canTransmitFinance", canTransmitFinance);
-        model.addAttribute("canMarkAsPaid", canMarkAsPaid);
         model.addAttribute("bonsCommande", bonCommandeService.getBonCommandesByDemande(demande));
 
 
@@ -1588,18 +1588,7 @@ public class DemandeController {
             redirectAttributes.addFlashAttribute("ko", "Cette demande ne peut pas être transmise à la finance.");
             return "redirect:/demande/fiche/" + id;
         }
-
-//        ValidationDemande historique = new ValidationDemande();
-//        historique.setDemandeMere(demande);
-//        historique.setValidateur(current);
-//        historique.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
-//        historique.setDateAction(String.valueOf(LocalDateTime.now()));
-//        historique.setCommentaire(
-//                commentaire == null || commentaire.isBlank()
-//                        ? "Transmission de la demande à la finance."
-//                        : "Transmission de la demande à la finance : " + commentaire.trim()
-//        );
-//        validationDemandeService.logAction(historique);
+        historiqueFinanceDemandeService.logTransmissionFinance(demande, current, commentaire);
 
         redirectAttributes.addFlashAttribute("ok", "Demande transmise à la finance.");
         return "redirect:/demande/fiche/" + id;
@@ -1622,18 +1611,7 @@ public class DemandeController {
             redirectAttributes.addFlashAttribute("ko", "Cette demande ne peut pas être marquée comme payée.");
             return "redirect:/demande/fiche/" + id;
         }
-
-//        ValidationDemande historique = new ValidationDemande();
-//        historique.setDemandeMere(demande);
-//        historique.setValidateur(current);
-//        historique.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
-//        historique.setDateAction(String.valueOf(LocalDateTime.now()));
-//        historique.setCommentaire(
-//                commentaire == null || commentaire.isBlank()
-//                        ? "Demande marquée comme payée en finance."
-//                        : "Demande marquée comme payée en finance : " + commentaire.trim()
-//        );
-//        validationDemandeService.logAction(historique);
+        historiqueFinanceDemandeService.logPaiementEffectue(demande, current, commentaire);
 
         redirectAttributes.addFlashAttribute("ok", "Demande marquée comme payée.");
         return "redirect:/demande/fiche/" + id;

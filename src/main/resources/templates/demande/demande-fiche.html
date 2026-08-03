@@ -206,11 +206,6 @@
                                 <div th:if="${demande.statutTransmissionFinance.name() == 'PAYEE'}" class="text-success fw-semibold">
                                     Payée
                                 </div>
-                                <div th:if="${canMarkAsPaid}" class="mt-2">
-                                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#markPaidFinanceModal">
-                                        <i class="fas fa-check-circle me-1"></i> Marquer comme payée
-                                    </button>
-                                </div>
                             </div>
                         </div>
 
@@ -1176,6 +1171,64 @@
                                                 </td>
 
                                                 <!-- Commentaire -->
+                                                <td th:text="${h.commentaire != null && !h.commentaire.isBlank() ? h.commentaire : '-'}">-</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- HISTORIQUE FINANCE (séparé de ValidationDemande) -->
+                        <div class="px-3 pb-3"
+                             th:if="${demande.statutTransmissionFinance != null and demande.statutTransmissionFinance.name() != 'NON_CONCERNEE'}">
+                            <div class="p-3 border rounded bg-light">
+                                <div class="fw-bold mb-3">
+                                    <i class="fas fa-money-check-alt me-2"></i> Historique finance
+                                </div>
+
+                                <div th:if="${historiquesFinance == null || historiquesFinance.isEmpty()}"
+                                     class="text-muted">
+                                    Aucun historique finance disponible
+                                </div>
+
+                                <div th:if="${historiquesFinance != null && !historiquesFinance.isEmpty()}">
+                                    <div class="table-responsive">
+                                        <table class="table align-middle table-hover table-bordered bg-white shadow-sm rounded overflow-hidden">
+                                            <thead class="table-light">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Utilisateur</th>
+                                                <th>Action finance</th>
+                                                <th>Commentaire</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr th:each="h : ${historiquesFinance}">
+                                                <td th:text="${h.dateAction != null ? #temporals.format(h.dateAction,'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                                                <td>
+                                                    <div th:if="${h.utilisateur != null}">
+                                                        <div class="fw-semibold" th:text="${h.utilisateur.nom + ' ' + h.utilisateur.prenom}"></div>
+                                                        <small class="text-muted"
+                                                               th:text="${
+                                                                    (h.utilisateur.poste != null ? h.utilisateur.poste.poste : '') +
+                                                                    (h.utilisateur.service != null ? ' - ' + h.utilisateur.service.acronyme : '')
+                                                               }">
+                                                        </small>
+                                                    </div>
+                                                    <span th:if="${h.utilisateur == null}">-</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-primary"
+                                                          th:if="${h.actionFinance != null and h.actionFinance.name() == 'TRANSMISSION_FINANCE'}">
+                                                        Transmise à la finance
+                                                    </span>
+                                                    <span class="badge bg-success"
+                                                          th:if="${h.actionFinance != null and h.actionFinance.name() == 'PAIEMENT_EFFECTUE'}">
+                                                        Paiement effectué
+                                                    </span>
+                                                </td>
                                                 <td th:text="${h.commentaire != null && !h.commentaire.isBlank() ? h.commentaire : '-'}">-</td>
                                             </tr>
                                             </tbody>
@@ -3082,35 +3135,6 @@
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
                     <button type="submit" class="btn btn-warning">
                         <i class="fas fa-paper-plane me-1"></i> Confirmer la transmission
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="markPaidFinanceModal" tabindex="-1" aria-labelledby="markPaidFinanceModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="markPaidFinanceModalLabel">
-                    <i class="fas fa-check-circle me-2"></i> Marquer comme payée
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-            </div>
-            <form method="post" th:action="@{/demande/fiche/{id}/payer-finance(id=${demande.id})}">
-                <div class="modal-body">
-                    <div class="alert alert-success mb-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Confirmez-vous que cette demande a bien été payée par la finance ?
-                    </div>
-                    <label for="markPaidFinanceCommentaire" class="form-label fw-bold">Commentaire (facultatif)</label>
-                    <input type="text" name="commentaire" id="markPaidFinanceCommentaire" class="form-control" placeholder="Ex. Paiement effectué le ...">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-check-circle me-1"></i> Confirmer le paiement
                     </button>
                 </div>
             </form>

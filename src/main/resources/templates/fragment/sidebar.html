@@ -32,7 +32,7 @@
         </a>
     </div>
 
-    <div class="px-3 mb-2" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','FINANCE')">
+    <div class="px-3 mb-2" sec:authorize="hasAnyRole('ADMIN','FINANCE')">
         <a class="nav-link text-white d-flex align-items-center sidebar-link"
            th:href="@{/demande/paiements-directs-finance}"
            th:classappend="${currentUri == '/demande/paiements-directs-finance' ? 'active' : ''}">
