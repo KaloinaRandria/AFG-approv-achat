@@ -19,6 +19,7 @@ public interface DemandeMereRepo
 
     boolean existsById(String id);
     Optional<DemandeMere> findByCodeProvisoire(String codeProvisoire);
+    List<DemandeMere> findByStatutOrderByDateDemandeAsc(int statut);
 
     @Query("""
             SELECT new afg.achat.afgApprovAchat.DTO.ServiceDemandeDTO(

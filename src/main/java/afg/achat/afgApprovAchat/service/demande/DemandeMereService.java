@@ -6,6 +6,8 @@ import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.util.ModeTraitement;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
+import afg.achat.afgApprovAchat.model.util.ModeTraitementEnum;
+import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.demande.DemandeFilleRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereSpec;
@@ -65,6 +67,78 @@ public class DemandeMereService {
 
     public void saveDemandeMere(DemandeMere dm) {
         demandeMereRepo.save(dm);
+    }
+
+    /** Met la demande de paiement direct dans la file MG après validation SG. */
+    public void preparerTransmissionFinance(DemandeMere demande) {
+        if (estPaiementDirect(demande)) {
+            demande.setStatutTransmissionFinance(DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE);
+            demandeMereRepo.save(demande);
+        }
+    }
+
+    public List<DemandeMere>getPaiementsDirectsATransmettre() {
+        return demandeMereRepo.findByStatutOrderByDateDemandeAsc(StatutDemande.VALIDE).stream()
+                .filter(this::estPaiementDirect)
+                .filter(d -> d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE)
+                .toList();
+    }
+
+    @Transactional
+    public boolean transmettreAFinance(DemandeMere demande, Utilisateur transmetteur, String commentaire) {
+        if (demande.getStatut() != StatutDemande.VALIDE
+                || !estPaiementDirect(demande)
+                || demande.getStatutTransmissionFinance() != DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE) {
+            return false;
+        }
+        demande.setStatutTransmissionFinance(DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE);
+        demande.setTransmisFinancePar(transmetteur);
+        demande.setDateTransmissionFinance(LocalDateTime.now());
+        demande.setCommentaireTransmissionFinance(
+                commentaire == null || commentaire.isBlank() ? null : commentaire.trim());
+        demandeMereRepo.save(demande);
+        return true;
+    }
+
+    public List<DemandeMere> getPaiementsDirectsTransmisAFinance() {
+        return demandeMereRepo.findByStatutOrderByDateDemandeAsc(StatutDemande.VALIDE).stream()
+                .filter(this::estPaiementDirect)
+                .filter(d -> d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE)
+                .toList();
+    }
+
+    @Transactional
+    public boolean marquerCommePayee(DemandeMere demande, Utilisateur utilisateur, String commentaire) {
+        if (demande.getStatut() != StatutDemande.VALIDE
+                || !estPaiementDirect(demande)
+                || demande.getStatutTransmissionFinance() != DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE) {
+            return false;
+        }
+
+        demande.setStatutTransmissionFinance(DemandeMere.StatutTransmissionFinance.PAYEE);
+        demande.setTransmisFinancePar(utilisateur);
+
+        String commentaireActuel = demande.getCommentaireTransmissionFinance();
+        StringBuilder commentaireFinal = new StringBuilder();
+        if (commentaireActuel != null && !commentaireActuel.isBlank()) {
+            commentaireFinal.append(commentaireActuel.trim());
+        }
+        if (commentaire != null && !commentaire.isBlank()) {
+            if (!commentaireFinal.isEmpty()) {
+                commentaireFinal.append(" | ");
+            }
+            commentaireFinal.append("Paiement enregistré : ").append(commentaire.trim());
+        }
+
+        demande.setCommentaireTransmissionFinance(commentaireFinal.isEmpty() ? null : commentaireFinal.toString());
+        demandeMereRepo.save(demande);
+        return true;
+    }
+
+    public boolean estPaiementDirect(DemandeMere demande) {
+        return demande.getModeTraitement() != null
+                && ModeTraitementEnum.PAIEMENT_DIRECT.getLibelle()
+                .equalsIgnoreCase(demande.getModeTraitement().getLibelle());
     }
 
     @Transactional

@@ -417,6 +417,12 @@ public class DemandeController {
         return auth.getAuthorities().stream().anyMatch(a -> role.equals(a.getAuthority()));
     }
 
+    private boolean hasFinanceAccess(Authentication auth) {
+        return hasRole(auth, "ROLE_FINANCE")
+                || hasRole(auth, "ROLE_ADMIN")
+                || hasRole(auth, "ROLE_MOYENS_GENERAUX");
+    }
+
     private List<Integer> resolveScope(String scope, Utilisateur current,
                                        List<Integer> allVisibleIds) {
         return switch (scope == null ? "ALL" : scope.toUpperCase()) {
@@ -1015,6 +1021,12 @@ public class DemandeController {
         //Bon de Commande Creation
         boolean canCreateBC = demandeMereService.peutCreerBonCommande(demande,isMG);
         model.addAttribute("canCreateBC", canCreateBC);
+        boolean canTransmitFinance = isMG
+                && demande.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE;
+        boolean canMarkAsPaid = hasFinanceAccess(auth)
+                && demande.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE;
+        model.addAttribute("canTransmitFinance", canTransmitFinance);
+        model.addAttribute("canMarkAsPaid", canMarkAsPaid);
         model.addAttribute("bonsCommande", bonCommandeService.getBonCommandesByDemande(demande));
 
 
@@ -1508,6 +1520,7 @@ public class DemandeController {
                     validationDemandeService.logAction(histoPj);
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
+                demandeMereService.preparerTransmissionFinance(demande);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
 
                 ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDE);
@@ -1536,6 +1549,93 @@ public class DemandeController {
         }
         System.out.println(">>> decision reçue = [" + decision + "]");
         redirectAttributes.addFlashAttribute("ko", "Décision invalide.");
+        return "redirect:/demande/fiche/" + id;
+    }
+
+    @GetMapping("/paiements-directs")
+    public String listePaiementsDirects(Model model) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (!hasRole(auth, "ROLE_MOYENS_GENERAUX") && !hasRole(auth, "ROLE_ADMIN")) {
+            return "redirect:/error/403";
+        }
+        model.addAttribute("demandes", demandeMereService.getPaiementsDirectsATransmettre());
+        return "demande/paiements-directs-liste";
+    }
+
+    @GetMapping("/paiements-directs-finance")
+    public String listePaiementsDirectsFinance(Model model) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (!hasFinanceAccess(auth)) {
+            return "redirect:/error/403";
+        }
+        model.addAttribute("demandes", demandeMereService.getPaiementsDirectsTransmisAFinance());
+        return "demande/paiements-directs-finance";
+    }
+
+    @PostMapping("/fiche/{id}/transmettre-finance")
+    public String transmettreFinance(@PathVariable String id,
+                                     @RequestParam(required = false) String commentaire,
+                                     RedirectAttributes redirectAttributes) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (!hasRole(auth, "ROLE_MOYENS_GENERAUX") && !hasRole(auth, "ROLE_ADMIN")) {
+            redirectAttributes.addFlashAttribute("ko", "Action réservée aux Moyens Généraux.");
+            return "redirect:/demande/fiche/" + id;
+        }
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+        DemandeMere demande = demandeMereService.getDemandeById(id);
+        if (demande == null || !demandeMereService.transmettreAFinance(demande, current, commentaire)) {
+            redirectAttributes.addFlashAttribute("ko", "Cette demande ne peut pas être transmise à la finance.");
+            return "redirect:/demande/fiche/" + id;
+        }
+
+//        ValidationDemande historique = new ValidationDemande();
+//        historique.setDemandeMere(demande);
+//        historique.setValidateur(current);
+//        historique.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+//        historique.setDateAction(String.valueOf(LocalDateTime.now()));
+//        historique.setCommentaire(
+//                commentaire == null || commentaire.isBlank()
+//                        ? "Transmission de la demande à la finance."
+//                        : "Transmission de la demande à la finance : " + commentaire.trim()
+//        );
+//        validationDemandeService.logAction(historique);
+
+        redirectAttributes.addFlashAttribute("ok", "Demande transmise à la finance.");
+        return "redirect:/demande/fiche/" + id;
+    }
+
+    @PostMapping("/fiche/{id}/payer-finance")
+    public String payerFinance(@PathVariable String id,
+                               @RequestParam(required = false) String commentaire,
+                               RedirectAttributes redirectAttributes) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (!hasFinanceAccess(auth)) {
+            redirectAttributes.addFlashAttribute("ko", "Action réservée à la finance.");
+            return "redirect:/demande/fiche/" + id;
+        }
+
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+        DemandeMere demande = demandeMereService.getDemandeById(id);
+        if (demande == null || !demandeMereService.marquerCommePayee(demande, current, commentaire)) {
+            redirectAttributes.addFlashAttribute("ko", "Cette demande ne peut pas être marquée comme payée.");
+            return "redirect:/demande/fiche/" + id;
+        }
+
+//        ValidationDemande historique = new ValidationDemande();
+//        historique.setDemandeMere(demande);
+//        historique.setValidateur(current);
+//        historique.setDecision(ValidationDemande.DecisionValidation.APPROUVE);
+//        historique.setDateAction(String.valueOf(LocalDateTime.now()));
+//        historique.setCommentaire(
+//                commentaire == null || commentaire.isBlank()
+//                        ? "Demande marquée comme payée en finance."
+//                        : "Demande marquée comme payée en finance : " + commentaire.trim()
+//        );
+//        validationDemandeService.logAction(historique);
+
+        redirectAttributes.addFlashAttribute("ok", "Demande marquée comme payée.");
         return "redirect:/demande/fiche/" + id;
     }
 

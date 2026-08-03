@@ -24,6 +24,22 @@
         </a>
     </div>
 
+    <div class="px-3 mb-2" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+        <a class="nav-link text-white d-flex align-items-center sidebar-link"
+           th:href="@{/demande/paiements-directs}"
+           th:classappend="${currentUri == '/demande/paiements-directs' ? 'active' : ''}">
+            <i class="fas fa-paper-plane me-3"></i> Paiements directs
+        </a>
+    </div>
+
+    <div class="px-3 mb-2" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','FINANCE')">
+        <a class="nav-link text-white d-flex align-items-center sidebar-link"
+           th:href="@{/demande/paiements-directs-finance}"
+           th:classappend="${currentUri == '/demande/paiements-directs-finance' ? 'active' : ''}">
+            <i class="fas fa-money-check-alt me-3"></i> Paiements finance
+        </a>
+    </div>
+
     <!--        DEVISE -->
     <div class="px-3 mb-2">
         <a class="nav-link text-white d-flex align-items-center sidebar-link"

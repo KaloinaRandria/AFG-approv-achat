@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Paiements directs à transmettre</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue"><i class="fas fa-paper-plane me-2"></i>Paiements directs à transmettre</h1>
+            <a th:href="@{/demande/list}" class="btn btn-outline-secondary">Liste des demandes</a>
+        </div>
+        <div class="alert alert-info">Ces demandes ont été validées par le S.G. La transmission à la finance reste une action manuelle des Moyens Généraux.</div>
+        <div class="card shadow-sm border-0"><div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead><tr><th>N° demande</th><th>Demandeur</th><th>Motif</th><th>Montant estimé</th><th>Date demande</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="demande : ${demandes}">
+                    <td th:text="${demande.id}"></td>
+                    <td th:text="${demande.demandeur != null ? demande.demandeur.nom + ' ' + demande.demandeur.prenom : '-'}"></td>
+                    <td th:text="${demande.motifEvoque}"></td>
+                    <td th:text="${demande.totalEstime != null ? #numbers.formatDecimal(demande.totalEstime, 1, 'WHITESPACE', 2, 'COMMA') : '-'}"></td>
+                    <td th:text="${demande.dateDemande != null ? #temporals.format(demande.dateDemande, 'dd/MM/yyyy') : '-'}"></td>
+                    <td><a class="btn btn-sm btn-primary" th:href="@{/demande/fiche/{id}(id=${demande.id})}">Ouvrir</a></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(demandes)}"><td colspan="6" class="text-center text-muted py-4">Aucun paiement direct en attente de transmission.</td></tr>
+                </tbody>
+            </table>
+        </div></div>
+    </section>
+</div>
+</body>
+</html>
