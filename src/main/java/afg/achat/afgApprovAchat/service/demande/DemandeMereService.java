@@ -80,7 +80,8 @@ public class DemandeMereService {
     public List<DemandeMere>getPaiementsDirectsATransmettre() {
         return demandeMereRepo.findByStatutOrderByDateDemandeAsc(StatutDemande.VALIDE).stream()
                 .filter(this::estPaiementDirect)
-                .filter(d -> d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE)
+                .filter(d -> d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE
+                        || d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE)
                 .toList();
     }
 
@@ -103,7 +104,8 @@ public class DemandeMereService {
     public List<DemandeMere> getPaiementsDirectsTransmisAFinance() {
         return demandeMereRepo.findByStatutOrderByDateDemandeAsc(StatutDemande.VALIDE).stream()
                 .filter(this::estPaiementDirect)
-                .filter(d -> d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE)
+                .filter(d -> d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE
+                        || d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.PAYEE)
                 .toList();
     }
 
