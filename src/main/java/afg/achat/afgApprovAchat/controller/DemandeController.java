@@ -95,6 +95,8 @@ public class DemandeController {
 
     private final ModeTraitementService modeTraitementService;
 
+    private final afg.achat.afgApprovAchat.service.paiement.PaiementDirectService paiementDirectService;
+
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
 

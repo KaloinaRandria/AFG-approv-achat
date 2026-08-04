@@ -92,6 +92,9 @@ public class DemandeMere {
     @Column(name = "commentaire_transmission_finance", columnDefinition = "TEXT")
     String commentaireTransmissionFinance;
 
+    @OneToOne(mappedBy = "demande", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private afg.achat.afgApprovAchat.model.paiement.PaiementDirect paiementDirect;
+
 
     public enum PrioriteDemande {
         P2,

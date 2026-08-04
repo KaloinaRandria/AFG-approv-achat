@@ -24,6 +24,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import afg.achat.afgApprovAchat.service.paiement.PaiementDirectService;
+
 @Service
 @RequiredArgsConstructor
 public class DemandeMereService {
@@ -32,6 +34,7 @@ public class DemandeMereService {
     private final DemandeFilleRepo  demandeFilleRepo;
     private final IdGenerator       idGenerator;
     private final ModeTraitementRepo modeTraitementRepo;
+    private final PaiementDirectService paiementDirectService;
 
     // ── Lecture ──────────────────────────────────────────────────────────────
 
@@ -74,6 +77,7 @@ public class DemandeMereService {
         if (estPaiementDirect(demande)) {
             demande.setStatutTransmissionFinance(DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE);
             demandeMereRepo.save(demande);
+            paiementDirectService.creerPaiementDirectPourDemande(demande);
         }
     }
 
@@ -87,18 +91,8 @@ public class DemandeMereService {
 
     @Transactional
     public boolean transmettreAFinance(DemandeMere demande, Utilisateur transmetteur, String commentaire) {
-        if (demande.getStatut() != StatutDemande.VALIDE
-                || !estPaiementDirect(demande)
-                || demande.getStatutTransmissionFinance() != DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE) {
-            return false;
-        }
-        demande.setStatutTransmissionFinance(DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE);
-        demande.setTransmisFinancePar(transmetteur);
-        demande.setDateTransmissionFinance(LocalDateTime.now());
-        demande.setCommentaireTransmissionFinance(
-                commentaire == null || commentaire.isBlank() ? null : commentaire.trim());
-        demandeMereRepo.save(demande);
-        return true;
+        if (!estPaiementDirect(demande)) return false;
+        return paiementDirectService.transmettreAFinance(demande, transmetteur, commentaire);
     }
 
     public List<DemandeMere> getPaiementsDirectsTransmisAFinance() {
@@ -111,30 +105,8 @@ public class DemandeMereService {
 
     @Transactional
     public boolean marquerCommePayee(DemandeMere demande, Utilisateur utilisateur, String commentaire) {
-        if (demande.getStatut() != StatutDemande.VALIDE
-                || !estPaiementDirect(demande)
-                || demande.getStatutTransmissionFinance() != DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE) {
-            return false;
-        }
-
-        demande.setStatutTransmissionFinance(DemandeMere.StatutTransmissionFinance.PAYEE);
-        demande.setTransmisFinancePar(utilisateur);
-
-        String commentaireActuel = demande.getCommentaireTransmissionFinance();
-        StringBuilder commentaireFinal = new StringBuilder();
-        if (commentaireActuel != null && !commentaireActuel.isBlank()) {
-            commentaireFinal.append(commentaireActuel.trim());
-        }
-        if (commentaire != null && !commentaire.isBlank()) {
-            if (!commentaireFinal.isEmpty()) {
-                commentaireFinal.append(" | ");
-            }
-            commentaireFinal.append("Paiement enregistré : ").append(commentaire.trim());
-        }
-
-        demande.setCommentaireTransmissionFinance(commentaireFinal.isEmpty() ? null : commentaireFinal.toString());
-        demandeMereRepo.save(demande);
-        return true;
+        if (!estPaiementDirect(demande)) return false;
+        return paiementDirectService.marquerCommePayee(demande, utilisateur, commentaire);
     }
 
     public boolean estPaiementDirect(DemandeMere demande) {

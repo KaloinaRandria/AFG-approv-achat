@@ -201,7 +201,7 @@
                             <th>Montant estimé</th>
                             <th>Priorité</th>
                             <th>Statut finance</th>
-                            <th>Actions</th>
+<!--                            <th>Actions</th>-->
                         </tr>
                         </thead>
 
@@ -251,11 +251,11 @@
                                 </span>
                             </td>
 
-                            <td>
-                                <a class="btn btn-sm btn-primary" th:href="@{/demande/fiche/{id}(id=${demande.id}, returnUrl=${returnUrl})}">
-                                    Ouvrir
-                                </a>
-                            </td>
+<!--                            <td>-->
+<!--                                <a class="btn btn-sm btn-outline-gradient-blue" th:href="@{/demande/fiche/{id}(id=${demande.id}, returnUrl=${returnUrl})}">-->
+<!--                                    Ouvrir-->
+<!--                                </a>-->
+<!--                            </td>-->
                         </tr>
 
                         <tr th:if="${demandesMeres.totalElements == 0}">

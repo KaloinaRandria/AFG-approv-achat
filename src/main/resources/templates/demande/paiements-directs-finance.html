@@ -249,12 +249,12 @@
 
                             <td>
                                 <div class="d-flex gap-2">
-                                    <a class="btn btn-sm btn-primary" th:href="@{/demande/fiche/{id}(id=${demande.id}, returnUrl=${returnUrl})}">
-                                        Ouvrir
-                                    </a>
+<!--                                    <a class="btn btn-sm btn-outline-gradient-blue" th:href="@{/demande/fiche/{id}(id=${demande.id}, returnUrl=${returnUrl})}">-->
+<!--                                        Ouvrir-->
+<!--                                    </a>-->
                                     <button type="button"
                                             th:if="${demande.statutTransmissionFinance != null and demande.statutTransmissionFinance.name() == 'TRANSMISE_FINANCE'}"
-                                            class="btn btn-sm btn-success"
+                                            class="btn btn-sm btn-gradient-green"
                                             data-bs-toggle="modal"
                                             data-bs-target="#markPaidFinanceModal"
                                             th:attr="data-demande-id=${demande.id},data-action-url=@{/demande/fiche/{id}/payer-finance(id=${demande.id})}">
