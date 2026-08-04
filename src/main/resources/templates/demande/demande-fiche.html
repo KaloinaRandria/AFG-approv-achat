@@ -3110,6 +3110,36 @@
         });
     });
 
+    // ── Anti-double : Transmission à la finance ──────────────────────────────
+    (function () {
+        const transmitModal = document.getElementById('transmitFinanceModal');
+        if (!transmitModal) return;
+
+        // Réinitialiser le bouton à chaque ouverture du modal
+        transmitModal.addEventListener('show.bs.modal', function () {
+            const btn = document.getElementById('btnConfirmerTransmission');
+            if (!btn) return;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Confirmer la transmission';
+        });
+
+        transmitModal.addEventListener('submit', function (e) {
+            const form = e.target.closest('form');
+            if (!form) return;
+            const btn = document.getElementById('btnConfirmerTransmission');
+            if (!btn || btn.disabled) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Transmission en cours...';
+
+            // Sécurité : réactiver après 15s en cas de timeout réseau
+            setTimeout(function () {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Confirmer la transmission';
+            }, 15000);
+        }, true);
+    })();
+
     /*]]>*/
 </script>
 
@@ -3133,7 +3163,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-warning">
+                    <button type="submit" id="btnConfirmerTransmission" class="btn btn-warning">
                         <i class="fas fa-paper-plane me-1"></i> Confirmer la transmission
                     </button>
                 </div>

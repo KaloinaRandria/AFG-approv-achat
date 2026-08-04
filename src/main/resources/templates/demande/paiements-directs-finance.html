@@ -359,7 +359,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-success">
+                    <button type="submit" id="btnConfirmerPaiement" class="btn btn-success">
                         <i class="fas fa-check-circle me-1"></i> Confirmer le paiement
                     </button>
                 </div>
@@ -404,7 +404,29 @@
                 if (form) form.setAttribute("action", actionUrl);
                 if (demandeIdEl) demandeIdEl.textContent = demandeId;
                 if (commentaireEl) commentaireEl.value = "";
+
+                // ── Anti-double : réinitialiser le bouton à chaque ouverture ──
+                const btn = document.getElementById('btnConfirmerPaiement');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Confirmer le paiement';
+                }
             });
+
+            // ── Anti-double : désactiver le bouton lors de la soumission ──
+            modalEl.addEventListener('submit', function () {
+                const btn = document.getElementById('btnConfirmerPaiement');
+                if (!btn || btn.disabled) return;
+
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Paiement en cours...';
+
+                // Sécurité : réactiver après 15s en cas de timeout réseau
+                setTimeout(function () {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Confirmer le paiement';
+                }, 15000);
+            }, true);
         }
     });
     /*]]>*/
