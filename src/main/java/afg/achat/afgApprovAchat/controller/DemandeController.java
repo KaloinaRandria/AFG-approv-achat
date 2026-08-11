@@ -1586,7 +1586,8 @@ public class DemandeController {
         if (singleTransmission == null) {
             allowedTransmissions = List.of(
                     DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE,
-                    DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE
+                    DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE,
+                    DemandeMere.StatutTransmissionFinance.PAYEE
             );
         }
 
@@ -1611,7 +1612,8 @@ public class DemandeController {
                 dateFrom, dateTo, size, sort, dir,
                 List.of(
                         DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE,
-                        DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE
+                        DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE,
+                        DemandeMere.StatutTransmissionFinance.PAYEE
                 )
         );
 
