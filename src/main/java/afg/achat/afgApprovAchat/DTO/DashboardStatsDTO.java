@@ -13,5 +13,14 @@ public record DashboardStatsDTO(
         long attenteN1, long attenteN2, long attenteN3,
         long attenteN4, long attenteSG, long attenteCodep,
         List<Map<String, Object>> moisData,
-        List<ServiceDemandeDTO> demandesParService
+        List<ServiceDemandeDTO> demandesParService,
+        Double slaP0,
+        Double slaP1,
+        Double slaP2,
+        Double monSlaP0,
+        Double monSlaP1,
+        Double monSlaP2,
+        Double trendEnCours,
+        Double trendRefusees,
+        Double trendTerminees
 ) {}

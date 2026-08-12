@@ -7,7 +7,12 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
-
+    <style>
+        .btn-xs {
+            padding: 0.2rem 0.5rem;
+            font-size: 0.75rem;
+        }
+    </style>
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
@@ -18,14 +23,14 @@
         <!-- En-tête avec icônes en dégradé bleu -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="fw-bold text-gradient-blue">
-                <i class="fas fa-laptop me-2"></i>Tableau de bord – Demandes de matériels
+                <i class="fas fa-chart-line me-2"></i>Tableau de bord – Demandes de matériels
             </h1>
         </div>
 
         <div class="container-fluid py-4">
-            <!-- ===== FILTRE DATE ===== -->
-            <form th:action="@{/dashboard}" method="get" class="mb-4" >
-                <div class="chart-card">
+            <!-- ===== FILTRE DATE & RACCOURCIS TEMPORELS ===== -->
+            <form id="filterForm" th:action="@{/dashboard}" method="get" class="mb-4">
+                <div class="chart-card shadow-sm border-0">
                     <div class="card-body py-3">
                         <div class="row g-2 align-items-end">
 
@@ -33,7 +38,7 @@
                                 <label class="form-label fw-semibold mb-1" style="color:#001051; font-size:13px;">
                                     <i class="fas fa-calendar-alt me-1"></i>Date début
                                 </label>
-                                <input type="date" name="dateFrom" class="form-control form-control-sm"
+                                <input type="date" id="dateFromInput" name="dateFrom" class="form-control form-control-sm"
                                        th:value="${dateFrom}">
                             </div>
 
@@ -41,7 +46,7 @@
                                 <label class="form-label fw-semibold mb-1" style="color:#001051; font-size:13px;">
                                     <i class="fas fa-calendar-alt me-1"></i>Date fin
                                 </label>
-                                <input type="date" name="dateTo" class="form-control form-control-sm"
+                                <input type="date" id="dateToInput" name="dateTo" class="form-control form-control-sm"
                                        th:value="${dateTo}">
                             </div>
 
@@ -58,56 +63,154 @@
                             </div>
 
                         </div>
+
+                        <!-- Presets de date rapides -->
+                        <div class="row mt-2 pt-2 border-top g-1 align-items-center">
+                            <div class="col-auto me-2">
+                                <span class="text-muted small fw-semibold"><i class="fas fa-bolt text-warning me-1"></i>Raccourcis :</span>
+                            </div>
+                            <div class="col-auto d-flex flex-wrap gap-1">
+                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill" onclick="applyDatePreset('today')">Aujourd'hui</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill" onclick="applyDatePreset('7days')">7 derniers jours</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill" onclick="applyDatePreset('thisMonth')">Ce mois-ci</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill" onclick="applyDatePreset('lastMonth')">Mois dernier</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill" onclick="applyDatePreset('thisQuarter')">Ce trimestre</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill" onclick="applyDatePreset('thisYear')">Année en cours</button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </form>
 
 
-            <!-- ===== 3 CARTES PRINCIPALES ===== -->
-            <div class="row g-3 mb-2">
+            <!-- ===== 3 CARTES PRINCIPALES AVEC TENDANCES MO/MO ===== -->
+            <div class="row g-3 mb-3">
 
-                <!-- En cours de traitement — bleu (charte principale) -->
+                <!-- En cours de traitement — bleu -->
                 <div class="col-xl-4 col-md-6">
                     <div class="stat-card grad-blue">
                         <div class="card-body">
                             <i class="fas fa-spinner card-icon"></i>
                             <div class="stat-label">En cours de traitement</div>
-                            <div class="stat-value" th:text="${enCours}">0</div>
-                            <div class="stat-sub">
-                                <i class="fas fa-clock me-1"></i>Demandes en attente de validation
+                            <div class="stat-value" id="valEnCours" th:text="${enCours}">0</div>
+                            <div class="stat-sub d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-clock me-1"></i>En attente de validation</span>
+                                <span class="badge rounded-pill bg-white text-dark shadow-sm fw-bold ms-1" id="badgeTrendEnCours"
+                                      th:text="${trendEnCours != null ? (trendEnCours >= 0 ? '+' + trendEnCours + '%' : trendEnCours + '%') : '0%'}">+0%</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Refusées — rouge (charte) -->
+                <!-- Refusées — rouge -->
                 <div class="col-xl-4 col-md-6">
                     <div class="stat-card grad-red">
                         <div class="card-body">
                             <i class="fas fa-times-circle card-icon"></i>
                             <div class="stat-label">Demandes refusées</div>
-                            <div class="stat-value" th:text="${refusees}">0</div>
-                            <div class="stat-sub">
-                                <i class="fas fa-ban me-1"></i>Total des demandes refusées
+                            <div class="stat-value" id="valRefusees" th:text="${refusees}">0</div>
+                            <div class="stat-sub d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-ban me-1"></i>Total refusées</span>
+                                <span class="badge rounded-pill bg-white text-dark shadow-sm fw-bold ms-1" id="badgeTrendRefusees"
+                                      th:text="${trendRefusees != null ? (trendRefusees >= 0 ? '+' + trendRefusees + '%' : trendRefusees + '%') : '0%'}">+0%</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Terminées — vert (charte) -->
+                <!-- Terminées — vert -->
                 <div class="col-xl-4 col-md-6">
                     <div class="stat-card grad-green">
                         <div class="card-body">
                             <i class="fas fa-check-circle card-icon"></i>
                             <div class="stat-label">Demandes terminées</div>
-                            <div class="stat-value" th:text="${terminees}">0</div>
-                            <div class="stat-sub">
-                                <i class="fas fa-check me-1"></i>Total des demandes validées
+                            <div class="stat-value" id="valTerminees" th:text="${terminees}">0</div>
+                            <div class="stat-sub d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-check me-1"></i>Total validées</span>
+                                <span class="badge rounded-pill bg-white text-dark shadow-sm fw-bold ms-1" id="badgeTrendTerminees"
+                                      th:text="${trendTerminees != null ? (trendTerminees >= 0 ? '+' + trendTerminees + '%' : trendTerminees + '%') : '0%'}">+0%</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
+            </div>
+
+            <!-- ===== CARTE DÉLAIS MOYENS D'APPROBATION (SLA) AVEC BASCULE PERSONNEL / GLOBAL ===== -->
+            <div class="row g-3 mb-3">
+                <div class="col-xl-12">
+                    <div class="chart-card shadow-sm border-0">
+                        <div class="card-header bg-transparent d-flex flex-wrap justify-content-between align-items-center py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="fw-bold me-2" style="color:#001051;">
+                                    <i class="fas fa-stopwatch text-primary me-2"></i>SLA – Délais Moyens d'Approbation
+                                </span>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" id="btnSlaPersonal" class="btn btn-gradient-blue" onclick="switchSlaMode('personal')">
+                                        <i class="fas fa-user-check me-1"></i>Mon SLA
+                                    </button>
+                                    <button type="button" id="btnSlaGlobal" class="btn btn-outline-gradient-blue" onclick="switchSlaMode('global')">
+                                        <i class="fas fa-globe me-1"></i>SLA Global
+                                    </button>
+                                </div>
+                            </div>
+                            <span class="badge bg-light text-secondary border fw-normal">Objectifs : P0 = 1j | P1 = 2j | P2 = 7j</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <!-- P0 -->
+                                <div class="col-md-4">
+                                    <div class="p-3 rounded border bg-light h-100">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="badge bg-danger">P0 — Urgent</span>
+                                            <span class="text-muted small">Cible: 1 jour</span>
+                                        </div>
+                                        <div class="d-flex align-items-baseline my-2">
+                                            <span class="h3 fw-bold mb-0 me-2" id="valSlaP0">N/A</span>
+                                            <span id="badgeSlaP0" class="badge" style="display:none;">Respecté</span>
+                                        </div>
+                                        <div class="progress" style="height: 6px;">
+                                            <div id="barSlaP0" class="progress-bar bg-danger" role="progressbar" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- P1 -->
+                                <div class="col-md-4">
+                                    <div class="p-3 rounded border bg-light h-100">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="badge bg-warning text-dark">P1 — Normal</span>
+                                            <span class="text-muted small">Cible: 2 jours</span>
+                                        </div>
+                                        <div class="d-flex align-items-baseline my-2">
+                                            <span class="h3 fw-bold mb-0 me-2" id="valSlaP1">N/A</span>
+                                            <span id="badgeSlaP1" class="badge" style="display:none;">Respecté</span>
+                                        </div>
+                                        <div class="progress" style="height: 6px;">
+                                            <div id="barSlaP1" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- P2 -->
+                                <div class="col-md-4">
+                                    <div class="p-3 rounded border bg-light h-100">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="badge bg-info text-dark">P2 — Faible</span>
+                                            <span class="text-muted small">Cible: 7 jours</span>
+                                        </div>
+                                        <div class="d-flex align-items-baseline my-2">
+                                            <span class="h3 fw-bold mb-0 me-2" id="valSlaP2">N/A</span>
+                                            <span id="badgeSlaP2" class="badge" style="display:none;">Respecté</span>
+                                        </div>
+                                        <div class="progress" style="height: 6px;">
+                                            <div id="barSlaP2" class="progress-bar bg-info" role="progressbar" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- ===== GRAPHIQUES ===== -->
@@ -116,8 +219,9 @@
                 <!-- Répartition statuts (Donut) -->
                 <div class="col-xl-4 col-md-6">
                     <div class="chart-card">
-                        <div class="card-header">
-                            <i class="fas fa-chart-pie"></i>Répartition des statuts
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-chart-pie me-2"></i>Répartition des statuts</span>
+                            <span class="text-muted small" style="font-size: 11px;"><i class="fas fa-mouse-pointer me-1"></i>Cliquer pour consulter</span>
                         </div>
                         <div class="card-body d-flex justify-content-center">
                             <div id="statutDonutChart" style="height:260px; width:100%;"></div>
@@ -125,11 +229,11 @@
                     </div>
                 </div>
 
-                <!-- Évolution mensuelle (ApexCharts) -->
+                <!-- Évolution mensuelle (Bar) -->
                 <div class="col-xl-8 col-md-6">
                     <div class="chart-card">
                         <div class="card-header">
-                            <i class="fas fa-chart-bar"></i>Évolution mensuelle des demandes
+                            <i class="fas fa-chart-bar me-2"></i>Évolution mensuelle des demandes
                         </div>
                         <div class="card-body">
                             <div id="demandesParMoisChart" style="height:260px;"></div>
@@ -140,8 +244,9 @@
                 <!-- Demandes en attente par niveau -->
                 <div class="col-xl-12">
                     <div class="chart-card">
-                        <div class="card-header">
-                            <i class="fas fa-sitemap"></i>Demandes en attente par niveau de validation
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-sitemap me-2"></i>Demandes en attente par niveau de validation</span>
+                            <span class="text-muted small" style="font-size: 11px;"><i class="fas fa-mouse-pointer me-1"></i>Cliquer pour filtrer</span>
                         </div>
                         <div class="card-body">
                             <div id="niveauxChart" style="height:280px;"></div>
@@ -152,8 +257,9 @@
                 <!-- Nature OPEX / CAPEX (Donut) -->
                 <div class="col-xl-6 col-md-6">
                     <div class="chart-card">
-                        <div class="card-header">
-                            <i class="fas fa-layer-group"></i>Répartition par nature (OPEX / CAPEX)
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-layer-group me-2"></i>Répartition par nature (OPEX / CAPEX)</span>
+                            <span class="text-muted small" style="font-size: 11px;"><i class="fas fa-mouse-pointer me-1"></i>Cliquer pour filtrer</span>
                         </div>
                         <div class="card-body d-flex justify-content-center">
                             <div id="natureChart" style="height:260px; width:100%;"></div>
@@ -164,8 +270,9 @@
                 <!-- Priorité (Bar) -->
                 <div class="col-xl-6 col-md-6">
                     <div class="chart-card">
-                        <div class="card-header">
-                            <i class="fas fa-flag"></i>Demandes par priorité
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-flag me-2"></i>Demandes par priorité</span>
+                            <span class="text-muted small" style="font-size: 11px;"><i class="fas fa-mouse-pointer me-1"></i>Cliquer pour filtrer</span>
                         </div>
                         <div class="card-body">
                             <div id="prioriteChart" style="height:260px;"></div>
@@ -174,8 +281,9 @@
                 </div>
                 <div class="col-xl-12">
                     <div class="chart-card">
-                        <div class="card-header">
-                            <i class="fas fa-building"></i> Demandes par service/département
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-building me-2"></i>Demandes par service/département</span>
+                            <span class="text-muted small" style="font-size: 11px;"><i class="fas fa-mouse-pointer me-1"></i>Cliquer pour filtrer</span>
                         </div>
                         <div class="card-body">
                             <div id="servicesChart" style="height:280px;"></div>
@@ -190,40 +298,51 @@
             /*<![CDATA[*/
 
             // ── Compteurs 3 cartes
-            const enCours   = /*[[${enCours}]]*/ 0;
-            const refusees  = /*[[${refusees}]]*/ 0;
-            const terminees = /*[[${terminees}]]*/ 0;
+            let enCours   = /*[[${enCours}]]*/ 0;
+            let refusees  = /*[[${refusees}]]*/ 0;
+            let terminees = /*[[${terminees}]]*/ 0;
 
             // ── Données mensuelles
-            const moisData = /*[[${moisData}]]*/ [];
-
-            const parseMois = s => JSON.parse(String(s).trim());
+            let moisData = /*[[${moisData}]]*/ [];
 
             // ── Nature
-            const opex  = /*[[${opex}]]*/ 0;
-            const capex = /*[[${capex}]]*/ 0;
+            let opex  = /*[[${opex}]]*/ 0;
+            let capex = /*[[${capex}]]*/ 0;
 
             // ── Priorité
-            const p0 = /*[[${p0}]]*/ 0;
-            const p1 = /*[[${p1}]]*/ 0;
-            const p2 = /*[[${p2}]]*/ 0;
+            let p0 = /*[[${p0}]]*/ 0;
+            let p1 = /*[[${p1}]]*/ 0;
+            let p2 = /*[[${p2}]]*/ 0;
 
-            const attenteN1    = /*[[${attenteN1}]]*/ 0;
-            const attenteN2    = /*[[${attenteN2}]]*/ 0;
-            const attenteN3    = /*[[${attenteN3}]]*/ 0;
-            const attenteN4    = /*[[${attenteN4}]]*/ 0;
-            const attenteSG    = /*[[${attenteSG}]]*/ 0;
-            const attenteCodep = /*[[${attenteCodep}]]*/ 0;
+            let attenteN1    = /*[[${attenteN1}]]*/ 0;
+            let attenteN2    = /*[[${attenteN2}]]*/ 0;
+            let attenteN3    = /*[[${attenteN3}]]*/ 0;
+            let attenteN4    = /*[[${attenteN4}]]*/ 0;
+            let attenteSG    = /*[[${attenteSG}]]*/ 0;
+            let attenteCodep = /*[[${attenteCodep}]]*/ 0;
 
-            const demandesParService = /*[[${demandesParService}]]*/ [];
+            let demandesParService = /*[[${demandesParService}]]*/ [];
 
+            // SLAs
+            let slaGlobalP0 = /*[[${slaP0}]]*/ null;
+            let slaGlobalP1 = /*[[${slaP1}]]*/ null;
+            let slaGlobalP2 = /*[[${slaP2}]]*/ null;
+
+            let monSlaP0 = /*[[${monSlaP0}]]*/ null;
+            let monSlaP1 = /*[[${monSlaP1}]]*/ null;
+            let monSlaP2 = /*[[${monSlaP2}]]*/ null;
+
+            const listUrl = /*[[@{/demande/list}]]*/ '/demande/list';
 
             /*]]>*/
         </script>
 
-        <!-- Chart.js -->
+        <!-- ECharts -->
         <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
         <script>
+            // Mode SLA initial
+            let currentSlaMode = (monSlaP0 != null || monSlaP1 != null || monSlaP2 != null) ? 'personal' : 'global';
+
             // Palette charte
             const BLEU_FONCE  = '#000A31';
             const BLEU_VIF    = '#00129f';
@@ -231,12 +350,28 @@
             const VERT        = '#28a745';
             const ROUGE       = '#dc2626';
             const ORANGE      = '#fd7e14';
-            const BLEU_MOYEN   = '#3347c2'; // entre vif et clair
-            const BLEU_PALE    = '#99a3d1'; // version plus douce
-            const VIOLET_SOFT  = '#6d28d9'; // contrôle de gestion (différenciation)
+            const VIOLET_SOFT  = '#6d28d9';
 
-            // ── 1. Donut – répartition des statuts ────────────────────
-            echarts.init(document.getElementById('statutDonutChart')).setOption({
+            // Initialisation des graphiques ECharts
+            const chartStatut   = echarts.init(document.getElementById('statutDonutChart'));
+            const chartMois     = echarts.init(document.getElementById('demandesParMoisChart'));
+            const chartNature   = echarts.init(document.getElementById('natureChart'));
+            const chartPriorite = echarts.init(document.getElementById('prioriteChart'));
+            const chartNiveaux  = echarts.init(document.getElementById('niveauxChart'));
+            const chartServices = echarts.init(document.getElementById('servicesChart'));
+
+            // Curseur pointeur
+            [chartStatut, chartMois, chartNature, chartPriorite, chartNiveaux, chartServices].forEach(c => {
+                c.getZr().on('mousemove', function () {
+                    c.getZr().setCursorStyle('pointer');
+                });
+            });
+
+            // Init SLA View
+            switchSlaMode(currentSlaMode);
+
+            // ── 1. Donut – Répartition des statuts
+            chartStatut.setOption({
                 animation: true,
                 animationDuration: 1000,
                 animationEasing: 'cubicOut',
@@ -252,64 +387,44 @@
                         { value: terminees, name: 'Terminées', itemStyle: { color: VERT } }
                     ],
                     label: { show: false },
-                    emphasis: {
-                        scale: true,
-                        scaleSize: 10,
-                        itemStyle: { shadowBlur: 20, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.3)' }
-                    }
+                    emphasis: { scale: true, scaleSize: 10 }
                 }]
             });
 
-            // ── 2. Bar groupé – évolution mensuelle ──────────────────
-            const moisLabels = moisData.map(d => {
-                const [y, m] = d.mois.split('-');
-                return new Date(y, m - 1).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+            chartStatut.on('click', function(params) {
+                if (params.name === 'Refusées') window.location.href = listUrl + '?statut=-1';
+                else if (params.name === 'Terminées') window.location.href = listUrl + '?statut=15';
+                else window.location.href = listUrl;
             });
 
-            echarts.init(document.getElementById('demandesParMoisChart')).setOption({
+            // ── 2. Bar groupé – Évolution mensuelle
+            function getMoisLabels(data) {
+                return (data || []).map(d => {
+                    const [y, m] = d.mois.split('-');
+                    return new Date(y, m - 1).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+                });
+            }
+
+            chartMois.setOption({
                 animation: true,
                 animationDuration: 1000,
                 animationEasing: 'cubicOut',
-                animationDelay: idx => idx * 50,
                 tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
                 legend: { top: 0, itemWidth: 12 },
                 grid: { left: '3%', right: '3%', bottom: '10%', containLabel: true },
-                xAxis: {
-                    type: 'category',
-                    data: moisLabels,
-                    axisLabel: { rotate: 30, fontSize: 11 }
-                },
-                yAxis: {
-                    type: 'value',
-                    minInterval: 1
-                },
+                xAxis: { type: 'category', data: getMoisLabels(moisData), axisLabel: { rotate: 30, fontSize: 11 } },
+                yAxis: { type: 'value', minInterval: 1 },
                 series: [
-                    {
-                        name: 'En cours',
-                        type: 'bar',
-                        data: moisData.map(d => d.enCours),
-                        itemStyle: { color: BLEU_VIF, borderRadius: [4, 4, 0, 0] }
-                    },
-                    {
-                        name: 'Refusées',
-                        type: 'bar',
-                        data: moisData.map(d => d.refusees),
-                        itemStyle: { color: ROUGE, borderRadius: [4, 4, 0, 0] }
-                    },
-                    {
-                        name: 'Terminées',
-                        type: 'bar',
-                        data: moisData.map(d => d.terminees),
-                        itemStyle: { color: VERT, borderRadius: [4, 4, 0, 0] }
-                    }
+                    { name: 'En cours', type: 'bar', data: moisData.map(d => d.enCours), itemStyle: { color: BLEU_VIF, borderRadius: [4, 4, 0, 0] } },
+                    { name: 'Refusées', type: 'bar', data: moisData.map(d => d.refusees), itemStyle: { color: ROUGE, borderRadius: [4, 4, 0, 0] } },
+                    { name: 'Terminées', type: 'bar', data: moisData.map(d => d.terminees), itemStyle: { color: VERT, borderRadius: [4, 4, 0, 0] } }
                 ]
             });
 
-            // ── 3. Donut – nature OPEX / CAPEX ────────────────────────
-            echarts.init(document.getElementById('natureChart')).setOption({
+            // ── 3. Donut – OPEX / CAPEX
+            chartNature.setOption({
                 animation: true,
                 animationDuration: 1200,
-                animationEasing: 'cubicOut',
                 tooltip: { trigger: 'item', formatter: '{b} : {c} ({d}%)' },
                 legend: { bottom: 0, itemWidth: 12 },
                 series: [{
@@ -320,27 +435,21 @@
                         { value: opex,  name: 'OPEX',  itemStyle: { color: BLEU_FONCE } },
                         { value: capex, name: 'CAPEX', itemStyle: { color: BLEU_CLAIR } }
                     ],
-                    label: { show: false },
-                    emphasis: {
-                        scale: true,
-                        scaleSize: 10,
-                        itemStyle: { shadowBlur: 20, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.3)' }
-                    }
+                    label: { show: false }
                 }]
             });
 
-            // ── 4. Bar – priorité ─────────────────────────────────────
-            echarts.init(document.getElementById('prioriteChart')).setOption({
+            chartNature.on('click', function(params) {
+                window.location.href = listUrl + '?type=' + params.name;
+            });
+
+            // ── 4. Bar – Priorité
+            chartPriorite.setOption({
                 animation: true,
                 animationDuration: 1000,
-                animationEasing: 'cubicOut',
-                animationDelay: idx => idx * 100,
                 tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
                 grid: { left: '3%', right: '3%', bottom: '5%', containLabel: true },
-                xAxis: {
-                    type: 'category',
-                    data: ['P0 — Urgent', 'P1 — Normal', 'P2 — Faible']
-                },
+                xAxis: { type: 'category', data: ['P0 — Urgent', 'P1 — Normal', 'P2 — Faible'] },
                 yAxis: { type: 'value', minInterval: 1 },
                 series: [{
                     type: 'bar',
@@ -353,85 +462,241 @@
                 }]
             });
 
-            // ── 5. Bar horizontal – demandes en attente par niveau ────────────
-            echarts.init(document.getElementById('niveauxChart')).setOption({
+            chartPriorite.on('click', function(params) {
+                const prio = params.name.split(' ')[0];
+                window.location.href = listUrl + '?priorite=' + prio;
+            });
+
+            // ── 5. Bar horizontal – Demandes en attente par niveau
+            chartNiveaux.setOption({
                 animation: true,
                 animationDuration: 1000,
-                animationEasing: 'cubicOut',
-                tooltip: {
-                    trigger: 'axis',
-                    axisPointer: { type: 'shadow' },
-                    formatter: params => `${params[0].name} : <b>${params[0].value}</b> demande(s)`
-                },
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: params => `${params[0].name} : <b>${params[0].value}</b> demande(s)` },
                 grid: { left: '3%', right: '8%', bottom: '5%', containLabel: true },
-                xAxis: {
-                    type: 'value',
-                    minInterval: 1,
-                    axisLabel: { fontSize: 11 }
-                },
-                yAxis: {
-                    type: 'category',
-                    data: ['N+1 (Manager)', 'Moyens Généraux', 'Contrôleur de gestion', 'DFC', 'SG', 'Comité de dépenses'],
-                    axisLabel: { fontSize: 12 },
-                    inverse: false
-                },
+                xAxis: { type: 'value', minInterval: 1, axisLabel: { fontSize: 11 } },
+                yAxis: { type: 'category', data: ['N+1 (Manager)', 'Moyens Généraux', 'Contrôleur de gestion', 'DFC', 'SG', 'Comité de dépenses'], axisLabel: { fontSize: 12 } },
                 series: [{
                     type: 'bar',
                     data: [
-                        { value: attenteN1,    itemStyle: { color: BLEU_VIF,   borderRadius: [0, 4, 4, 0] } }, // N+1
-                        { value: attenteN2,    itemStyle: { color: BLEU_CLAIR, borderRadius: [0, 4, 4, 0] } }, // Moyens généraux
-                        { value: attenteN3,    itemStyle: { color: VIOLET_SOFT,borderRadius: [0, 4, 4, 0] } }, // Contrôle
-                        { value: attenteN4,    itemStyle: { color: VERT,       borderRadius: [0, 4, 4, 0] } }, // Finance
-                        { value: attenteSG,    itemStyle: { color: BLEU_FONCE, borderRadius: [0, 4, 4, 0] } }, // SG
-                        { value: attenteCodep, itemStyle: { color: ORANGE,     borderRadius: [0, 4, 4, 0] } }  // CODEP
+                        { value: attenteN1,    itemStyle: { color: BLEU_VIF,   borderRadius: [0, 4, 4, 0] } },
+                        { value: attenteN2,    itemStyle: { color: BLEU_CLAIR, borderRadius: [0, 4, 4, 0] } },
+                        { value: attenteN3,    itemStyle: { color: VIOLET_SOFT,borderRadius: [0, 4, 4, 0] } },
+                        { value: attenteN4,    itemStyle: { color: VERT,       borderRadius: [0, 4, 4, 0] } },
+                        { value: attenteSG,    itemStyle: { color: BLEU_FONCE, borderRadius: [0, 4, 4, 0] } },
+                        { value: attenteCodep, itemStyle: { color: ORANGE,     borderRadius: [0, 4, 4, 0] } }
                     ],
-                    label: {
-                        show: true,
-                        position: 'right',
-                        fontSize: 12,
-                        fontWeight: 'bold'
-                    },
+                    label: { show: true, position: 'right', fontSize: 12, fontWeight: 'bold' },
                     barMaxWidth: 40
                 }]
             });
 
-            // ── 6. Bar horizontal – demandes par service ──────────────────────────
-            echarts.init(document.getElementById('servicesChart')).setOption({
+            chartNiveaux.on('click', function(params) {
+                const levelMap = {
+                    'N+1 (Manager)': 1,
+                    'Moyens Généraux': 11,
+                    'Contrôleur de gestion': 12,
+                    'DFC': 13,
+                    'SG': 14,
+                    'Comité de dépenses': 20
+                };
+                const st = levelMap[params.name];
+                if (st) window.location.href = listUrl + '?statut=' + st;
+            });
+
+            // ── 6. Bar horizontal – Demandes par service
+            chartServices.setOption({
                 animation: true,
                 animationDuration: 1000,
-                animationEasing: 'cubicOut',
-                tooltip: {
-                    trigger: 'axis',
-                    axisPointer: { type: 'shadow' },
-                    formatter: params => `${params[0].name} : <b>${params[0].value}</b> demande(s)`
-                },
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: params => `${params[0].name} : <b>${params[0].value}</b> demande(s)` },
                 grid: { left: '3%', right: '8%', bottom: '5%', containLabel: true },
-                xAxis: {
-                    type: 'value',
-                    minInterval: 1,
-                    axisLabel: { fontSize: 11 }
-                },
-                yAxis: {
-                    type: 'category',
-                    data: demandesParService.map(d => d.acronymeService ?? 'N/A'),
-                    axisLabel: { fontSize: 12 },
-                    inverse: true
-                },
+                xAxis: { type: 'value', minInterval: 1, axisLabel: { fontSize: 11 } },
+                yAxis: { type: 'category', data: demandesParService.map(d => d.acronymeService ?? 'N/A'), axisLabel: { fontSize: 12 }, inverse: true },
                 series: [{
                     type: 'bar',
-                    data: demandesParService.map(d => ({
-                        value: d.nbDemande,
-                        itemStyle: { color: BLEU_VIF, borderRadius: [0, 4, 4, 0] }
-                    })),
-                    label: {
-                        show: true,
-                        position: 'right',
-                        fontSize: 12,
-                        fontWeight: 'bold'
-                    },
+                    data: demandesParService.map(d => ({ value: d.nbDemande, itemStyle: { color: BLEU_VIF, borderRadius: [0, 4, 4, 0] } })),
+                    label: { show: true, position: 'right', fontSize: 12, fontWeight: 'bold' },
                     barMaxWidth: 40
                 }]
             });
+
+            chartServices.on('click', function(params) {
+                window.location.href = listUrl + '?demandeur=' + encodeURIComponent(params.name);
+            });
+
+            // ── Bascule SLA Personnel / Global
+            function switchSlaMode(mode) {
+                currentSlaMode = mode;
+                const btnPersonal = document.getElementById('btnSlaPersonal');
+                const btnGlobal   = document.getElementById('btnSlaGlobal');
+
+                if (mode === 'personal') {
+                    btnPersonal.className = 'btn btn-primary';
+                    btnGlobal.className   = 'btn btn-outline-primary';
+
+                    updateSlaItem('valSlaP0', 'badgeSlaP0', 'barSlaP0', monSlaP0, 1.0);
+                    updateSlaItem('valSlaP1', 'badgeSlaP1', 'barSlaP1', monSlaP1, 2.0);
+                    updateSlaItem('valSlaP2', 'badgeSlaP2', 'barSlaP2', monSlaP2, 7.0);
+                } else {
+                    btnGlobal.className   = 'btn btn-primary';
+                    btnPersonal.className = 'btn btn-outline-primary';
+
+                    updateSlaItem('valSlaP0', 'badgeSlaP0', 'barSlaP0', slaGlobalP0, 1.0);
+                    updateSlaItem('valSlaP1', 'badgeSlaP1', 'barSlaP1', slaGlobalP1, 2.0);
+                    updateSlaItem('valSlaP2', 'badgeSlaP2', 'barSlaP2', slaGlobalP2, 7.0);
+                }
+            }
+
+            // ── Fonctions AJAX & Presets de date
+            function applyDatePreset(preset) {
+                const today = new Date();
+                let fromDate, toDate;
+
+                if (preset === 'today') {
+                    fromDate = today;
+                    toDate = today;
+                } else if (preset === '7days') {
+                    fromDate = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+                    toDate = today;
+                } else if (preset === 'thisMonth') {
+                    fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    toDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                } else if (preset === 'lastMonth') {
+                    fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    toDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                } else if (preset === 'thisQuarter') {
+                    const q = Math.floor(today.getMonth() / 3);
+                    fromDate = new Date(today.getFullYear(), q * 3, 1);
+                    toDate = new Date(today.getFullYear(), (q + 1) * 3, 0);
+                } else if (preset === 'thisYear') {
+                    fromDate = new Date(today.getFullYear(), 0, 1);
+                    toDate = new Date(today.getFullYear(), 11, 31);
+                }
+
+                const formatDate = d => {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+
+                document.getElementById('dateFromInput').value = formatDate(fromDate);
+                document.getElementById('dateToInput').value = formatDate(toDate);
+
+                refreshDashboardAsync();
+            }
+
+            function refreshDashboardAsync() {
+                const dateFrom = document.getElementById('dateFromInput').value;
+                const dateTo   = document.getElementById('dateToInput').value;
+
+                let url = '/api/dashboard/stats';
+                const params = [];
+                if (dateFrom) params.push('dateFrom=' + encodeURIComponent(dateFrom));
+                if (dateTo)   params.push('dateTo='   + encodeURIComponent(dateTo));
+                if (params.length > 0) url += '?' + params.join('&');
+
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Cartes principales
+                        document.getElementById('valEnCours').innerText = data.enCours;
+                        document.getElementById('valRefusees').innerText = data.refusees;
+                        document.getElementById('valTerminees').innerText = data.terminees;
+
+                        // Tendances Mo/Mo
+                        const formatTrend = t => t != null ? (t >= 0 ? '+' + t + '%' : t + '%') : '0%';
+                        document.getElementById('badgeTrendEnCours').innerText   = formatTrend(data.trendEnCours);
+                        document.getElementById('badgeTrendRefusees').innerText  = formatTrend(data.trendRefusees);
+                        document.getElementById('badgeTrendTerminees').innerText = formatTrend(data.trendTerminees);
+
+                        // Update SLAs Data
+                        slaGlobalP0 = data.slaP0;
+                        slaGlobalP1 = data.slaP1;
+                        slaGlobalP2 = data.slaP2;
+
+                        monSlaP0 = data.monSlaP0;
+                        monSlaP1 = data.monSlaP1;
+                        monSlaP2 = data.monSlaP2;
+
+                        switchSlaMode(currentSlaMode);
+
+                        // ECharts update
+                        chartStatut.setOption({
+                            series: [{ data: [
+                                { value: data.enCours,   name: 'En cours',  itemStyle: { color: BLEU_VIF } },
+                                { value: data.refusees,  name: 'Refusées',  itemStyle: { color: ROUGE } },
+                                { value: data.terminees, name: 'Terminées', itemStyle: { color: VERT } }
+                            ]}]
+                        });
+
+                        chartNature.setOption({
+                            series: [{ data: [
+                                { value: data.opex,  name: 'OPEX',  itemStyle: { color: BLEU_FONCE } },
+                                { value: data.capex, name: 'CAPEX', itemStyle: { color: BLEU_CLAIR } }
+                            ]}]
+                        });
+
+                        chartPriorite.setOption({
+                            series: [{ data: [
+                                { value: data.p0, itemStyle: { color: ROUGE,      borderRadius: [4, 4, 0, 0] } },
+                                { value: data.p1, itemStyle: { color: ORANGE,     borderRadius: [4, 4, 0, 0] } },
+                                { value: data.p2, itemStyle: { color: BLEU_CLAIR, borderRadius: [4, 4, 0, 0] } }
+                            ]}]
+                        });
+
+                        chartNiveaux.setOption({
+                            series: [{ data: [
+                                { value: data.attenteN1,    itemStyle: { color: BLEU_VIF,   borderRadius: [0, 4, 4, 0] } },
+                                { value: data.attenteN2,    itemStyle: { color: BLEU_CLAIR, borderRadius: [0, 4, 4, 0] } },
+                                { value: data.attenteN3,    itemStyle: { color: VIOLET_SOFT,borderRadius: [0, 4, 4, 0] } },
+                                { value: data.attenteN4,    itemStyle: { color: VERT,       borderRadius: [0, 4, 4, 0] } },
+                                { value: data.attenteSG,    itemStyle: { color: BLEU_FONCE, borderRadius: [0, 4, 4, 0] } },
+                                { value: data.attenteCodep, itemStyle: { color: ORANGE,     borderRadius: [0, 4, 4, 0] } }
+                            ]}]
+                        });
+
+                        chartMois.setOption({
+                            xAxis: { data: getMoisLabels(data.moisData) },
+                            series: [
+                                { data: (data.moisData || []).map(d => d.enCours) },
+                                { data: (data.moisData || []).map(d => d.refusees) },
+                                { data: (data.moisData || []).map(d => d.terminees) }
+                            ]
+                        });
+
+                        if (data.demandesParService) {
+                            chartServices.setOption({
+                                yAxis: { data: data.demandesParService.map(d => d.acronymeService ?? 'N/A') },
+                                series: [{ data: data.demandesParService.map(d => ({ value: d.nbDemande, itemStyle: { color: BLEU_VIF, borderRadius: [0, 4, 4, 0] } })) }]
+                            });
+                        }
+                    })
+                    .catch(err => console.error("Erreur actualisation dashboard: ", err));
+            }
+
+            function updateSlaItem(valId, badgeId, barId, val, target) {
+                const valElem   = document.getElementById(valId);
+                const badgeElem = document.getElementById(badgeId);
+                const barElem   = document.getElementById(barId);
+
+                if (val != null) {
+                    valElem.innerText = val + ' j';
+                    if (val <= target) {
+                        badgeElem.className = 'badge bg-success';
+                        badgeElem.innerText = 'Respecté';
+                    } else {
+                        badgeElem.className = 'badge bg-warning text-dark';
+                        badgeElem.innerText = 'Dépassement';
+                    }
+                    badgeElem.style.display = 'inline-block';
+                    const pct = Math.min(100, Math.round((val / target) * 100));
+                    barElem.style.width = pct + '%';
+                } else {
+                    valElem.innerText = 'N/A';
+                    badgeElem.style.display = 'none';
+                    barElem.style.width = '0%';
+                }
+            }
         </script>
     </section>
 </div>
