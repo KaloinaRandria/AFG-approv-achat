@@ -222,6 +222,15 @@ public class UtilisateurService {
                     .orElseThrow(() -> new IllegalArgumentException("Service introuvable : " + dto.getServiceId()));
         }
 
+        Utilisateur superieur = null;
+        if (dto.getSuperieurHierarchiqueId() != null) {
+            if (dto.getSuperieurHierarchiqueId() == id) {
+                throw new IllegalArgumentException("Un utilisateur ne peut pas être son propre supérieur hiérarchique.");
+            }
+            superieur = utilisateurRepo.findById(dto.getSuperieurHierarchiqueId())
+                    .orElseThrow(() -> new IllegalArgumentException("Supérieur introuvable : " + dto.getSuperieurHierarchiqueId()));
+        }
+
         utilisateur.setNom(dto.getNom());
         utilisateur.setPrenom(dto.getPrenom());
         utilisateur.setMail(dto.getMail());
@@ -229,6 +238,7 @@ public class UtilisateurService {
         utilisateur.setPoste(poste);
         utilisateur.setService(service);
         utilisateur.setRoles(roles);
+        utilisateur.setSuperieurHierarchique(superieur);
 
         return utilisateurRepo.save(utilisateur);
     }
