@@ -1029,6 +1029,10 @@ public class DemandeController {
         boolean canTransmitFinance = isMG
                 && demande.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE;
         model.addAttribute("canTransmitFinance", canTransmitFinance);
+        boolean isFinance = hasFinanceAccess(auth);
+        boolean canPayFinance = isFinance
+                && demande.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE;
+        model.addAttribute("canPayFinance", canPayFinance);
         model.addAttribute("bonsCommande", bonCommandeService.getBonCommandesByDemande(demande));
 
 
