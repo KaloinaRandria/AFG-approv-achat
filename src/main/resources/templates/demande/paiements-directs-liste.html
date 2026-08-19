@@ -198,7 +198,7 @@
                                 <i class="far fa-user me-2 icon-gradient-light-blue"></i>Demandeur
                             </th>
                             <th>Motif évoqué</th>
-                            <th>Montant estimé</th>
+<!--                            <th>Montant estimé</th>-->
                             <th>Priorité</th>
                             <th>Statut finance</th>
 <!--                            <th>Actions</th>-->
@@ -232,7 +232,7 @@
                             : demande.motifEvoque}">
                             </td>
 
-                            <td th:text="${demande.totalEstime != null ? #numbers.formatDecimal(demande.totalEstime, 1, 'WHITESPACE', 2, 'COMMA') : (demande.totalPrix != null ? #numbers.formatDecimal(demande.totalPrix, 1, 'WHITESPACE', 2, 'COMMA') : '-')}"></td>
+<!--                            <td th:text="${demande.totalEstime != null ? #numbers.formatDecimal(demande.totalEstime, 1, 'WHITESPACE', 2, 'COMMA') : (demande.totalPrix != null ? #numbers.formatDecimal(demande.totalPrix, 1, 'WHITESPACE', 2, 'COMMA') : '-')}"></td>-->
 
                             <td th:text="${demande.priorite != null ? demande.priorite : '-'}"></td>
 
