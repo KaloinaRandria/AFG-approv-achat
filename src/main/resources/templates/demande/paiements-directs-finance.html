@@ -198,10 +198,9 @@
                                 <i class="far fa-user me-2 icon-gradient-light-blue"></i>Demandeur
                             </th>
                             <th>Motif évoqué</th>
-                            <th>Montant estimé</th>
+<!--                            <th>Montant estimé</th>-->
                             <th>Priorité</th>
-                            <th>Statut finance</th>
-                            <th>Actions</th>
+                            <th>Statut</th>
                         </tr>
                         </thead>
 
@@ -232,7 +231,7 @@
                             : demande.motifEvoque}">
                             </td>
 
-                            <td th:text="${demande.totalEstime != null ? #numbers.formatDecimal(demande.totalEstime, 1, 'WHITESPACE', 2, 'COMMA') : (demande.totalPrix != null ? #numbers.formatDecimal(demande.totalPrix, 1, 'WHITESPACE', 2, 'COMMA') : '-')}"></td>
+<!--                            <td th:text="${demande.totalEstime != null ? #numbers.formatDecimal(demande.totalEstime, 1, 'WHITESPACE', 2, 'COMMA') : (demande.totalPrix != null ? #numbers.formatDecimal(demande.totalPrix, 1, 'WHITESPACE', 2, 'COMMA') : '-')}"></td>-->
 
                             <td th:text="${demande.priorite != null ? demande.priorite : '-'}"></td>
 
@@ -247,21 +246,14 @@
                                 </span>
                             </td>
 
-                            <td>
-                                <div class="d-flex gap-2">
-<!--                                    <a class="btn btn-sm btn-outline-gradient-blue" th:href="@{/demande/fiche/{id}(id=${demande.id}, returnUrl=${returnUrl})}">-->
-<!--                                        Ouvrir-->
+<!--                            <td>-->
+<!--                                <div class="d-flex gap-2">-->
+<!--                                    <a class="btn btn-sm btn-outline-gradient-blue"-->
+<!--                                       th:href="@{/demande/fiche/{id}(id=${demande.id}, returnUrl=${returnUrl})}">-->
+<!--                                        <i class="fas fa-eye me-1"></i> Ouvrir la fiche-->
 <!--                                    </a>-->
-                                    <button type="button"
-                                            th:if="${demande.statutTransmissionFinance != null and demande.statutTransmissionFinance.name() == 'TRANSMISE_FINANCE'}"
-                                            class="btn btn-sm btn-gradient-green"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#markPaidFinanceModal"
-                                            th:attr="data-demande-id=${demande.id},data-action-url=@{/demande/fiche/{id}/payer-finance(id=${demande.id})}">
-                                        <i class="fas fa-check-circle me-1"></i>Marquer payée
-                                    </button>
-                                </div>
-                            </td>
+<!--                                </div>-->
+<!--                            </td>-->
                         </tr>
 
                         <tr th:if="${demandesMeres.totalElements == 0}">

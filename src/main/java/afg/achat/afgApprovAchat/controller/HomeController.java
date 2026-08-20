@@ -304,7 +304,7 @@ public class HomeController {
 
         // ── Stats (tout délégué au service) ─────────────────────────────
         DashboardStatsDTO stats = dashboardService.computeStats(
-                new ArrayList<>(allIds), isAdminOrSpecial, dateFrom, dateTo);
+                new ArrayList<>(allIds), isAdminOrSpecial, dateFrom, dateTo, current.getId());
 
         // ── Compteurs personnels (restent en mémoire, périmètre restreint)
         // Nécessitent les IDs → calculés ici uniquement si périmètre non-admin
@@ -355,6 +355,16 @@ public class HomeController {
         model.addAttribute("attenteCodep",       stats.attenteCodep());
         model.addAttribute("moisData",           stats.moisData());
         model.addAttribute("demandesParService", stats.demandesParService());
+
+        model.addAttribute("slaP0",               stats.slaP0());
+        model.addAttribute("slaP1",               stats.slaP1());
+        model.addAttribute("slaP2",               stats.slaP2());
+        model.addAttribute("monSlaP0",            stats.monSlaP0());
+        model.addAttribute("monSlaP1",            stats.monSlaP1());
+        model.addAttribute("monSlaP2",            stats.monSlaP2());
+        model.addAttribute("trendEnCours",        stats.trendEnCours());
+        model.addAttribute("trendRefusees",       stats.trendRefusees());
+        model.addAttribute("trendTerminees",      stats.trendTerminees());
 
         model.addAttribute("mesDemandesAValider",       mesDemandesAValider);
         model.addAttribute("demandesValidateurAssigné", demandesValidateurAssigne);

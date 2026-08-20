@@ -232,6 +232,7 @@
                         aria-label="Close"></button>
             </div>
             <form th:action="@{/user/modifier}" method="post" id="utilisateurForm">
+                <input type="hidden" id="modalReturnUrl" name="returnUrl">
                 <div class="modal-body">
                     <input type="hidden" id="modalId" name="id">
                     <div class="mb-3">
@@ -276,6 +277,18 @@
                             <option value="">Sélectionner un poste</option>
                             <option th:each="p : ${postes}" th:value="${p.id}"
                                     th:text="${p.poste}"></option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modalSuperieur" class="form-label">
+                            <i class="fas fa-user-tie me-2 icon-gradient-blue"></i>Supérieur hiérarchique
+                        </label>
+                        <select class="select2 w-100" id="modalSuperieur" name="superieurHierarchiqueId">
+                            <option value="">-- Aucun supérieur --</option>
+                            <option th:each="u : ${tousUtilisateurs}"
+                                    th:value="${u.id}"
+                                    th:text="${u.nom + ' ' + u.prenom + ' (' + u.mail + ')'}"></option>
                         </select>
                     </div>
 
@@ -461,7 +474,10 @@
             $('#modalContact').val('');
             $('#modalService').val('');
             $('#modalPoste').val('');
+            $('#modalSuperieur').val('').trigger('change');
             $('#modalRoles').val(null).trigger('change');
+            $('#modalReturnUrl').val(window.location.pathname + window.location.search);
+
 
             const userId = button.data('id');
             const labelNom = button.data('nom') || '';
@@ -483,6 +499,7 @@
                     $('#modalContact').val(utilisateur.contact || '');
                     $('#modalService').val(utilisateur.serviceId || '');
                     $('#modalPoste').val(utilisateur.posteId || '');
+                    $('#modalSuperieur').val(utilisateur.superieurHierarchiqueId || '').trigger('change');
 
                     const roleIds = Array.isArray(utilisateur.roleIds) ? utilisateur.roleIds.map(String) : [];
                     $('#modalRoles').val(roleIds).trigger('change');
@@ -499,12 +516,25 @@
             if ($.fn.select2 && $('#modalRoles').data('select2')) {
                 $('#modalRoles').val(null).trigger('change');
             }
+            if ($.fn.select2 && $('#modalSuperieur').data('select2')) {
+                $('#modalSuperieur').val('').trigger('change');
+            }
         });
 
         if ($.fn.select2 && $('#modalRoles').length) {
             $('#modalRoles').select2({
                 dropdownParent: $('#modifierModal'),
                 placeholder: 'Sélectionnez un ou plusieurs rôles...',
+                allowClear: true,
+                language: 'fr',
+                width: '100%'
+            });
+        }
+
+        if ($.fn.select2 && $('#modalSuperieur').length) {
+            $('#modalSuperieur').select2({
+                dropdownParent: $('#modifierModal'),
+                placeholder: 'Rechercher un supérieur...',
                 allowClear: true,
                 language: 'fr',
                 width: '100%'

@@ -52,6 +52,7 @@ public class UtilisateurController {
         model.addAttribute("services", serviceRepo.findAll());
         model.addAttribute("postes", posteRepo.findAll());
         model.addAttribute("roles", roleRepo.findAll());
+        model.addAttribute("tousUtilisateurs", utilisateurRepo.findAll());
     }
 
     @GetMapping("/add")
@@ -210,6 +211,8 @@ public class UtilisateurController {
         data.put("contact", utilisateur.getContact());
         data.put("serviceId", utilisateur.getService() != null ? utilisateur.getService().getId() : null);
         data.put("posteId", utilisateur.getPoste() != null ? utilisateur.getPoste().getId() : null);
+        data.put("superieurHierarchiqueId", utilisateur.getSuperieurHierarchique() != null
+                ? utilisateur.getSuperieurHierarchique().getId() : null);
         data.put("roleIds", utilisateur.getRoles().stream()
                 .map(Role::getId)
                 .toList());
@@ -231,8 +234,9 @@ public class UtilisateurController {
             @RequestParam(value = "contact", required = false) String contact,
             @RequestParam(value = "posteId", required = false) Integer posteId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
+            @RequestParam(value = "superieurHierarchiqueId", required = false) Integer superieurHierarchiqueId,
             @RequestParam(value = "roles", required = false) List<Integer> roleIdsList,
-
+            @RequestParam(value = "returnUrl", required = false) String returnUrl,
             RedirectAttributes redirectAttributes
     ) {
         Utilisateur existant = utilisateurService.getUtilisateurById(id);
@@ -248,12 +252,16 @@ public class UtilisateurController {
         dto.setContact(contact);
         dto.setPosteId(posteId);
         dto.setServiceId(serviceId);
+        dto.setSuperieurHierarchiqueId(superieurHierarchiqueId);
         dto.setRoleIds(roleIdsList != null ? new HashSet<>(roleIdsList) : new HashSet<>());
-        dto.setSuperieurHierarchiqueId(existant.getSuperieurHierarchique() != null ? existant.getSuperieurHierarchique().getId() : null);
         dto.setPdpId(existant.getPdp() != null ? existant.getPdp().getId() : null);
         dto.setValidateurIds(existant.getValidateurs().stream()
                 .map(Utilisateur::getId)
                 .collect(java.util.stream.Collectors.toSet()));
+
+        String target = (returnUrl != null && returnUrl.startsWith("/user/"))
+                ? returnUrl
+                : "/user/list";
 
         try {
             utilisateurService.modifierUtilisateur(id, dto);
