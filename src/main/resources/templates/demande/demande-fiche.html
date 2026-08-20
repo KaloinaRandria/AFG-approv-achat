@@ -571,10 +571,29 @@
                         <div class="bl-body" th:if="${canDecisionMG and demande.statut
      == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
 
-                            <div class="alert alert-info py-2 mx-3 mb-2">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Pour chaque article, saisissez le prix proforma. Si du stock est disponible,
-                                utilisez <strong>"Scinder"</strong> pour créer une ligne stock séparée.
+                            <!-- BANDEAU STYLISÉ STATUT PRIX & CONSIGNES MG -->
+                            <div class="mx-3 mb-3 p-3 rounded-4 shadow-sm border" id="alertPrixContainer"
+                                 style="background: linear-gradient(135deg, rgba(255, 243, 205, 0.6) 0%, rgba(255, 255, 255, 0.95) 100%); border-color: rgba(255, 193, 7, 0.4) !important;">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="d-flex align-items-center justify-content-center rounded-circle shadow-sm"
+                                         id="alertPrixIconWrapper"
+                                         style="width: 42px; height: 42px; min-width: 42px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                                        <i class="fas fa-exclamation-triangle fa-lg" id="alertPrixIcon"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
+                                            <h6 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                                                <span id="alertPrixTitle">Saisie des prix proforma</span>
+                                                <span id="badgePrixManquantsHeader" class="badge rounded-pill bg-warning text-dark px-2 py-1 small">
+                                                    <i class="fas fa-clock me-1"></i>En attente de saisie
+                                                </span>
+                                            </h6>
+                                        </div>
+                                        <p class="mb-0 text-muted small" id="alertPrixDescription">
+                                            Pour chaque article, saisissez le prix proforma. Si du stock est disponible, utilisez le bouton <strong class="text-primary"><i class="fas fa-layer-group"></i> Scinder</strong> pour créer une ligne stock séparée.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
                             <table class="bl-table table table-hover align-middle">
@@ -879,6 +898,7 @@
 
                                         <select class="form-select form-select-sm"
                                                 name="typeDemande"
+                                                id="typeDemandeSelect"
                                                 required>
                                             <option value="">-- Choisir --</option>
                                             <option th:each="n : ${natures}"
@@ -899,13 +919,14 @@
                                             Mode de traitement <span class="text-danger">*</span>
                                         </label>
 
-                                        <select class="form-select from-select-sm"
-                                        name="modeTraitement"
-                                        required>
+                                        <select class="form-select form-select-sm"
+                                                name="modeTraitement"
+                                                id="modeTraitementSelect"
+                                                required>
                                             <option value="">-- Choisir --</option>
                                             <option th:each="m : ${modeTraitement}"
-                                            th:value="${m.getId()}"
-                                            th:text="${m.getLibelle()}">
+                                                    th:value="${m.getId()}"
+                                                    th:text="${m.getLibelle()}">
                                             </option>
                                         </select>
                                     </div>
@@ -1051,27 +1072,22 @@
 
                                             <button type="button"
                                                     class="btn btn-outline-danger btn-reject"
-                                                    data-decision="REJECT"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#decisionModal">
+                                                    data-decision="REJECT">
                                                 <i class="fas fa-times me-1"></i>
                                                 Rejeter
                                             </button>
 
                                             <button type="button"
                                                     class="btn btn-gradient-green btn-approve"
-                                                    data-decision="APPROVE"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#decisionModal">
+                                                    data-decision="APPROVE">
                                                 <i class="fas fa-check me-1"></i>
                                                 Valider
                                             </button>
 
                                             <button type="button"
                                                     class="btn btn-gradient-purple"
-                                                    th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#codepModal">
+                                                    id="btnEnvoyerCodep"
+                                                    th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
                                                 <i class="fas fa-landmark me-1"></i>
                                                 Envoyer au CODEP
                                             </button>
@@ -1083,18 +1099,14 @@
 
                                             <button type="button"
                                                     class="btn btn-outline-danger btn-reject"
-                                                    data-decision="REJECT"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#decisionModal">
+                                                    data-decision="REJECT">
                                                 <i class="fas fa-times me-1"></i>
                                                 Rejeter
                                             </button>
 
                                             <button type="button"
                                                     class="btn btn-gradient-green btn-approve"
-                                                    data-decision="APPROVE"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#decisionModal">
+                                                    data-decision="APPROVE">
                                                 <i class="fas fa-check me-1"></i>
                                                 Valider
                                             </button>
@@ -1623,6 +1635,62 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body text-center p-3" id="previewPjBody"></div>
+        </div>
+    </div>
+</div>
+<!-- MODAL ALERTE INFORMATIONS REQUISES (PRIX, TYPE DEMANDE, MODE TRAITEMENT) -->
+<div class="modal fade" id="prixManquantsModal" tabindex="-1"
+     aria-labelledby="prixManquantsModalLabel" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0 rounded-4">
+
+            <!-- HEADER AVEC GRADIENT ORANGE -->
+            <div class="modal-header btn-gradient-orange rounded-top-4 text-white">
+                <h5 class="modal-title d-flex align-items-center" id="prixManquantsModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="prixManquantsModalTitle">Informations obligatoires requises</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+
+            <!-- BODY -->
+            <div class="modal-body p-4">
+                <div class="p-3 border rounded-4 bg-light mb-3">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="fas fa-info-circle text-warning mt-1 fa-lg"></i>
+                        <div>
+                            <div class="fw-bold text-dark mb-1" id="prixManquantsModalActionText">
+                                Action impossible
+                            </div>
+                            <div class="small text-muted" id="prixManquantsModalSubText">
+                                Veuillez compléter les éléments obligatoires ci-dessous avant de pouvoir continuer.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fw-semibold text-dark small text-uppercase mb-2">
+                    <i class="fas fa-list-ul me-1 text-muted"></i> <span id="prixManquantsModalSectionTitle">Éléments à renseigner</span> (<span id="prixManquantsModalCount">0</span>) :
+                </div>
+
+                <div class="border rounded-3 p-2 bg-white" style="max-height: 200px; overflow-y: auto;">
+                    <ul class="list-group list-group-flush small" id="prixManquantsModalList">
+                        <!-- Rempli dynamiquement par JS -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- FOOTER -->
+            <div class="modal-footer border-0 pt-0 justify-content-between">
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-3" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Fermer
+                </button>
+                <button type="button" class="btn btn-gradient-orange rounded-3 px-4 text-white" id="btnFocusPremierPrix">
+                    <i class="fas fa-edit me-1"></i> Compléter les informations
+                </button>
+            </div>
+
         </div>
     </div>
 </div>
@@ -2291,28 +2359,203 @@
         document.getElementById('decisionCodepForm').submit();
     });
 
-    // ── Save prix ──────────────────────────────────────────────────────────────
+    // ── Helper & Modal pour les vérifications préalables (Prix, Type Demande, Mode Traitement) ──
+    function getArticlesSansPrix() {
+        const articles = [];
+        document.querySelectorAll('.prix-input').forEach(inp => {
+            if (inp.closest('tr')?.classList.contains('table-danger')) return;
+            const val = parseFloat(inp.value);
+            if (!inp.value || isNaN(val) || val <= 0) {
+                const tr = inp.closest('tr');
+                const designation = tr?.querySelector('td:first-child')?.textContent?.trim() || `Ligne #${inp.dataset.ligneId}`;
+                articles.push({ input: inp, designation: designation });
+            }
+        });
+        return articles;
+    }
+
+    function verifierPreconditionsMG(actionName) {
+        const erreurs = [];
+
+        // 1. Type de demande (OPEX/CAPEX)
+        const typeDemandeSelect = document.getElementById('typeDemandeSelect') || document.querySelector('select[name="typeDemande"]');
+        if (typeDemandeSelect && (!typeDemandeSelect.value || typeDemandeSelect.value.trim() === '')) {
+            erreurs.push({
+                type: 'TYPE_DEMANDE',
+                element: typeDemandeSelect,
+                titre: 'Type de demande (OPEX / CAPEX)',
+                description: 'Le type de demande (OPEX ou CAPEX) doit être obligatoirement sélectionné.',
+                badge: 'À choisir',
+                icon: 'fa-tag'
+            });
+        }
+
+        // 2. Mode de traitement (seulement en Validation MG)
+        if (actionName === 'Validation') {
+            const modeTraitementSelect = document.getElementById('modeTraitementSelect') || document.querySelector('select[name="modeTraitement"]');
+            if (modeTraitementSelect && (!modeTraitementSelect.value || modeTraitementSelect.value.trim() === '')) {
+                erreurs.push({
+                    type: 'MODE_TRAITEMENT',
+                    element: modeTraitementSelect,
+                    titre: 'Mode de traitement',
+                    description: 'Le mode de traitement doit être obligatoirement sélectionné.',
+                    badge: 'À choisir',
+                    icon: 'fa-cogs'
+                });
+            }
+        }
+
+        // 3. Prix unitaires des articles
+        const articlesSansPrix = getArticlesSansPrix();
+        if (articlesSansPrix.length > 0) {
+            erreurs.push({
+                type: 'PRIX_ARTICLES',
+                element: articlesSansPrix[0].input,
+                titre: `${articlesSansPrix.length} article(s) sans prix unitaire`,
+                description: 'Tous les articles doivent avoir un prix unitaire proforma renseigné (> 0).',
+                badge: 'Prix manquant',
+                icon: 'fa-box',
+                subItems: articlesSansPrix
+            });
+        }
+
+        return erreurs;
+    }
+
+    function afficherModalChampsRequis(actionName, erreurs) {
+        const modalEl = document.getElementById('prixManquantsModal');
+        if (!modalEl) return;
+
+        const listEl = document.getElementById('prixManquantsModalList');
+        const countEl = document.getElementById('prixManquantsModalCount');
+        const actionTextEl = document.getElementById('prixManquantsModalActionText');
+        const subTextEl = document.getElementById('prixManquantsModalSubText');
+        const sectionTitleEl = document.getElementById('prixManquantsModalSectionTitle');
+
+        if (countEl) countEl.textContent = erreurs.length;
+        if (actionTextEl) actionTextEl.textContent = `${actionName} impossible`;
+        if (subTextEl) {
+            subTextEl.textContent = `Certains éléments obligatoires doivent être renseignés avant de pouvoir procéder à l'action "${actionName}".`;
+        }
+        if (sectionTitleEl) {
+            sectionTitleEl.textContent = 'Éléments obligatoires à renseigner';
+        }
+
+        if (listEl) {
+            listEl.innerHTML = '';
+            erreurs.forEach(err => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item px-2 py-2 border-bottom';
+                let subHtml = '';
+                if (err.subItems && err.subItems.length > 0) {
+                    subHtml = `<ul class="list-unstyled ms-4 mt-1 mb-0 small text-muted">
+                        ${err.subItems.map(item => `<li class="py-1"><i class="fas fa-angle-right text-warning me-1"></i>${item.designation}</li>`).join('')}
+                    </ul>`;
+                }
+                li.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas ${err.icon} text-warning"></i>
+                            <div>
+                                <span class="fw-semibold text-dark">${err.titre}</span>
+                                <div class="small text-muted">${err.description}</div>
+                            </div>
+                        </div>
+                        <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 small">${err.badge}</span>
+                    </div>
+                    ${subHtml}
+                `;
+                listEl.appendChild(li);
+            });
+        }
+
+        const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+
+    document.getElementById('btnFocusPremierPrix')?.addEventListener('click', function () {
+        const modalEl = document.getElementById('prixManquantsModal');
+        if (modalEl) {
+            const modal = window.bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+
+        const typeDemandeSelect = document.getElementById('typeDemandeSelect') || document.querySelector('select[name="typeDemande"]');
+        const modeTraitementSelect = document.getElementById('modeTraitementSelect') || document.querySelector('select[name="modeTraitement"]');
+        const articlesSansPrix = getArticlesSansPrix();
+
+        setTimeout(() => {
+            if (typeDemandeSelect && (!typeDemandeSelect.value || typeDemandeSelect.value.trim() === '')) {
+                typeDemandeSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                typeDemandeSelect.focus();
+                typeDemandeSelect.classList.add('is-invalid');
+            } else if (modeTraitementSelect && (!modeTraitementSelect.value || modeTraitementSelect.value.trim() === '')) {
+                modeTraitementSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                modeTraitementSelect.focus();
+                modeTraitementSelect.classList.add('is-invalid');
+            } else if (articlesSansPrix.length > 0 && articlesSansPrix[0].input) {
+                articlesSansPrix[0].input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                articlesSansPrix[0].input.focus();
+                articlesSansPrix[0].input.classList.add('is-invalid');
+            }
+        }, 350);
+    });
+
+    document.getElementById('typeDemandeSelect')?.addEventListener('change', function () {
+        if (this.value && this.value.trim() !== '') this.classList.remove('is-invalid');
+    });
+    document.getElementById('modeTraitementSelect')?.addEventListener('change', function () {
+        if (this.value && this.value.trim() !== '') this.classList.remove('is-invalid');
+    });
+
+    // ── Save prix & gestion bandeau dynamique ──────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         const btnSave = document.getElementById('btnSavePrix');
-        if (!btnSave) return;
-
-        const statusEl = document.getElementById('prixSaveStatus');
-        const badge    = document.getElementById('badgePrixManquants');
 
         function verifierPrixManquants() {
-            const inputs = document.querySelectorAll('.prix-input');
-            let manquants = 0;
-            inputs.forEach(inp => {
-                const val = parseFloat(inp.value);
-                if (!inp.value || isNaN(val) || val <= 0) manquants++;
-            });
+            const articlesSansPrix = getArticlesSansPrix();
+            const manquants = articlesSansPrix.length;
+
+            const badge = document.getElementById('badgePrixManquants');
             if (badge) badge.style.display = manquants > 0 ? 'inline-block' : 'none';
+
+            const container = document.getElementById('alertPrixContainer');
+            const iconWrapper = document.getElementById('alertPrixIconWrapper');
+            const icon = document.getElementById('alertPrixIcon');
+            const title = document.getElementById('alertPrixTitle');
+            const badgeHeader = document.getElementById('badgePrixManquantsHeader');
+            const desc = document.getElementById('alertPrixDescription');
+
+            if (container && iconWrapper && icon && title && badgeHeader && desc) {
+                if (manquants > 0) {
+                    container.style.background = 'linear-gradient(135deg, rgba(255, 243, 205, 0.6) 0%, rgba(255, 255, 255, 0.95) 100%)';
+                    container.style.borderColor = 'rgba(255, 193, 7, 0.4)';
+                    iconWrapper.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                    icon.className = 'fas fa-exclamation-triangle fa-lg';
+                    title.textContent = 'Prix proforma requis';
+                    badgeHeader.className = 'badge rounded-pill bg-danger text-white px-2 py-1 small';
+                    badgeHeader.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i>${manquants} article(s) sans prix`;
+                    desc.innerHTML = `Il reste <strong>${manquants} article(s)</strong> sans prix unitaire. Renseignez et enregistrez les prix pour pouvoir valider ou envoyer la demande au CODEP.`;
+                } else {
+                    container.style.background = 'linear-gradient(135deg, rgba(209, 250, 229, 0.5) 0%, rgba(255, 255, 255, 0.95) 100%)';
+                    container.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                    iconWrapper.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                    icon.className = 'fas fa-check-circle fa-lg';
+                    title.textContent = 'Prix proforma renseignés';
+                    badgeHeader.className = 'badge rounded-pill bg-success text-white px-2 py-1 small';
+                    badgeHeader.innerHTML = `<i class="fas fa-check me-1"></i>Tous les prix saisis`;
+                    desc.innerHTML = `Tous les articles disposent d'un prix valide. Vous pouvez enregistrer les prix et procéder à la validation ou à l'envoi au CODEP.`;
+                }
+            }
         }
 
         document.querySelectorAll('.prix-input').forEach(inp => {
             inp.addEventListener('input', verifierPrixManquants);
         });
         verifierPrixManquants();
+
+        if (!btnSave) return;
+        const statusEl = document.getElementById('prixSaveStatus');
 
         btnSave.addEventListener('click', function () {
             const inputs  = document.querySelectorAll('.prix-input');
@@ -2400,6 +2643,14 @@
         const modal         = window.bootstrap.Modal.getOrCreateInstance(modalEl);
 
         function openModal(decision) {
+            if (decision === "APPROVE") {
+                const erreurs = verifierPreconditionsMG("Validation");
+                if (erreurs.length > 0) {
+                    afficherModalChampsRequis("Validation", erreurs);
+                    return;
+                }
+            }
+
             decisionValue.value = decision;
             commentInput.value  = "";
             commentInput.classList.remove("is-invalid");
@@ -2462,19 +2713,29 @@
         }
     });
 
-
-
     // ── Modal CODEP envoi ──────────────────────────────────────────────────────
-    document.getElementById('codepModal')?.addEventListener('show.bs.modal', function () {
-        const typeDemandeSelect    = document.querySelector('select[name="typeDemande"]');
+    document.getElementById('btnEnvoyerCodep')?.addEventListener('click', function () {
+        const erreurs = verifierPreconditionsMG("Envoi au CODEP");
+        if (erreurs.length > 0) {
+            afficherModalChampsRequis("Envoi au CODEP", erreurs);
+            return;
+        }
+
+        const typeDemandeSelect = document.getElementById('typeDemandeSelect') || document.querySelector('select[name="typeDemande"]');
         const codepTypeDemandeInput = document.getElementById('codepTypeDemande');
         if (typeDemandeSelect && codepTypeDemandeInput)
             codepTypeDemandeInput.value = typeDemandeSelect.value;
 
-        const prioriteSelect    = document.querySelector('select[name="priorite"]');
+        const prioriteSelect = document.querySelector('select[name="priorite"]');
         const codepPrioriteInput = document.getElementById('codepPriorite');
         if (prioriteSelect && codepPrioriteInput)
             codepPrioriteInput.value = prioriteSelect.value;
+
+        const modalEl = document.getElementById('codepModal');
+        if (modalEl) {
+            const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        }
     });
 
     // ── Aperçu pièces jointes ──────────────────────────────────────────────────

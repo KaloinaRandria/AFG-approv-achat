@@ -190,6 +190,7 @@ public class DemandeController {
             demandeMere.setDescription(description);
             demandeMere.setStatut(1);
             demandeMere.setTotalPrix(totalGeneral); //total basé sur PrixArticle
+            demandeMere.setTotalEstime(totalGeneral);
             this.demandeMereService.saveDemandeMere(demandeMere);
 
             // Save les lignes (après demandeMere pour que la FK soit valide)
@@ -1308,6 +1309,7 @@ public class DemandeController {
                     histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
                     validationDemandeService.logAction(histoPj);
                 }
+                demandeMereService.recalculerTotal(demande);
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
                 redirectAttributes.addFlashAttribute("ok", "Demande validée par le Comité de dépense.");
@@ -1415,6 +1417,7 @@ public class DemandeController {
                 }
 
 
+                demandeMereService.recalculerTotal(demande);
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
                 validationDemandeService.logValidation(demande, current, cmt , etape);
                 List<Utilisateur> controleurs = utilisateurService.getUtilisateursByRole("CONTROLEUR");
@@ -1900,6 +1903,22 @@ public class DemandeController {
             return "redirect:/demande/fiche/" + id;
         }
 
+        List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande);
+        List<String> lignesSansPrix = lignes.stream()
+                .filter(l -> l.getStatut() != StatutDemande.REFUSE)
+                .filter(l -> l.getPrixUnitaire() == null || l.getPrixUnitaire() <= 0)
+                .map(l -> l.getArticle() != null
+                        ? l.getArticle().getCodeArticle() + " - " + l.getArticle().getDesignation()
+                        : "Article inconnu")
+                .toList();
+
+        if (!lignesSansPrix.isEmpty()) {
+            redirectAttributes.addFlashAttribute("ko",
+                    "Impossible d'envoyer au CODEP : les articles suivants n'ont pas de prix unitaire : "
+                            + String.join(", ", lignesSansPrix));
+            return "redirect:/demande/fiche/" + id;
+        }
+
         //MG doit obligatoirement choisir le type (OPEX/CAPEX)
         String td = (typeDemande == null) ? "" : typeDemande.trim().toUpperCase();
         if (td.isBlank()) {
@@ -1982,6 +2001,7 @@ public class DemandeController {
             histoPj.setDateAction(String.valueOf(LocalDateTime.now()));
             validationDemandeService.logAction(histoPj);
         }
+        demandeMereService.recalculerTotal(demande);
         demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.DECISION_CODEP);
         validationDemandeService.logValidation(demande, current, "Envoi au CODEP", etape);
         redirectAttributes.addFlashAttribute("ok", "Demande envoyée au CODEP (action irréversible).");
