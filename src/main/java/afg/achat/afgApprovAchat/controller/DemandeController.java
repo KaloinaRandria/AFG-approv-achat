@@ -18,6 +18,7 @@ import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.*;
 import afg.achat.afgApprovAchat.service.stock.LotStockService;
 import afg.achat.afgApprovAchat.service.util.CommentaireFinanceService;
+import afg.achat.afgApprovAchat.service.util.HistoriqueFinanceDemandeService;
 import afg.achat.afgApprovAchat.service.util.ModeTraitementService;
 import afg.achat.afgApprovAchat.service.util.PrixArticleService;
 import jakarta.servlet.http.HttpSession;
@@ -78,6 +79,7 @@ public class DemandeController {
     private final CodepPieceJointeService codepPieceJointeService;
 
     private final  CommentaireFinanceService commentaireFinanceService;
+    private final HistoriqueFinanceDemandeService historiqueFinanceDemandeService;
 
     private final EmailSenderService ess;
 
@@ -92,6 +94,8 @@ public class DemandeController {
     private final LotStockService lotStockService;
 
     private final ModeTraitementService modeTraitementService;
+
+    private final afg.achat.afgApprovAchat.service.paiement.PaiementDirectService paiementDirectService;
 
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
@@ -415,6 +419,11 @@ public class DemandeController {
 
     private boolean hasRole(Authentication auth, String role) {
         return auth.getAuthorities().stream().anyMatch(a -> role.equals(a.getAuthority()));
+    }
+
+    private boolean hasFinanceAccess(Authentication auth) {
+        return hasRole(auth, "ROLE_FINANCE")
+                || hasRole(auth, "ROLE_ADMIN");
     }
 
     private List<Integer> resolveScope(String scope, Utilisateur current,
@@ -939,6 +948,7 @@ public class DemandeController {
         List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
         List<CodepPieceJointe> codepPiecesJointes = codepPieceJointeService.listByDemandeId(demande.getId());
         CommentaireFinance commentaireFinance = commentaireFinanceService.getCommentaireFinanceByIdDemande(demande); // ← AJOUTER
+        List<HistoriqueFinanceDemande> historiquesFinance = historiqueFinanceDemandeService.getHistoriqueByDemande(demande);
 
 
         int currentStep;
@@ -975,6 +985,7 @@ public class DemandeController {
 
         model.addAttribute("steps", steps);
         model.addAttribute("historiques", historiques);
+        model.addAttribute("historiquesFinance", historiquesFinance);
         model.addAttribute("piecesJointes", piecesJointes);
         model.addAttribute("codepPiecesJointes", codepPiecesJointes);
         model.addAttribute("currentStep", currentStep);
@@ -1015,6 +1026,13 @@ public class DemandeController {
         //Bon de Commande Creation
         boolean canCreateBC = demandeMereService.peutCreerBonCommande(demande,isMG);
         model.addAttribute("canCreateBC", canCreateBC);
+        boolean canTransmitFinance = isMG
+                && demande.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE;
+        model.addAttribute("canTransmitFinance", canTransmitFinance);
+        boolean isFinance = hasFinanceAccess(auth);
+        boolean canPayFinance = isFinance
+                && demande.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE;
+        model.addAttribute("canPayFinance", canPayFinance);
         model.addAttribute("bonsCommande", bonCommandeService.getBonCommandesByDemande(demande));
 
 
@@ -1508,6 +1526,7 @@ public class DemandeController {
                     validationDemandeService.logAction(histoPj);
                 }
                 demandeMereService.appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
+                demandeMereService.preparerTransmissionFinance(demande);
                 validationDemandeService.logValidation(demande, current, cmt, etape);
 
                 ess.envoyerMailDemandeur(demande, current, cmt, etape, StatutDemande.VALIDE);
@@ -1536,6 +1555,250 @@ public class DemandeController {
         }
         System.out.println(">>> decision reçue = [" + decision + "]");
         redirectAttributes.addFlashAttribute("ko", "Décision invalide.");
+        return "redirect:/demande/fiche/" + id;
+    }
+
+    @GetMapping("/paiements-directs")
+    public String listePaiementsDirects(
+            Model model,
+            HttpServletRequest request,
+            @RequestParam(defaultValue = "0")           int page,
+            @RequestParam(defaultValue = "10")          int size,
+            @RequestParam(defaultValue = "dateDemande") String sort,
+            @RequestParam(defaultValue = "desc")        String dir,
+            @RequestParam(required = false)             String   statutTransmission,
+            @RequestParam(required = false)             String   priorite,
+            @RequestParam(required = false)             String   motif,
+            @RequestParam(required = false)             String   num,
+            @RequestParam(required = false)             String   demandeur,
+            @RequestParam(required = false)             String   type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (!hasRole(auth, "ROLE_MOYENS_GENERAUX") && !hasRole(auth, "ROLE_ADMIN")) {
+            return "redirect:/error/403";
+        }
+
+        DemandeMere.StatutTransmissionFinance singleTransmission = null;
+        List<DemandeMere.StatutTransmissionFinance> allowedTransmissions = null;
+        if (statutTransmission != null && !statutTransmission.isBlank()) {
+            try {
+                singleTransmission = DemandeMere.StatutTransmissionFinance.valueOf(statutTransmission.trim());
+            } catch (Exception ignored) {}
+        }
+        if (singleTransmission == null) {
+            allowedTransmissions = List.of(
+                    DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE,
+                    DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE,
+                    DemandeMere.StatutTransmissionFinance.PAYEE
+            );
+        }
+
+        DemandeMereSpec.SearchCriteria criteria = DemandeMereSpec.SearchCriteria.builder()
+                .num(num)
+                .demandeur(demandeur)
+                .type(type)
+                .priorite(priorite)
+                .motif(motif)
+                .statut(StatutDemande.VALIDE)
+                .paiementDirectOnly(true)
+                .statutTransmissionFinance(singleTransmission)
+                .statutsTransmissionFinance(allowedTransmissions)
+                .dateFrom(DemandeMereService.toFrom(dateFrom))
+                .dateTo(DemandeMereService.toTo(dateTo))
+                .build();
+
+        Page<DemandeMere> mePage = demandeMereService.search(criteria, page, size, sort, dir);
+
+        populatePaiementDirectModel(
+                model, mePage, statutTransmission, priorite, motif, num, demandeur, type,
+                dateFrom, dateTo, size, sort, dir,
+                List.of(
+                        DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE,
+                        DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE,
+                        DemandeMere.StatutTransmissionFinance.PAYEE
+                )
+        );
+
+        String returnUrl = buildPaiementDirectReturnUrl("/demande/paiements-directs", page, size, sort, dir,
+                statutTransmission, priorite, motif, num, demandeur, type, dateFrom, dateTo);
+        model.addAttribute("returnUrl", returnUrl);
+
+        return "demande/paiements-directs-liste";
+    }
+
+    @GetMapping("/paiements-directs-finance")
+    public String listePaiementsDirectsFinance(
+            Model model,
+            HttpServletRequest request,
+            @RequestParam(defaultValue = "0")           int page,
+            @RequestParam(defaultValue = "10")          int size,
+            @RequestParam(defaultValue = "dateDemande") String sort,
+            @RequestParam(defaultValue = "desc")        String dir,
+            @RequestParam(required = false)             String   statutTransmission,
+            @RequestParam(required = false)             String   priorite,
+            @RequestParam(required = false)             String   motif,
+            @RequestParam(required = false)             String   num,
+            @RequestParam(required = false)             String   demandeur,
+            @RequestParam(required = false)             String   type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (!hasFinanceAccess(auth)) {
+            return "redirect:/error/403";
+        }
+
+        DemandeMere.StatutTransmissionFinance singleTransmission = null;
+        List<DemandeMere.StatutTransmissionFinance> allowedTransmissions = null;
+        if (statutTransmission != null && !statutTransmission.isBlank()) {
+            try {
+                singleTransmission = DemandeMere.StatutTransmissionFinance.valueOf(statutTransmission.trim());
+            } catch (Exception ignored) {}
+        }
+        if (singleTransmission == null) {
+            allowedTransmissions = List.of(
+                    DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE,
+                    DemandeMere.StatutTransmissionFinance.PAYEE
+            );
+        }
+
+        DemandeMereSpec.SearchCriteria criteria = DemandeMereSpec.SearchCriteria.builder()
+                .num(num)
+                .demandeur(demandeur)
+                .type(type)
+                .priorite(priorite)
+                .motif(motif)
+                .statut(StatutDemande.VALIDE)
+                .paiementDirectOnly(true)
+                .statutTransmissionFinance(singleTransmission)
+                .statutsTransmissionFinance(allowedTransmissions)
+                .dateFrom(DemandeMereService.toFrom(dateFrom))
+                .dateTo(DemandeMereService.toTo(dateTo))
+                .build();
+
+        Page<DemandeMere> mePage = demandeMereService.search(criteria, page, size, sort, dir);
+
+        populatePaiementDirectModel(
+                model, mePage, statutTransmission, priorite, motif, num, demandeur, type,
+                dateFrom, dateTo, size, sort, dir,
+                List.of(
+                        DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE,
+                        DemandeMere.StatutTransmissionFinance.PAYEE
+                )
+        );
+
+        String returnUrl = buildPaiementDirectReturnUrl("/demande/paiements-directs-finance", page, size, sort, dir,
+                statutTransmission, priorite, motif, num, demandeur, type, dateFrom, dateTo);
+        model.addAttribute("returnUrl", returnUrl);
+
+        return "demande/paiements-directs-finance";
+    }
+
+    private void populatePaiementDirectModel(
+            Model model, Page<DemandeMere> demandesMeres,
+            String statutTransmission, String priorite, String motif, String num,
+            String demandeur, String type,
+            LocalDate dateFrom, LocalDate dateTo,
+            int size, String sort, String dir,
+            List<DemandeMere.StatutTransmissionFinance> allowedStatuts) {
+
+        Map<String, String> transmissionFiltre = new LinkedHashMap<>();
+        for (DemandeMere.StatutTransmissionFinance st : allowedStatuts) {
+            switch (st) {
+                case A_TRANSMETTRE -> transmissionFiltre.put("A_TRANSMETTRE", "À transmettre");
+                case TRANSMISE_FINANCE -> transmissionFiltre.put("TRANSMISE_FINANCE", "Transmise à la finance");
+                case PAYEE -> transmissionFiltre.put("PAYEE", "Payée");
+            }
+        }
+        model.addAttribute("transmissionFiltre", transmissionFiltre);
+
+        Map<String, String> prioriteFiltre = new LinkedHashMap<>();
+        prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P2), "P2");
+        prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P1), "P1");
+        prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P0), "P0");
+        model.addAttribute("prioriteFiltre", prioriteFiltre);
+
+        model.addAttribute("demandesMeres", demandesMeres);
+        model.addAttribute("demandes", demandesMeres.getContent());
+        model.addAttribute("statutTransmission", statutTransmission == null ? "" : statutTransmission);
+        model.addAttribute("priorite",  priorite  == null ? "" : priorite);
+        model.addAttribute("motif",     motif     == null ? "" : motif);
+        model.addAttribute("num",       num       == null ? "" : num);
+        model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
+        model.addAttribute("type",      type      == null ? "" : type);
+        model.addAttribute("dateFrom",  dateFrom);
+        model.addAttribute("dateTo",    dateTo);
+        model.addAttribute("page",      demandesMeres.getNumber());
+        model.addAttribute("size",      size);
+        model.addAttribute("sort",      sort);
+        model.addAttribute("dir",       dir);
+    }
+
+    private String buildPaiementDirectReturnUrl(
+            String path, int page, int size, String sort, String dir,
+            String statutTransmission, String priorite, String motif,
+            String num, String demandeur, String type,
+            LocalDate dateFrom, LocalDate dateTo) {
+        StringBuilder sb = new StringBuilder(path).append("?");
+        sb.append("page=").append(page);
+        sb.append("&size=").append(size);
+        sb.append("&sort=").append(sort);
+        sb.append("&dir=").append(dir);
+        if (statutTransmission != null) sb.append("&statutTransmission=").append(statutTransmission);
+        if (priorite != null)   sb.append("&priorite=").append(priorite);
+        if (motif   != null)    sb.append("&motif=").append(motif);
+        if (num     != null)    sb.append("&num=").append(num);
+        if (demandeur != null)  sb.append("&demandeur=").append(demandeur);
+        if (type    != null)    sb.append("&type=").append(type);
+        if (dateFrom != null)   sb.append("&dateFrom=").append(dateFrom);
+        if (dateTo  != null)    sb.append("&dateTo=").append(dateTo);
+        return sb.toString();
+    }
+
+    @PostMapping("/fiche/{id}/transmettre-finance")
+    public String transmettreFinance(@PathVariable String id,
+                                     @RequestParam(required = false) String commentaire,
+                                     RedirectAttributes redirectAttributes) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (!hasRole(auth, "ROLE_MOYENS_GENERAUX") && !hasRole(auth, "ROLE_ADMIN")) {
+            redirectAttributes.addFlashAttribute("ko", "Action réservée aux Moyens Généraux.");
+            return "redirect:/demande/fiche/" + id;
+        }
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+        DemandeMere demande = demandeMereService.getDemandeById(id);
+        if (demande == null || !demandeMereService.transmettreAFinance(demande, current, commentaire)) {
+            redirectAttributes.addFlashAttribute("ko", "Cette demande ne peut pas être transmise à la finance.");
+            return "redirect:/demande/fiche/" + id;
+        }
+        historiqueFinanceDemandeService.logTransmissionFinance(demande, current, commentaire);
+
+        redirectAttributes.addFlashAttribute("ok", "Demande transmise à la finance.");
+        return "redirect:/demande/fiche/" + id;
+    }
+
+    @PostMapping("/fiche/{id}/payer-finance")
+    public String payerFinance(@PathVariable String id,
+                               @RequestParam(required = false) String commentaire,
+                               RedirectAttributes redirectAttributes) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (!hasFinanceAccess(auth)) {
+            redirectAttributes.addFlashAttribute("ko", "Action réservée à la finance.");
+            return "redirect:/demande/fiche/" + id;
+        }
+
+        Utilisateur principal = (Utilisateur) auth.getPrincipal();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());
+        DemandeMere demande = demandeMereService.getDemandeById(id);
+        if (demande == null || !demandeMereService.marquerCommePayee(demande, current, commentaire)) {
+            redirectAttributes.addFlashAttribute("ko", "Cette demande ne peut pas être marquée comme payée.");
+            return "redirect:/demande/fiche/" + id;
+        }
+        historiqueFinanceDemandeService.logPaiementEffectue(demande, current, commentaire);
+
+        redirectAttributes.addFlashAttribute("ok", "Demande marquée comme payée.");
         return "redirect:/demande/fiche/" + id;
     }
 
