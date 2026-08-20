@@ -1,6 +1,6 @@
 package afg.achat.afgApprovAchat.model.bonLivraison;
 
-import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.util.Devise;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.persistence.*;

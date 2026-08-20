@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+>
+<head>
+    <meta charset="UTF-8">
+    <title>Saisie bon de commande</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <div class="container mt-3">
+            <form th:action="@{/bon-commande/sauvegarder}" method="post" id="formSauvegarderBC">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>BON DE COMMANDE</h2>
+                    </div>
+                    <div class="card-body">
+                        <!-- Champ caché pour l'ID du BC -->
+                        <input type="hidden" name="idBcMere" th:value="${bonCommandeMere.id}">
+                        <!-- Champ caché pour la demande mère -->
+                        <input type="hidden" name="demandeMereI" th:value="${demandeMereId}">
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="numero" class="form-label required-field"><strong>Numéro </strong></label>
+                                <input type="text" class="form-control" id="numero" name="numero"
+                                       th:value="${bonCommandeMere.numero}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="service" class="form-label"><strong>Service</strong></label>
+                                <input type="text" class="form-control" id="service" name="service"
+                                       th:value="${bcContacts.getFirst().utilisateur.service.libelle}" disabled>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="statut" class="form-label"><strong>Statut</strong></label>
+                                <input type="text" class="form-control" id="statut" name="statut"
+                                       th:value="${bonCommandeMere.statut}" disabled>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <!-- Fournisseur -->
+                            <div class="col-md-6 mb-3 position-relative">
+                                <label class="form-label fw-bold required-field">Fournisseur</label>
+                                <div class="input-group">
+                                    <input type="text"
+                                           class="form-control"
+                                           id="fournisseurInput"
+                                           placeholder="Rechercher un fournisseur..."
+                                           autocomplete="off"
+                                           th:value="${bonCommandeMere.fournisseur != null ? bonCommandeMere.fournisseur.nom : ''}">
+                                    <input type="hidden" name="fournisseurs" id="fournisseurId"
+                                           th:value="${bonCommandeMere.fournisseur != null ? bonCommandeMere.fournisseur.id : ''}">
+                                </div>
+                                <div id="fournisseurList"
+                                     class="list-group position-absolute w-100 shadow"
+                                     style="z-index: 1000;"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="referenceFournisseur" class="form-label"><strong>Référence fournisseur </strong></label>
+                                <input type="text" class="form-control" id="referenceFournisseur" name="referenceFournisseur"
+                                       th:value="${bonCommandeMere.referenceFournisseur}">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <!-- Responsable fournisseur -->
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>Responsable fournisseur</strong></label>
+
+                                <!-- Cas 1 : un responsable est déjà affecté -> affichage lecture seule + bouton Modifier -->
+                                <div id="responsableAffecteBlock"
+                                     class="input-group"
+                                     th:style="${responsableFournisseurActuel != null} ? '' : 'display:none'">
+                                    <input type="text"
+                                           class="form-control"
+                                           id="responsableFournisseurInput"
+                                           disabled
+                                           th:value="${responsableFournisseurActuel != null ? (responsableFournisseurActuel.responsable.prenom + ' ' + responsableFournisseurActuel.responsable.nom) : ''}">
+                                    <button type="button" class="btn btn-outline-secondary" id="btnModifierResponsable">
+                                        <i class="bi bi-pencil"></i> Modifier
+                                    </button>
+                                </div>
+                                <input type="hidden" name="responsableFournisseurId" id="responsableFournisseurIdInput"
+                                       th:value="${responsableFournisseurActuel != null ? responsableFournisseurActuel.id : ''}">
+                                <!-- ID du responsable (personne) actuellement affecté, utile pour distinguer "mise à jour" vs "nouvelle personne" -->
+                                <input type="hidden" id="responsableActuelPersonneId"
+                                       th:value="${responsableFournisseurActuel != null ? responsableFournisseurActuel.responsable.id : ''}">
+
+                                <!-- Cas 2 : saisie/édition -> visible si pas de responsable, ou si "Modifier" cliqué -->
+                                <div id="nouveauResponsableBlock"
+                                     class="row g-2 mt-1"
+                                     th:style="${bonCommandeMere.fournisseur != null and responsableFournisseurActuel == null} ? '' : 'display:none'">
+
+                                    <!-- Choix affiché seulement en mode "modification" d'un responsable existant -->
+                                    <div class="col-12" id="choixModeResponsable" style="display:none;">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="modeResponsable" id="modeCorrigerContact" value="update" checked>
+                                            <label class="form-check-label" for="modeCorrigerContact">Corriger les infos de ce responsable</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="modeResponsable" id="modeNouvelleAffectation" value="new">
+                                            <label class="form-check-label" for="modeNouvelleAffectation">Affecter une autre personne</label>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control form-control-sm"
+                                               id="nouveauResponsableNom" name="nouveauResponsableNom"
+                                               placeholder="Nom">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control form-control-sm"
+                                               id="nouveauResponsablePrenom" name="nouveauResponsablePrenom"
+                                               placeholder="Prénom">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="tel" class="form-control form-control-sm"
+                                               id="nouveauResponsableContact" name="nouveauResponsableContact"
+                                               placeholder="Contact">
+                                    </div>
+                                    <div class="col-12" id="annulerModifBlock" style="display:none;">
+                                        <button type="button" class="btn btn-link btn-sm p-0" id="btnAnnulerModifResponsable">Annuler la modification</button>
+                                    </div>
+                                </div>
+
+                                <!-- Champ envoyé au contrôleur pour indiquer l'action voulue -->
+                                <input type="hidden" name="actionResponsable" id="actionResponsableInput" value="">
+
+                                <small class="text-muted"
+                                       id="responsableHint"
+                                       th:style="${bonCommandeMere.fournisseur != null and responsableFournisseurActuel == null} ? '' : 'display:none'">
+                                    Aucun responsable affecté à ce fournisseur — saisissez-le ci-dessus, il sera automatiquement créé et affecté.
+                                </small>
+                            </div>
+                            <!-- Adresse fournisseur -->
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>Adresse fournisseur</strong></label>
+
+                                <!-- Cas 1 : une adresse est déjà affectée -> lecture seule + bouton Modifier -->
+                                <div id="adresseAffecteeBlock"
+                                     class="input-group"
+                                     th:style="${adresseFournisseurActuel != null} ? '' : 'display:none'">
+                                    <input type="text"
+                                           class="form-control"
+                                           id="adresseFournisseurInput"
+                                           disabled
+                                           th:value="${adresseFournisseurActuel != null ? adresseFournisseurActuel.adresse.libelle : ''}">
+                                    <button type="button" class="btn btn-outline-secondary" id="btnModifierAdresse">
+                                        <i class="bi bi-pencil"></i> Modifier
+                                    </button>
+                                </div>
+                                <input type="hidden" name="adresseFournisseurId" id="adresseFournisseurIdInput"
+                                       th:value="${adresseFournisseurActuel != null ? adresseFournisseurActuel.id : ''}">
+
+                                <!-- Cas 2 : saisie/édition -->
+                                <div id="nouvelleAdresseBlock"
+                                     class="row g-2 mt-1"
+                                     th:style="${bonCommandeMere.fournisseur != null and adresseFournisseurActuel == null} ? '' : 'display:none'">
+
+                                    <div class="col-12" id="choixModeAdresse" style="display:none;">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="modeAdresse" id="modeCorrigerAdresse" value="update" checked>
+                                            <label class="form-check-label" for="modeCorrigerAdresse">Corriger cette adresse</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="modeAdresse" id="modeNouvelleAdresse" value="new">
+                                            <label class="form-check-label" for="modeNouvelleAdresse">Affecter une autre adresse</label>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-10">
+                                        <input type="text" class="form-control form-control-sm"
+                                               id="nouvelleAdresseLibelle" name="nouvelleAdresseLibelle"
+                                               placeholder="Adresse (libellé complet)">
+                                    </div>
+                                    <div class="col-12" id="annulerModifAdresseBlock" style="display:none;">
+                                        <button type="button" class="btn btn-link btn-sm p-0" id="btnAnnulerModifAdresse">Annuler la modification</button>
+                                    </div>
+                                </div>
+
+                                <input type="hidden" name="actionAdresse" id="actionAdresseInput" value="">
+
+                                <small class="text-muted"
+                                       id="adresseHint"
+                                       th:style="${bonCommandeMere.fournisseur != null and adresseFournisseurActuel == null} ? '' : 'display:none'">
+                                    Aucune adresse affectée à ce fournisseur — saisissez-la ci-dessus, elle sera automatiquement créée et affectée.
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="dateCreation" class="form-label"><strong>Date création :</strong></label>
+                                <input type="datetime-local"
+                                       class="form-control"
+                                       id="dateCreation"
+                                       th:value="${#temporals.format(bonCommandeMere.dateCreation, 'yyyy-MM-dd''T''HH:mm')}"
+                                       required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="dateLivraisonPrevue" class="form-label required-field"><strong>Date prévue pour la livraison :</strong></label>
+                                <input type="date" class="form-control" id="dateLivraisonPrevue" name="dateLivraisonPrevue"
+                                       th:value="${bonCommandeMere.dateLivraisonPrevue != null ? #temporals.format(bonCommandeMere.dateLivraisonPrevue, 'yyyy-MM-dd') : ''}">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="lieuLivraison" class="form-label required-field"><strong>Lieu livraison :</strong></label>
+                                <input type="text" class="form-control" id="lieuLivraison" name="lieuLivraison"
+                                       th:value="${bonCommandeMere.lieuLivraison}">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="createur" class="form-label"><strong>Créateur :</strong></label>
+                                <input type="text" class="form-control" id="createur" disabled
+                                       th:value="${bonCommandeMere.createur != null ? (bonCommandeMere.createur.prenom + ' ' + bonCommandeMere.createur.nom) : ''}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="demandeMereIdDisplay" class="form-label">
+                                    <strong>Référence de la Demande :</strong>
+                                </label>
+
+                                <div class="input-group">
+                                    <input type="text"
+                                           class="form-control"
+                                           id="demandeMereIdDisplay"
+                                           disabled
+                                           th:value="${demandeMereId}">
+
+                                    <a class="btn btn-outline-gradient-blue"
+                                       th:href="@{/demande/fiche/{id}(id=${demandeMereId})}">
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                        Consulter
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- =========================
+                             Contacts du bon de commande
+                             ========================= -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label class="form-label">
+                                    <strong>Contacts</strong>
+                                </label>
+
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm align-middle">
+                                        <thead class="table-light">
+                                        <tr>
+                                            <th>Nom</th>
+                                            <th>EMAIL</th>
+                                            <th>TELEPHONE</th>
+                                        </tr>
+                                        </thead>
+
+                                        <tbody>
+                                        <tr th:each="contact : ${bcContacts}">
+                                            <td th:text="${contact.utilisateur.nom +' '+ contact.utilisateur.prenom}"></td>
+                                            <td th:text="${contact.utilisateur.mail}"></td>
+                                            <td th:text="${contact.utilisateur.contact}"></td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <hr>
+
+                        <!-- Tableau des lignes de commande -->
+                        <div class="mt-3">
+                            <div class="table-responsive">
+                                <table class="bl-table table table-hover align-middle">
+                                    <thead class="table-light">
+                                    <tr>
+                                        <th>Ref</th>
+                                        <th>Désignation article</th>
+                                        <th>Désignation fournisseur</th>
+                                        <th>QTE</th>
+                                        <th>Unité</th>
+                                        <th>Prix unitaire HT en MGA</th>
+                                        <th>Montant HT en MGA</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr th:if="${bonCommandeMere.description != null}">
+                                        <td colspan="7"
+                                            class="text-center align-middle fw-bold fs-5 bg-light py-3"
+                                            th:text="${bonCommandeMere.description}">
+                                        </td>
+                                    </tr>
+                                    <tr th:each="bcf, stat : ${bonCommandeFilles}">
+                                        <td th:text="${bcf.article != null ? bcf.article.codeArticle : ''}"></td>
+                                        <td th:text="${bcf.article != null ? bcf.article.designation : ''}"></td>
+                                        <td>
+                                            <input type="hidden" th:name="'lignes[' + ${stat.index} + '].demandeFilleId'"
+                                                   th:value="${bcf.demandeFille.id}">
+                                            <input type="hidden" th:name="'lignes[' + ${stat.index} + '].articleId'"
+                                                   th:value="${bcf.article != null ? bcf.article.id : ''}">
+                                            <textarea class="form-control form-control-sm" aria-label="Désignation fournisseur"
+                                                      th:name="'lignes[' + ${stat.index} + '].designationFournisseur'"
+                                                      th:text="${bcf.designationFournisseur}"></textarea>
+                                        </td>
+                                        <td>
+                                            <span th:text="${bcf.quantiteCommandee}"></span>
+                                            <input type="hidden" th:name="'lignes[' + ${stat.index} + '].quantiteCommandee'"
+                                                   th:value="${bcf.quantiteCommandee}">
+                                        </td>
+                                        <td th:text="${bcf.article.getUdm().getDescription()}"></td>
+                                        <td>
+                                            <span th:text="${#numbers.formatDecimal(bcf.prixUnitaireHT, 1, 'DEFAULT', 2, 'DEFAULT')}"></span>
+                                            <input type="hidden" th:name="'lignes[' + ${stat.index} + '].prixUnitaireHT'"
+                                                   th:value="${bcf.prixUnitaireHT}">
+                                        </td>
+                                        <td>
+                                            <span th:text="${#numbers.formatDecimal(bcf.montantHT, 1, 'DEFAULT', 2, 'DEFAULT')}"></span>
+                                            <input type="hidden" th:name="'lignes[' + ${stat.index} + '].montantHT'"
+                                                   class="hidden-montant-ht" th:value="${bcf.montantHT}">
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <small class="text-muted">Les lignes de commande sont créées à partir des demandes liées.</small>
+                        </div>
+
+                        <hr>
+
+                        <!-- =====================================================
+                             SECTION RÉCAPITULATIF FINANCIER
+                             Inspiré du bon de commande Excel :
+                             Montant HT → Remise → Montant HT remisé → TVA → Montant TTC
+                             ===================================================== -->
+                        <div class="row justify-content-end mt-4">
+                            <div class="col-md-5">
+                                <table class="table table-sm table-bordered recap-financier">
+                                    <tbody>
+
+                                    <!-- Montant HT total (calculé automatiquement) -->
+                                    <tr>
+                                        <th class="text-end bg-light" style="width: 55%">Montant HT</th>
+                                        <td class="text-end fw-bold">
+                                            <span id="displayMontantHT">0,00</span> MGA
+                                            <input type="hidden" name="montantHT" id="montantHTInput"
+                                                   th:value="${bonCommandeMere.montantHT}">
+                                        </td>
+                                    </tr>
+
+                                    <!-- Remise (saisie manuelle en %) -->
+                                    <tr id="rowRemise">
+                                        <th class="text-end bg-light">
+                                            Remise
+                                            <input type="number"
+                                                   id="tauxRemise"
+                                                   name="tauxRemise"
+                                                   class="form-control form-control-sm d-inline-block ms-1"
+                                                   style="width: 70px;"
+                                                   min="0" max="100" step="0.01"
+                                                   placeholder="%"
+                                                   th:value="${bonCommandeMere.remise > 0 ? bonCommandeMere.remise : ''}">
+                                            <span class="text-muted small">%</span>
+                                        </th>
+                                        <td class="text-end text-danger" id="displayRemise">— MGA</td>
+                                    </tr>
+
+                                    <!-- Montant HT après remise (affiché seulement si remise > 0) -->
+                                    <tr id="rowMontantHTRemise" style="display: none;">
+                                        <th class="text-end bg-light">Montant HT remisé</th>
+                                        <td class="text-end fw-semibold">
+                                            <span id="displayMontantHTRemise">0,00</span> MGA
+                                        </td>
+                                    </tr>
+
+                                    <!-- TVA (saisie manuelle en %) -->
+                                    <tr>
+                                        <th class="text-end bg-light">
+                                            TVA
+                                            <input type="number"
+                                                   id="tauxTVA"
+                                                   name="tauxTVA"
+                                                   class="form-control form-control-sm d-inline-block ms-1"
+                                                   style="width: 70px;"
+                                                   min="0" max="100" step="0.01"
+                                                   placeholder="%"
+                                                   th:value="${bonCommandeMere.tauxTVA > 0 ? bonCommandeMere.tauxTVA : ''}">
+                                            <span class="text-muted small">%</span>
+                                        </th>
+                                        <td class="text-end" id="displayTVA">0,00 MGA</td>
+                                    </tr>
+
+                                    <!-- Montant TTC (calculé automatiquement) -->
+                                    <tr class="table-primary">
+                                        <th class="text-end">Montant TTC</th>
+                                        <td class="text-end fw-bold fs-5">
+                                            <span id="displayMontantTTC">0,00</span> MGA
+                                            <input type="hidden" name="montantTTC" id="montantTTCInput"
+                                                   th:value="${bonCommandeMere.montantTTC}">
+                                        </td>
+                                    </tr>
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- Fin section récapitulatif -->
+
+                    </div>
+
+                    <div class="card-footer text-end">
+                        <a href="/bon-commande/list" class="btn btn-secondary me-2">
+                            <i class="fas fa-times me-1"></i> Retour
+                        </a>
+                        <button type="submit" class="btn btn-gradient-green">
+                            <i class="fas fa-save me-1"></i> Sauvegarder le bon de commande
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    document.addEventListener("DOMContentLoaded", function () {
+        const form = document.getElementById("formSauvegarderBC");
+        const inputPhone = document.getElementById("nouveauResponsableContact");
+
+        const iti = window.intlTelInput(inputPhone, {
+            initialCountry: "mg",
+            separateDialCode: true,
+            nationalMode: true,
+            formatOnDisplay: true,
+            autoPlaceholder: "polite",
+            utilsScript: "https://unpkg.com/intl-tel-input@17.0.19/build/js/utils.js"
+        });
+
+        // ---------- Validation rouge/vert (inputs + textarea + téléphone) ----------
+        const fields = form.querySelectorAll("input, textarea");
+        fields.forEach(el => {
+            const evt = (el.type === "tel" || el.tagName === "SELECT") ? "change" : "input";
+            el.addEventListener(evt, function () {
+                if (this.checkValidity()) {
+                    this.classList.remove("is-invalid");
+                    this.classList.add("is-valid");
+                } else {
+                    this.classList.remove("is-valid");
+                    this.classList.add("is-invalid");
+                }
+            });
+        });
+
+        // Validation spécifique téléphone (intlTelInput)
+        function updatePhoneValidity() {
+            // iti.isValidNumber() gère les pays/format
+            const ok = inputPhone.value.trim().length > 0 && iti.isValidNumber();
+            if (ok) {
+                inputPhone.classList.remove("is-invalid");
+                inputPhone.classList.add("is-valid");
+            } else {
+                inputPhone.classList.remove("is-valid");
+                inputPhone.classList.add("is-invalid");
+            }
+            return ok;
+        }
+        inputPhone.addEventListener("blur", updatePhoneValidity);
+        inputPhone.addEventListener("keyup", updatePhoneValidity);
+        inputPhone.addEventListener("change", updatePhoneValidity);
+    });
+
+    // Global : accessible partout
+    // Chaque élément attendu : { id, nom, responsableFournisseurId, responsableNom }
+    const fournisseurs = /*[[${fournisseurs}]]*/ [];
+
+    // ── Autocomplete fournisseur + gestion responsable ────────────────────────
+    (function () {
+        const input      = document.getElementById("fournisseurInput");
+        const list       = document.getElementById("fournisseurList");
+        const hidden     = document.getElementById("fournisseurId");
+        const blockAffecte = document.getElementById("responsableAffecteBlock");
+        const respInput  = document.getElementById("responsableFournisseurInput");
+        const respHidden = document.getElementById("responsableFournisseurIdInput");
+        const nouveauBlock   = document.getElementById("nouveauResponsableBlock");
+        const responsableHint = document.getElementById("responsableHint");
+        const nouveauNom      = document.getElementById("nouveauResponsableNom");
+        const nouveauPrenom   = document.getElementById("nouveauResponsablePrenom");
+        const nouveauContact  = document.getElementById("nouveauResponsableContact");
+        const choixMode      = document.getElementById("choixModeResponsable");
+        const annulerBlock   = document.getElementById("annulerModifBlock");
+        const actionInput    = document.getElementById("actionResponsableInput");
+        const blockAdresseAffectee = document.getElementById("adresseAffecteeBlock");
+        const adresseInput   = document.getElementById("adresseFournisseurInput");
+        const adresseHidden  = document.getElementById("adresseFournisseurIdInput");
+        const nouvelleAdresseBlock = document.getElementById("nouvelleAdresseBlock");
+        const adresseHint    = document.getElementById("adresseHint");
+        const champLibelle    = document.getElementById("nouvelleAdresseLibelle");
+        const choixModeAdresse   = document.getElementById("choixModeAdresse");
+        const annulerAdresseBlock = document.getElementById("annulerModifAdresseBlock");
+        const actionAdresseInput  = document.getElementById("actionAdresseInput");
+
+        function resetModeEditionAdresse() {
+            if (choixModeAdresse) choixModeAdresse.style.display = "none";
+            if (annulerAdresseBlock) annulerAdresseBlock.style.display = "none";
+            if (actionAdresseInput) actionAdresseInput.value = "";
+        }
+
+        function toggleAdresseUI(hasAdresse, libelleAffiche) {
+            resetModeEditionAdresse();
+            if (hasAdresse) {
+                if (blockAdresseAffectee) blockAdresseAffectee.style.display = "";
+                if (adresseInput) {
+                    adresseInput.style.display = "";
+                    adresseInput.value = libelleAffiche || "";
+                }
+                if (nouvelleAdresseBlock) nouvelleAdresseBlock.style.display = "none";
+                if (adresseHint) adresseHint.style.display = "none";
+                if (champLibelle) champLibelle.value = "";
+            } else {
+                if (blockAdresseAffectee) blockAdresseAffectee.style.display = "none";
+                if (nouvelleAdresseBlock) nouvelleAdresseBlock.style.display = "";
+                if (adresseHint) adresseHint.style.display = "";
+                if (adresseHidden) adresseHidden.value = "";
+            }
+        }
+
+        if (!input || !list || !hidden) return;
+
+        function clearList() { list.innerHTML = ""; }
+
+        function resetModeEdition() {
+            if (choixMode) choixMode.style.display = "none";
+            if (annulerBlock) annulerBlock.style.display = "none";
+            if (actionInput) actionInput.value = "";
+        }
+
+        function toggleResponsableUI(hasResponsable, nomAffiche) {
+            resetModeEdition();
+            if (hasResponsable) {
+                if (blockAffecte) blockAffecte.style.display = "";
+                if (respInput) {
+                    respInput.style.display = "";   // ← reset explicite, ne plus jamais laisser "none" traîner
+                    respInput.value = nomAffiche || "";
+                }
+                if (nouveauBlock) nouveauBlock.style.display = "none";
+                if (responsableHint) responsableHint.style.display = "none";
+                if (nouveauNom)     nouveauNom.value = "";
+                if (nouveauPrenom)  nouveauPrenom.value = "";
+                if (nouveauContact) nouveauContact.value = "";
+            } else {
+                if (blockAffecte) blockAffecte.style.display = "none";
+                if (nouveauBlock) nouveauBlock.style.display = "";
+                if (responsableHint) responsableHint.style.display = "";
+                if (respHidden) respHidden.value = "";
+            }
+        }
+
+        input.addEventListener("input", function () {
+            const q = this.value.toLowerCase().trim();
+            clearList();
+            hidden.value = "";
+            if (respHidden) respHidden.value = "";
+            if (blockAffecte) blockAffecte.style.display = "none";
+            if (nouveauBlock) nouveauBlock.style.display = "none";
+            if (responsableHint) responsableHint.style.display = "none";
+            resetModeEdition();
+
+            if (adresseHidden) adresseHidden.value = "";
+            if (blockAdresseAffectee) blockAdresseAffectee.style.display = "none";
+            if (nouvelleAdresseBlock) nouvelleAdresseBlock.style.display = "none";
+            if (adresseHint) adresseHint.style.display = "none";
+            resetModeEditionAdresse();
+            if (q.length < 2) return;
+
+            fournisseurs
+                .filter(f => (f.nom || "").toLowerCase().includes(q))
+                .slice(0, 10)
+                .forEach(f => {
+                    const item = document.createElement("button");
+                    item.type = "button";
+                    item.className = "list-group-item list-group-item-action";
+                    item.textContent = f.nom;
+                    item.addEventListener("click", () => {
+                        input.value = f.nom;
+                        hidden.value = f.id;
+                        if (respHidden) respHidden.value = f.responsableFournisseurId || "";
+                        toggleResponsableUI(!!f.responsableFournisseurId, f.responsableNom);
+
+                        if (adresseHidden) adresseHidden.value = f.adresseFournisseurId || "";
+                        toggleAdresseUI(!!f.adresseFournisseurId, f.adresseLibelle);
+                        clearList();
+                    });
+                    list.appendChild(item);
+                });
+        });
+
+        document.addEventListener("click", (e) => {
+            if (!input.contains(e.target) && !list.contains(e.target)) clearList();
+        });
+    })();
+
+    // ── Bouton "Modifier" le responsable ──────────────────────────────────────
+    (function () {
+        const btnModifier   = document.getElementById("btnModifierResponsable");
+        const btnAnnuler    = document.getElementById("btnAnnulerModifResponsable");
+        const blockAffecte  = document.getElementById("responsableAffecteBlock");
+        const blockNouveau  = document.getElementById("nouveauResponsableBlock");
+        const choixMode     = document.getElementById("choixModeResponsable");
+        const annulerBlock  = document.getElementById("annulerModifBlock");
+        const inputNom      = document.getElementById("nouveauResponsableNom");
+        const inputPrenom   = document.getElementById("nouveauResponsablePrenom");
+        const inputContact  = document.getElementById("nouveauResponsableContact");
+        const actionInput   = document.getElementById("actionResponsableInput");
+        const respFournisseurInput = document.getElementById("responsableFournisseurInput");
+
+        if (!btnModifier) return;
+
+        btnModifier.addEventListener("click", function () {
+            const nomComplet = (respFournisseurInput.value || "").trim();
+            const parties = nomComplet.split(" ");
+            inputPrenom.value = parties[0] || "";
+            inputNom.value = parties.slice(1).join(" ") || "";
+
+            blockAffecte.style.display = "none";
+            blockNouveau.style.display = "";
+            choixMode.style.display = "";
+            annulerBlock.style.display = "";
+            actionInput.value = "update";
+        });
+
+        if (btnAnnuler) {
+            btnAnnuler.addEventListener("click", function () {
+                blockAffecte.style.display = "";
+                blockNouveau.style.display = "none";
+                choixMode.style.display = "none";
+                annulerBlock.style.display = "none";
+                actionInput.value = "";
+                inputNom.value = "";
+                inputPrenom.value = "";
+                inputContact.value = "";
+            });
+        }
+
+        document.querySelectorAll('input[name="modeResponsable"]').forEach(radio => {
+            radio.addEventListener("change", function () {
+                actionInput.value = this.value;
+            });
+        });
+    })();
+
+    // ── Bouton "Modifier" l'adresse ────────────────────────────────────────────
+    (function () {
+        const btnModifier   = document.getElementById("btnModifierAdresse");
+        const btnAnnuler    = document.getElementById("btnAnnulerModifAdresse");
+        const blockAffectee = document.getElementById("adresseAffecteeBlock");
+        const blockNouvelle = document.getElementById("nouvelleAdresseBlock");
+        const choixMode     = document.getElementById("choixModeAdresse");
+        const annulerBlock  = document.getElementById("annulerModifAdresseBlock");
+        const champLibelle  = document.getElementById("nouvelleAdresseLibelle");
+        const actionInput   = document.getElementById("actionAdresseInput");
+        const adresseAffichee = document.getElementById("adresseFournisseurInput");
+
+        if (!btnModifier) return;
+
+        btnModifier.addEventListener("click", function () {
+            champLibelle.value = (adresseAffichee.value || "").trim();
+
+            blockAffectee.style.display = "none";
+            blockNouvelle.style.display = "";
+            choixMode.style.display = "";
+            annulerBlock.style.display = "";
+            actionInput.value = "update";
+        });
+
+        if (btnAnnuler) {
+            btnAnnuler.addEventListener("click", function () {
+                blockAffectee.style.display = "";
+                blockNouvelle.style.display = "none";
+                choixMode.style.display = "none";
+                annulerBlock.style.display = "none";
+                actionInput.value = "";
+                champLibelle.value = "";
+            });
+        }
+
+        document.querySelectorAll('input[name="modeAdresse"]').forEach(radio => {
+            radio.addEventListener("change", function () {
+                actionInput.value = this.value;
+            });
+        });
+    })();
+
+    // ── Calcul des montants ───────────────────────────────────────────────────
+
+    /**
+     * Formate un nombre en format français avec 2 décimales.
+     * Ex : 11271000 → "11 271 000,00"
+     */
+    function formatMGA(value) {
+        return new Intl.NumberFormat('fr-FR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(value);
+    }
+
+    /**
+     * Calcule et met à jour tous les totaux du récapitulatif :
+     *   1. Montant HT = somme des lignes
+     *   2. Remise (si taux > 0) → déduite du HT
+     *   3. Montant HT remisé (affiché seulement si remise > 0)
+     *   4. TVA sur montant HT (après remise si applicable)
+     *   5. Montant TTC = HT remisé + TVA
+     */
+    function recalculerTotaux() {
+
+        // 1. Somme des montants HT de chaque ligne
+        let totalHT = 0;
+        document.querySelectorAll('input.hidden-montant-ht').forEach(function(input) {
+            const val = parseFloat(input.value) || 0;
+            totalHT += val;
+        });
+
+        document.getElementById('displayMontantHT').textContent = formatMGA(totalHT);
+        document.getElementById('montantHTInput').value = totalHT.toFixed(2);
+
+        // 2. Remise
+        const tauxRemise = parseFloat(document.getElementById('tauxRemise').value) || 0;
+        const montantRemise = totalHT * (tauxRemise / 100);
+        const rowRemise = document.getElementById('rowRemise');
+        const rowMontantHTRemise = document.getElementById('rowMontantHTRemise');
+        const displayRemise = document.getElementById('displayRemise');
+
+        if (tauxRemise > 0) {
+            displayRemise.textContent = '− ' + formatMGA(montantRemise) + ' MGA';
+            rowMontantHTRemise.style.display = '';
+        } else {
+            displayRemise.textContent = '— MGA';
+            rowMontantHTRemise.style.display = 'none';
+        }
+
+        // 3. Montant HT après remise
+        const montantHTRemise = totalHT - montantRemise;
+        document.getElementById('displayMontantHTRemise').textContent = formatMGA(montantHTRemise);
+
+        // 4. TVA calculée sur le montant HT (après remise)
+        const tauxTVA = parseFloat(document.getElementById('tauxTVA').value) || 0;
+        const montantTVA = montantHTRemise * (tauxTVA / 100);
+        document.getElementById('displayTVA').textContent = formatMGA(montantTVA) + ' MGA';
+
+        // 5. Montant TTC
+        const montantTTC = montantHTRemise + montantTVA;
+        document.getElementById('displayMontantTTC').textContent = formatMGA(montantTTC);
+        document.getElementById('montantTTCInput').value = montantTTC.toFixed(2);
+    }
+
+    // ── Initialisation au chargement ─────────────────────────────────────────
+    window.addEventListener('load', function () {
+
+        // Calcul des montantHT ligne par ligne depuis quantité × prix
+        document.querySelectorAll('tbody tr').forEach(function(row) {
+            const qteInput    = row.querySelector('input[name*="quantiteCommandee"]');
+            const prixInput   = row.querySelector('input[name*="prixUnitaireHT"]');
+            const montantInput = row.querySelector('input.hidden-montant-ht');
+
+            if (!qteInput || !prixInput || !montantInput) return;
+
+            const quantite   = parseFloat(qteInput.value)  || 0;
+            const prix       = parseFloat(prixInput.value) || 0;
+            const montantHT  = quantite * prix;
+
+            // Mettre à jour l'affichage de la cellule (span)
+            const spanMontant = row.querySelector('td:last-child span');
+            if (spanMontant) spanMontant.textContent = formatMGA(montantHT);
+
+            montantInput.value = montantHT;
+        });
+
+        // Puis calculer les totaux récapitulatifs
+        recalculerTotaux();
+    });
+
+    // Recalcul à chaque changement de taux de remise ou TVA
+    document.getElementById('tauxRemise').addEventListener('input', recalculerTotaux);
+    document.getElementById('tauxTVA').addEventListener('input',    recalculerTotaux);
+
+    /*]]>*/
+</script>
+</body>
+</html>

@@ -127,10 +127,6 @@
                                         th:data-id="${u.id}"
                                         th:data-nom="${u.nom}"
                                         th:data-prenom="${u.prenom}"
-                                        th:data-mail="${u.mail}"
-                                        th:data-contact="${u.contact}"
-                                        th:data-serviceid="${u.service != null ? u.service.id : ''}"
-                                        th:data-posteid="${u.poste != null ? u.poste.id : ''}"
                                         title="Modifier utilisateur">
                                     <i class="fas fa-edit"></i>
                                 </button>
@@ -236,6 +232,7 @@
                         aria-label="Close"></button>
             </div>
             <form th:action="@{/user/modifier}" method="post" id="utilisateurForm">
+                <input type="hidden" id="modalReturnUrl" name="returnUrl">
                 <div class="modal-body">
                     <input type="hidden" id="modalId" name="id">
                     <div class="mb-3">
@@ -281,6 +278,30 @@
                             <option th:each="p : ${postes}" th:value="${p.id}"
                                     th:text="${p.poste}"></option>
                         </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modalSuperieur" class="form-label">
+                            <i class="fas fa-user-tie me-2 icon-gradient-blue"></i>Supérieur hiérarchique
+                        </label>
+                        <select class="select2 w-100" id="modalSuperieur" name="superieurHierarchiqueId">
+                            <option value="">-- Aucun supérieur --</option>
+                            <option th:each="u : ${tousUtilisateurs}"
+                                    th:value="${u.id}"
+                                    th:text="${u.nom + ' ' + u.prenom + ' (' + u.mail + ')'}"></option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modalRoles" class="form-label">
+                            <i class="fas fa-shield-alt me-2 icon-gradient-blue"></i>Rôles *
+                        </label>
+                        <select class="select2 w-100" id="modalRoles" name="roles" multiple="multiple">
+                            <option th:each="r : ${roles}" th:value="${r.id}" th:text="${r.role}"></option>
+                        </select>
+                        <div class="form-text text-muted mt-1">
+                            <i class="fas fa-info-circle me-1"></i>Vous pouvez ajouter ou retirer des rôles depuis ce modal.
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -445,19 +466,80 @@
         // -------------------------------------------------------
         $('#modifierModal').on('show.bs.modal', function (event) {
             var button = $(event.relatedTarget);
+
             $('#modalId').val(button.data('id'));
-            $('#modalNom').val(button.data('nom'));
-            $('#modalPrenom').val(button.data('prenom'));
-            $('#modalMail').val(button.data('mail'));
-            $('#modalContact').val(button.data('contact') || '');
-            $('#modalService').val(button.data('serviceid') || '');
-            $('#modalPoste').val(button.data('posteid') || '');
-            $('#modifierModalLabel').text('Modifier l\'utilisateur: ' + button.data('nom') + ' ' + button.data('prenom'));
+            $('#modalNom').val('');
+            $('#modalPrenom').val('');
+            $('#modalMail').val('');
+            $('#modalContact').val('');
+            $('#modalService').val('');
+            $('#modalPoste').val('');
+            $('#modalSuperieur').val('').trigger('change');
+            $('#modalRoles').val(null).trigger('change');
+            $('#modalReturnUrl').val(window.location.pathname + window.location.search);
+
+
+            const userId = button.data('id');
+            const labelNom = button.data('nom') || '';
+            const labelPrenom = button.data('prenom') || '';
+            $('#modifierModalLabel').text('Modifier l\'utilisateur: ' + labelNom + ' ' + labelPrenom);
+
+            fetch(`${CONTEXT_PATH}user/${userId}`)
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Utilisateur introuvable');
+                    }
+                    return response.json();
+                })
+                .then(function (utilisateur) {
+                    $('#modalId').val(utilisateur.id);
+                    $('#modalNom').val(utilisateur.nom || '');
+                    $('#modalPrenom').val(utilisateur.prenom || '');
+                    $('#modalMail').val(utilisateur.mail || '');
+                    $('#modalContact').val(utilisateur.contact || '');
+                    $('#modalService').val(utilisateur.serviceId || '');
+                    $('#modalPoste').val(utilisateur.posteId || '');
+                    $('#modalSuperieur').val(utilisateur.superieurHierarchiqueId || '').trigger('change');
+
+                    const roleIds = Array.isArray(utilisateur.roleIds) ? utilisateur.roleIds.map(String) : [];
+                    $('#modalRoles').val(roleIds).trigger('change');
+
+                    $('#modifierModalLabel').text('Modifier l\'utilisateur: ' + (utilisateur.nom || '') + ' ' + (utilisateur.prenom || ''));
+                })
+                .catch(function () {
+                    afficherToast('Impossible de charger les informations de l\'utilisateur.', 'danger');
+                });
         });
 
         $('#modifierModal').on('hidden.bs.modal', function () {
             $('#utilisateurForm')[0].reset();
+            if ($.fn.select2 && $('#modalRoles').data('select2')) {
+                $('#modalRoles').val(null).trigger('change');
+            }
+            if ($.fn.select2 && $('#modalSuperieur').data('select2')) {
+                $('#modalSuperieur').val('').trigger('change');
+            }
         });
+
+        if ($.fn.select2 && $('#modalRoles').length) {
+            $('#modalRoles').select2({
+                dropdownParent: $('#modifierModal'),
+                placeholder: 'Sélectionnez un ou plusieurs rôles...',
+                allowClear: true,
+                language: 'fr',
+                width: '100%'
+            });
+        }
+
+        if ($.fn.select2 && $('#modalSuperieur').length) {
+            $('#modalSuperieur').select2({
+                dropdownParent: $('#modifierModal'),
+                placeholder: 'Rechercher un supérieur...',
+                allowClear: true,
+                language: 'fr',
+                width: '100%'
+            });
+        }
 
         // -------------------------------------------------------
         // Boutons de suppression
@@ -622,7 +704,7 @@
 
             if (!confirm('Confirmer le retrait de ce validateur ?')) return;
 
-            fetch(`${CONTEXT_PATH} user/${currentUserId}/validateurs/${validateurId}/retirer`, {
+            fetch(`${CONTEXT_PATH}user/${currentUserId}/validateurs/${validateurId}/retirer`, {
                 method:  'POST',
                 headers: { [csrfHeader]: csrfToken }
             })

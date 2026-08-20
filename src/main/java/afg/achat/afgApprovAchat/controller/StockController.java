@@ -14,6 +14,9 @@ import afg.achat.afgApprovAchat.service.stock.StockMereService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +31,7 @@ import java.util.Set;
 @Controller
 @RequestMapping("/stock")
 public class StockController {
+
     @Autowired
     StockMereService stockMereService;
     @Autowired
@@ -38,6 +42,8 @@ public class StockController {
     VEtatStockService vEtatStockService;
     @Autowired
     StockAlerteService stockAlerteService;
+    private static final int FAMILLE_MATERIELS_INFORMATIQUE_ID = 19;
+
 
     @PostMapping("/save-entree")
     public String insertEntreeStock(@RequestParam(name = "codeArticle") String codeArticle,
@@ -104,6 +110,7 @@ public class StockController {
     }
 
     @GetMapping("/etat-stock")
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX','IT')")
     public String getEtatStock(
             Model model,
             HttpServletRequest request,
@@ -124,18 +131,24 @@ public class StockController {
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        // ✅ Recherche multi-critère
-        Page<VEtatStock> etatPage = vEtatStockService.searchEtatStockMulti(code, designation, udm, etat, pageable);
+        // Recherche multi-critère
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean hasFullStockAccess = hasRole(authentication, "ROLE_ADMIN")
+                || hasRole(authentication, "ROLE_MOYENS_GENERAUX");
+        Integer familleVisibleId = hasFullStockAccess ? null : FAMILLE_MATERIELS_INFORMATIQUE_ID;
 
-        // ✅ codes page courante
+        Page<VEtatStock> etatPage = vEtatStockService.searchEtatStockMulti(
+                code, designation, udm, etat, familleVisibleId, pageable);
+
+        // codes page courante
         List<String> codes = etatPage.getContent().stream()
                 .map(VEtatStock::getCodeArticle)
                 .toList();
 
-        // ✅ alertes map uniquement pour la colonne Etat
+        // alertes map uniquement pour la colonne Etat
         Map<String, StockAlerte> alertesMapPage = stockAlerteService.getAlertesMapForCodes(codes);
 
-        // ✅ conversion DTO
+        // conversion DTO
         List<EtatStockAlerteDTO> dtoContent = etatPage.getContent().stream().map(etatStock -> {
             EtatStockAlerteDTO dto = new EtatStockAlerteDTO(etatStock);
             StockAlerte alerte = alertesMapPage.get(etatStock.getCodeArticle());
@@ -145,9 +158,13 @@ public class StockController {
 
         Page<EtatStockAlerteDTO> etatStocks = new PageImpl<>(dtoContent, pageable, etatPage.getTotalElements());
 
-        // ✅ badge + modal alertes (inchangé)
-        int alertesCount = stockAlerteService.getAlertesCount();
-        List<StockAlerte> alertes = stockAlerteService.getAlertesAll();
+        // badge + modal alertes (inchangé)
+        int alertesCount = hasFullStockAccess
+                ? stockAlerteService.getAlertesCount()
+                : stockAlerteService.getAlertesCountByFamilleId(familleVisibleId);
+        List<StockAlerte> alertes = hasFullStockAccess
+                ? stockAlerteService.getAlertesAll()
+                : stockAlerteService.getAlertesAllByFamilleId(familleVisibleId);
         long ruptureCount = alertes.stream().filter(a -> "RUPTURE".equals(a.getTypeAlerte())).count();
         long seuilCount   = alertes.stream().filter(a -> "SEUIL".equals(a.getTypeAlerte())).count();
 
@@ -158,7 +175,7 @@ public class StockController {
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
 
-        // ✅ pour garder les valeurs dans les inputs
+        // pour garder les valeurs dans les inputs
         model.addAttribute("code", code == null ? "" : code);
         model.addAttribute("designation", designation == null ? "" : designation);
         model.addAttribute("udm", udm == null ? "" : udm);
@@ -171,6 +188,12 @@ public class StockController {
 
         return "stock/stock-liste";
     }
+
+    private boolean hasRole(Authentication authentication, String role) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> role.equals(authority.getAuthority()));
+    }
+
 
 
 

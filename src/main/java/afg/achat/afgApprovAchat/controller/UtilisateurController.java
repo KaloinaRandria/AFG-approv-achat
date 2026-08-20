@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.DTO.UtilisateurRequestDTO;
+import afg.achat.afgApprovAchat.model.utilisateur.Role;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.utilisateur.PdpRepo;
 import afg.achat.afgApprovAchat.repository.utilisateur.PosteRepo;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,6 +46,13 @@ public class UtilisateurController {
         model.addAttribute("services",     serviceRepo.findAll());
         model.addAttribute("pdps",         pdpRepo.findAll());
         model.addAttribute("utilisateurs", utilisateurRepo.findAll());
+    }
+
+    private void populateListModel(Model model) {
+        model.addAttribute("services", serviceRepo.findAll());
+        model.addAttribute("postes", posteRepo.findAll());
+        model.addAttribute("roles", roleRepo.findAll());
+        model.addAttribute("tousUtilisateurs", utilisateurRepo.findAll());
     }
 
     @GetMapping("/add")
@@ -149,8 +158,7 @@ public class UtilisateurController {
         model.addAttribute("size", size);
 
         // Données pour les dropdowns (modales)
-        model.addAttribute("services", serviceRepo.findAll());
-        model.addAttribute("postes", posteRepo.findAll());
+        populateListModel(model);
 
         return "utilisateur/utilisateur-liste";
     }
@@ -179,10 +187,94 @@ public class UtilisateurController {
         }
 
         // Données pour les dropdowns (modales)
-        model.addAttribute("services", serviceRepo.findAll());
-        model.addAttribute("postes", posteRepo.findAll());
+        populateListModel(model);
 
         return "utilisateur/utilisateur-liste";
+    }
+
+    /**
+     * Données d'un utilisateur pour préremplir le modal de modification.
+     */
+    @GetMapping("/{id}")
+    @ResponseBody
+    public ResponseEntity<?> getUtilisateur(@PathVariable int id) {
+        Utilisateur utilisateur = utilisateurService.getUtilisateurById(id);
+        if (utilisateur == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", utilisateur.getId());
+        data.put("nom", utilisateur.getNom());
+        data.put("prenom", utilisateur.getPrenom());
+        data.put("mail", utilisateur.getMail());
+        data.put("contact", utilisateur.getContact());
+        data.put("serviceId", utilisateur.getService() != null ? utilisateur.getService().getId() : null);
+        data.put("posteId", utilisateur.getPoste() != null ? utilisateur.getPoste().getId() : null);
+        data.put("superieurHierarchiqueId", utilisateur.getSuperieurHierarchique() != null
+                ? utilisateur.getSuperieurHierarchique().getId() : null);
+        data.put("roleIds", utilisateur.getRoles().stream()
+                .map(Role::getId)
+                .toList());
+
+        return ResponseEntity.ok(data);
+    }
+
+    /**
+     * POST /user/modifier
+     * Met à jour les informations d'un utilisateur.
+     */
+    @PostMapping("/modifier")
+    public String updateUser(
+            @RequestParam("id") int id,
+            @RequestParam("nom") String nom,
+            @RequestParam("prenom") String prenom,
+            @RequestParam("mail") String mail,
+
+            @RequestParam(value = "contact", required = false) String contact,
+            @RequestParam(value = "posteId", required = false) Integer posteId,
+            @RequestParam(value = "serviceId", required = false) Integer serviceId,
+            @RequestParam(value = "superieurHierarchiqueId", required = false) Integer superieurHierarchiqueId,
+            @RequestParam(value = "roles", required = false) List<Integer> roleIdsList,
+            @RequestParam(value = "returnUrl", required = false) String returnUrl,
+            RedirectAttributes redirectAttributes
+    ) {
+        Utilisateur existant = utilisateurService.getUtilisateurById(id);
+        if (existant == null) {
+            redirectAttributes.addFlashAttribute("ko", "Utilisateur introuvable : id=" + id);
+            return "redirect:/user/list";
+        }
+
+        UtilisateurRequestDTO dto = new UtilisateurRequestDTO();
+        dto.setNom(nom);
+        dto.setPrenom(prenom);
+        dto.setMail(mail);
+        dto.setContact(contact);
+        dto.setPosteId(posteId);
+        dto.setServiceId(serviceId);
+        dto.setSuperieurHierarchiqueId(superieurHierarchiqueId);
+        dto.setRoleIds(roleIdsList != null ? new HashSet<>(roleIdsList) : new HashSet<>());
+        dto.setPdpId(existant.getPdp() != null ? existant.getPdp().getId() : null);
+        dto.setValidateurIds(existant.getValidateurs().stream()
+                .map(Utilisateur::getId)
+                .collect(java.util.stream.Collectors.toSet()));
+
+        String target = (returnUrl != null && returnUrl.startsWith("/user/"))
+                ? returnUrl
+                : "/user/list";
+
+        try {
+            utilisateurService.modifierUtilisateur(id, dto);
+            redirectAttributes.addFlashAttribute("ok",
+                    "Utilisateur '" + prenom + " " + nom + "' modifié avec succès.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("ko",
+                    "Erreur inattendue : " + e.getMessage());
+        }
+
+        return "redirect:/user/list";
     }
 
     // -------------------------------------------------------

@@ -2,7 +2,7 @@ package afg.achat.afgApprovAchat.service.util;
 
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.Famille;
-import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
@@ -11,7 +11,7 @@ import afg.achat.afgApprovAchat.model.utilisateur.Poste;
 import afg.achat.afgApprovAchat.repository.bonLivraison.BonLivraisonFilleRepo;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FamilleService;
-import afg.achat.afgApprovAchat.service.FournisseurService;
+import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;

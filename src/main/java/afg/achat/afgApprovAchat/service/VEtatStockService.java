@@ -12,7 +12,7 @@ public class VEtatStockService {
     @Autowired
     VEtatStockRepo vEtatStockRepo;
 
-    // ✅ Pageable
+    // Pageable
     public Page<VEtatStock> getEtatStocksPage(String q, Pageable pageable) {
         if (q == null || q.trim().isEmpty()) {
             return vEtatStockRepo.findAll(pageable);
@@ -31,13 +31,13 @@ public class VEtatStockService {
             String designation,
             String udm,
             String etat,
+            Integer familleId,
             Pageable pageable
     ) {
         String c = (code == null) ? "" : code.trim();
         String d = (designation == null) ? "" : designation.trim();
         String u = (udm == null) ? "" : udm.trim();
         String e = (etat == null) ? "" : etat.trim().toUpperCase(); // RUPTURE/SEUIL/NORMAL
-
-        return vEtatStockRepo.searchMulti(c, d, u, e, pageable);
+        return vEtatStockRepo.searchMulti(c, d, u, e, familleId, pageable);
     }
 }

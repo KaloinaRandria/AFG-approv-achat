@@ -4,11 +4,15 @@ package afg.achat.afgApprovAchat.service.demande;
 import afg.achat.afgApprovAchat.DTO.ServiceDemandeDTO;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.model.util.ModeTraitement;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
+import afg.achat.afgApprovAchat.model.util.ModeTraitementEnum;
+import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.demande.DemandeFilleRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereSpec;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereSpec.SearchCriteria;
+import afg.achat.afgApprovAchat.repository.util.ModeTraitementRepo;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +24,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import afg.achat.afgApprovAchat.service.paiement.PaiementDirectService;
+
 @Service
 @RequiredArgsConstructor
 public class DemandeMereService {
@@ -27,11 +33,17 @@ public class DemandeMereService {
     private final DemandeMereRepo   demandeMereRepo;
     private final DemandeFilleRepo  demandeFilleRepo;
     private final IdGenerator       idGenerator;
+    private final ModeTraitementRepo modeTraitementRepo;
+    private final PaiementDirectService paiementDirectService;
 
     // ── Lecture ──────────────────────────────────────────────────────────────
 
     public Optional<DemandeMere> getDemandeMereById(String id) {
         return demandeMereRepo.findById(id);
+    }
+
+    public DemandeMere getDemandeById(String id) {
+        return demandeMereRepo.findById(id).orElse(null);
     }
 
     public DemandeMere[] getAllDemandesMeres() {
@@ -58,6 +70,49 @@ public class DemandeMereService {
 
     public void saveDemandeMere(DemandeMere dm) {
         demandeMereRepo.save(dm);
+    }
+
+    /** Met la demande de paiement direct dans la file MG après validation SG. */
+    public void preparerTransmissionFinance(DemandeMere demande) {
+        if (estPaiementDirect(demande)) {
+            demande.setStatutTransmissionFinance(DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE);
+            demandeMereRepo.save(demande);
+            paiementDirectService.creerPaiementDirectPourDemande(demande);
+        }
+    }
+
+    public List<DemandeMere>getPaiementsDirectsATransmettre() {
+        return demandeMereRepo.findByStatutOrderByDateDemandeAsc(StatutDemande.VALIDE).stream()
+                .filter(this::estPaiementDirect)
+                .filter(d -> d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE
+                        || d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE)
+                .toList();
+    }
+
+    @Transactional
+    public boolean transmettreAFinance(DemandeMere demande, Utilisateur transmetteur, String commentaire) {
+        if (!estPaiementDirect(demande)) return false;
+        return paiementDirectService.transmettreAFinance(demande, transmetteur, commentaire);
+    }
+
+    public List<DemandeMere> getPaiementsDirectsTransmisAFinance() {
+        return demandeMereRepo.findByStatutOrderByDateDemandeAsc(StatutDemande.VALIDE).stream()
+                .filter(this::estPaiementDirect)
+                .filter(d -> d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE
+                        || d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.PAYEE)
+                .toList();
+    }
+
+    @Transactional
+    public boolean marquerCommePayee(DemandeMere demande, Utilisateur utilisateur, String commentaire) {
+        if (!estPaiementDirect(demande)) return false;
+        return paiementDirectService.marquerCommePayee(demande, utilisateur, commentaire);
+    }
+
+    public boolean estPaiementDirect(DemandeMere demande) {
+        return demande.getModeTraitement() != null
+                && ModeTraitementEnum.PAIEMENT_DIRECT.getLibelle()
+                .equalsIgnoreCase(demande.getModeTraitement().getLibelle());
     }
 
     @Transactional
@@ -107,5 +162,20 @@ public class DemandeMereService {
 
     public static LocalDateTime toTo(LocalDate d) {
         return d == null ? LocalDateTime.of(2999, 12, 31, 23, 59, 59) : d.atTime(23, 59, 59);
+    }
+
+    public boolean peutCreerBonCommande(DemandeMere demandeMere, boolean isMG) {
+        if (demandeMere.getStatut() != StatutDemande.VALIDE) {
+            return false;
+        }
+        if(!isMG) {
+            return false;
+        }
+        ModeTraitement mode = demandeMere.getModeTraitement();
+        if(mode == null) {
+            return false;
+        }
+
+        return mode.isNecessiteBonCommande();
     }
 }
