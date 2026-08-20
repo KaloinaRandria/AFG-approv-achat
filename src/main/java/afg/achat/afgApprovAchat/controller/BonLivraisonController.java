@@ -1,22 +1,18 @@
 package afg.achat.afgApprovAchat.controller;
 
-import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
-import afg.achat.afgApprovAchat.model.demande.DemandeFille;
-import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.stock.StockFille;
 import afg.achat.afgApprovAchat.model.stock.StockMere;
 import afg.achat.afgApprovAchat.model.util.Devise;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
 import afg.achat.afgApprovAchat.model.util.PrixArticle;
 import afg.achat.afgApprovAchat.service.ArticleService;
-import afg.achat.afgApprovAchat.service.FournisseurService;
+import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonFilleService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
-import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
-import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.stock.LotStockService;
 import afg.achat.afgApprovAchat.service.stock.StockFilleService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;

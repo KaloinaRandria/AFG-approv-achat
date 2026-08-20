@@ -42,7 +42,9 @@ public class UtilisateurService {
     public Utilisateur getUtilisateurByMail(String mail) {
         return utilisateurRepo.findByMail(mail);
     }
-
+    public List<Utilisateur> getAllUtilisateurs() {
+        return utilisateurRepo.findAll();
+    }
     public List<Integer> getIdsUtilisateurVisible(int userId) {
         List<Integer> ids = new ArrayList<>();
         ids.add(userId);
@@ -181,6 +183,64 @@ public class UtilisateurService {
         }
 
         return sauvegarde;
+    }
+
+    /**
+     * Met à jour les informations d'un utilisateur existant.
+     * Les rôles reçus remplacent les rôles actuels : le formulaire peut donc
+     * aussi bien ajouter un rôle qu'en retirer un.
+     */
+    @Transactional
+    public Utilisateur modifierUtilisateur(int id, UtilisateurRequestDTO dto) {
+        Utilisateur utilisateur = utilisateurRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur introuvable : id=" + id));
+
+        Utilisateur utilisateurAvecMemeMail = utilisateurRepo.findByMail(dto.getMail());
+        if (utilisateurAvecMemeMail != null && utilisateurAvecMemeMail.getId() != id) {
+            throw new IllegalArgumentException(
+                    "Un utilisateur avec le mail '" + dto.getMail() + "' existe déjà."
+            );
+        }
+
+        Set<Role> roles = new HashSet<>();
+        if (dto.getRoleIds() != null) {
+            for (Integer roleId : dto.getRoleIds()) {
+                roles.add(roleRepo.findById(roleId)
+                        .orElseThrow(() -> new IllegalArgumentException("Rôle introuvable : " + roleId)));
+            }
+        }
+
+        Poste poste = null;
+        if (dto.getPosteId() != null) {
+            poste = posteRepo.findById(dto.getPosteId())
+                    .orElseThrow(() -> new IllegalArgumentException("Poste introuvable : " + dto.getPosteId()));
+        }
+
+        afg.achat.afgApprovAchat.model.util.Service service = null;
+        if (dto.getServiceId() != null) {
+            service = serviceRepo.findById(dto.getServiceId())
+                    .orElseThrow(() -> new IllegalArgumentException("Service introuvable : " + dto.getServiceId()));
+        }
+
+        Utilisateur superieur = null;
+        if (dto.getSuperieurHierarchiqueId() != null) {
+            if (dto.getSuperieurHierarchiqueId() == id) {
+                throw new IllegalArgumentException("Un utilisateur ne peut pas être son propre supérieur hiérarchique.");
+            }
+            superieur = utilisateurRepo.findById(dto.getSuperieurHierarchiqueId())
+                    .orElseThrow(() -> new IllegalArgumentException("Supérieur introuvable : " + dto.getSuperieurHierarchiqueId()));
+        }
+
+        utilisateur.setNom(dto.getNom());
+        utilisateur.setPrenom(dto.getPrenom());
+        utilisateur.setMail(dto.getMail());
+        utilisateur.setContact(dto.getContact());
+        utilisateur.setPoste(poste);
+        utilisateur.setService(service);
+        utilisateur.setRoles(roles);
+        utilisateur.setSuperieurHierarchique(superieur);
+
+        return utilisateurRepo.save(utilisateur);
     }
 
     /**

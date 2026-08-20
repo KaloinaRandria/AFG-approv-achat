@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.model.demande;
 
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
+import afg.achat.afgApprovAchat.model.util.ModeTraitement;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
@@ -69,6 +70,31 @@ public class DemandeMere {
     @Column(name = "total_estime")
     Double totalEstime;
 
+    @ManyToOne @JoinColumn(name = "id_mode_traitement", referencedColumnName = "id_mode_traitement")
+    ModeTraitement modeTraitement;
+
+    /**
+     * Suivi opérationnel après la validation finale. Il ne fait pas partie du
+     * workflow de validation : une demande reste donc VALIDEE après son envoi
+     * manuel à la finance.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "statut_transmission_finance")
+    StatutTransmissionFinance statutTransmissionFinance = StatutTransmissionFinance.NON_CONCERNEE;
+
+    @ManyToOne
+    @JoinColumn(name = "id_transmis_finance_par", referencedColumnName = "id_utilisateur")
+    Utilisateur transmisFinancePar;
+
+    @Column(name = "date_transmission_finance")
+    LocalDateTime dateTransmissionFinance;
+
+    @Column(name = "commentaire_transmission_finance", columnDefinition = "TEXT")
+    String commentaireTransmissionFinance;
+
+    @OneToOne(mappedBy = "demande", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private afg.achat.afgApprovAchat.model.paiement.PaiementDirect paiementDirect;
+
 
     public enum PrioriteDemande {
         P2,
@@ -84,6 +110,13 @@ public class DemandeMere {
         NON_LIVREE,       // Aucun BS encore
         EN_COURS_SORTIE,  // Au moins 1 BS confirmé, reste des lignes
         SOLDEE            // Toutes les lignes sorties
+    }
+
+    public enum StatutTransmissionFinance {
+        NON_CONCERNEE,
+        A_TRANSMETTRE,
+        TRANSMISE_FINANCE,
+        PAYEE
     }
 
     public void setId(IdGenerator idGenerator) {

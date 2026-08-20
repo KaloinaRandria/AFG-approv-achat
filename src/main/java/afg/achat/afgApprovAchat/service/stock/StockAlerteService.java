@@ -81,6 +81,19 @@ public class StockAlerteService {
 
     public List<StockAlerte> getAlertesAll() {
         List<VEtatStock> etats = vEtatStockRepo.findAlertesAll();
+        return toAlertes(etats);
+    }
+
+    public List<StockAlerte> getAlertesAllByFamilleId(int familleId) {
+        return toAlertes(vEtatStockRepo.findAlertesAllByFamilleId(familleId));
+    }
+
+    public int getAlertesCountByFamilleId(int familleId) {
+        long count = vEtatStockRepo.countAlertesByFamilleId(familleId);
+        return (count > Integer.MAX_VALUE) ? Integer.MAX_VALUE : (int) count;
+    }
+
+    private List<StockAlerte> toAlertes(List<VEtatStock> etats) {
         List<StockAlerte> alertes = new ArrayList<>();
 
         for (VEtatStock e : etats) {

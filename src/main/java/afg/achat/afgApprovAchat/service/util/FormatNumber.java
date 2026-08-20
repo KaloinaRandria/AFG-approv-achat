@@ -3,6 +3,8 @@ package afg.achat.afgApprovAchat.service.util;
 import org.springframework.stereotype.Service;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 @Service
 public class FormatNumber {
@@ -22,6 +24,12 @@ public class FormatNumber {
 
         DecimalFormat formatter = new DecimalFormat("#,###.00", symbols);
         return formatter.format(number);
+    }
+
+    public static String formatDate() {
+        LocalDate date = LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("ddMMyyyy");
+        return date.format(formatter);
     }
 
 }

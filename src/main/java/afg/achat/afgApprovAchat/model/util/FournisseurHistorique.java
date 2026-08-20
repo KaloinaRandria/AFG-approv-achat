@@ -1,7 +1,7 @@
 package afg.achat.afgApprovAchat.model.util;
 
 
-import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
