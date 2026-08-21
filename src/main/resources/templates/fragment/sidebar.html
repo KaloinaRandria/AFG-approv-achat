@@ -33,7 +33,7 @@
         </a>
     </div>
 
-    <div class="px-3 mb-2" sec:authorize="hasAnyRole('ADMIN','FINANCE')">
+    <div class="px-3 mb-2" sec:authorize="hasAnyRole('ADMIN','FINANCE','FINANCE_CONSULT')">
         <a class="nav-link text-white d-flex align-items-center sidebar-link"
            th:href="@{/demande/paiements-directs-finance}"
            th:classappend="${currentUri == '/demande/paiements-directs-finance' ? 'active' : ''}">
@@ -45,7 +45,7 @@
     <!--        DEVISE -->
     <div class="px-3 mb-2">
         <a class="nav-link text-white d-flex align-items-center sidebar-link"
-           sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','FINANCE')"
+           sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','FINANCE','FINANCE_CONSULT')"
            th:href="@{/devise/devise-pages}"
             th:classappend="${currentUri == '/devise/devise-pages' ? 'active' : ''}">
             <i class="fas fa-coins me-3"></i> Devise et Cours

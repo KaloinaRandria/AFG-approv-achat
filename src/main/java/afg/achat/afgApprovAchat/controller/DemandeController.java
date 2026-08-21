@@ -427,6 +427,12 @@ public class DemandeController {
                 || hasRole(auth, "ROLE_ADMIN");
     }
 
+    private boolean hasFinanceReadAccess(Authentication auth) {
+        return hasRole(auth, "ROLE_FINANCE")
+                || hasRole(auth, "ROLE_FINANCE_CONSULT")
+                || hasRole(auth, "ROLE_ADMIN");
+    }
+
     private List<Integer> resolveScope(String scope, Utilisateur current,
                                        List<Integer> allVisibleIds) {
         return switch (scope == null ? "ALL" : scope.toUpperCase()) {
@@ -1649,7 +1655,7 @@ public class DemandeController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (!hasFinanceAccess(auth)) {
+        if (!hasFinanceReadAccess(auth)) {
             return "redirect:/error/403";
         }
 
