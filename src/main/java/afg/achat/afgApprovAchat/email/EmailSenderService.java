@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -197,5 +198,102 @@ public class EmailSenderService {
                 "[AFG Bank - Demande Achat] - Demande en attente de votre validation",
                 props
         ));
+    }
+
+    // ── Notifications Paiement Direct ─────────────────────────────────────────
+
+    /**
+     * Notifie tous les utilisateurs Finance qu'une demande de paiement direct
+     * leur a été transmise.
+     *
+     * @param demande       la demande concernée
+     * @param transmetteur  l'utilisateur qui a transmis la demande
+     * @param commentaire   commentaire éventuel de transmission
+     * @param financeUsers  liste des utilisateurs ayant ROLE_FINANCE
+     */
+    public void envoyerMailTransmissionFinance(DemandeMere demande,
+                                               Utilisateur transmetteur,
+                                               String commentaire,
+                                               List<Utilisateur> financeUsers) {
+        if (financeUsers == null || financeUsers.isEmpty()) return;
+
+        String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
+        String dateTransmission = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+
+        for (Utilisateur destinataire : financeUsers) {
+            if (destinataire.getMail() == null || destinataire.getMail().isBlank()) continue;
+
+            System.out.println(">>> Mail transmission finance");
+            System.out.println("    to           : " + destinataire.getMail());
+            System.out.println("    demande      : " + demande.getId());
+            System.out.println("    transmetteur : " + transmetteur.getNom());
+
+            Map<String, Object> props = new HashMap<>();
+            props.put("id",               demande.getId());
+            props.put("demandeur",        demande.getDemandeur());
+            props.put("transmetteur",     transmetteur);
+            props.put("destinataire",     destinataire);
+            props.put("dateTransmission", dateTransmission);
+            props.put("montant",          demande.getTotalEstime() != null
+                                              ? demande.getTotalEstime()
+                                              : demande.getTotalPrix());
+            props.put("commentaire",      commentaire);
+            props.put("lienFiche",        baseUrl + "/demande/fiche/" + demande.getId());
+
+            this.sendEmail(new Mail(
+                    "paiementTransmisFinance",
+                    destinataire.getMail(),
+                    "[AFG Bank - Demande Achat - Paiement Direct] - Nouvelle demande transmise à la finance",
+                    props
+            ));
+        }
+    }
+
+    /**
+     * Notifie tous les utilisateurs Finance qu'un paiement direct a été effectué.
+     *
+     * @param demande      la demande concernée
+     * @param payeur       l'utilisateur qui a enregistré le paiement
+     * @param commentaire  commentaire éventuel de paiement
+     * @param financeUsers liste des utilisateurs ayant ROLE_FINANCE
+     */
+    public void envoyerMailPaiementEffectue(DemandeMere demande,
+                                            Utilisateur payeur,
+                                            String commentaire,
+                                            List<Utilisateur> financeUsers) {
+        if (financeUsers == null || financeUsers.isEmpty()) return;
+
+        String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
+        String datePaiement = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+
+        for (Utilisateur destinataire : financeUsers) {
+            if (destinataire.getMail() == null || destinataire.getMail().isBlank()) continue;
+
+            System.out.println(">>> Mail paiement effectué");
+            System.out.println("    to       : " + destinataire.getMail());
+            System.out.println("    demande  : " + demande.getId());
+            System.out.println("    payeur   : " + payeur.getNom());
+
+            Map<String, Object> props = new HashMap<>();
+            props.put("id",           demande.getId());
+            props.put("demandeur",    demande.getDemandeur());
+            props.put("payeur",       payeur);
+            props.put("destinataire", destinataire);
+            props.put("datePaiement", datePaiement);
+            props.put("montant",      demande.getTotalEstime() != null
+                                          ? demande.getTotalEstime()
+                                          : demande.getTotalPrix());
+            props.put("commentaire",  commentaire);
+            props.put("lienFiche",    baseUrl + "/demande/fiche/" + demande.getId());
+
+            this.sendEmail(new Mail(
+                    "paiementEffectue",
+                    destinataire.getMail(),
+                    "[AFG Bank - Demande Achat - Paiement Direct] - Paiement effectué",
+                    props
+            ));
+        }
     }
 }

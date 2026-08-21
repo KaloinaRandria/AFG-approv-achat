@@ -1778,6 +1778,9 @@ public class DemandeController {
         }
         historiqueFinanceDemandeService.logTransmissionFinance(demande, current, commentaire);
 
+        List<Utilisateur> financeUsers = utilisateurService.getUtilisateursByRole("ROLE_FINANCE");
+        ess.envoyerMailTransmissionFinance(demande, current, commentaire, financeUsers);
+
         redirectAttributes.addFlashAttribute("ok", "Demande transmise à la finance.");
         return "redirect:/demande/fiche/" + id;
     }
@@ -1800,6 +1803,9 @@ public class DemandeController {
             return "redirect:/demande/fiche/" + id;
         }
         historiqueFinanceDemandeService.logPaiementEffectue(demande, current, commentaire);
+
+        List<Utilisateur> financeUsers = utilisateurService.getUtilisateursByRole("ROLE_FINANCE");
+        ess.envoyerMailPaiementEffectue(demande, current, commentaire, financeUsers);
 
         redirectAttributes.addFlashAttribute("ok", "Demande marquée comme payée.");
         return "redirect:/demande/fiche/" + id;

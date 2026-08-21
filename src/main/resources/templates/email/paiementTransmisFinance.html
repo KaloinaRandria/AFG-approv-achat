@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8" /></head>
+<body>
+<div class="container">
+    <p>Bonjour <span th:text="${destinataire.prenom + ' ' + destinataire.nom}"></span>,</p>
+    <p>
+        Une demande de <strong>paiement direct</strong> vous a été transmise par
+        <span th:text="${transmetteur.prenom + ' ' + transmetteur.nom}"></span>
+        le <span th:text="${dateTransmission}"></span>.
+    </p>
+    <p>
+        <strong>Référence :</strong> <span th:text="${id}"></span><br/>
+        <strong>Demandeur :</strong> <span th:text="${demandeur.prenom + ' ' + demandeur.nom}"></span><br/>
+        <strong>Montant :</strong> <span th:text="${montant}"></span>
+    </p>
+    <p th:if="${commentaire != null and !#strings.isEmpty(commentaire)}">
+        <strong>Commentaire :</strong> <em th:text="${commentaire}"></em>
+    </p>
+    <p>
+        <a th:href="${lienFiche}">Ouvrir la fiche de la demande</a>
+    </p>
+    <br/>
+    <p>Cordialement,</p>
+    <p><img src="cid:signature-image" /></p>
+</div>
+</body>
+</html>
