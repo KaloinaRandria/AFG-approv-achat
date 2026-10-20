@@ -346,7 +346,8 @@ public class DemandeController {
         boolean isControleur = hasRole(auth, "ROLE_CONTROLEUR");
         boolean isDFC        = hasRole(auth, "ROLE_DFC");
         boolean isSG         = hasRole(auth, "ROLE_SG");
-        boolean isBackoffice = isAdmin || isMG || isControleur || isDFC || isSG;
+        boolean isAudit      = hasRole(auth, "ROLE_AUDIT");
+        boolean isBackoffice = isAdmin || isAudit || isMG || isControleur || isDFC || isSG;
 
         // ── 2. IDs visibles : hiérarchie + validateurs assignés ─────────────────
         List<Integer> visibleIds  = utilisateurService.getIdsUtilisateurVisible(current.getId());
@@ -371,7 +372,7 @@ public class DemandeController {
                 .dateFrom(DemandeMereService.toFrom(dateFrom))
                 .dateTo(DemandeMereService.toTo(dateTo));
 
-        if (isAdmin) {
+        if (isAdmin || isAudit) {
             // Admin : aucune restriction sur les demandeurs ni sur les statuts
 
         } else if (isMG || isControleur || isDFC || isSG) {
@@ -768,6 +769,9 @@ public class DemandeController {
         boolean isAdmin = auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
 
+        boolean isAudit = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_AUDIT".equals(a.getAuthority()));
+
         boolean isMG = auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_MOYENS_GENERAUX".equals(a.getAuthority()));
 
@@ -780,7 +784,7 @@ public class DemandeController {
         boolean isSG = auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_SG".equals(a.getAuthority()));
 
-        boolean isAdminOrSpecial = isAdmin || isMG || isControleur || isDFC || isSG;
+        boolean isAdminOrSpecial = isAdmin || isAudit || isMG || isControleur || isDFC || isSG;
 
         DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
         if (demande == null) {
