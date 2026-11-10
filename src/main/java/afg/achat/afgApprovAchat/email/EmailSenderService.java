@@ -4,6 +4,7 @@ import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
@@ -34,6 +35,15 @@ public class EmailSenderService {
 
     // Pool de threads limité pour l'envoi asynchrone
     private final ExecutorService emailExecutor = Executors.newSingleThreadExecutor();
+
+    /** URL publique de l'application (liens des mails). */
+    @Value("${app.base-url}")
+    private String baseUrl;
+
+    /** Lien vers la fiche d'une demande, pour les mails. */
+    public String lienFiche(String demandeId) {
+        return baseUrl + "/demande/fiche/" + demandeId;
+    }
 
     public EmailSenderService(JavaMailSender emailSender, TemplateEngine templateEngine) {
         this.emailSender = emailSender;
@@ -129,8 +139,6 @@ public class EmailSenderService {
             propsValidateur.put("dateDecision",   dateDecision);
             propsValidateur.put("etape",          StatutDemande.getLibelle(etapeCourante));
             propsValidateur.put("prochaineEtape", StatutDemande.getLibelle(prochaineEtape));
-            String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
-//                String baseUrl = "http://localhost:8080";
 
             String lienValidation = baseUrl + "/demande/fiche/" + demande.getId();
             propsValidateur.put("lienValidation", lienValidation);
@@ -180,7 +188,6 @@ public class EmailSenderService {
 
         String dateDecision = LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-        String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
 
         Map<String, Object> props = new HashMap<>();
         props.put("id",             demande.getId());
@@ -217,7 +224,6 @@ public class EmailSenderService {
                                                List<Utilisateur> financeUsers) {
         if (financeUsers == null || financeUsers.isEmpty()) return;
 
-        String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
         String dateTransmission = LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
 
@@ -264,7 +270,6 @@ public class EmailSenderService {
                                             List<Utilisateur> financeUsers) {
         if (financeUsers == null || financeUsers.isEmpty()) return;
 
-        String baseUrl = "http://10.25.10.151:8081/AFG-approv-achat";
         String datePaiement = LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
 
