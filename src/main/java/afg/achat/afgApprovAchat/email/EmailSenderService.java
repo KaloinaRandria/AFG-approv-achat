@@ -7,7 +7,8 @@ import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.FileSystemResource;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+@Slf4j
 @Service
 public class EmailSenderService {
 
@@ -45,56 +47,72 @@ public class EmailSenderService {
         return baseUrl + "/demande/fiche/" + demandeId;
     }
 
+    /**
+     * Interrupteur d'envoi des mails. {@code true} par défaut (production) ;
+     * le profil {@code dev} le met à {@code false} : les mails sont alors seulement tracés dans les logs.
+     */
+    @Value("${app.mail.enabled:true}")
+    private boolean mailEnabled;
+
     public EmailSenderService(JavaMailSender emailSender, TemplateEngine templateEngine) {
         this.emailSender = emailSender;
         this.templateEngine = templateEngine;
     }
 
+    @PostConstruct
+    void signalerModeMail() {
+        if (!mailEnabled) {
+            log.warn("ENVOI DES MAILS DÉSACTIVÉ (app.mail.enabled=false) : les mails sont seulement écrits dans les logs.");
+        }
+    }
+
     public void sendEmail(Mail mail) {
-//        emailExecutor.submit(() -> {
-//            try {
-//                MimeMessage message = emailSender.createMimeMessage();
-//                MimeMessageHelper helper = new MimeMessageHelper(message,
-//                        MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED,
-//                        StandardCharsets.UTF_8.name());
-//
-//                Context context = new Context();
-//                context.setVariables(mail.getProps());
-//                String html = templateEngine.process("email/" + mail.getTemplateName(), context);
-//
-//                String[] recipients = mail.getMailTo().split(",");
-//                for (String recipient : recipients) {
-//                    helper.addTo(recipient.trim());
-//                }
-//
-//                if (mail.getCc() != null) {
-//                    helper.setCc(mail.getCc());
-//                }
-//
-//                helper.setSubject(mail.getSubject());
-//                helper.setFrom(mail.getFrom_adress() != null ? mail.getFrom_adress() :
-//                        ((JavaMailSenderImpl) emailSender).getUsername());
-//                helper.setText(html, true);
-//
-//                if (mail.getAttachments() != null) {
-//                    for (MultipartFile file : mail.getAttachments()) {
-//                        helper.addAttachment(file.getOriginalFilename(),
-//                                new ByteArrayResource(file.getBytes()));
-//                    }
-//                }
-//
-//                ClassPathResource imageFile = new ClassPathResource("static/img/logo_afg_email.png");
-//                helper.addInline("signature-image", new FileSystemResource(imageFile.getFile()));
-//
-//                System.out.println("Sending mail to: " + mail.getMailTo());
-//                emailSender.send(message);
-//                System.out.println("Email sent to: " + mail.getMailTo());
-//
-//            } catch (Exception e) {
-//                System.err.println("Failed to send email to: " + mail.getMailTo());
-//                e.printStackTrace();
-//            }
-//        });
+        if (!mailEnabled) {
+            log.info("[MAIL NON ENVOYÉ] modèle={} | à={} | sujet={}",
+                    mail.getTemplateName(), mail.getMailTo(), mail.getSubject());
+            return;
+        }
+
+        emailExecutor.submit(() -> {
+            try {
+                MimeMessage message = emailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message,
+                        MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED,
+                        StandardCharsets.UTF_8.name());
+
+                Context context = new Context();
+                context.setVariables(mail.getProps());
+                String html = templateEngine.process("email/" + mail.getTemplateName(), context);
+
+                for (String recipient : mail.getMailTo().split(",")) {
+                    helper.addTo(recipient.trim());
+                }
+                if (mail.getCc() != null) {
+                    helper.setCc(mail.getCc());
+                }
+
+                helper.setSubject(mail.getSubject());
+                helper.setFrom(mail.getFrom_adress() != null ? mail.getFrom_adress() :
+                        ((JavaMailSenderImpl) emailSender).getUsername());
+                helper.setText(html, true);
+
+                if (mail.getAttachments() != null) {
+                    for (MultipartFile file : mail.getAttachments()) {
+                        helper.addAttachment(file.getOriginalFilename(),
+                                new ByteArrayResource(file.getBytes()));
+                    }
+                }
+
+                // ClassPathResource directement : fonctionne aussi depuis un jar/war
+                helper.addInline("signature-image", new ClassPathResource("static/img/logo_afg_email.png"));
+
+                emailSender.send(message);
+                log.info("Mail envoyé à {} ({})", mail.getMailTo(), mail.getTemplateName());
+
+            } catch (Exception e) {
+                log.error("Échec de l'envoi du mail à {} ({})", mail.getMailTo(), mail.getTemplateName(), e);
+            }
+        });
     }
 
     public void envoyerMailValidation(DemandeMere demande,
