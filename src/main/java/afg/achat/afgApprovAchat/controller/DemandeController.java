@@ -700,6 +700,12 @@ public class DemandeController {
                                @RequestParam(required = false, defaultValue = "/demande/list") String returnUrl,
                                RedirectAttributes redirectAttributes, HttpSession session) {
 
+        // Lien de retour : uniquement une page interne des demandes (pas de redirection externe)
+        if (returnUrl == null || !returnUrl.startsWith("/demande/")
+                || returnUrl.contains("//") || returnUrl.contains("\\")) {
+            returnUrl = "/demande/list";
+        }
+
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
         Utilisateur current = utilisateurService.getUtilisateurByMail(principal.getMail());

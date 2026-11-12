@@ -28,7 +28,9 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
+            // Protection CSRF active (défaut Spring Security) : le jeton est ajouté
+            // aux formulaires par Thymeleaf (th:action) et aux appels AJAX par le
+            // script du fragment load_script.
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(
                             "/login",

@@ -386,7 +386,12 @@
                     th:text="${#authentication.principal.prenom + ' ' + #authentication.principal.nom}"></strong>
         </a>
         <ul class="dropdown-menu dropdown-menu-end text-small shadow" aria-labelledby="dropdownUser">
-            <li><a class="dropdown-item" th:href="@{/logout}">Déconnexion</a></li>
+            <li>
+                <!-- Déconnexion en POST (exigé par la protection CSRF) -->
+                <form th:action="@{/logout}" method="post" class="m-0">
+                    <button type="submit" class="dropdown-item">Déconnexion</button>
+                </form>
+            </li>
             <li sec:authorize="hasAnyRole('ADMIN')"><a class="dropdown-item" th:href="@{/import/import-saisie-page}">Import de données</a></li>
         </ul>
     </div>

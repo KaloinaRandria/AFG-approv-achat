@@ -45,6 +45,7 @@ public class StockController {
     private static final int FAMILLE_MATERIELS_INFORMATIQUE_ID = 19;
 
 
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @PostMapping("/save-entree")
     public String insertEntreeStock(@RequestParam(name = "codeArticle") String codeArticle,
                                     @RequestParam(name = "quantite") String quantiteEntree,
@@ -73,6 +74,7 @@ public class StockController {
         return "redirect:/stock/etat-stock";
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @PostMapping("/save-sortie")
     public String insertSortieStock(@RequestParam(name = "codeArticle") String codeArticle,
                                     @RequestParam(name = "quantite") String quantiteSortie,

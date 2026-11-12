@@ -83,6 +83,7 @@ public class ArticleController {
         return "article/article-liste";
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @GetMapping("/entree-saisie/{codeArticle}")
     public String entreeArticle(@PathVariable String codeArticle, Model model, HttpServletRequest request) {
         Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));
@@ -90,6 +91,7 @@ public class ArticleController {
         return "stock/entree-saisie";
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @GetMapping("/sortie-saisie/{codeArticle}")
     public String sortieArticle(@PathVariable String codeArticle, Model model, HttpServletRequest request) {
         Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));

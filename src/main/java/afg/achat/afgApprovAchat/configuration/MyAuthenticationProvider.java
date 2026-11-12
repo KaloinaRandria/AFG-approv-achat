@@ -37,23 +37,6 @@ public class MyAuthenticationProvider implements AuthenticationProvider{
 		String password = arg0.getCredentials().toString().trim() ;
 		try {
 
-			//System.out.println("------------");
-			/*if(email.startsWith("test") && password.equals(email)) {
-				Collaborateur user = ur.findByEmailActif(email);
-				return new UsernamePasswordAuthenticationToken(user, null,
-				        Collections.singletonList(new SimpleGrantedAuthority("ROLE_"+user.getRole().getLibelle())));
-			}
-			if(email.equals("s.dago@atlantic-group.net") && password.equals("P@ssword01")) {
-				Collaborateur user = ur.findByEmailActif(email);
-				return new UsernamePasswordAuthenticationToken(user, null,
-				        Collections.singletonList(new SimpleGrantedAuthority("ROLE_"+user.getRole().getLibelle())));
-			}
-		
-			if(email.equals("charmica.andriakotoarson@afgbank.mg") && password.equals("charmica.andriakotoarson@afgbank.mg")) {
-				Collaborateur user = ur.findByEmailActif(email);
-				return new UsernamePasswordAuthenticationToken(user, null,
-				        Collections.singletonList(new SimpleGrantedAuthority("ROLE_"+user.getRole().getLibelle())));
-			}*/
             // Connexion de test (profil dev uniquement) : comptes listés dans
             // app.auth.test-login.comptes, avec le mot de passe app.auth.test-login.password.
             if (estConnexionDeTest(email, password)) {
@@ -65,14 +48,6 @@ public class MyAuthenticationProvider implements AuthenticationProvider{
                 return authentifier(user);
             }
 
-			if(email.equals("s.dago@atlantic-group.net") && password.equals("P@ssword01")) {
-				Utilisateur user = utilisateurService.getUtilisateurByMail(email);
-                Collection<GrantedAuthority> authorities = user.getRoles().stream()
-                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
-                        .toList();
-
-                return new UsernamePasswordAuthenticationToken(user, null, authorities);
-			}
 			if(activeDir.authentify(email, password)) {
                 Utilisateur user = utilisateurService.getUtilisateurByMail(email);
                 if (user == null) {

@@ -1,4 +1,69 @@
 <div th:fragment="load_script">
+    <!-- Jeton CSRF : ajouté automatiquement aux appels AJAX et aux formulaires POST -->
+    <script th:inline="javascript">
+        (function () {
+            const token  = /*[[${_csrf != null ? _csrf.token : ''}]]*/ '';
+            const header = /*[[${_csrf != null ? _csrf.headerName : 'X-CSRF-TOKEN'}]]*/ 'X-CSRF-TOKEN';
+            const param  = /*[[${_csrf != null ? _csrf.parameterName : '_csrf'}]]*/ '_csrf';
+            if (!token) return;
+            window.CSRF = {token: token, header: header, param: param};
+
+            const estLecture = m => /^(GET|HEAD|OPTIONS|TRACE)$/i.test(m || 'GET');
+            const memeOrigine = url => {
+                try { return new URL(url, window.location.href).origin === window.location.origin; }
+                catch (e) { return false; }
+            };
+
+            // fetch()
+            const fetchOrigine = window.fetch;
+            window.fetch = function (input, init) {
+                const url     = (typeof input === 'string' || input instanceof URL) ? String(input) : input.url;
+                const methode = (init && init.method) || (typeof input === 'object' && input.method) || 'GET';
+                if (!estLecture(methode) && memeOrigine(url)) {
+                    init = init || {};
+                    const headers = new Headers(init.headers
+                        || (typeof input === 'object' && !(input instanceof URL) ? input.headers : undefined));
+                    headers.set(header, token);
+                    init.headers = headers;
+                }
+                return fetchOrigine.call(this, input, init);
+            };
+
+            // XMLHttpRequest (jQuery $.ajax, Dropzone, jQuery Filer…)
+            const openOrigine = XMLHttpRequest.prototype.open;
+            const sendOrigine = XMLHttpRequest.prototype.send;
+            XMLHttpRequest.prototype.open = function (methode, url) {
+                this.__csrf = !estLecture(methode) && memeOrigine(url);
+                return openOrigine.apply(this, arguments);
+            };
+            XMLHttpRequest.prototype.send = function () {
+                if (this.__csrf) {
+                    try { this.setRequestHeader(header, token); } catch (e) { /* requête déjà envoyée */ }
+                }
+                return sendOrigine.apply(this, arguments);
+            };
+
+            // Formulaires POST sans champ de jeton (action posée en JavaScript, etc.)
+            const completer = form => {
+                if ((form.getAttribute('method') || '').toLowerCase() !== 'post') return;
+                if (form.querySelector('input[name="' + param + '"]')) return;
+                const champ = document.createElement('input');
+                champ.type = 'hidden';
+                champ.name = param;
+                champ.value = token;
+                form.appendChild(champ);
+            };
+            const completerTous = () => document.querySelectorAll('form').forEach(completer);
+            document.addEventListener('DOMContentLoaded', completerTous);
+            document.addEventListener('submit', e => completer(e.target), true);
+            // form.submit() ne déclenche pas l'événement "submit"
+            const submitOrigine = HTMLFormElement.prototype.submit;
+            HTMLFormElement.prototype.submit = function () {
+                completer(this);
+                return submitOrigine.call(this);
+            };
+        })();
+    </script>
     <!-- UN SEUL jQuery au début -->
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 

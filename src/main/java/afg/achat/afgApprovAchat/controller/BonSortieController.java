@@ -11,7 +11,10 @@ import afg.achat.afgApprovAchat.repository.bonSortie.BonSortieMereRepo;
 import afg.achat.afgApprovAchat.service.BonSortieService;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
+import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
+import afg.achat.afgApprovAchat.service.workflow.WorkflowService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,8 +32,12 @@ public class BonSortieController {
     private final DemandeFilleService demandeFilleService;
     private final BonSortieMereRepo bsMereRepo;
     private final BonSortieFilleRepo bsFilleRepo;
+    private final WorkflowService workflowService;
+    private final UtilisateurService utilisateurService;
 
     // ── Créer un BS depuis la fiche demande ─────────────────────────────────
+    // Même condition que l'affichage du bouton sur la fiche (canCreateBS : rôle MG)
+    @PreAuthorize("hasRole('MOYENS_GENERAUX')")
     @PostMapping("/creer/{idDemande}")
     public String creerBonSortie(@PathVariable String idDemande,
                                  @RequestParam("commentaire") String commentaire,
@@ -68,6 +75,11 @@ public class BonSortieController {
                 if (quantite <= 0) continue;
 
                 DemandeFille df = demandeFilleService.getDemandeFilleById(dfId);
+                // La ligne doit appartenir à la demande du bon de sortie
+                if (df == null || df.getDemandeMere() == null
+                        || !idDemande.equals(df.getDemandeMere().getId())) {
+                    throw new IllegalArgumentException("Ligne de demande invalide pour cette demande.");
+                }
 
                 bonSortieService.ajouterLigne(bs, df, quantite);
             }
@@ -92,6 +104,16 @@ public class BonSortieController {
         BonSortieMere bs = bsMereRepo.findById(id).orElse(null);
         if (bs == null) {
             redirectAttributes.addFlashAttribute("ko", "Bon de sortie introuvable.");
+            return "redirect:/demande/list";
+        }
+
+        // Même règle de consultation que la fiche de la demande liée
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Utilisateur current = utilisateurService.getUtilisateurByMail(
+                ((Utilisateur) auth.getPrincipal()).getMail());
+        if (bs.getDemandeMere() == null
+                || !workflowService.aAccesDemande(bs.getDemandeMere(), current, auth)) {
+            redirectAttributes.addFlashAttribute("ko", "Accès refusé à ce bon de sortie.");
             return "redirect:/demande/list";
         }
 

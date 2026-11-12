@@ -8,7 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/error")
 public class CustomErrorController {
 
-    @GetMapping("/403")
+    // Tous verbes : un refus (rôle ou jeton CSRF) sur un POST est transmis ici en POST
+    @RequestMapping("/403")
     public String error403() {
         return "error/403";
     }
