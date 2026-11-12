@@ -314,17 +314,39 @@ class WorkflowServiceTest {
     void envoiCodepReserveAuxMGALEtapeMG() {
         demande.setStatut(StatutDemande.VALIDATION_N2);
         assertThrows(WorkflowException.class, () -> service.envoyerAuCodep(
-                demande, current, auth("ROLE_MOYENS_GENERAUX"), "OPEX", null, null));
+                demande, current, auth("ROLE_MOYENS_GENERAUX"), "OPEX", null, null, null));
     }
 
     @Test
     void envoiCodepMarqueLaDemande() {
         demande.setStatut(StatutDemande.VALIDATION_N1);
-        service.envoyerAuCodep(demande, current, auth("ROLE_MOYENS_GENERAUX"), "OPEX", "P1", null);
+        service.envoyerAuCodep(demande, current, auth("ROLE_MOYENS_GENERAUX"), "OPEX", "P1", null, null);
 
         assertTrue(demande.getViaCodep());
         assertEquals(DemandeMere.NatureDemande.OPEX, demande.getNatureDemande());
         verify(demandeMereService).appliquerDecisionGlobale(demande, StatutDemande.DECISION_CODEP);
+    }
+
+    @Test
+    void envoiCodepConserveLeModeDeTraitementRenseigne() {
+        demande.setStatut(StatutDemande.VALIDATION_N1);
+        ModeTraitement mode = new ModeTraitement();
+        mode.setLibelle("Achat");
+        when(modeTraitementService.getModeTraitementById(1)).thenReturn(mode);
+
+        service.envoyerAuCodep(demande, current, auth("ROLE_MOYENS_GENERAUX"), "OPEX", "P1", "1", null);
+
+        assertSame(mode, demande.getModeTraitement());
+        verify(demandeMereService).appliquerDecisionGlobale(demande, StatutDemande.DECISION_CODEP);
+    }
+
+    @Test
+    void envoiCodepSansModeDeTraitementResteAccepte() {
+        demande.setStatut(StatutDemande.VALIDATION_N1);
+        service.envoyerAuCodep(demande, current, auth("ROLE_MOYENS_GENERAUX"), "OPEX", "P1", "", null);
+
+        assertNull(demande.getModeTraitement());
+        assertTrue(demande.getViaCodep());
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

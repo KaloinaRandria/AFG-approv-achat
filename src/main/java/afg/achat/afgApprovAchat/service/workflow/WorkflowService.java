@@ -275,7 +275,8 @@ public class WorkflowService {
 
     @Transactional
     public void envoyerAuCodep(DemandeMere demande, Utilisateur current, Authentication auth,
-                               String typeDemande, String prioriteParam, MultipartFile[] piecesJointes) {
+                               String typeDemande, String prioriteParam, String modeTraitement,
+                               MultipartFile[] piecesJointes) {
         if (!calculerDroits(demande, current, auth).mg()) {
             throw new WorkflowException("Vous ne pouvez pas envoyer cette demande au CODEP.");
         }
@@ -285,11 +286,19 @@ public class WorkflowService {
         pieceJointeService.verifierFormats(piecesJointes);
         DemandeMere.NatureDemande nature = parseNature(typeDemande);
         DemandeMere.PrioriteDemande priorite = parsePriorite(prioriteParam);
+        // Facultatif à l'envoi au CODEP : conservé seulement s'il a été renseigné
+        ModeTraitement mode = (modeTraitement == null || modeTraitement.isBlank())
+                ? null : parseModeTraitement(modeTraitement);
 
         // ── 2. Écritures ──
         int etape = demande.getStatut();
         demande.setNatureDemande(nature);
         appliquerPriorite(demande, current, priorite);
+        if (mode != null) {
+            demande.setModeTraitement(mode);
+            validationDemandeService.journaliser(demande, current, etape,
+                    "Ajout du mode de traitement : " + mode.getLibelle());
+        }
         demande.setViaCodep(true);
 
         List<String> pj = pieceJointeService.enregistrerPourCodep(piecesJointes, demande, "PJ_CODEP");

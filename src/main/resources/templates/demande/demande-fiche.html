@@ -1173,18 +1173,18 @@
                                                 <td>
                                                     <span class="badge"
                                                           th:classappend="${
-                                                              h.decision == T(afg.achat.afgApprovAchat.model.demande.ValidationDemande.DecisionValidation).REFUSE
+                                                              (h.decision != null and h.decision.name() == 'REFUSE')
                                                               ? ' bg-danger'
                                                               : ' bg-success'
                                                           }">
                                                         <i class="fas"
                                                            th:classappend="${
-                                                               h.decision == T(afg.achat.afgApprovAchat.model.demande.ValidationDemande.DecisionValidation).REFUSE
+                                                               (h.decision != null and h.decision.name() == 'REFUSE')
                                                                ? ' fa-times-circle'
                                                                : ' fa-check-circle'
                                                            }"></i>
                                                         <span th:text="${
-                                                            h.decision == T(afg.achat.afgApprovAchat.model.demande.ValidationDemande.DecisionValidation).REFUSE
+                                                            (h.decision != null and h.decision.name() == 'REFUSE')
                                                             ? 'REFUSÉE'
                                                             : 'VALIDÉE'
                                                         }"></span>
@@ -1852,6 +1852,7 @@
                 <div class="modal-body">
                     <input type="hidden" name="typeDemande" id="codepTypeDemande">
                     <input type="hidden" name="priorite" id="codepPriorite">
+                    <input type="hidden" name="modeTraitement" id="codepModeTraitement">
 
                     <!-- Message informatif -->
                     <div class="alert alert-warning">
@@ -2730,6 +2731,12 @@
         const codepPrioriteInput = document.getElementById('codepPriorite');
         if (prioriteSelect && codepPrioriteInput)
             codepPrioriteInput.value = prioriteSelect.value;
+
+        // Le mode de traitement saisi par les MG est transmis avec l'envoi au CODEP
+        const modeTraitementSelect = document.getElementById('modeTraitementSelect') || document.querySelector('select[name="modeTraitement"]');
+        const codepModeTraitementInput = document.getElementById('codepModeTraitement');
+        if (modeTraitementSelect && codepModeTraitementInput)
+            codepModeTraitementInput.value = modeTraitementSelect.value;
 
         const modalEl = document.getElementById('codepModal');
         if (modalEl) {

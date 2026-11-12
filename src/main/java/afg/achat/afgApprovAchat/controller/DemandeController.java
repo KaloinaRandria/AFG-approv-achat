@@ -1272,6 +1272,7 @@ public class DemandeController {
     public String sendToCodep(@PathVariable("id") String id,
                               @RequestParam(value = "typeDemande", required = false) String typeDemande,
                               @RequestParam(value = "priorite", required = false) String prioriteParam,
+                              @RequestParam(value = "modeTraitement", required = false) String modeTraitement,
                               @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                               RedirectAttributes redirectAttributes) {
 
@@ -1284,7 +1285,7 @@ public class DemandeController {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         try {
             workflowService.envoyerAuCodep(demande, utilisateurCourant(auth), auth,
-                    typeDemande, prioriteParam, piecesJointes);
+                    typeDemande, prioriteParam, modeTraitement, piecesJointes);
             redirectAttributes.addFlashAttribute("ok", "Demande envoyée au CODEP (action irréversible).");
         } catch (WorkflowException e) {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
