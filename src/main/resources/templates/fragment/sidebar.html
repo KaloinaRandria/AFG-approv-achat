@@ -215,6 +215,13 @@
                         </li>
                         <li sec:authorize="hasAnyRole('ADMIN','MG_CREATOR','MOYENS_GENERAUX')">
                             <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/bon-commande/lignes-a-acheter}"
+                               th:classappend="${currentUri == '/bon-commande/lignes-a-acheter' ? 'active' : ''}">
+                                Lignes à acheter
+                            </a>
+                        </li>
+                        <li sec:authorize="hasAnyRole('ADMIN','MG_CREATOR','MOYENS_GENERAUX')">
+                            <a class="nav-link text-white sidebar-sub"
                                th:href="@{/bon-commande/manuel/nouveau}"
                                th:classappend="${currentUri == '/bon-commande/manuel/nouveau' ? 'active' : ''}">
                                 Nouveau bon de commande

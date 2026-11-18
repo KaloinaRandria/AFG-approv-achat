@@ -45,14 +45,11 @@ import static org.mockito.Mockito.*;
 class BonCommandeDemandeServiceTest {
 
     @Mock BonCommandeMereRepo bonCommandeMereRepo;
-    @Mock DemandeMereService demandeMereService;
-    @Mock DemandeFilleService demandeFilleService;
     @Mock FournisseurService fournisseurService;
     @Mock ResponsableFournisseurService responsableFournisseurService;
     @Mock ResponsableService responsableService;
     @Mock AdresseFournisseurService adresseFournisseurService;
     @Mock AdresseService adresseService;
-    @Mock IdGenerator idGenerator;
 
     @InjectMocks BonCommandeDemandeService service;
 
@@ -62,76 +59,13 @@ class BonCommandeDemandeServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(idGenerator.generateId(eq("DM"), any())).thenReturn("DM1");
-        when(idGenerator.generateId(eq("BC"), any())).thenReturn("BC1");
-        when(idGenerator.generateNumeroBC()).thenReturn("18112026-1");
+        IdGenerator idGenerator = mock(IdGenerator.class);
+        when(idGenerator.generateId(any(), any())).thenReturn("DM1");
         demande = new DemandeMere();
         demande.setId(idGenerator);
         demande.setStatut(StatutDemande.VALIDE);
 
-        when(demandeMereService.getDemandeById("DM1")).thenReturn(demande);
-        when(demandeMereService.peutCreerBonCommande(demande, true)).thenReturn(true);
-        when(bonCommandeMereRepo.findByDemandeMereOrderByDateCreationDesc(demande)).thenReturn(List.of());
         when(bonCommandeMereRepo.save(any())).thenAnswer(i -> i.getArgument(0));
-    }
-
-    // ── Création ─────────────────────────────────────────────────────────────
-
-    @Test
-    void creationAvecSeulementLesLignesACommander() {
-        DemandeFille achat = ligne(1, 2, 1000.0, DemandeFille.TypeApprovisionnement.ACHAT, StatutDemande.VALIDE);
-        DemandeFille stock = ligne(2, 3, 500.0, DemandeFille.TypeApprovisionnement.STOCK, StatutDemande.VALIDE);
-        DemandeFille refusee = ligne(3, 1, 800.0, DemandeFille.TypeApprovisionnement.ACHAT, StatutDemande.REFUSE);
-        when(demandeFilleService.getDemandeFilleByDemandeMere(demande)).thenReturn(List.of(achat, stock, refusee));
-
-        BonCommandeMere bc = service.creer("DM1", current, mg);
-
-        assertEquals(StatutBonCommande.BROUILLON, bc.getStatut());
-        assertEquals(1, bc.getLignes().size());
-        assertSame(achat, bc.getLignes().get(0).getDemandeFille());
-        assertEquals(2000.0, bc.getMontantHT(), 0.001);
-        assertEquals(2000.0, bc.getMontantTTC(), 0.001);
-        assertSame(current, bc.getCreateur());
-    }
-
-    @Test
-    void unBonActifExistantEstRenvoyeSansEnCreerUnAutre() {
-        BonCommandeMere annule = new BonCommandeMere();
-        annule.setStatut(StatutBonCommande.ANNULE);
-        BonCommandeMere actif = new BonCommandeMere();
-        actif.setStatut(StatutBonCommande.EN_ATTENTE_VALIDATION);
-        when(bonCommandeMereRepo.findByDemandeMereOrderByDateCreationDesc(demande)).thenReturn(List.of(annule, actif));
-
-        assertSame(actif, service.creer("DM1", current, mg));
-        verify(bonCommandeMereRepo, never()).save(any());
-    }
-
-    @Test
-    void unBonAnnuleNEmpechePasDEnRecreerUn() {
-        BonCommandeMere annule = new BonCommandeMere();
-        annule.setStatut(StatutBonCommande.ANNULE);
-        when(bonCommandeMereRepo.findByDemandeMereOrderByDateCreationDesc(demande)).thenReturn(List.of(annule));
-        when(demandeFilleService.getDemandeFilleByDemandeMere(demande)).thenReturn(
-                List.of(ligne(1, 1, 10.0, DemandeFille.TypeApprovisionnement.ACHAT, StatutDemande.VALIDE)));
-
-        assertNotSame(annule, service.creer("DM1", current, mg));
-        verify(bonCommandeMereRepo).save(any());
-    }
-
-    @Test
-    void creationRefuseeSiLaDemandeNeLePermetPas() {
-        when(demandeMereService.peutCreerBonCommande(demande, true)).thenReturn(false);
-        assertThrows(WorkflowException.class, () -> service.creer("DM1", current, mg));
-        assertThrows(WorkflowException.class, () -> service.creer("INCONNUE", current, mg));
-        assertThrows(WorkflowException.class, () -> service.creer("DM1", current, auth("ROLE_MG_VALIDATOR")));
-        verify(bonCommandeMereRepo, never()).save(any());
-    }
-
-    @Test
-    void creationRefuseeSansLigneACommander() {
-        when(demandeFilleService.getDemandeFilleByDemandeMere(demande)).thenReturn(
-                List.of(ligne(1, 1, 10.0, DemandeFille.TypeApprovisionnement.STOCK, StatutDemande.VALIDE)));
-        assertThrows(WorkflowException.class, () -> service.creer("DM1", current, mg));
     }
 
     // ── Saisie ───────────────────────────────────────────────────────────────

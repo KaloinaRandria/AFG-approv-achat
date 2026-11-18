@@ -9,7 +9,10 @@ import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -41,6 +44,25 @@ public class BonCommandeService {
 
     public void deleteBonCommandeFillesByBonCommandeMere(BonCommandeMere bonCommandeMere) {
         bonCommandeFilleRepo.deleteByBonCommandeMere(bonCommandeMere);
+    }
+
+    /**
+     * Bons de commande d'une demande, du plus récent au plus ancien : ceux créés depuis la
+     * demande et les bons groupés qui contiennent au moins une de ses lignes.
+     */
+    public List<BonCommandeMere> getBonsCommandeDeLaDemande(DemandeMere demande) {
+        Map<String, BonCommandeMere> bons = new LinkedHashMap<>();
+        bonCommandeMereRepo.findByDemandeMereOrderByDateCreationDesc(demande).forEach(bc -> bons.put(bc.getId(), bc));
+        bonCommandeFilleRepo.bonsContenantLaDemande(demande).forEach(bc -> bons.putIfAbsent(bc.getId(), bc));
+        return bons.values().stream()
+                .sorted(Comparator.comparing(BonCommandeMere::getDateCreation,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
+    }
+
+    /** Lignes des bons de commande non annulés qui portent sur les lignes d'une demande. */
+    public List<BonCommandeFille> getLignesCommandeesDeLaDemande(DemandeMere demande) {
+        return bonCommandeFilleRepo.lignesCommandeesDeLaDemande(demande);
     }
 
     public List<BonCommandeMere> getAllBonCommandes() {

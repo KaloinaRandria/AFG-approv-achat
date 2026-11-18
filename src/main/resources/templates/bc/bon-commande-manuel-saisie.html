@@ -34,7 +34,8 @@
             <span th:text="${bonCommandeMere.motifRejet}"></span>
         </div>
 
-        <form th:action="@{/bon-commande/manuel/sauvegarder}" method="post" id="formBonCommande">
+        <form th:action="@{/bon-commande/manuel/sauvegarder}" method="post" id="formBonCommande"
+              data-chargement="Enregistrement en cours…">
             <input type="hidden" name="id" th:value="${bonCommandeMere.id}">
 
             <div class="card shadow-lg border-0 mb-3">
@@ -106,9 +107,16 @@
                     <h5 class="mb-0 fw-bold text-gradient-blue">
                         <i class="fas fa-list me-2 icon-gradient-blue"></i> Lignes
                     </h5>
-                    <button type="button" class="btn btn-sm btn-gradient-green" id="btnAjouterLigne">
-                        <i class="fas fa-plus me-1"></i> Ajouter une ligne
-                    </button>
+                    <div class="d-flex gap-2">
+                        <!-- Les lignes de demandes se choisissent dans l'écran « Lignes à acheter » -->
+                        <a class="btn btn-sm btn-outline-primary" th:if="${bonCommandeMere.id == null}"
+                           th:href="@{/bon-commande/lignes-a-acheter}">
+                            <i class="fas fa-clipboard-list me-1"></i> Choisir des lignes de demandes
+                        </a>
+                        <button type="button" class="btn btn-sm btn-gradient-green" id="btnAjouterLigne">
+                            <i class="fas fa-plus me-1"></i> Ajouter une ligne libre
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -128,10 +136,21 @@
                             </thead>
                             <tbody id="corpsLignes">
                             <tr th:each="l : ${lignes}" class="ligne-bc">
-                                <td><textarea class="form-control form-control-sm" name="designation[]" rows="3" required
-                                              th:text="${l.designationAffichee}"></textarea></td>
+                                <td>
+                                    <textarea class="form-control form-control-sm" name="designation[]" rows="3" required
+                                              maxlength="2000" th:text="${l.designationAffichee}"></textarea>
+                                    <!-- Ligne de demande commandée par cette ligne (vide pour une ligne libre) -->
+                                    <input type="hidden" name="demandeFilleId[]"
+                                           th:value="${l.demandeFille != null ? l.demandeFille.id : ''}">
+                                    <span class="badge bg-info text-dark mt-1" th:if="${l.demandeFille != null}"
+                                          th:text="'Demande ' + ${l.demandeFille.demandeMere.id}
+                                                   + (${l.demandeFille.demandeMere.demandeur != null}
+                                                      ? ' — ' + ${l.demandeFille.demandeMere.demandeur.nom} : '')"></span>
+                                </td>
+                                <!-- Article imposé par la ligne de demande : lecture seule (et non désactivé, pour être envoyé) -->
                                 <td><input type="text" class="form-control form-control-sm champ-article" name="codeArticle[]"
                                            list="articlesDatalist" autocomplete="off" placeholder="Code ou désignation"
+                                           th:readonly="${l.demandeFille != null}"
                                            th:value="${l.article != null ? l.article.codeArticle : ''}"></td>
                                 <td><input type="number" class="form-control form-control-sm champ-qte" name="quantite[]"
                                            min="0" step="any" required th:value="${l.quantiteCommandee}"></td>
@@ -147,6 +166,16 @@
                         </table>
                     </div>
                     <datalist id="articlesDatalist"></datalist>
+
+                    <!-- Regroupement à l'impression : rempli par le script selon les lignes saisies -->
+                    <div id="infoRegroupement" class="alert alert-info py-2 small d-none">
+                        <i class="fas fa-layer-group me-1"></i>
+                        <span id="infoRegroupementTexte"></span>
+                    </div>
+                    <div id="alertePrix" class="alert alert-warning py-2 small d-none">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <span id="alertePrixTexte"></span>
+                    </div>
 
                     <div class="row justify-content-end mt-3">
                         <div class="col-md-5">
@@ -208,7 +237,10 @@
 <!-- Modèle d'une ligne vide -->
 <template id="modeleLigne">
     <tr class="ligne-bc">
-        <td><textarea class="form-control form-control-sm" name="designation[]" rows="3" required></textarea></td>
+        <td>
+            <textarea class="form-control form-control-sm" name="designation[]" rows="3" required maxlength="2000"></textarea>
+            <input type="hidden" name="demandeFilleId[]" value="">
+        </td>
         <td><input type="text" class="form-control form-control-sm champ-article" name="codeArticle[]"
                    list="articlesDatalist" autocomplete="off" placeholder="Code ou désignation"></td>
         <td><input type="number" class="form-control form-control-sm champ-qte" name="quantite[]"
@@ -236,7 +268,45 @@
         const nombre = el => parseFloat(el && el.value) || 0;
 
         // Montant de chaque ligne et récapitulatif : HT → remise → HT remisé → TVA → TTC
+        /*
+         * Signale les lignes d'un même article : celles au même prix (et de même désignation
+         * et unité) seront fusionnées sur le bon imprimé ; des prix différents empêchent la fusion.
+         */
+        function verifierRegroupements() {
+            const parArticle = new Map();
+            corps.querySelectorAll('tr.ligne-bc').forEach(tr => {
+                const code = (tr.querySelector('.champ-article').value || '').trim().toUpperCase();
+                if (!code) return;
+                if (!parArticle.has(code)) parArticle.set(code, []);
+                parArticle.get(code).push(nombre(tr.querySelector('.champ-prix')));
+            });
+
+            const fusions = [];
+            const conflits = [];
+            parArticle.forEach((prix, code) => {
+                if (prix.length < 2) return;
+                const distincts = [...new Set(prix)];
+                if (distincts.length === 1) {
+                    fusions.push(`${code} (${prix.length} lignes)`);
+                } else {
+                    conflits.push(`${code} : ${distincts.map(formater).join(' / ')}`);
+                }
+            });
+
+            const info = document.getElementById('infoRegroupement');
+            document.getElementById('infoRegroupementTexte').textContent =
+                'Regroupées en une seule ligne sur le bon imprimé : ' + fusions.join(', ') + '.';
+            info.classList.toggle('d-none', fusions.length === 0);
+
+            const alerte = document.getElementById('alertePrix');
+            document.getElementById('alertePrixTexte').textContent =
+                'Prix unitaires différents pour un même article : ' + conflits.join(' ; ')
+                + '. Harmonisez-les selon le devis du fournisseur pour imprimer une seule ligne.';
+            alerte.classList.toggle('d-none', conflits.length === 0);
+        }
+
         function recalculer() {
+            verifierRegroupements();
             let totalHT = 0;
             corps.querySelectorAll('tr.ligne-bc').forEach(tr => {
                 const montant = nombre(tr.querySelector('.champ-qte')) * nombre(tr.querySelector('.champ-prix'));
@@ -274,6 +344,7 @@
         corps.addEventListener('input', e => {
             if (e.target.matches('.champ-qte, .champ-prix')) recalculer();
             if (!e.target.matches('.champ-article')) return;
+            verifierRegroupements();
 
             const motCle = e.target.value.trim();
             clearTimeout(minuterie);

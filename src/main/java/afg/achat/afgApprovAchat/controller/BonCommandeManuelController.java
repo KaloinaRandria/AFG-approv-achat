@@ -1,8 +1,12 @@
 package afg.achat.afgApprovAchat.controller;
 
+import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeFille;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
+import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
+import afg.achat.afgApprovAchat.service.bonCommande.BesoinAchatService;
 import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeManuelService;
+import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeService;
 import afg.achat.afgApprovAchat.service.bonCommande.SaisieBonCommande;
 import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
@@ -22,7 +26,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Bon de commande créé manuellement (sans demande d'achat) : saisie par un créateur
@@ -41,14 +48,50 @@ public class BonCommandeManuelController {
     private final BonCommandeService bonCommandeService;
     private final FournisseurService fournisseurService;
     private final UtilisateurService utilisateurService;
+    private final DemandeFilleService demandeFilleService;
+    private final BesoinAchatService besoinAchatService;
 
     // ── Saisie ───────────────────────────────────────────────────────────────
 
+    /**
+     * Nouveau bon de commande, vide ou pré-rempli avec des lignes de demandes à acheter
+     * (sélectionnées dans l'écran « Lignes à acheter »).
+     *
+     * @param lignesDemande identifiants des lignes de demande à commander
+     */
     @PreAuthorize(ROLES_CREATION)
     @GetMapping("/nouveau")
-    public String nouveau(Model model) {
+    public String nouveau(@RequestParam(name = "lignes", required = false) List<Integer> lignesDemande,
+                          Model model) {
         BonCommandeMere bc = new BonCommandeMere();
         bc.setStatut(BonCommandeMere.StatutBonCommande.BROUILLON);
+
+        if (lignesDemande != null && !lignesDemande.isEmpty()) {
+            List<DemandeFille> selection = lignesDemande.stream()
+                    .distinct()
+                    .map(demandeFilleService::getDemandeFilleById)
+                    .filter(Objects::nonNull)
+                    // Lignes du même article côte à côte : elles seront fusionnées à l'impression
+                    .sorted(Comparator.comparing((DemandeFille df) ->
+                                    df.getArticle() != null ? df.getArticle().getCodeArticle() : "")
+                            .thenComparing(df -> df.getDemandeMere().getId()))
+                    .toList();
+            // Une ligne par besoin, avec le reste à commander, le prix et l'unité de la demande
+            for (BesoinAchatService.BesoinAchat besoin : besoinAchatService.besoins(selection)) {
+                if (besoin.getResteACommander() <= 0) continue;
+                DemandeFille df = besoin.getLigne();
+                BonCommandeFille ligne = new BonCommandeFille();
+                ligne.setDemandeFille(df);
+                ligne.setArticle(df.getArticle());
+                ligne.setDesignation(df.getArticle() != null ? df.getArticle().getDesignation() : "");
+                ligne.setQuantiteCommandee(besoin.getResteACommander());
+                ligne.setPrixUnitaireHT(df.getPrixUnitaire() != null ? df.getPrixUnitaire() : 0);
+                bc.getLignes().add(ligne);
+            }
+            if (bc.getLignes().isEmpty()) {
+                model.addAttribute("ko", "Les lignes sélectionnées n'ont plus rien à commander.");
+            }
+        }
         return formulaire(bc, model);
     }
 
@@ -91,12 +134,14 @@ public class BonCommandeManuelController {
                               @RequestParam(name = "quantite[]", required = false) List<String> quantites,
                               @RequestParam(name = "unite[]", required = false) List<String> unites,
                               @RequestParam(name = "prixUnitaire[]", required = false) List<String> prixUnitaires,
+                              @RequestParam(name = "demandeFilleId[]", required = false) List<String> demandeFilleIds,
                               RedirectAttributes redirectAttributes) {
+        // Tous les champs d'une ligne sont toujours envoyés (aucun n'est désactivé) : les listes restent alignées
         List<SaisieBonCommande.Ligne> lignes = new ArrayList<>();
         int nombre = designations == null ? 0 : designations.size();
         for (int i = 0; i < nombre; i++) {
             lignes.add(new SaisieBonCommande.Ligne(designations.get(i), valeur(codesArticle, i),
-                    valeur(quantites, i), valeur(unites, i), valeur(prixUnitaires, i)));
+                    valeur(quantites, i), valeur(unites, i), valeur(prixUnitaires, i), valeur(demandeFilleIds, i)));
         }
         SaisieBonCommande saisie = new SaisieBonCommande(id, fournisseurId, referenceFournisseur,
                 dateLivraisonPrevue, lieuLivraison, modalitePaiement, referenceApprobation, description,
@@ -108,11 +153,18 @@ public class BonCommandeManuelController {
                     + " enregistré en brouillon. Soumettez-le pour lancer la validation.");
             return "redirect:/bon-commande/" + bc.getId();
         } catch (WorkflowException e) {
-            // La saisie n'est pas conservée : le message indique quoi corriger
+            // La saisie n'est pas conservée ; pour un nouveau bon, les lignes de demande choisies le sont
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
-            return (id == null || id.isBlank())
+            if (id != null && !id.isBlank()) {
+                return "redirect:/bon-commande/manuel/" + id + "/modifier";
+            }
+            String lignesChoisies = demandeFilleIds == null ? "" : demandeFilleIds.stream()
+                    .filter(v -> v != null && v.matches("\\d+"))
+                    .distinct()
+                    .collect(Collectors.joining(","));
+            return lignesChoisies.isEmpty()
                     ? "redirect:/bon-commande/manuel/nouveau"
-                    : "redirect:/bon-commande/manuel/" + id + "/modifier";
+                    : "redirect:/bon-commande/manuel/nouveau?lignes=" + lignesChoisies;
         }
     }
 

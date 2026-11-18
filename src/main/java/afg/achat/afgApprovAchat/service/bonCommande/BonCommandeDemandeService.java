@@ -4,23 +4,18 @@ import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeFille;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere.StatutBonCommande;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
-import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.fournisseur.Adresse;
 import afg.achat.afgApprovAchat.model.fournisseur.AdresseFournisseur;
 import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.fournisseur.Responsable;
 import afg.achat.afgApprovAchat.model.fournisseur.ResponsableFournisseur;
-import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.bonCommande.BonCommandeMereRepo;
-import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
-import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.fournisseur.AdresseFournisseurService;
 import afg.achat.afgApprovAchat.service.fournisseur.AdresseService;
 import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
 import afg.achat.afgApprovAchat.service.fournisseur.ResponsableFournisseurService;
 import afg.achat.afgApprovAchat.service.fournisseur.ResponsableService;
-import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.workflow.WorkflowException;
 import afg.achat.afgApprovAchat.service.workflow.WorkflowService;
 import lombok.RequiredArgsConstructor;
@@ -31,16 +26,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.List;
-import java.util.Optional;
 
 /**
- * Bon de commande créé à partir d'une demande validée, puis complété par les Moyens Généraux.
+ * Bon de commande créé à partir d'une demande (ancien circuit), complété par les Moyens Généraux.
  *
- * <p>Les quantités et les prix viennent des lignes de la demande : seules les lignes à
- * commander (ni refusées, ni servies depuis le stock) sont reprises. Les montants sont
- * toujours recalculés ici, jamais repris du navigateur. Une fois complété, le bon suit le
- * même circuit de validation que le bon manuel (Moyens Généraux puis S.G.), voir
+ * <p>La création depuis la fiche de la demande est retirée : un bon de commande regroupe
+ * désormais les lignes de plusieurs demandes (écran « Lignes à acheter », bon manuel). Ce
+ * service ne sert plus qu'à terminer les brouillons existants. Quantités et prix suivent les
+ * lignes de la demande ; les montants sont toujours recalculés ici, jamais repris du navigateur.
+ * Une fois complété, le bon suit le même circuit de validation que le bon manuel (Moyens Généraux puis S.G.), voir
  * {@link BonCommandeManuelService}.</p>
  */
 @Service
@@ -50,14 +44,11 @@ public class BonCommandeDemandeService {
     private static final int LONGUEUR_MAX = 255;
 
     private final BonCommandeMereRepo bonCommandeMereRepo;
-    private final DemandeMereService demandeMereService;
-    private final DemandeFilleService demandeFilleService;
     private final FournisseurService fournisseurService;
     private final ResponsableFournisseurService responsableFournisseurService;
     private final ResponsableService responsableService;
     private final AdresseFournisseurService adresseFournisseurService;
     private final AdresseService adresseService;
-    private final IdGenerator idGenerator;
 
     // ── Droits ───────────────────────────────────────────────────────────────
 
@@ -69,75 +60,6 @@ public class BonCommandeDemandeService {
     /** Bon issu d'une demande, encore en brouillon, modifiable par l'utilisateur. */
     public static boolean peutCompleter(BonCommandeMere bc, Authentication auth) {
         return !bc.estManuel() && bc.getStatut() == StatutBonCommande.BROUILLON && peutGerer(auth);
-    }
-
-    /** Lignes de la demande à commander au fournisseur. */
-    public static boolean aCommander(DemandeFille ligne) {
-        return ligne.getStatut() != StatutDemande.REFUSE
-                && ligne.getTypeApprovisionnement() != DemandeFille.TypeApprovisionnement.STOCK;
-    }
-
-    // ── Création ─────────────────────────────────────────────────────────────
-
-    /**
-     * Crée le brouillon du bon de commande de la demande. S'il en existe déjà un qui n'est
-     * pas annulé, c'est lui qui est renvoyé (un seul bon actif par demande).
-     */
-    @Transactional
-    public BonCommandeMere creer(String demandeId, Utilisateur current, Authentication auth) {
-        if (!peutGerer(auth)) {
-            throw new WorkflowException("Vous ne pouvez pas créer de bon de commande.");
-        }
-        DemandeMere demande = demandeMereService.getDemandeById(demandeId);
-        if (demande == null) {
-            throw new WorkflowException("Demande introuvable.");
-        }
-        // Mêmes conditions que l'affichage du bouton sur la fiche de la demande
-        if (!demandeMereService.peutCreerBonCommande(demande, true)) {
-            throw new WorkflowException("Cette demande ne permet pas de créer un bon de commande "
-                    + "(elle doit être validée et son mode de traitement doit prévoir un bon de commande).");
-        }
-        Optional<BonCommandeMere> actif = bonActif(demande);
-        if (actif.isPresent()) {
-            return actif.get();
-        }
-
-        List<DemandeFille> lignes = demandeFilleService.getDemandeFilleByDemandeMere(demande).stream()
-                .filter(BonCommandeDemandeService::aCommander)
-                .toList();
-        if (lignes.isEmpty()) {
-            throw new WorkflowException("Aucune ligne de cette demande n'est à commander "
-                    + "(lignes refusées ou servies depuis le stock).");
-        }
-
-        BonCommandeMere bc = new BonCommandeMere();
-        bc.setId(idGenerator);
-        bc.setNumero(idGenerator.generateNumeroBC());
-        bc.setDateCreation(LocalDateTime.now());
-        bc.setLieuLivraison("");
-        bc.setReferenceFournisseur("");
-        bc.setStatut(StatutBonCommande.BROUILLON);
-        bc.setDescription(demande.getMotifEvoque());
-        bc.setCreateur(current);
-        bc.setDemandeMere(demande);
-
-        for (DemandeFille df : lignes) {
-            BonCommandeFille ligne = new BonCommandeFille();
-            ligne.setBonCommandeMere(bc);
-            ligne.setDemandeFille(df);
-            ligne.setArticle(df.getArticle());
-            appliquerQuantiteEtPrix(ligne, df);
-            bc.getLignes().add(ligne);
-        }
-        recalculerMontants(bc, 0, 0);
-        return bonCommandeMereRepo.save(bc);
-    }
-
-    /** Bon de commande non annulé de la demande, s'il y en a un. */
-    public Optional<BonCommandeMere> bonActif(DemandeMere demande) {
-        return bonCommandeMereRepo.findByDemandeMereOrderByDateCreationDesc(demande).stream()
-                .filter(bc -> bc.getStatut() != StatutBonCommande.ANNULE)
-                .findFirst();
     }
 
     // ── Saisie ───────────────────────────────────────────────────────────────

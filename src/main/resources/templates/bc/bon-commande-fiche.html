@@ -75,13 +75,15 @@
                     <i class="fas fa-edit me-1"></i> Modifier
                 </a>
                 <form method="post" class="m-0" th:if="${peutSoumettre}"
-                      th:action="@{/bon-commande/manuel/{id}/soumettre(id=${bonCommandeMere.id})}">
+                      th:action="@{/bon-commande/manuel/{id}/soumettre(id=${bonCommandeMere.id})}"
+                      data-chargement="Soumission en cours…">
                     <button type="submit" class="btn btn-gradient-green">
                         <i class="fas fa-paper-plane me-1"></i> Soumettre à validation
                     </button>
                 </form>
                 <form method="post" class="m-0" th:if="${peutSoumettre}"
                       th:action="@{/bon-commande/manuel/{id}/annuler(id=${bonCommandeMere.id})}"
+                      data-chargement="Annulation en cours…"
                       onsubmit="return confirm('Annuler définitivement ce bon de commande ?');">
                     <button type="submit" class="btn btn-outline-danger">
                         <i class="fas fa-ban me-1"></i> Annuler le bon
@@ -90,7 +92,8 @@
 
                 <!-- Validateur de l'étape en cours -->
                 <form method="post" class="m-0" th:if="${peutValider}"
-                      th:action="@{/bon-commande/manuel/{id}/valider(id=${bonCommandeMere.id})}">
+                      th:action="@{/bon-commande/manuel/{id}/valider(id=${bonCommandeMere.id})}"
+                      data-chargement="Validation en cours…">
                     <button type="submit" class="btn btn-gradient-green">
                         <i class="fas fa-check me-1"></i> Valider
                     </button>
@@ -202,7 +205,7 @@
                 <tr>
                     <th style="width:6%">N°</th>
                     <th>Désignations</th>
-                    <th class="col-article" style="width:16%">Article</th>
+                    <th class="col-article" style="width:16%">Article / demande</th>
                     <th style="width:8%">Qté</th>
                     <th style="width:9%">Unité</th>
                     <th style="width:14%">PU HT en MGA</th>
@@ -217,13 +220,24 @@
                 <tr th:if="${lignes == null or lignes.isEmpty()}">
                     <td colspan="7" class="text-center text-muted">Aucune ligne</td>
                 </tr>
-                <tr th:each="ligne, stat : ${lignes}">
+                <!-- Lignes fusionnées pour le fournisseur : même article, désignation, unité et prix -->
+                <tr th:each="ligne, stat : ${lignesImprimees}">
                     <td class="text-center" th:text="${stat.count}"></td>
-                    <td class="bc-designation" th:text="${ligne.designationAffichee}"></td>
-                    <td class="col-article"
-                        th:text="${ligne.article != null ? ligne.article.codeArticle + ' - ' + ligne.article.designation : '—'}"></td>
-                    <td class="text-center" th:text="${#numbers.formatDecimal(ligne.quantiteCommandee, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
-                    <td class="text-center" th:text="${ligne.uniteAffichee}"></td>
+                    <td class="bc-designation" th:text="${ligne.designation}"></td>
+                    <!-- Suivi interne (non imprimé) : article et répartition par demande -->
+                    <td class="col-article">
+                        <span th:text="${ligne.article != null ? ligne.article.codeArticle + ' - ' + ligne.article.designation : '—'}"></span>
+                        <div th:each="d : ${ligne.details}" th:if="${d.demandeFille != null}" class="small">
+                            <a th:href="@{/demande/fiche/{id}(id=${d.demandeFille.demandeMere.id})}"
+                               th:text="${d.demandeFille.demandeMere.id}"></a>
+                            <span th:if="${ligne.fusionnee}"
+                                  th:text="' : ' + ${#numbers.formatDecimal(d.quantiteCommandee, 1, 'WHITESPACE', 2, 'COMMA')}"></span>
+                        </div>
+                        <div th:if="${ligne.fusionnee}" class="small text-muted"
+                             th:text="${ligne.details.size()} + ' lignes regroupées'"></div>
+                    </td>
+                    <td class="text-center" th:text="${#numbers.formatDecimal(ligne.quantite, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                    <td class="text-center" th:text="${ligne.unite}"></td>
                     <td class="text-end" th:text="${#numbers.formatDecimal(ligne.prixUnitaireHT, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
                     <td class="text-end" th:text="${#numbers.formatDecimal(ligne.montantHT, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
                 </tr>
@@ -278,7 +292,8 @@
 <div class="modal fade no-print" id="modalRejet" tabindex="-1" aria-hidden="true" th:if="${peutValider}">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="post" th:action="@{/bon-commande/manuel/{id}/rejeter(id=${bonCommandeMere.id})}">
+            <form method="post" th:action="@{/bon-commande/manuel/{id}/rejeter(id=${bonCommandeMere.id})}"
+                  data-chargement="Rejet en cours…">
                 <div class="modal-header">
                     <h5 class="modal-title">Rejeter le bon de commande</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>

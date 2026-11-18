@@ -8,7 +8,11 @@ import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere.StatutBonComma
 import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.bonCommande.BonCommandeMereRepo;
+import afg.achat.afgApprovAchat.model.demande.DemandeFille;
+import afg.achat.afgApprovAchat.model.util.StatutDemande;
+import afg.achat.afgApprovAchat.model.util.TypeDemande;
 import afg.achat.afgApprovAchat.service.ArticleService;
+import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.fournisseur.AdresseFournisseurService;
 import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
 import afg.achat.afgApprovAchat.service.fournisseur.ResponsableFournisseurService;
@@ -24,7 +28,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Bon de commande créé manuellement (sans demande d'achat) et son circuit de validation.
@@ -49,6 +55,8 @@ public class BonCommandeManuelService {
     private final AdresseFournisseurService adresseFournisseurService;
     private final ResponsableFournisseurService responsableFournisseurService;
     private final ArticleService articleService;
+    private final DemandeFilleService demandeFilleService;
+    private final BesoinAchatService besoinAchatService;
     private final IdGenerator idGenerator;
 
     // ── Droits ───────────────────────────────────────────────────────────────
@@ -104,7 +112,7 @@ public class BonCommandeManuelService {
         LocalDateTime dateLivraison = lireDate(saisie.dateLivraisonPrevue());
         double tauxRemise = lireTaux(saisie.tauxRemise(), "remise");
         double tauxTVA = lireTaux(saisie.tauxTVA(), "TVA");
-        List<BonCommandeFille> lignes = lireLignes(saisie.lignes());
+        List<BonCommandeFille> lignes = lireLignes(saisie.lignes(), saisie.id());
 
         // ── 2. Écritures ──
         if (bc == null) {
@@ -264,8 +272,17 @@ public class BonCommandeManuelService {
     }
 
     /** Lignes du formulaire, sans les lignes vides ; au moins une ligne est exigée. */
-    private List<BonCommandeFille> lireLignes(List<SaisieBonCommande.Ligne> saisies) {
+    /**
+     * Lignes du formulaire, sans les lignes vides ; au moins une ligne est exigée.
+     * Une ligne liée à une ligne de demande prend l'article de la demande, et la quantité
+     * totale commandée pour cette ligne ne peut pas dépasser son reste à commander.
+     *
+     * @param bcEnCours identifiant du bon modifié ; {@code null} ou vide pour un nouveau bon
+     */
+    private List<BonCommandeFille> lireLignes(List<SaisieBonCommande.Ligne> saisies, String bcEnCours) {
         List<BonCommandeFille> lignes = new ArrayList<>();
+        // Quantité totale commandée dans ce bon par ligne de demande (une ligne peut être répétée)
+        Map<DemandeFille, Double> quantiteParLigneDemande = new LinkedHashMap<>();
         int numero = 0;
         for (SaisieBonCommande.Ligne saisie : saisies == null ? List.<SaisieBonCommande.Ligne>of() : saisies) {
             if (saisie.estVide()) continue;
@@ -280,8 +297,13 @@ public class BonCommandeManuelService {
             }
             double prix = lireNombre(saisie.prixUnitaire(), "Ligne " + numero + " : prix unitaire");
 
+            DemandeFille ligneDemande = lireLigneDemande(saisie.demandeFilleId(), numero);
             Article article = null;
-            if (saisie.codeArticle() != null && !saisie.codeArticle().isBlank()) {
+            if (ligneDemande != null) {
+                // L'article est celui de la ligne de demande, quel que soit le code saisi
+                article = ligneDemande.getArticle();
+                quantiteParLigneDemande.merge(ligneDemande, quantite, Double::sum);
+            } else if (saisie.codeArticle() != null && !saisie.codeArticle().isBlank()) {
                 String code = saisie.codeArticle().trim();
                 int n = numero;
                 article = articleService.getArticleByCodeArticle(code)
@@ -291,6 +313,7 @@ public class BonCommandeManuelService {
             BonCommandeFille ligne = new BonCommandeFille();
             ligne.setDesignation(saisie.designation().trim());
             ligne.setArticle(article);
+            ligne.setDemandeFille(ligneDemande);
             ligne.setUnite(nettoyer(saisie.unite()));
             ligne.setQuantiteCommandee(quantite);
             ligne.setQuantiteRestante(quantite);
@@ -301,7 +324,55 @@ public class BonCommandeManuelService {
         if (lignes.isEmpty()) {
             throw new WorkflowException("Le bon de commande doit contenir au moins une ligne.");
         }
+
+        // Pas de commande au-delà du besoin : une ligne de demande n'est commandée qu'une fois
+        for (Map.Entry<DemandeFille, Double> e : quantiteParLigneDemande.entrySet()) {
+            DemandeFille df = e.getKey();
+            double reste = besoinAchatService.resteACommander(df, bcEnCours);
+            if (e.getValue() > reste + 0.001) {
+                throw new WorkflowException("Demande " + df.getDemandeMere().getId() + ", "
+                        + libelle(df) + " : " + formater(e.getValue()) + " commandé(s), mais il ne reste que "
+                        + formater(reste) + " à commander (le reste est déjà sorti du stock ou commandé).");
+            }
+        }
         return lignes;
+    }
+
+    /**
+     * Ligne de demande liée, facultative : elle doit appartenir à une demande de matériel
+     * validée et être achetable (mêmes règles que l'écran « Lignes à acheter »).
+     */
+    private DemandeFille lireLigneDemande(String demandeFilleId, int numero) {
+        if (demandeFilleId == null || demandeFilleId.isBlank()) return null;
+        DemandeFille df;
+        try {
+            df = demandeFilleService.getDemandeFilleById(Integer.parseInt(demandeFilleId.trim()));
+        } catch (NumberFormatException e) {
+            throw new WorkflowException("Ligne " + numero + " : ligne de demande invalide.");
+        }
+        if (df == null || df.getDemandeMere() == null) {
+            throw new WorkflowException("Ligne " + numero + " : ligne de demande introuvable.");
+        }
+        if (df.getDemandeMere().getTypeDemande() != TypeDemande.FOURNITURE) {
+            throw new WorkflowException("Ligne " + numero + " : la demande " + df.getDemandeMere().getId()
+                    + " n'est pas une demande de matériel.");
+        }
+        if (df.getDemandeMere().getStatut() != StatutDemande.VALIDE || df.getStatut() == StatutDemande.REFUSE
+                || df.getTypeApprovisionnement() == DemandeFille.TypeApprovisionnement.STOCK) {
+            throw new WorkflowException("Ligne " + numero + " : la ligne de la demande " + df.getDemandeMere().getId()
+                    + " n'est pas à acheter (demande non validée, ligne refusée ou servie depuis le stock).");
+        }
+        return df;
+    }
+
+    private static String libelle(DemandeFille df) {
+        return df.getArticle() != null
+                ? df.getArticle().getCodeArticle() + " - " + df.getArticle().getDesignation()
+                : "ligne " + df.getId();
+    }
+
+    private static String formater(double quantite) {
+        return quantite == Math.rint(quantite) ? String.valueOf((long) quantite) : String.valueOf(quantite);
     }
 
     private static double lireNombre(String valeur, String nom) {

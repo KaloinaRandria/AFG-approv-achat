@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Lignes à acheter</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-clipboard-list icon-gradient-blue"></i> Lignes à acheter
+            </h1>
+            <a class="btn btn-outline-secondary" th:href="@{/bon-commande/list}">
+                <i class="fas fa-list-ul me-1"></i> Bons de commande
+            </a>
+        </div>
+
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Lignes des demandes de matériel validées qui ne sont couvertes ni par une sortie de stock ni par un bon de commande (les anciennes demandes ne sont pas reprises).
+            Cochez les lignes à commander chez un même fournisseur, puis créez le bon de commande :
+            elles y sont reprises avec leur reste à commander, et vous pouvez y ajouter des lignes libres.
+        </div>
+
+        <div class="card shadow-lg border-0 mb-3">
+            <div class="card-body">
+                <form method="get" th:action="@{/bon-commande/lignes-a-acheter}" class="row g-2 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label mb-1">Recherche</label>
+                        <input class="form-control" type="text" name="recherche" th:value="${recherche}"
+                               placeholder="N° de demande, demandeur, article, motif…">
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-gradient-blue" type="submit">
+                            <i class="fas fa-filter me-1"></i>Filtrer
+                        </button>
+                        <a class="btn btn-outline-secondary" th:href="@{/bon-commande/lignes-a-acheter}">Réinitialiser</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- La sélection ouvre un nouveau bon de commande pré-rempli -->
+        <form method="get" th:action="@{/bon-commande/manuel/nouveau}" id="formSelection"
+              data-chargement="Préparation du bon…">
+            <div class="card shadow-lg border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small" th:text="${besoins.size()} + ' ligne(s) à acheter'"></span>
+                        <button type="submit" class="btn btn-gradient-green" id="btnCreerBc" disabled>
+                            <i class="fas fa-file-invoice me-1"></i>
+                            Créer un bon de commande avec la sélection (<span id="nbSelection">0</span>)
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                            <tr>
+                                <th style="width:3%">
+                                    <input type="checkbox" class="form-check-input" id="toutCocher"
+                                           title="Tout cocher" aria-label="Tout cocher">
+                                </th>
+                                <th>Demande</th>
+                                <th>Demandeur</th>
+                                <th>Article</th>
+                                <th class="text-end">Demandé</th>
+                                <th class="text-end">Sorti du stock</th>
+                                <th class="text-end">Déjà commandé</th>
+                                <th class="text-end">Reste à commander</th>
+                                <th class="text-end">PU proforma</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${besoins.isEmpty()}">
+                                <td colspan="9" class="text-center text-muted py-4">Aucune ligne à acheter.</td>
+                            </tr>
+                            <tr th:each="b : ${besoins}" th:with="df=${b.ligne}, dm=${b.ligne.demandeMere}">
+                                <td>
+                                    <input type="checkbox" class="form-check-input case-ligne" name="lignes"
+                                           th:value="${df.id}"
+                                           th:attr="aria-label=${'Sélectionner ' + (df.article != null ? df.article.designation : df.id)}">
+                                </td>
+                                <td>
+                                    <a th:href="@{/demande/fiche/{id}(id=${dm.id})}" th:text="${dm.id}"></a>
+                                    <div class="small text-muted"
+                                         th:text="${dm.dateDemande != null ? #temporals.format(dm.dateDemande, 'dd/MM/yyyy') : ''}"></div>
+                                </td>
+                                <td th:text="${dm.demandeur != null ? dm.demandeur.nom + ' ' + dm.demandeur.prenom : '—'}"></td>
+                                <td>
+                                    <span class="fw-semibold" th:text="${df.article != null ? df.article.codeArticle : ''}"></span>
+                                    <span th:text="${df.article != null ? df.article.designation : ''}"></span>
+                                </td>
+                                <td class="text-end" th:text="${#numbers.formatDecimal(b.quantiteDemandee, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                <td class="text-end" th:text="${#numbers.formatDecimal(b.quantiteSortie, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                <td class="text-end" th:text="${#numbers.formatDecimal(b.quantiteCommandee, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(b.resteACommander, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                <td class="text-end"
+                                    th:text="${df.prixUnitaire != null and df.prixUnitaire > 0
+                                              ? #numbers.formatDecimal(df.prixUnitaire, 1, 'WHITESPACE', 2, 'COMMA') : '—'}"></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </section>
+</div>
+
+<script th:inline="none">
+    /*<![CDATA[*/
+    (function () {
+        const cases = document.querySelectorAll('.case-ligne');
+        const toutCocher = document.getElementById('toutCocher');
+        const bouton = document.getElementById('btnCreerBc');
+        const compteur = document.getElementById('nbSelection');
+
+        function majSelection() {
+            const n = Array.from(cases).filter(c => c.checked).length;
+            compteur.textContent = n;
+            bouton.disabled = n === 0;
+            toutCocher.checked = n > 0 && n === cases.length;
+            toutCocher.indeterminate = n > 0 && n < cases.length;
+        }
+
+        cases.forEach(c => c.addEventListener('change', majSelection));
+        toutCocher.addEventListener('change', () => {
+            cases.forEach(c => { c.checked = toutCocher.checked; });
+            majSelection();
+        });
+        majSelection();
+    })();
+    /*]]>*/
+</script>
+</body>
+</html>

@@ -25,6 +25,22 @@ public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
     double calculerTotal(@Param("demande") DemandeMere demande,
                          @Param("statutRefuse") int statutRefuse);
 
+    /**
+     * Lignes susceptibles d'être achetées : lignes non refusées des demandes de matériel
+     * validées, hors lignes servies depuis le stock (scindées en type STOCK). Les anciennes
+     * demandes (remboursement, sponsoring…, type STANDARD ou sans type) ne sont pas reprises.
+     */
+    @Query("""
+    SELECT df FROM DemandeFille df
+    JOIN FETCH df.demandeMere dm
+    WHERE dm.statut = :valide
+      AND dm.typeDemande = afg.achat.afgApprovAchat.model.util.TypeDemande.FOURNITURE
+      AND df.statut <> :refuse
+      AND df.typeApprovisionnement <> afg.achat.afgApprovAchat.model.demande.DemandeFille.TypeApprovisionnement.STOCK
+    ORDER BY dm.dateDemande ASC, df.id ASC
+""")
+    List<DemandeFille> findLignesAchetables(@Param("valide") int valide, @Param("refuse") int refuse);
+
     @Query("select dmf.article from DemandeFille dmf where dmf.id = :idDemandeFille")
     Article findArticleByIdDemandeFille(int idDemandeFille);
 

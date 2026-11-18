@@ -25,13 +25,21 @@ public record SaisieBonCommande(String id,
     /**
      * Une ligne du bon : désignation libre, quantité, unité et prix unitaire HT.
      *
-     * @param codeArticle article concerné, facultatif ; il n'est pas imprimé
+     * @param codeArticle    article concerné, facultatif ; il n'est pas imprimé
+     * @param demandeFilleId ligne de demande que cette ligne commande, facultative ;
+     *                       elle fixe l'article et borne la quantité au reste à commander
      */
     public record Ligne(String designation,
                         String codeArticle,
                         String quantite,
                         String unite,
-                        String prixUnitaire) {
+                        String prixUnitaire,
+                        String demandeFilleId) {
+
+        /** Ligne libre, sans lien avec une demande. */
+        public Ligne(String designation, String codeArticle, String quantite, String unite, String prixUnitaire) {
+            this(designation, codeArticle, quantite, unite, prixUnitaire, null);
+        }
 
         /** Ligne laissée entièrement vide dans le formulaire. */
         public boolean estVide() {

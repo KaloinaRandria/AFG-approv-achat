@@ -46,6 +46,8 @@ class BonCommandeManuelServiceTest {
     @Mock ResponsableFournisseurService responsableFournisseurService;
     @Mock ArticleService articleService;
     @Mock IdGenerator idGenerator;
+    @Mock afg.achat.afgApprovAchat.service.demande.DemandeFilleService demandeFilleService;
+    @Mock BesoinAchatService besoinAchatService;
 
     @InjectMocks BonCommandeManuelService service;
 
@@ -194,6 +196,89 @@ class BonCommandeManuelServiceTest {
         SaisieBonCommande trop = new SaisieBonCommande(null, "7", "x".repeat(300), null, null,
                 null, null, null, null, null, List.of(ligne("Prestation", "1", "10")));
         assertThrows(WorkflowException.class, () -> service.enregistrer(trop, current, createur));
+    }
+
+    // ── Lien avec les lignes de demandes ─────────────────────────────────────
+
+    @Test
+    void ligneLieePrendLArticleDeLaDemandeDansLaLimiteDuReste() {
+        afg.achat.afgApprovAchat.model.demande.DemandeFille df = ligneDemande(50, afg.achat.afgApprovAchat.model.util.StatutDemande.VALIDE);
+        when(besoinAchatService.resteACommander(df, null)).thenReturn(6.0);
+
+        BonCommandeMere cree = service.enregistrer(saisie(null, null, null,
+                new SaisieBonCommande.Ligne("Ecran", "AUTRE", "6", "Unité", "100", "50"),
+                ligne("Prestation libre", "1", "10")), current, createur);
+
+        BonCommandeFille liee = cree.getLignes().get(0);
+        assertSame(df, liee.getDemandeFille());
+        assertSame(df.getArticle(), liee.getArticle()); // le code saisi « AUTRE » est ignoré
+        assertNull(cree.getLignes().get(1).getDemandeFille());
+        verify(articleService, never()).getArticleByCodeArticle("AUTRE");
+    }
+
+    @Test
+    void pasDeCommandeAuDelaDuResteMemeEnRepetantLaLigne() {
+        afg.achat.afgApprovAchat.model.demande.DemandeFille df = ligneDemande(50, afg.achat.afgApprovAchat.model.util.StatutDemande.VALIDE);
+        when(besoinAchatService.resteACommander(df, null)).thenReturn(6.0);
+
+        WorkflowException e = assertThrows(WorkflowException.class, () -> service.enregistrer(saisie(null, null, null,
+                new SaisieBonCommande.Ligne("Ecran", null, "4", "Unité", "100", "50"),
+                new SaisieBonCommande.Ligne("Ecran (suite)", null, "3", "Unité", "100", "50")), current, createur));
+        assertTrue(e.getMessage().contains("il ne reste que 6"));
+        verify(bonCommandeMereRepo, never()).save(any());
+    }
+
+    @Test
+    void enModificationLeResteNeCompteQueLesAutresBons() {
+        afg.achat.afgApprovAchat.model.demande.DemandeFille df = ligneDemande(50, afg.achat.afgApprovAchat.model.util.StatutDemande.VALIDE);
+        when(besoinAchatService.resteACommander(df, "BC9")).thenReturn(5.0);
+
+        service.enregistrer(saisie("BC9", null, null,
+                new SaisieBonCommande.Ligne("Ecran", null, "5", "Unité", "100", "50")), current, createur);
+        verify(besoinAchatService).resteACommander(df, "BC9");
+    }
+
+    @Test
+    void ligneDUneDemandeNonValideeRefusee() {
+        ligneDemande(50, afg.achat.afgApprovAchat.model.util.StatutDemande.VALIDATION_N2);
+        assertThrows(WorkflowException.class, () -> service.enregistrer(saisie(null, null, null,
+                new SaisieBonCommande.Ligne("Ecran", null, "1", "Unité", "100", "50")), current, createur));
+        verify(bonCommandeMereRepo, never()).save(any());
+    }
+
+    @Test
+    void ligneDUneAncienneDemandeRefusee() {
+        // Ancienne demande : type STANDARD, ou sans type (créée avant l'ajout du type)
+        for (afg.achat.afgApprovAchat.model.util.TypeDemande type :
+                new afg.achat.afgApprovAchat.model.util.TypeDemande[]{afg.achat.afgApprovAchat.model.util.TypeDemande.STANDARD, null}) {
+            afg.achat.afgApprovAchat.model.demande.DemandeFille df =
+                    ligneDemande(50, afg.achat.afgApprovAchat.model.util.StatutDemande.VALIDE);
+            df.getDemandeMere().setTypeDemande(type);
+            WorkflowException e = assertThrows(WorkflowException.class, () -> service.enregistrer(saisie(null, null, null,
+                    new SaisieBonCommande.Ligne("Ecran", null, "1", "Unité", "100", "50")), current, createur));
+            assertTrue(e.getMessage().contains("pas une demande de matériel"));
+        }
+        verify(bonCommandeMereRepo, never()).save(any());
+    }
+
+    private afg.achat.afgApprovAchat.model.demande.DemandeFille ligneDemande(int id, int statutDemande) {
+        DemandeMere dm = new DemandeMere();
+        IdGenerator gen = mock(IdGenerator.class);
+        when(gen.generateId(any(), any())).thenReturn("DM7");
+        dm.setId(gen);
+        dm.setStatut(statutDemande);
+        dm.setTypeDemande(afg.achat.afgApprovAchat.model.util.TypeDemande.FOURNITURE);
+
+        Article article = new Article();
+        article.setCodeArticle("ART7");
+        afg.achat.afgApprovAchat.model.demande.DemandeFille df = new afg.achat.afgApprovAchat.model.demande.DemandeFille();
+        df.setId(id);
+        df.setDemandeMere(dm);
+        df.setArticle(article);
+        df.setStatut(statutDemande);
+        df.setQuantite("10");
+        when(demandeFilleService.getDemandeFilleById(id)).thenReturn(df);
+        return df;
     }
 
     // ── Circuit de validation ────────────────────────────────────────────────

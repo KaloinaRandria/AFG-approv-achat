@@ -64,6 +64,53 @@
             };
         })();
     </script>
+    <!--
+        Chargement des boutons : un formulaire marqué data-chargement="Texte…" affiche une
+        roue sur le bouton cliqué et bloque ses boutons pendant l'envoi (évite le double clic).
+        Les boutons extérieurs au formulaire (attribut form="id") sont aussi bloqués.
+    -->
+    <script>
+        (function () {
+            document.addEventListener('submit', function (e) {
+                const form = e.target;
+                // Formulaire non concerné, ou envoi annulé (confirm() refusé, contrôle échoué)
+                if (!form.hasAttribute || !form.hasAttribute('data-chargement') || e.defaultPrevented) return;
+
+                const boutons = Array.from(form.querySelectorAll('button[type="submit"], button:not([type])'));
+                if (form.id) {
+                    boutons.push(...document.querySelectorAll('button[form="' + form.id + '"]'));
+                }
+                const cible = e.submitter || boutons[0];
+
+                // Un bouton désactivé n'est plus envoyé : on recopie son nom et sa valeur (ex. action=soumettre)
+                if (cible && cible.name) {
+                    const champ = document.createElement('input');
+                    champ.type = 'hidden';
+                    champ.name = cible.name;
+                    champ.value = cible.value;
+                    form.appendChild(champ);
+                }
+
+                boutons.forEach(function (b) {
+                    if (b.dataset.htmlOrigine === undefined) b.dataset.htmlOrigine = b.innerHTML;
+                    b.disabled = true;
+                });
+                if (cible) {
+                    cible.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>'
+                        + (form.getAttribute('data-chargement') || 'Traitement en cours…');
+                }
+            });
+
+            // Retour arrière du navigateur (page restaurée depuis le cache) : boutons réactivés
+            window.addEventListener('pageshow', function (e) {
+                if (!e.persisted) return;
+                document.querySelectorAll('button[data-html-origine]').forEach(function (b) {
+                    b.innerHTML = b.dataset.htmlOrigine;
+                    b.disabled = false;
+                });
+            });
+        })();
+    </script>
     <!-- UN SEUL jQuery au début -->
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 

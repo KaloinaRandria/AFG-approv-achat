@@ -25,7 +25,8 @@
                 <span th:text="${bonCommandeMere.motifRejet}"></span>
             </div>
 
-            <form th:action="@{/bon-commande/sauvegarder}" method="post" id="formSauvegarderBC">
+            <form th:action="@{/bon-commande/sauvegarder}" method="post" id="formSauvegarderBC"
+                  data-chargement="Enregistrement en cours…">
                 <div class="card">
                     <div class="card-header">
                         <h2>BON DE COMMANDE</h2>
@@ -450,7 +451,7 @@
                     </div>
                 </div>
             </form>
-            <form id="formAnnulerBC" method="post" th:if="${peutSoumettre}"
+            <form id="formAnnulerBC" method="post" th:if="${peutSoumettre}" data-chargement="Annulation en cours…"
                   th:action="@{/bon-commande/manuel/{id}/annuler(id=${bonCommandeMere.id})}"
                   onsubmit="return confirm('Annuler définitivement ce bon de commande ?');"></form>
         </div>

@@ -6,9 +6,11 @@ import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
 import afg.achat.afgApprovAchat.model.fournisseur.AdresseFournisseur;
 import afg.achat.afgApprovAchat.model.fournisseur.ResponsableFournisseur;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
+import afg.achat.afgApprovAchat.service.bonCommande.BesoinAchatService;
 import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeDemandeService;
 import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeManuelService;
 import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeService;
+import afg.achat.afgApprovAchat.service.bonCommande.LigneImprimee;
 import afg.achat.afgApprovAchat.service.bonCommande.SaisieBonCommandeDemande;
 import afg.achat.afgApprovAchat.service.fournisseur.AdresseFournisseurService;
 import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
@@ -47,6 +49,7 @@ public class BonCommandeController {
     private final BonCommandeService bonCommandeService;
     private final BonCommandeDemandeService bonCommandeDemandeService;
     private final BonCommandeManuelService bonCommandeManuelService;
+    private final BesoinAchatService besoinAchatService;
     private final FournisseurService fournisseurService;
     private final UtilisateurService utilisateurService;
     private final ResponsableFournisseurService responsableFournisseurService;
@@ -84,23 +87,40 @@ public class BonCommandeController {
         return "bc/bon-commande-liste";
     }
 
-    // ── Bon issu d'une demande ───────────────────────────────────────────────
+    // ── Lignes à acheter ─────────────────────────────────────────────────────
 
-    /** Crée le brouillon depuis la fiche de la demande (ou ouvre le bon déjà existant). */
-    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
-    @PostMapping("/creer/{id}")
-    public String creeBonCommandeByDemande(@PathVariable(name = "id") String demandeMereId,
-                                           RedirectAttributes redirectAttributes) {
-        try {
-            BonCommandeMere bc = bonCommandeDemandeService.creer(demandeMereId, utilisateurCourant(), auth());
-            redirectAttributes.addFlashAttribute("ok",
-                    "Bon de commande n° " + bc.getNumero() + " : complétez les informations puis soumettez-le à validation.");
-            return "redirect:/bon-commande/" + bc.getId();
-        } catch (WorkflowException e) {
-            redirectAttributes.addFlashAttribute("ko", e.getMessage());
-            return "redirect:/demande/fiche/" + demandeMereId;
-        }
+    /**
+     * Lignes de demandes validées encore à commander, toutes demandes confondues.
+     * Les Moyens Généraux en cochent plusieurs pour créer un bon de commande groupé.
+     */
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_CREATOR')")
+    @GetMapping("/lignes-a-acheter")
+    public String lignesAAcheter(@RequestParam(required = false) String recherche, Model model) {
+        String filtre = recherche == null ? "" : recherche.trim().toLowerCase();
+        List<BesoinAchatService.BesoinAchat> besoins = besoinAchatService.lignesEnAttente().stream()
+                .filter(b -> filtre.isEmpty() || correspond(b, filtre))
+                .toList();
+        model.addAttribute("besoins", besoins);
+        model.addAttribute("recherche", recherche == null ? "" : recherche);
+        return "bc/lignes-a-acheter";
     }
+
+    /** Recherche sur la demande, le demandeur et l'article. */
+    private static boolean correspond(BesoinAchatService.BesoinAchat b, String filtre) {
+        var df = b.getLigne();
+        var dm = df.getDemandeMere();
+        String texte = String.join(" ",
+                dm.getId(),
+                dm.getDemandeur() != null ? dm.getDemandeur().getNom() + " " + dm.getDemandeur().getPrenom() : "",
+                df.getArticle() != null ? df.getArticle().getCodeArticle() + " " + df.getArticle().getDesignation() : "",
+                dm.getMotifEvoque() != null ? dm.getMotifEvoque() : "");
+        return texte.toLowerCase().contains(filtre);
+    }
+
+    // ── Bon issu d'une demande (bons existants) ──────────────────────────────
+    // La création depuis la fiche de la demande est retirée : un bon de commande regroupe
+    // désormais les lignes de plusieurs demandes (écran « Lignes à acheter »). Les brouillons
+    // déjà créés depuis une demande peuvent encore être complétés, soumis ou annulés.
 
     @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @PostMapping("/sauvegarder")
@@ -188,6 +208,8 @@ public class BonCommandeController {
 
         model.addAttribute("bonCommandeMere", bonCommandeMere);
         model.addAttribute("lignes", lignes);
+        // Présentation fournisseur : lignes identiques (article, désignation, unité, prix) fusionnées
+        model.addAttribute("lignesImprimees", LigneImprimee.regrouper(lignes));
         model.addAttribute("peutModifier", BonCommandeManuelService.peutModifier(bonCommandeMere, auth));
         model.addAttribute("peutSoumettre", BonCommandeManuelService.peutSoumettre(bonCommandeMere, auth));
         model.addAttribute("peutValider", BonCommandeManuelService.peutValider(bonCommandeMere, auth));

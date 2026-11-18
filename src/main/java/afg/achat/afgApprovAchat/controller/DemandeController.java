@@ -880,9 +880,6 @@ public class DemandeController {
         model.addAttribute("isViewerNplus1OfDemandeur", isViewerNplus1OfDemandeur);
         model.addAttribute("returnUrl", returnUrl);
 
-        //Bon de Commande Creation
-        boolean canCreateBC = demandeMereService.peutCreerBonCommande(demande,isMG);
-        model.addAttribute("canCreateBC", canCreateBC);
         boolean canTransmitFinance = isMG
                 && demande.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE;
         model.addAttribute("canTransmitFinance", canTransmitFinance);
@@ -890,7 +887,10 @@ public class DemandeController {
         boolean canPayFinance = isFinance
                 && demande.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE;
         model.addAttribute("canPayFinance", canPayFinance);
-        model.addAttribute("bonsCommande", bonCommandeService.getBonCommandesByDemande(demande));
+        // Bons de commande de la demande (lecture seule) : créés depuis la demande (ancien circuit)
+        // ou bons groupés qui contiennent au moins une de ses lignes
+        model.addAttribute("bonsCommande", bonCommandeService.getBonsCommandeDeLaDemande(demande));
+        model.addAttribute("lignesCommandees", bonCommandeService.getLignesCommandeesDeLaDemande(demande));
 
 
         // ── Bon de sortie ────────────────────────────────────────────────────────
