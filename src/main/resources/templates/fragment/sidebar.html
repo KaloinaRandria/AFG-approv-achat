@@ -233,8 +233,10 @@
         </div>
 
         <!-- Bons de sortie : historique de toutes les sorties de stock (Moyens Généraux) -->
-        <div class="px-3 mb-2" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+        <!-- Dans l'accordéon : même retrait que les boutons voisins (padding Bootstrap 1rem 1.25rem) -->
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
             <a class="nav-link text-white d-flex align-items-center sidebar-link"
+               style="padding: 1rem 1.25rem;"
                th:href="@{/bon-sortie/list}"
                th:classappend="${currentUri.startsWith('/bon-sortie') ? 'active' : ''}">
                 <i class="fas fa-file-export me-3"></i> Bons de sortie
