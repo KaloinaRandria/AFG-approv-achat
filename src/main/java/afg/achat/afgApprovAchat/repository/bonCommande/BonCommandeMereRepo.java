@@ -12,4 +12,6 @@ public interface BonCommandeMereRepo extends JpaRepository<BonCommandeMere, Stri
 	List<BonCommandeMere> findByDemandeMereOrderByDateCreationDesc(DemandeMere demandeMere);
 
 	List<BonCommandeMere> findAllByOrderByDateCreationDesc();
+
+	boolean existsByNumero(String numero);
 }

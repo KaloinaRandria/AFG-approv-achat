@@ -29,7 +29,7 @@ import java.util.List;
 /**
  * Bon de commande créé manuellement (sans demande d'achat) et son circuit de validation.
  *
- * <p>Circuit : un créateur (rôle MG_CREATOR) saisit le bon en brouillon et le soumet ;
+ * <p>Circuit : un créateur (rôle MG_CREATOR ou Moyens Généraux) saisit le bon en brouillon et le soumet ;
  * les Moyens Généraux (rôle MG_VALIDATOR) le valident, puis le S.G. (rôle SG) donne la
  * validation finale. Un rejet, à l'une ou l'autre étape, renvoie le bon en brouillon
  * avec son motif. L'administrateur peut agir à chaque étape.</p>
@@ -53,13 +53,25 @@ public class BonCommandeManuelService {
 
     // ── Droits ───────────────────────────────────────────────────────────────
 
+    /** Créer un bon manuel : rôle MG_CREATOR, Moyens Généraux ou administrateur. */
     public static boolean peutCreer(Authentication auth) {
-        return WorkflowService.hasRole(auth, ROLE_CREATEUR) || WorkflowService.hasRole(auth, ROLE_ADMIN);
+        return WorkflowService.hasRole(auth, ROLE_CREATEUR)
+                || WorkflowService.hasRole(auth, "ROLE_MOYENS_GENERAUX")
+                || WorkflowService.hasRole(auth, ROLE_ADMIN);
     }
 
-    /** Modifier, soumettre ou annuler : un bon manuel encore en brouillon, par un créateur. */
+    /** Modifier avec le formulaire du bon manuel : un bon manuel encore en brouillon, par un créateur. */
     public static boolean peutModifier(BonCommandeMere bc, Authentication auth) {
         return bc.estManuel() && bc.getStatut() == StatutBonCommande.BROUILLON && peutCreer(auth);
+    }
+
+    /**
+     * Soumettre à validation ou annuler un brouillon : bon manuel (créateur) ou bon issu
+     * d'une demande (Moyens Généraux). Les deux suivent le même circuit de validation.
+     */
+    public static boolean peutSoumettre(BonCommandeMere bc, Authentication auth) {
+        if (bc.getStatut() != StatutBonCommande.BROUILLON) return false;
+        return bc.estManuel() ? peutCreer(auth) : BonCommandeDemandeService.peutGerer(auth);
     }
 
     /** Valider ou rejeter : le bon attend une validation et l'utilisateur a le rôle de cette étape. */
@@ -136,11 +148,14 @@ public class BonCommandeManuelService {
     @Transactional
     public void soumettre(String id, Utilisateur current, Authentication auth) {
         BonCommandeMere bc = charger(id);
-        if (!peutModifier(bc, auth)) {
+        if (!peutSoumettre(bc, auth)) {
             throw new WorkflowException("Ce bon de commande ne peut pas être soumis par vous.");
         }
         if (bc.getLignes().isEmpty()) {
             throw new WorkflowException("Impossible de soumettre un bon de commande sans ligne.");
+        }
+        if (bc.getFournisseur() == null) {
+            throw new WorkflowException("Choisissez le fournisseur avant de soumettre le bon de commande.");
         }
 
         bc.setStatut(StatutBonCommande.EN_ATTENTE_VALIDATION);
@@ -204,7 +219,7 @@ public class BonCommandeManuelService {
     @Transactional
     public void annuler(String id, Authentication auth) {
         BonCommandeMere bc = charger(id);
-        if (!peutModifier(bc, auth)) {
+        if (!peutSoumettre(bc, auth)) {
             throw new WorkflowException("Ce bon de commande ne peut pas être annulé par vous.");
         }
         bc.setStatut(StatutBonCommande.ANNULE);
@@ -302,7 +317,16 @@ public class BonCommandeManuelService {
         }
     }
 
+    /**
+     * Texte saisi, sans espaces superflus. Les colonnes texte font 255 caractères : au-delà,
+     * l'enregistrement échouerait en base. L'exception annule toute la transaction.
+     */
     private static String nettoyer(String valeur) {
-        return valeur == null ? "" : valeur.trim();
+        String texte = valeur == null ? "" : valeur.trim();
+        if (texte.length() > 255) {
+            throw new WorkflowException("Un champ dépasse 255 caractères : « "
+                    + texte.substring(0, 30) + "… ». Raccourcissez-le.");
+        }
+        return texte;
     }
 }

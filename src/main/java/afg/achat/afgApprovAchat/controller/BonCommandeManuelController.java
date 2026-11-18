@@ -34,7 +34,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BonCommandeManuelController {
 
-    private static final String ROLES_CREATION = "hasAnyRole('ADMIN','MG_CREATOR')";
+    private static final String ROLES_CREATION = "hasAnyRole('ADMIN','MG_CREATOR','MOYENS_GENERAUX')";
     private static final String ROLES_VALIDATION = "hasAnyRole('ADMIN','MG_VALIDATOR','SG')";
 
     private final BonCommandeManuelService bonCommandeManuelService;

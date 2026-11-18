@@ -1310,7 +1310,7 @@
                                             <tr th:each="bc : ${bonsCommande}">
                                                 <td class="fw-semibold" th:text="${bc.numero}"></td>
                                                 <td th:text="${bc.dateCreation != null ? #temporals.format(bc.dateCreation, 'dd/MM/yyyy HH:mm') : '—'}"></td>
-                                                <td>—</td>
+                                                <td th:text="${bc.dateValidationSg != null ? #temporals.format(bc.dateValidationSg, 'dd/MM/yyyy HH:mm') : '—'}"></td>
                                                 <td th:text="${bc.createur != null ? bc.createur.nom + ' ' + bc.createur.prenom : '—'}"></td>
                                                 <td>
                                                 <span th:switch="${bc.statut?.name()}">
@@ -1318,6 +1318,9 @@
                                                           class="badge bg-warning text-dark">
                                                         <i class="fas fa-pencil me-1"></i>Brouillon
                                                     </span>
+                                                    <span th:case="'EN_ATTENTE_VALIDATION'"
+                                                          class="badge bg-info text-dark"
+                                                          th:text="${bc.libelleStatut}">En attente</span>
                                                     <span th:case="'VALIDE'"
                                                           class="badge bg-success">
                                                         <i class="fas fa-check me-1"></i>Validé
@@ -1347,11 +1350,11 @@
                                     </div>
                                 </div>
                                 <!-- ── BOUTON CREER BON DE COMMANDE ── -->
-                                <div th:if="${canCreateBC and (bonsCommande == null or bonsCommande.isEmpty())}">
+                                <div th:if="${canCreateBC and (bonsCommande == null or #lists.isEmpty(bonsCommande.?[statut?.name() != 'ANNULE']))}">
                                     <hr class="my-3">
                                     <div class="d-flex gap-2">
                                         <form th:action="@{/bon-commande/creer/{id}(id=${demande.id})}"
-                                              method="get"
+                                              method="post"
                                               id="formCreerBc">
 
                                             <button type="submit"

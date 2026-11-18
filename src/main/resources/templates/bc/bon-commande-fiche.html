@@ -12,6 +12,9 @@
         /* Document imprimé : même structure que le bon de commande papier */
         .bc-document { background: #fff; color: #000; padding: 24px; }
         .bc-document table { width: 100%; border-collapse: collapse; }
+        /* Même taille que sur le bon de sortie ; la carte étant en flex colonne,
+           align-self évite que l'image s'étire sur toute la largeur */
+        .bc-logo { height: 60px; width: auto; align-self: flex-start; }
         .bc-titre { text-align: center; font-weight: 700; font-size: 1.4rem; letter-spacing: 2px; margin: 12px 0 16px; }
         .bc-entete td { border: 1px solid #000; padding: 4px 8px; vertical-align: top; width: 33.33%; }
         .bc-entete .bc-libelle { background: #e9ecef; font-weight: 700; font-size: .8rem; text-transform: uppercase; }
@@ -41,14 +44,18 @@
 
         <!-- ── Barre d'actions (jamais imprimée) ─────────────────────────────── -->
         <div class="no-print d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-            <h1 class="fw-bold text-gradient-blue mb-0">
-                <i class="fas fa-file-invoice me-3 icon-gradient-blue"></i> Bon de commande
-                <span class="badge fs-6 align-middle ms-2"
+            <!-- Le badge est hors du titre : text-gradient-blue rend le texte transparent
+                 (dégradé), ce qui masquerait le libellé du statut -->
+            <div class="d-flex align-items-center gap-3">
+                <h1 class="fw-bold text-gradient-blue mb-0">
+                    <i class="fas fa-file-invoice me-3 icon-gradient-blue"></i> Bon de commande
+                </h1>
+                <span class="badge fs-6"
                       th:classappend="${bonCommandeMere.statut?.name() == 'VALIDE'} ? 'bg-success' :
                                       (${bonCommandeMere.statut?.name() == 'ANNULE'} ? 'bg-danger' :
                                       (${bonCommandeMere.statut?.name() == 'EN_ATTENTE_VALIDATION'} ? 'bg-warning text-dark' : 'bg-secondary'))"
                       th:text="${bonCommandeMere.libelleStatut}">Statut</span>
-            </h1>
+            </div>
             <div class="d-flex flex-wrap gap-2">
                 <a class="btn btn-outline-secondary" th:href="@{/bon-commande/list}">
                     <i class="fas fa-list-ul me-1"></i> Liste
@@ -67,13 +74,13 @@
                    th:href="@{/bon-commande/manuel/{id}/modifier(id=${bonCommandeMere.id})}">
                     <i class="fas fa-edit me-1"></i> Modifier
                 </a>
-                <form method="post" class="m-0" th:if="${peutModifier}"
+                <form method="post" class="m-0" th:if="${peutSoumettre}"
                       th:action="@{/bon-commande/manuel/{id}/soumettre(id=${bonCommandeMere.id})}">
                     <button type="submit" class="btn btn-gradient-green">
                         <i class="fas fa-paper-plane me-1"></i> Soumettre à validation
                     </button>
                 </form>
-                <form method="post" class="m-0" th:if="${peutModifier}"
+                <form method="post" class="m-0" th:if="${peutSoumettre}"
                       th:action="@{/bon-commande/manuel/{id}/annuler(id=${bonCommandeMere.id})}"
                       onsubmit="return confirm('Annuler définitivement ce bon de commande ?');">
                     <button type="submit" class="btn btn-outline-danger">
@@ -128,7 +135,7 @@
 
         <!-- ── Document ──────────────────────────────────────────────────────── -->
         <div class="bc-document card shadow-sm border-0">
-            <img th:src="@{/img/logo_afg.png}" alt="AFG Bank" height="60">
+            <img th:src="@{/img/logo_afg.png}" alt="AFG Bank" height="60" class="bc-logo">
             <div class="bc-titre">BON DE COMMANDE</div>
 
             <table class="bc-entete">

@@ -186,9 +186,9 @@
             </div>
         </div>
 
-        <!-- Bon de commande : consultation, création manuelle (MG_CREATOR) et validation (MG_VALIDATOR, SG) -->
+        <!-- Bon de commande : consultation, création manuelle (MG_CREATOR, Moyens Généraux) et validation (MG_VALIDATOR, SG) -->
         <div class="accordion-item bg-transparent border-0"
-             sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_CREATOR','MG_VALIDATOR','SG')">
+             sec:authorize="hasAnyRole('ADMIN','MG_CREATOR','MG_VALIDATOR','SG')">
             <h2 class="accordion-header">
                 <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
                         type="button"
@@ -213,7 +213,7 @@
                                 Liste
                             </a>
                         </li>
-                        <li sec:authorize="hasAnyRole('ADMIN','MG_CREATOR')">
+                        <li sec:authorize="hasAnyRole('ADMIN','MG_CREATOR','MOYENS_GENERAUX')">
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/bon-commande/manuel/nouveau}"
                                th:classappend="${currentUri == '/bon-commande/manuel/nouveau' ? 'active' : ''}">

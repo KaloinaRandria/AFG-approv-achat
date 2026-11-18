@@ -74,6 +74,7 @@ class BonCommandeManuelServiceTest {
         bc.setId(idGenerator);
         when(idGenerator.generateId(any(), any())).thenReturn("BC1");
         bc.setStatut(StatutBonCommande.BROUILLON);
+        bc.setFournisseur(fournisseur);
         bc.getLignes().add(new BonCommandeFille());
         when(bonCommandeMereRepo.findById("BC9")).thenReturn(Optional.of(bc));
     }
@@ -161,10 +162,38 @@ class BonCommandeManuelServiceTest {
     }
 
     @Test
-    void unBonIssuDUneDemandeNEstPasGereIci() {
+    void unBonIssuDUneDemandeSuitLeMemeCircuitMaisSeCompleteAilleurs() {
         bc.setDemandeMere(new DemandeMere());
+        // Pas de formulaire du bon manuel pour un bon issu d'une demande
         assertFalse(BonCommandeManuelService.peutModifier(bc, createur));
+        // Seuls les Moyens Généraux (ou l'admin) le soumettent
         assertThrows(WorkflowException.class, () -> service.soumettre("BC9", current, createur));
+
+        service.soumettre("BC9", current, auth("ROLE_MOYENS_GENERAUX"));
+        assertEquals(EtapeValidation.MG, bc.getEtapeValidation());
+    }
+
+    @Test
+    void lesMoyensGenerauxPeuventCreerUnBonManuel() {
+        Authentication mg = auth("ROLE_MOYENS_GENERAUX");
+        assertTrue(BonCommandeManuelService.peutCreer(mg));
+        BonCommandeMere cree = service.enregistrer(saisie(null, null, null, ligne("Prestation", "1", "10")), current, mg);
+        assertEquals(StatutBonCommande.BROUILLON, cree.getStatut());
+        assertFalse(BonCommandeManuelService.peutCreer(validateurMg));
+    }
+
+    @Test
+    void soumissionImpossibleSansFournisseur() {
+        bc.setFournisseur(null);
+        assertThrows(WorkflowException.class, () -> service.soumettre("BC9", current, createur));
+        assertEquals(StatutBonCommande.BROUILLON, bc.getStatut());
+    }
+
+    @Test
+    void texteTropLongRefuse() {
+        SaisieBonCommande trop = new SaisieBonCommande(null, "7", "x".repeat(300), null, null,
+                null, null, null, null, null, List.of(ligne("Prestation", "1", "10")));
+        assertThrows(WorkflowException.class, () -> service.enregistrer(trop, current, createur));
     }
 
     // ── Circuit de validation ────────────────────────────────────────────────
