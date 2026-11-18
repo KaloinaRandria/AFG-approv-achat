@@ -55,6 +55,11 @@
                                       (${bonCommandeMere.statut?.name() == 'ANNULE'} ? 'bg-danger' :
                                       (${bonCommandeMere.statut?.name() == 'EN_ATTENTE_VALIDATION'} ? 'bg-warning text-dark' : 'bg-secondary'))"
                       th:text="${bonCommandeMere.libelleStatut}">Statut</span>
+                <span class="badge fs-6" th:if="${bonCommandeMere.statut?.name() == 'VALIDE'}"
+                      th:classappend="${bonCommandeMere.statutReception.name() == 'RECU'} ? 'bg-success' :
+                                      (${bonCommandeMere.statutReception.name() == 'PARTIELLEMENT_RECU'} ? 'bg-info text-dark' :
+                                      (${bonCommandeMere.statutReception.name() == 'SOLDE'} ? 'bg-dark' : 'bg-light text-dark border'))"
+                      th:text="${bonCommandeMere.statutReception.libelle}">Réception</span>
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <a class="btn btn-outline-secondary" th:href="@{/bon-commande/list}">
@@ -102,6 +107,65 @@
                         data-bs-toggle="modal" data-bs-target="#modalRejet">
                     <i class="fas fa-times me-1"></i> Rejeter
                 </button>
+
+                <!-- Moyens Généraux : réception du bon validé (bon de livraison = entrée en stock) -->
+                <a class="btn btn-gradient-green" th:if="${peutReceptionner}"
+                   th:href="@{/bonlivraison/reception/{id}(id=${bonCommandeMere.id})}">
+                    <i class="fas fa-truck-loading me-1"></i> Réceptionner
+                </a>
+                <button type="button" class="btn btn-outline-dark" th:if="${peutSolder}"
+                        data-bs-toggle="modal" data-bs-target="#modalSolder">
+                    <i class="fas fa-flag-checkered me-1"></i> Solder le reliquat
+                </button>
+            </div>
+        </div>
+
+        <!-- Suivi de la réception (jamais imprimé) -->
+        <div class="no-print card shadow-sm border-0 mb-3"
+             th:if="${bonCommandeMere.statut?.name() == 'VALIDE'}">
+            <div class="card-header bg-white border-0 py-2">
+                <h6 class="mb-0 fw-bold"><i class="fas fa-truck me-2"></i>Suivi de la réception</h6>
+            </div>
+            <div class="card-body pt-0">
+                <div class="alert alert-secondary py-2 small" th:if="${bonCommandeMere.statutReception.name() == 'SOLDE'}">
+                    <strong>Reliquat abandonné</strong>
+                    <span th:if="${bonCommandeMere.clotureReceptionPar != null}"
+                          th:text="' par ' + ${bonCommandeMere.clotureReceptionPar.prenom} + ' ' + ${bonCommandeMere.clotureReceptionPar.nom}"></span>
+                    <span th:if="${bonCommandeMere.dateClotureReception != null}"
+                          th:text="' le ' + ${#temporals.format(bonCommandeMere.dateClotureReception, 'dd/MM/yyyy')}"></span> :
+                    <span th:text="${bonCommandeMere.motifClotureReception}"></span>
+                </div>
+                <div class="row">
+                    <div class="col-lg-7">
+                        <table class="table table-sm table-bordered small mb-2">
+                            <thead class="table-light">
+                            <tr><th>Désignation</th><th class="text-end">Commandé</th><th class="text-end">Reçu</th><th class="text-end">Reste</th></tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="l : ${lignes}">
+                                <td th:text="${l.designationAffichee}"></td>
+                                <td class="text-end" th:text="${#numbers.formatDecimal(l.quantiteCommandee, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                <td class="text-end" th:text="${#numbers.formatDecimal(l.quantiteRecue, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(l.resteARecevoir, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-lg-5">
+                        <div class="small fw-bold mb-1">Bons de livraison</div>
+                        <div class="small text-muted" th:if="${bonsLivraison.isEmpty()}">Aucune réception enregistrée.</div>
+                        <ul class="list-unstyled small mb-0" th:unless="${bonsLivraison.isEmpty()}">
+                            <li th:each="bl : ${bonsLivraison}">
+                                <a th:href="@{/bonlivraison/list(num=${bl.id})}" th:text="${bl.id}"
+                                   sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"></a>
+                                <span th:text="${bl.id}" sec:authorize="!hasAnyRole('ADMIN','MOYENS_GENERAUX')"></span>
+                                — <span th:text="${#temporals.format(bl.dateReception, 'dd/MM/yyyy HH:mm')}"></span>
+                                <span class="text-muted" th:if="${bl.description != null and !#strings.isEmpty(bl.description)}"
+                                      th:text="'(' + ${bl.description} + ')'"></span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -306,6 +370,31 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                     <button type="submit" class="btn btn-danger">Rejeter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ── Solder le reliquat : le motif est obligatoire ──────────────────────────── -->
+<div class="modal fade no-print" id="modalSolder" tabindex="-1" aria-hidden="true" th:if="${peutSolder}">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" th:action="@{/bonlivraison/reception/{id}/solder(id=${bonCommandeMere.id})}"
+                  data-chargement="Clôture en cours…">
+                <div class="modal-header">
+                    <h5 class="modal-title">Solder le reliquat</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="motifSolde" class="form-label fw-bold required-field">Motif</label>
+                    <textarea class="form-control" id="motifSolde" name="motif" rows="3" required
+                              placeholder="Ex. rupture définitive chez le fournisseur"></textarea>
+                    <div class="form-text">Le reste à recevoir ne sera plus attendu : le bon ne pourra plus être réceptionné.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="submit" class="btn btn-dark">Solder</button>
                 </div>
             </form>
         </div>

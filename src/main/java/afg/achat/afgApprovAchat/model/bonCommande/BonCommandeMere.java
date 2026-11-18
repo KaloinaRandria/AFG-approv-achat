@@ -111,6 +111,47 @@ public class BonCommandeMere {
         ANNULE
     }
 
+    // ── Réception (bons de livraison) ───────────────────────────────────────
+
+    /** Avancement de la réception ; {@code null} pour les bons antérieurs = rien reçu. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "statut_reception")
+    StatutReception statutReception;
+
+    /** Motif de la clôture d'un reliquat que le fournisseur ne livrera pas. */
+    @Column(name = "motif_cloture_reception", columnDefinition = "TEXT")
+    String motifClotureReception;
+    @ManyToOne @JoinColumn(name = "id_cloture_reception_par", referencedColumnName = "id_utilisateur")
+    Utilisateur clotureReceptionPar;
+    @Column(name = "date_cloture_reception")
+    LocalDateTime dateClotureReception;
+
+    public enum StatutReception {
+        NON_RECU("Non reçu"),
+        PARTIELLEMENT_RECU("Partiellement reçu"),
+        RECU("Reçu"),
+        /** Réception arrêtée avec un reliquat que le fournisseur ne livrera pas. */
+        SOLDE("Soldé (reliquat abandonné)");
+
+        private final String libelle;
+
+        StatutReception(String libelle) { this.libelle = libelle; }
+
+        public String getLibelle() { return libelle; }
+    }
+
+    /** Statut de réception ; {@code NON_RECU} pour les bons enregistrés avant son introduction. */
+    public StatutReception getStatutReception() {
+        return statutReception != null ? statutReception : StatutReception.NON_RECU;
+    }
+
+    /** Un bon validé dont la réception n'est ni complète ni soldée attend encore des livraisons. */
+    public boolean estReceptionnable() {
+        StatutReception r = getStatutReception();
+        return statut == StatutBonCommande.VALIDE
+                && (r == StatutReception.NON_RECU || r == StatutReception.PARTIELLEMENT_RECU);
+    }
+
     /** Étapes de validation d'un bon de commande, dans l'ordre. */
     public enum EtapeValidation {
         MG("Moyens Généraux", "MG_VALIDATOR"),

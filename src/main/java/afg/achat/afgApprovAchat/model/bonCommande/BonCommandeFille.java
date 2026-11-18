@@ -53,6 +53,11 @@ public class BonCommandeFille {
     @Column(name = "quantite_restante")
     double quantiteRestante;
 
+    /** Quantité encore attendue du fournisseur : commandée moins déjà reçue, jamais négative. */
+    public double getResteARecevoir() {
+        return Math.max(0, quantiteCommandee - quantiteRecue);
+    }
+
     @Column(name = "prix_unitaire_ht")
     double prixUnitaireHT;
     @Column(name = "montant_ht")

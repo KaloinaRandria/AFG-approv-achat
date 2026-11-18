@@ -12,6 +12,7 @@ import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeManuelService;
 import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeService;
 import afg.achat.afgApprovAchat.service.bonCommande.LigneImprimee;
 import afg.achat.afgApprovAchat.service.bonCommande.SaisieBonCommandeDemande;
+import afg.achat.afgApprovAchat.service.bonlivraison.ReceptionBonCommandeService;
 import afg.achat.afgApprovAchat.service.fournisseur.AdresseFournisseurService;
 import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
 import afg.achat.afgApprovAchat.service.fournisseur.ResponsableFournisseurService;
@@ -60,6 +61,7 @@ public class BonCommandeController {
     private final UtilisateurService utilisateurService;
     private final ResponsableFournisseurService responsableFournisseurService;
     private final AdresseFournisseurService adresseFournisseurService;
+    private final ReceptionBonCommandeService receptionBonCommandeService;
 
     // ── Liste ────────────────────────────────────────────────────────────────
 
@@ -253,6 +255,13 @@ public class BonCommandeController {
         model.addAttribute("peutModifier", BonCommandeManuelService.peutModifier(bonCommandeMere, auth));
         model.addAttribute("peutSoumettre", BonCommandeManuelService.peutSoumettre(bonCommandeMere, auth));
         model.addAttribute("peutValider", BonCommandeManuelService.peutValider(bonCommandeMere, auth));
+
+        // Réception : bons de livraison rattachés ; saisie réservée aux Moyens Généraux
+        boolean gereLaReception = WorkflowService.hasRole(auth, "ROLE_MOYENS_GENERAUX")
+                || WorkflowService.hasRole(auth, "ROLE_ADMIN");
+        model.addAttribute("bonsLivraison", receptionBonCommandeService.getBonsLivraison(bonCommandeMere));
+        model.addAttribute("peutReceptionner", gereLaReception && bonCommandeMere.estReceptionnable());
+        model.addAttribute("peutSolder", gereLaReception && ReceptionBonCommandeService.peutSolder(bonCommandeMere));
 
         // Montants du récapitulatif (la remise et la TVA sont enregistrées en pourcentage)
         double montantHT = lignes.stream().mapToDouble(BonCommandeFille::getMontantHT).sum();

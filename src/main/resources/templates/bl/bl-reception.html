@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Réception du bon de commande</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <style>
+        .reception-table td, .reception-table th { vertical-align: middle; }
+        .reception-table .num { text-align: end; white-space: nowrap; }
+        .reception-table input.form-control { min-width: 110px; }
+        .ligne-soldee { opacity: .55; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section th:with="numeroBc=${bonCommandeMere.numero != null and !#strings.isEmpty(bonCommandeMere.numero) ? bonCommandeMere.numero : bonCommandeMere.id}">
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+            <h1 class="fw-bold text-gradient-blue mb-0">
+                <i class="fas fa-truck-loading me-3 icon-gradient-blue"></i>
+                Réception du bon de commande <span th:text="${numeroBc}"></span>
+            </h1>
+            <a class="btn btn-outline-secondary" th:href="@{/bon-commande/{id}(id=${bonCommandeMere.id})}">
+                <i class="fas fa-arrow-left me-1"></i> Bon de commande
+            </a>
+        </div>
+
+        <form method="post" th:action="@{/bonlivraison/reception/{id}(id=${bonCommandeMere.id})}"
+              data-chargement="Enregistrement de la réception…">
+            <input type="hidden" name="jeton" th:value="${jeton}">
+
+            <!-- ── En-tête du bon de livraison ── -->
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Fournisseur</label>
+                            <input type="text" class="form-control" readonly
+                                   th:value="${bonCommandeMere.fournisseur != null ? bonCommandeMere.fournisseur.nom : ''}">
+                            <div class="form-text">Celui du bon de commande.</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="devise" class="form-label fw-bold required-field">Devise</label>
+                            <select id="devise" name="devise" class="form-select" required>
+                                <option value="">— Choisir —</option>
+                                <option th:each="d : ${devises}" th:value="${d.id}"
+                                        th:text="${d.acronyme}"
+                                        th:selected="${valeurs['devise'] == #strings.toString(d.id)}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="dateReception" class="form-label fw-bold required-field">Date de réception</label>
+                            <input type="datetime-local" id="dateReception" name="dateReception" class="form-control"
+                                   required th:value="${valeurs['dateReception']}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="description" class="form-label fw-bold">Référence / observation</label>
+                            <input type="text" id="description" name="description" class="form-control"
+                                   placeholder="N° BL du fournisseur, remarque…" th:value="${valeurs['description']}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Lignes du bon de commande ── -->
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0 fw-bold text-gradient-blue">Lignes à réceptionner</h5>
+                    <p class="text-muted mb-0 mt-1 small">
+                        Saisissez la quantité effectivement livrée (0 ou vide = non livrée cette fois).
+                        Elle ne peut pas dépasser le reste à recevoir. Le prix est celui du bon de commande ;
+                        modifiez-le seulement s'il diffère sur le bon de livraison du fournisseur.
+                    </p>
+                </div>
+                <div class="card-body pt-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered reception-table mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Désignation</th>
+                                <th style="width:22%">Article en stock</th>
+                                <th class="num">Commandé</th>
+                                <th class="num">Déjà reçu</th>
+                                <th class="num">Reste</th>
+                                <th style="width:13%">Qté reçue</th>
+                                <th style="width:14%">Prix unitaire</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="l : ${lignes}" th:classappend="${l.resteARecevoir <= 0} ? 'ligne-soldee'">
+                                <td>
+                                    <div th:text="${l.designationAffichee}"></div>
+                                    <div class="small" th:if="${l.demandeFille != null}">
+                                        Demande
+                                        <a th:href="@{/demande/fiche/{id}(id=${l.demandeFille.demandeMere.id})}"
+                                           th:text="${l.demandeFille.demandeMere.id}"></a>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span th:if="${l.article != null}"
+                                          th:text="${l.article.codeArticle + ' - ' + l.article.designation}"></span>
+                                    <span th:if="${l.article != null and !l.article.estActif()}"
+                                          class="badge bg-danger ms-1">inactif</span>
+                                    <!-- Ligne saisie sans article : on choisit l'article qui entre en stock -->
+                                    <input th:if="${l.article == null and l.resteARecevoir > 0}"
+                                           type="text" class="form-control form-control-sm" list="articlesActifs"
+                                           th:name="'article_' + ${l.id}" th:value="${valeurs['article_' + l.id]}"
+                                           placeholder="Code article">
+                                </td>
+                                <td class="num" th:text="${#numbers.formatDecimal(l.quantiteCommandee, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                <td class="num" th:text="${#numbers.formatDecimal(l.quantiteRecue, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                <td class="num fw-bold" th:text="${#numbers.formatDecimal(l.resteARecevoir, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                <td>
+                                    <input th:if="${l.resteARecevoir > 0}" type="number" step="any" min="0"
+                                           th:max="${l.resteARecevoir}" class="form-control form-control-sm"
+                                           th:name="'quantite_' + ${l.id}" th:value="${valeurs['quantite_' + l.id]}">
+                                    <span th:unless="${l.resteARecevoir > 0}" class="text-success small">
+                                        <i class="fas fa-check"></i> Reçu
+                                    </span>
+                                </td>
+                                <td>
+                                    <input th:if="${l.resteARecevoir > 0}" type="number" step="any" min="0"
+                                           class="form-control form-control-sm" th:name="'prix_' + ${l.id}"
+                                           th:value="${valeurs['prix_' + l.id] != null ? valeurs['prix_' + l.id] : l.prixUnitaireHT}">
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <datalist id="articlesActifs">
+                        <option th:each="a : ${articlesActifs}" th:value="${a.codeArticle}"
+                                th:text="${a.designation}"></option>
+                    </datalist>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mb-4">
+                <a class="btn btn-secondary" th:href="@{/bon-commande/{id}(id=${bonCommandeMere.id})}">Annuler</a>
+                <button type="button" class="btn btn-outline-primary" id="toutRecevoir">
+                    <i class="fas fa-check-double me-1"></i> Tout le reste est livré
+                </button>
+                <button type="submit" class="btn btn-gradient-green">
+                    <i class="fas fa-save me-1"></i> Enregistrer la réception
+                </button>
+            </div>
+        </form>
+
+        <!-- ── Réceptions déjà enregistrées ── -->
+        <div class="card shadow-sm border-0" th:if="${!bonsLivraison.isEmpty()}">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold text-gradient-blue">Réceptions précédentes</h5>
+            </div>
+            <div class="card-body pt-0">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Bon de livraison</th><th>Date</th><th>Observation</th></tr></thead>
+                    <tbody>
+                    <tr th:each="bl : ${bonsLivraison}">
+                        <td th:text="${bl.id}"></td>
+                        <td th:text="${#temporals.format(bl.dateReception, 'dd/MM/yyyy HH:mm')}"></td>
+                        <td th:text="${bl.description}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+<script>
+    // Remplit chaque quantité avec le reste à recevoir
+    document.getElementById('toutRecevoir').addEventListener('click', function () {
+        document.querySelectorAll('input[name^="quantite_"]').forEach(function (input) {
+            input.value = input.getAttribute('max');
+        });
+    });
+</script>
+</body>
+</html>

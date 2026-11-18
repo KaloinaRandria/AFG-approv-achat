@@ -158,6 +158,10 @@
                                 <i class="fas fa-coins me-2 icon-gradient-light-blue"></i>Devise
                             </th>
 
+                            <th>
+                                <i class="fas fa-file-invoice me-2 icon-gradient-light-blue"></i>Bon de commande
+                            </th>
+
                         </tr>
                         </thead>
 
@@ -173,6 +177,12 @@
                             <td th:text="${bl.fournisseur != null ? bl.fournisseur.nom : '-'}"></td>
                             <td th:text="${#temporals.format(bl.dateReception, 'dd/MM/yyyy HH:mm')}"></td>
                             <td th:text="${bl.devise != null ? (bl.devise.designation + ' (' + bl.devise.acronyme + ')') : '-'}"></td>
+                            <td>
+                                <a th:if="${bl.bonCommandeMere != null}" onclick="event.stopPropagation()"
+                                   th:href="@{/bon-commande/{id}(id=${bl.bonCommandeMere.id})}"
+                                   th:text="${bl.bonCommandeMere.numero != null and !#strings.isEmpty(bl.bonCommandeMere.numero) ? bl.bonCommandeMere.numero : bl.bonCommandeMere.id}"></a>
+                                <span th:unless="${bl.bonCommandeMere != null}" class="text-muted">Hors BC</span>
+                            </td>
                         </tr>
 
                         <tr th:if="${bonLivraisonMeres.totalElements == 0}">

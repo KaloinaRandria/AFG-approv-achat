@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.repository.bonLivraison;
 
+import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -67,6 +69,9 @@ public interface BonLivraisonMereRepo extends JpaRepository<BonLivraisonMere,Str
     BonLivraisonMere findByIdFacture(String idFacture);
 
     boolean existsByIdFacture(String idFacture);
+
+    /** Bons de livraison qui réceptionnent un bon de commande, du plus récent au plus ancien. */
+    List<BonLivraisonMere> findByBonCommandeMereOrderByDateReceptionDesc(BonCommandeMere bonCommandeMere);
 
 
 }
