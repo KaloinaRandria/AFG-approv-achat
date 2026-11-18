@@ -167,13 +167,14 @@ public class WorkflowService {
                     etape == EtapeWorkflow.DECISION_CODEP ? "CODEP" : "");
 
             completerDemande.run();
-            passerALEtapeSuivante(demande, current, cmd.commentaireNettoye(), etape);
-            return messageApprobation(etape);
+            EtapeWorkflow suivante = etape.suivante(demande.getTypeDemandeEffectif());
+            passerALEtapeSuivante(demande, current, cmd.commentaireNettoye(), etape, suivante);
+            return messageApprobation(etape, suivante);
         }
 
         // Admin sans droit propre à l'étape : passage forcé, sans contrôles ni mails
         if (hasRole(auth, "ROLE_ADMIN")) {
-            EtapeWorkflow suivante = etape.suivante();
+            EtapeWorkflow suivante = etape.suivante(demande.getTypeDemandeEffectif());
             if (suivante == null) {
                 throw new WorkflowException("Cette demande est déjà clôturée.");
             }
@@ -194,7 +195,7 @@ public class WorkflowService {
      */
     private Runnable preparerValidationMG(DemandeMere demande, Utilisateur current, DecisionDemande cmd) {
         verifierPrixLignes(demande, "Impossible de valider");
-        DemandeMere.NatureDemande nature = parseNature(cmd.typeDemande());
+        DemandeMere.NatureDemande nature = parseNature(cmd.natureDemande());
         DemandeMere.PrioriteDemande priorite = parsePriorite(cmd.priorite());
         ModeTraitement mode = parseModeTraitement(cmd.modeTraitement());
 
@@ -239,8 +240,8 @@ public class WorkflowService {
         };
     }
 
-    private void passerALEtapeSuivante(DemandeMere demande, Utilisateur current, String cmt, EtapeWorkflow etape) {
-        EtapeWorkflow suivante = etape.suivante();
+    private void passerALEtapeSuivante(DemandeMere demande, Utilisateur current, String cmt,
+                                       EtapeWorkflow etape, EtapeWorkflow suivante) {
         demandeMereService.appliquerDecisionGlobale(demande, suivante.getStatut());
         if (suivante == EtapeWorkflow.VALIDE) {
             demandeMereService.preparerTransmissionFinance(demande);
@@ -259,7 +260,11 @@ public class WorkflowService {
         });
     }
 
-    private static String messageApprobation(EtapeWorkflow etape) {
+    private static String messageApprobation(EtapeWorkflow etape, EtapeWorkflow suivante) {
+        // Circuit raccourci par le type de demande : cette validation est la dernière
+        if (suivante == EtapeWorkflow.VALIDE && etape != EtapeWorkflow.VALIDATION_N4) {
+            return "Demande validée et finalisée par " + articleValidateur(etape) + ".";
+        }
         return switch (etape) {
             case CREE           -> "Demande envoyée en validation N1 (MG).";
             case VALIDATION_N1  -> "Demande validée par les Moyens Généraux (N2).";
@@ -271,11 +276,21 @@ public class WorkflowService {
         };
     }
 
+    private static String articleValidateur(EtapeWorkflow etape) {
+        return switch (etape) {
+            case VALIDATION_N1  -> "les Moyens Généraux";
+            case DECISION_CODEP -> "le Comité de dépense";
+            case VALIDATION_N2  -> "le contrôleur de gestion";
+            case VALIDATION_N3  -> "la D.F.C.";
+            default             -> etape.getLibelleValidateur();
+        };
+    }
+
     // ── Envoi au CODEP ───────────────────────────────────────────────────────
 
     @Transactional
     public void envoyerAuCodep(DemandeMere demande, Utilisateur current, Authentication auth,
-                               String typeDemande, String prioriteParam, String modeTraitement,
+                               String natureDemande, String prioriteParam, String modeTraitement,
                                MultipartFile[] piecesJointes) {
         if (!calculerDroits(demande, current, auth).mg()) {
             throw new WorkflowException("Vous ne pouvez pas envoyer cette demande au CODEP.");
@@ -284,7 +299,7 @@ public class WorkflowService {
         // ── 1. Contrôles ──
         verifierPrixLignes(demande, "Impossible d'envoyer au CODEP");
         pieceJointeService.verifierFormats(piecesJointes);
-        DemandeMere.NatureDemande nature = parseNature(typeDemande);
+        DemandeMere.NatureDemande nature = parseNature(natureDemande);
         DemandeMere.PrioriteDemande priorite = parsePriorite(prioriteParam);
         // Facultatif à l'envoi au CODEP : conservé seulement s'il a été renseigné
         ModeTraitement mode = (modeTraitement == null || modeTraitement.isBlank())
@@ -337,15 +352,15 @@ public class WorkflowService {
                 : "Article inconnu";
     }
 
-    private static DemandeMere.NatureDemande parseNature(String typeDemande) {
-        String td = (typeDemande == null) ? "" : typeDemande.trim().toUpperCase();
-        if (td.isBlank()) {
-            throw new WorkflowException("Veuillez choisir le Type de demande (OPEX/CAPEX) avant de valider.");
+    private static DemandeMere.NatureDemande parseNature(String natureDemande) {
+        String nd = (natureDemande == null) ? "" : natureDemande.trim().toUpperCase();
+        if (nd.isBlank()) {
+            throw new WorkflowException("Veuillez choisir la nature de la demande (OPEX/CAPEX) avant de valider.");
         }
         try {
-            return DemandeMere.NatureDemande.valueOf(td);
+            return DemandeMere.NatureDemande.valueOf(nd);
         } catch (IllegalArgumentException ex) {
-            throw new WorkflowException("Type de demande invalide : " + typeDemande);
+            throw new WorkflowException("Nature de demande invalide : " + natureDemande);
         }
     }
 

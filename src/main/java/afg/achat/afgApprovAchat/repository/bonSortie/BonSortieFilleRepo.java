@@ -23,4 +23,13 @@ public interface BonSortieFilleRepo extends JpaRepository<BonSortieFille, Intege
           AND f.bonSortieMere.statut = 'CONFIRME'
     """)
     double sumQuantiteSortieByDemandeFille(@Param("demandeFille") DemandeFille demandeFille);
+
+    /** Pour chaque bon : [id du bon, nombre de lignes, montant total]. */
+    @Query("""
+        SELECT f.bonSortieMere.id, COUNT(f), COALESCE(SUM(f.montantTotal), 0)
+        FROM BonSortieFille f
+        WHERE f.bonSortieMere IN :bons
+        GROUP BY f.bonSortieMere.id
+    """)
+    List<Object[]> totauxParBon(@Param("bons") List<BonSortieMere> bons);
 }

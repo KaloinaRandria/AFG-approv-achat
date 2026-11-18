@@ -43,6 +43,10 @@ public class BonCommandeService {
         bonCommandeFilleRepo.deleteByBonCommandeMere(bonCommandeMere);
     }
 
+    public List<BonCommandeMere> getAllBonCommandes() {
+        return bonCommandeMereRepo.findAllByOrderByDateCreationDesc();
+    }
+
     public Optional<BonCommandeMere> getBonCommandeMereById(String id) {
         return bonCommandeMereRepo.findById(id);
     }

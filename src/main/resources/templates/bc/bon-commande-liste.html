@@ -14,6 +14,97 @@
 <div class="main-content">
     <section>
         <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-file-invoice icon-gradient-blue"></i> Bons de commande
+            </h1>
+            <a th:if="${peutCreer}" th:href="@{/bon-commande/manuel/nouveau}" class="btn btn-gradient-green">
+                <i class="fas fa-plus-circle me-1"></i> Nouveau bon de commande
+            </a>
+        </div>
+
+        <div class="card shadow-lg border-0 mb-3">
+            <div class="card-body">
+                <form method="get" th:action="@{/bon-commande/list}" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Statut</label>
+                        <select class="form-select" name="statut">
+                            <option value="" th:selected="${statut == ''}">Tous</option>
+                            <option th:each="s : ${statuts}"
+                                    th:value="${s.name()}"
+                                    th:text="${s.name() == 'BROUILLON' ? 'Brouillon'
+                                             : (s.name() == 'EN_ATTENTE_VALIDATION' ? 'En attente de validation'
+                                             : (s.name() == 'VALIDE' ? 'Validé' : 'Annulé'))}"
+                                    th:selected="${statut == s.name()}">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-gradient-blue" type="submit">
+                            <i class="fas fa-filter me-1"></i>Filtrer
+                        </button>
+                        <a class="btn btn-outline-secondary" th:href="@{/bon-commande/list}">Réinitialiser</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-lg border-0">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>Numéro</th>
+                            <th>Date</th>
+                            <th>Objet</th>
+                            <th>Fournisseur</th>
+                            <th>Origine</th>
+                            <th class="text-end">Montant TTC</th>
+                            <th>Statut</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${bonsCommande.isEmpty()}">
+                            <td colspan="8" class="text-center text-muted py-4">Aucun bon de commande.</td>
+                        </tr>
+                        <tr th:each="bc : ${bonsCommande}">
+                            <td class="fw-semibold"
+                                th:text="${bc.numero != null and !#strings.isEmpty(bc.numero) ? bc.numero : bc.id}"></td>
+                            <td th:text="${bc.dateCreation != null ? #temporals.format(bc.dateCreation, 'dd/MM/yyyy') : '—'}"></td>
+                            <td th:text="${bc.description != null and !#strings.isEmpty(bc.description) ? #strings.abbreviate(bc.description, 50) : '—'}"></td>
+                            <td th:text="${bc.fournisseur != null ? bc.fournisseur.nom : '—'}"></td>
+                            <td>
+                                <span th:if="${bc.estManuel()}" class="badge bg-info text-dark">Manuel</span>
+                                <a th:unless="${bc.estManuel()}"
+                                   th:href="@{/demande/fiche/{id}(id=${bc.demandeMere.id})}"
+                                   th:text="${bc.demandeMere.id}"></a>
+                            </td>
+                            <td class="text-end"
+                                th:text="${bc.montantTTC > 0 ? #numbers.formatDecimal(bc.montantTTC, 1, 'WHITESPACE', 2, 'COMMA') : '—'}"></td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${bc.statut?.name() == 'VALIDE'} ? 'bg-success' :
+                                                      (${bc.statut?.name() == 'ANNULE'} ? 'bg-danger' :
+                                                      (${bc.statut?.name() == 'EN_ATTENTE_VALIDATION'} ? 'bg-warning text-dark' : 'bg-secondary'))"
+                                      th:text="${bc.libelleStatut}"></span>
+                                <span class="badge bg-primary ms-1" th:if="${idsAValider.contains(bc.id)}">
+                                    <i class="fas fa-bell me-1"></i>À valider
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a th:href="@{/bon-commande/{id}(id=${bc.id})}" class="btn btn-sm btn-outline-gradient-blue">
+                                    <i class="fas fa-eye me-1"></i> Voir
+                                </a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </section>
 </div>
 </body>

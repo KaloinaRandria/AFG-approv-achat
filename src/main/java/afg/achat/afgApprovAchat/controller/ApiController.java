@@ -49,9 +49,12 @@ public class ApiController {
     @GetMapping("/articles/search")
     @ResponseBody
     public List<Map<String, String>> searchArticles(@RequestParam String keyword) {
+        // Recherche utilisée par les saisies (demande, bon de livraison, bon de commande) :
+        // les articles inactifs ne sont plus proposés
         return articleRepo
                 .findByCodeArticleContainingIgnoreCaseOrDesignationContainingIgnoreCase(keyword, keyword)
                 .stream()
+                .filter(a -> a.estActif())
                 .map(a -> {
                     Map<String, String> map = new HashMap<>();
                     map.put("code", a.getCodeArticle());

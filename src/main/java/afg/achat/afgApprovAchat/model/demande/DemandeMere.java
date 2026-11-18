@@ -3,6 +3,7 @@ package afg.achat.afgApprovAchat.model.demande;
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
 import afg.achat.afgApprovAchat.model.util.ModeTraitement;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
+import afg.achat.afgApprovAchat.model.util.TypeDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.persistence.*;
@@ -39,6 +40,11 @@ public class DemandeMere {
     @Enumerated(EnumType.STRING)
     @Column(name = "nature_demande")
     NatureDemande natureDemande;
+
+    /** Détermine le circuit de validation ; {@code null} pour les demandes antérieures (circuit standard). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type_demande")
+    TypeDemande typeDemande;
 
     @Column(name = "description", columnDefinition = "TEXT")
     String description;
@@ -132,6 +138,11 @@ public class DemandeMere {
     public DemandeMere(String dateDemande, String dateSortie) {
         this.setDateDemande(dateDemande);
         this.setDateSortie(dateSortie);
+    }
+
+    /** Type utilisé pour le circuit : jamais {@code null}. */
+    public TypeDemande getTypeDemandeEffectif() {
+        return TypeDemande.ouStandard(typeDemande);
     }
 
     public boolean getDecisionViaCodep(Boolean isCodepWorkflow) {

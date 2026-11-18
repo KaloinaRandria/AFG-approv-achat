@@ -4,12 +4,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Données saisies avec une décision sur la fiche d'une demande.
- * Seuls certains champs servent selon l'étape (MG : type, priorité, mode ;
- * contrôleur : ligne budgétaire et commentaire).
+ * Seuls certains champs servent selon l'étape (MG : nature OPEX/CAPEX, priorité,
+ * mode de traitement ; contrôleur : ligne budgétaire et commentaire).
  */
 public record DecisionDemande(String commentaire,
                               MultipartFile[] piecesJointes,
-                              String typeDemande,
+                              String natureDemande,
                               String priorite,
                               String modeTraitement,
                               String ligneBudgetaire,

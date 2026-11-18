@@ -53,6 +53,13 @@ public class StockController {
         Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));
         model.addAttribute("article", article);
 
+        // Un article inactif n'a plus de stock
+        if (!article.estActif()) {
+            model.addAttribute("error", "Cet article est inactif : il n'est plus géré en stock.");
+            model.addAttribute("quantiteEntree", quantiteEntree);
+            return "stock/entree-saisie";
+        }
+
         try {
             StockMere stockMere = new StockMere();
 

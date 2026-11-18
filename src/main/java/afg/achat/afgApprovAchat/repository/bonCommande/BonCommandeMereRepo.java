@@ -10,4 +10,6 @@ import java.util.List;
 @Repository
 public interface BonCommandeMereRepo extends JpaRepository<BonCommandeMere, String> {
 	List<BonCommandeMere> findByDemandeMereOrderByDateCreationDesc(DemandeMere demandeMere);
+
+	List<BonCommandeMere> findAllByOrderByDateCreationDesc();
 }

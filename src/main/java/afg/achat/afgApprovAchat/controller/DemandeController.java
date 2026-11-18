@@ -109,6 +109,9 @@ public class DemandeController {
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
 
+        // Seule la demande de matériel se crée encore
+        model.addAttribute("typeDemande", TypeDemande.FOURNITURE);
+
         // Token anti double-soumission
         String token = UUID.randomUUID().toString();
         session.setAttribute("submissionToken", token);
@@ -126,6 +129,7 @@ public class DemandeController {
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
                                 @RequestParam(name = "quantite[]") List<String> quantite,
                                 @RequestParam(name = "priorite") String priorite,
+                                @RequestParam(name = "typeDemande", required = false) String typeDemande,
                                 @RequestParam(name = "piecesJointes") MultipartFile[] piecesJointes,
                                 @RequestParam(name = "submissionToken") String submissionToken,
                                 HttpSession session,
@@ -146,19 +150,32 @@ public class DemandeController {
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
 
+        TypeDemande type;
+        try {
+            type = TypeDemande.parse(typeDemande);
+        } catch (IllegalArgumentException e) {
+            type = null;
+        }
+        // Les anciennes demandes hors matériel ne se créent plus
+        if (type == null || !type.isCreable()) {
+            redirectAttributes.addFlashAttribute("ko", "Seule une demande de matériel peut être créée.");
+            return "redirect:/demande/add";
+        }
+        final String retourSaisie = "redirect:/demande/add";
+
         try {
             if (dateSortie == null || dateSortie.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "La date prévue pour la livraison est obligatoire.");
-                return "redirect:/demande/add";
+                return retourSaisie;
             }
             if (motif == null || motif.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "Le motif evoqué est obligatoire.");
-                return "redirect:/demande/add";
+                return retourSaisie;
             }
 
             if (articleCodes == null || articleCodes.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "Impossible de valider la demande sans aucune ligne d’article.");
-                return "redirect:/demande/add";
+                return retourSaisie;
             }
 
             double totalGeneral = 0.0;
@@ -169,6 +186,11 @@ public class DemandeController {
                 String code = articleCodes.get(i);
                 Article article = articleService.getArticleByCodeArticle(code)
                         .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + code));
+
+                // Un article inactif ne peut plus être demandé
+                if (!article.estActif()) {
+                    throw new IllegalArgumentException("L'article " + code + " est inactif : il ne peut plus être demandé.");
+                }
 
                 double qte = MontantCalculator.parseDoubleSafe(quantite.get(i));
                 if (qte <= 0) continue;
@@ -192,13 +214,13 @@ public class DemandeController {
             // serait créée puis resoumise (doublon).
             if (lignes.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "Impossible de valider la demande : aucune ligne n'a une quantité supérieure à 0.");
-                return "redirect:/demande/add";
+                return retourSaisie;
             }
             try {
                 pieceJointeService.verifierFormats(piecesJointes);
             } catch (WorkflowException e) {
                 redirectAttributes.addFlashAttribute("ko", e.getMessage());
-                return "redirect:/demande/add";
+                return retourSaisie;
             }
 
             DemandeMere demandeMere = new DemandeMere();
@@ -206,6 +228,7 @@ public class DemandeController {
             demandeMere.setDateDemande(String.valueOf(LocalDateTime.now()));
             demandeMere.setDateSortie(dateSortie + "T00:00");
             demandeMere.setPriorite(DemandeMere.PrioriteDemande.valueOf(priorite.trim()));
+            demandeMere.setTypeDemande(type);
             demandeMere.setMotifEvoque(motif);
             demandeMere.setDemandeur(utilisateur);
             demandeMere.setDescription(description);
@@ -289,14 +312,14 @@ public class DemandeController {
 
 
             redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
-            return "redirect:/demande/list";
+            return "redirect:/demande/list?typeDemande=" + type.name();
 
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
-            return "redirect:/demande/add";
+            return retourSaisie;
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement : " + e.getMessage());
-            return "redirect:/demande/add";
+            return retourSaisie;
         }
     }
 
@@ -315,6 +338,7 @@ public class DemandeController {
             @RequestParam(required = false)             String   num,
             @RequestParam(required = false)             String   demandeur,
             @RequestParam(required = false)             String   type,
+            @RequestParam(required = false)             String   typeDemande,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(required = false, defaultValue = "ALL") String scope) {
@@ -349,6 +373,7 @@ public class DemandeController {
                 .num(num)
                 .demandeur(demandeur)
                 .type(type)
+                .typeDemande(typeDemande)
                 .priorite(priorite)
                 .motif(motif)
                 .statut(statutFilter)
@@ -381,13 +406,13 @@ public class DemandeController {
         // ── 6. Alimentation du modèle Thymeleaf ──────────────────────────────────
         populateModel(
                 model, demandesMeres,
-                statut, priorite, motif, num, demandeur, type,
+                statut, priorite, motif, num, demandeur, type, typeDemande,
                 dateFrom, dateTo, scope,
                 size, sort, dir,
                 isBackoffice, hasChildren,
                 isMG, isControleur, isDFC, isSG, isAdmin
         );
-        String returnUrl = buildReturnUrl(page, size, sort, dir, statut, priorite, motif, num, demandeur, type, dateFrom, dateTo, scope);
+        String returnUrl = buildReturnUrl(page, size, sort, dir, statut, priorite, motif, num, demandeur, type, typeDemande, dateFrom, dateTo, scope);
         model.addAttribute("returnUrl", returnUrl);
 
         model.addAttribute("motif",                  motif);
@@ -451,7 +476,7 @@ public class DemandeController {
 
     private void populateModel(Model model, Page<DemandeMere> demandesMeres,
                                Integer statut, String priorite, String motif, String num,
-                               String demandeur, String type,
+                               String demandeur, String type, String typeDemande,
                                LocalDate dateFrom, LocalDate dateTo,
                                String scope, int size, String sort, String dir,
                                boolean isBackofficeValidator, boolean hasChildren,
@@ -482,7 +507,7 @@ public class DemandeController {
         model.addAttribute("isSGOnly",         isSG && !isAdmin);
 
         // Colspan calculé (évite l'expression #authorization fragile dans Thymeleaf)
-        int colCount = 5; // id + date + motif + priorité + statut
+        int colCount = 6; // id + date + motif + type + priorité + statut
         if (isBackofficeValidator || hasChildren) colCount++;
         model.addAttribute("tableColCount", colCount);
 
@@ -494,6 +519,16 @@ public class DemandeController {
         model.addAttribute("num",       num       == null ? "" : num);
         model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
         model.addAttribute("type",      type      == null ? "" : type);
+        // Type affiché : normalisé, vide si absent ou inconnu (liste de toutes les demandes)
+        TypeDemande typeListe;
+        try {
+            typeListe = TypeDemande.parse(typeDemande);
+        } catch (IllegalArgumentException e) {
+            typeListe = null;
+        }
+        model.addAttribute("typeDemande",  typeListe == null ? "" : typeListe.name());
+        model.addAttribute("titreListe",   typeListe == null ? "Toutes les demandes" : typeListe.getLibelleListe());
+        model.addAttribute("typesDemande", TypeDemande.values());
         model.addAttribute("dateFrom",  dateFrom);
         model.addAttribute("dateTo",    dateTo);
         model.addAttribute("scope",     scope);
@@ -508,7 +543,7 @@ public class DemandeController {
 
     private String buildReturnUrl(int page, int size, String sort, String dir,
                                   Integer statut, String priorite, String motif,
-                                  String num, String demandeur, String type,
+                                  String num, String demandeur, String type, String typeDemande,
                                   LocalDate dateFrom, LocalDate dateTo, String scope) {
         StringBuilder sb = new StringBuilder("/demande/list?");
         sb.append("page=").append(page);
@@ -521,6 +556,7 @@ public class DemandeController {
         if (num     != null)    sb.append("&num=").append(num);
         if (demandeur != null)  sb.append("&demandeur=").append(demandeur);
         if (type    != null)    sb.append("&type=").append(type);
+        if (typeDemande != null && !typeDemande.isBlank()) sb.append("&typeDemande=").append(typeDemande);
         if (dateFrom != null)   sb.append("&dateFrom=").append(dateFrom);
         if (dateTo  != null)    sb.append("&dateTo=").append(dateTo);
         if (scope   != null)    sb.append("&scope=").append(scope);
@@ -784,12 +820,13 @@ public class DemandeController {
         // Libellés, badges et frise : source unique EtapeWorkflow
         Map<Integer, String> statutLabels = EtapeWorkflow.libellesAttente();
         String statutLabel  = statutLabels.getOrDefault(demande.getStatut(), "INCONNU");
-        Map<Integer, String> stepLabels   = EtapeWorkflow.libellesEtapeFranchie(isCodepWorkflow);
+        TypeDemande typeCircuit = demande.getTypeDemandeEffectif();
+        Map<Integer, String> stepLabels   = EtapeWorkflow.libellesEtapeFranchie(isCodepWorkflow, typeCircuit);
         Map<Integer, String> histoLabels  = EtapeWorkflow.libellesValidateur();
         Map<Integer, String> badgeClasses = EtapeWorkflow.badgesFiche();
         Map<Integer, String> badgeIcons   = EtapeWorkflow.icones();
-        List<String> steps = EtapeWorkflow.libellesCircuit(isCodepWorkflow);
-        int currentStep    = EtapeWorkflow.numeroDansCircuit(demande.getStatut(), isCodepWorkflow);
+        List<String> steps = EtapeWorkflow.libellesCircuit(isCodepWorkflow, typeCircuit);
+        int currentStep    = EtapeWorkflow.numeroDansCircuit(demande.getStatut(), isCodepWorkflow, typeCircuit);
 
         List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
         List<CodepPieceJointe> codepPiecesJointes = codepPieceJointeService.listByDemandeId(demande.getId());
@@ -833,6 +870,7 @@ public class DemandeController {
         model.addAttribute("badgeIcons", badgeIcons);
 
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
+        model.addAttribute("typesDemande", TypeDemande.values());
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("modeTraitement", modeTraitements);
         model.addAttribute("ligneBudgetaires", ligneBudgetaires);
@@ -856,7 +894,9 @@ public class DemandeController {
 
 
         // ── Bon de sortie ────────────────────────────────────────────────────────
+        // Seules les demandes de fourniture portent sur des articles en stock
         boolean canCreateBS = demande.getStatut() == StatutDemande.VALIDE
+                && demande.getTypeDemandeEffectif().isArticlesEnStock()
                 && isMG
                 && demande.getEtatLivraison() != DemandeMere.EtatLivraison.SOLDEE;
 
@@ -869,9 +909,10 @@ public class DemandeController {
                     .map(df -> {
                         double restant         = bonSortieService.getQuantiteRestante(df);
                         double totalSorti      = df.getQuantite() - restant;
-                        double stockDisponible = stockFilleRepo.getStockDisponible(
+                        // Même source que la sortie : les lots FIFO consommés à la confirmation
+                        double stockDisponible = lotStockService.getStockDisponible(
                                 df.getArticle().getCodeArticle()
-                        ); // ← SUM(entree) - SUM(sortie)
+                        );
                         return new LigneRestanteDTO(df, totalSorti, restant, stockDisponible);
                     })
                     .filter(l -> l.getRestant() > 0)
@@ -892,7 +933,7 @@ public class DemandeController {
     @PostMapping("/fiche/{id}/decision")
     public String decision(@PathVariable("id") String id,
                            @RequestParam("decision") String decision,
-                           @RequestParam(value = "typeDemande", required = false) String typeDemande,
+                           @RequestParam(value = "natureDemande", required = false) String natureDemande,
                            @RequestParam(value = "modeTraitement", required = false) String modeTraitement,
                            @RequestParam(value = "commentaire", required = false) String commentaire,
                            @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
@@ -922,7 +963,7 @@ public class DemandeController {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur current = utilisateurCourant(auth);
-        DecisionDemande cmd = new DecisionDemande(commentaire, piecesJointes, typeDemande, priorite,
+        DecisionDemande cmd = new DecisionDemande(commentaire, piecesJointes, natureDemande, priorite,
                 modeTraitement, ligneBudgetaire, commentaireControleur);
         String action = (decision == null) ? "" : decision.trim().toUpperCase();
 
@@ -1270,7 +1311,7 @@ public class DemandeController {
 
     @PostMapping("/fiche/{id}/send-codep")
     public String sendToCodep(@PathVariable("id") String id,
-                              @RequestParam(value = "typeDemande", required = false) String typeDemande,
+                              @RequestParam(value = "natureDemande", required = false) String natureDemande,
                               @RequestParam(value = "priorite", required = false) String prioriteParam,
                               @RequestParam(value = "modeTraitement", required = false) String modeTraitement,
                               @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
@@ -1285,7 +1326,7 @@ public class DemandeController {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         try {
             workflowService.envoyerAuCodep(demande, utilisateurCourant(auth), auth,
-                    typeDemande, prioriteParam, modeTraitement, piecesJointes);
+                    natureDemande, prioriteParam, modeTraitement, piecesJointes);
             redirectAttributes.addFlashAttribute("ok", "Demande envoyée au CODEP (action irréversible).");
         } catch (WorkflowException e) {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());

@@ -242,6 +242,27 @@ public class ArticleController {
         return "redirect:/article/list";
     }
 
+    /**
+     * Active ou désactive un article. Un article inactif reste visible sur les anciennes
+     * demandes mais n'est plus proposé dans les saisies ni suivi en stock.
+     */
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
+    @PostMapping("/actif")
+    public String changerActif(@RequestParam(name = "codeArticle") String codeArticle,
+                               @RequestParam(name = "actif") boolean actif,
+                               RedirectAttributes redirectAttributes) {
+        Article article = articleService.getArticleByCodeArticle(codeArticle).orElse(null);
+        if (article == null) {
+            redirectAttributes.addFlashAttribute("ko", "Article introuvable.");
+            return "redirect:/article/list";
+        }
+        article.setActif(actif);
+        articleService.saveArticle(article);
+        redirectAttributes.addFlashAttribute("ok", "Article " + article.getCodeArticle()
+                + (actif ? " réactivé." : " désactivé : il n'est plus proposé dans les saisies."));
+        return "redirect:/article/list";
+    }
+
     @GetMapping("/list/ajax")
     @ResponseBody
     public Page<ArticleDTO> listArticlesAjax(

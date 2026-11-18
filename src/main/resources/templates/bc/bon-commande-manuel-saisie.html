@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Saisie bon de commande</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <meta name="context-path" th:content="@{/}" />
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-file-invoice me-3 icon-gradient-blue"></i>
+                <span th:text="${bonCommandeMere.id == null} ? 'Nouveau bon de commande' : 'Modifier le bon de commande'">Bon de commande</span>
+            </h1>
+            <a class="btn btn-gradient-blue" th:href="@{/bon-commande/list}">
+                <i class="fas fa-list-ul me-2"></i> Liste des bons de commande
+            </a>
+        </div>
+
+        <!-- Motif du dernier rejet : à corriger avant de soumettre à nouveau -->
+        <div class="alert alert-warning"
+             th:if="${bonCommandeMere.motifRejet != null and !#strings.isEmpty(bonCommandeMere.motifRejet)}">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Rejeté<span th:if="${bonCommandeMere.rejetePar != null}"
+                                th:text="' par ' + ${bonCommandeMere.rejetePar.prenom} + ' ' + ${bonCommandeMere.rejetePar.nom}"></span> :</strong>
+            <span th:text="${bonCommandeMere.motifRejet}"></span>
+        </div>
+
+        <form th:action="@{/bon-commande/manuel/sauvegarder}" method="post" id="formBonCommande">
+            <input type="hidden" name="id" th:value="${bonCommandeMere.id}">
+
+            <div class="card shadow-lg border-0 mb-3">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0 fw-bold text-gradient-blue">
+                        <i class="fas fa-building me-2 icon-gradient-blue"></i> Fournisseur et livraison
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="fournisseur" class="form-label fw-bold required-field">Fournisseur</label>
+                            <select id="fournisseur" name="fournisseur" class="form-select" required>
+                                <option value="">-- Choisir --</option>
+                                <option th:each="f : ${fournisseurs}"
+                                        th:value="${f.id}"
+                                        th:text="${f.nom}"
+                                        th:selected="${bonCommandeMere.fournisseur != null and bonCommandeMere.fournisseur.id == f.id}">
+                                </option>
+                            </select>
+                            <div class="form-text text-muted">
+                                L'adresse et la personne de contact du fournisseur sont reprises de sa fiche.
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="referenceFournisseur" class="form-label fw-bold">Votre réf (devis du fournisseur)</label>
+                            <input type="text" class="form-control" id="referenceFournisseur" name="referenceFournisseur"
+                                   placeholder="Ex : N° DEVIS-2026/018999"
+                                   th:value="${bonCommandeMere.referenceFournisseur}">
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="dateLivraisonPrevue" class="form-label fw-bold">Date de livraison prévue</label>
+                            <input type="date" class="form-control" id="dateLivraisonPrevue" name="dateLivraisonPrevue"
+                                   th:value="${bonCommandeMere.dateLivraisonPrevue != null ? #temporals.format(bonCommandeMere.dateLivraisonPrevue, 'yyyy-MM-dd') : ''}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="lieuLivraison" class="form-label fw-bold">Lieu de livraison</label>
+                            <input type="text" class="form-control" id="lieuLivraison" name="lieuLivraison"
+                                   placeholder="Ex : IVATO"
+                                   th:value="${bonCommandeMere.lieuLivraison}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="modalitePaiement" class="form-label fw-bold">Modalité de paiement</label>
+                            <input type="text" class="form-control" id="modalitePaiement" name="modalitePaiement"
+                                   placeholder="Ex : 70% à la commande et 30% à la livraison"
+                                   th:value="${bonCommandeMere.modalitePaiement}">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="referenceApprobation" class="form-label fw-bold">Référence d'approbation</label>
+                            <input type="text" class="form-control" id="referenceApprobation" name="referenceApprobation"
+                                   placeholder="Ex : CODEP 007/26 du 06/03/26"
+                                   th:value="${bonCommandeMere.referenceApprobation}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="description" class="form-label fw-bold">Objet du bon de commande</label>
+                            <input type="text" class="form-control" id="description" name="description"
+                                   placeholder="Ex : BRANDING GAB AEROPORT IVATO"
+                                   th:value="${bonCommandeMere.description}">
+                            <div class="form-text text-muted">Imprimé en titre au-dessus des lignes.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-lg border-0 mb-3">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-gradient-blue">
+                        <i class="fas fa-list me-2 icon-gradient-blue"></i> Lignes
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-gradient-green" id="btnAjouterLigne">
+                        <i class="fas fa-plus me-1"></i> Ajouter une ligne
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table align-middle" id="tableLignes">
+                            <thead class="table-light">
+                            <tr>
+                                <th style="width:34%">Désignation <span class="text-danger">*</span></th>
+                                <th style="width:18%">Article concerné
+                                    <span class="text-muted small fw-normal d-block">facultatif, non imprimé</span>
+                                </th>
+                                <th style="width:9%">Qté <span class="text-danger">*</span></th>
+                                <th style="width:10%">Unité</th>
+                                <th style="width:13%">PU HT (MGA) <span class="text-danger">*</span></th>
+                                <th style="width:13%" class="text-end">Montant HT</th>
+                                <th style="width:3%"></th>
+                            </tr>
+                            </thead>
+                            <tbody id="corpsLignes">
+                            <tr th:each="l : ${lignes}" class="ligne-bc">
+                                <td><textarea class="form-control form-control-sm" name="designation[]" rows="3" required
+                                              th:text="${l.designationAffichee}"></textarea></td>
+                                <td><input type="text" class="form-control form-control-sm champ-article" name="codeArticle[]"
+                                           list="articlesDatalist" autocomplete="off" placeholder="Code ou désignation"
+                                           th:value="${l.article != null ? l.article.codeArticle : ''}"></td>
+                                <td><input type="number" class="form-control form-control-sm champ-qte" name="quantite[]"
+                                           min="0" step="any" required th:value="${l.quantiteCommandee}"></td>
+                                <td><input type="text" class="form-control form-control-sm" name="unite[]"
+                                           placeholder="Unité" th:value="${l.uniteAffichee}"></td>
+                                <td><input type="number" class="form-control form-control-sm champ-prix" name="prixUnitaire[]"
+                                           min="0" step="any" required th:value="${l.prixUnitaireHT}"></td>
+                                <td class="text-end fw-semibold montant-ligne">0,00</td>
+                                <td><button type="button" class="btn btn-sm btn-outline-danger btn-supprimer-ligne" title="Supprimer la ligne">
+                                    <i class="fas fa-trash"></i></button></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <datalist id="articlesDatalist"></datalist>
+
+                    <div class="row justify-content-end mt-3">
+                        <div class="col-md-5">
+                            <table class="table table-sm table-bordered">
+                                <tbody>
+                                <tr>
+                                    <th class="text-end bg-light" style="width:55%">Montant HT</th>
+                                    <td class="text-end fw-bold"><span id="totalHT">0,00</span> MGA</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-end bg-light">
+                                        Remise
+                                        <input type="number" id="tauxRemise" name="tauxRemise"
+                                               class="form-control form-control-sm d-inline-block ms-1" style="width:80px"
+                                               min="0" max="100" step="0.01" placeholder="%"
+                                               th:value="${bonCommandeMere.remise > 0 ? bonCommandeMere.remise : ''}">
+                                        <span class="text-muted small">%</span>
+                                    </th>
+                                    <td class="text-end text-danger"><span id="totalRemise">0,00</span> MGA</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-end bg-light">Montant HT remisé</th>
+                                    <td class="text-end fw-semibold"><span id="totalHTRemise">0,00</span> MGA</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-end bg-light">
+                                        TVA
+                                        <input type="number" id="tauxTVA" name="tauxTVA"
+                                               class="form-control form-control-sm d-inline-block ms-1" style="width:80px"
+                                               min="0" max="100" step="0.01" placeholder="%"
+                                               th:value="${bonCommandeMere.tauxTVA > 0 ? bonCommandeMere.tauxTVA : ''}">
+                                        <span class="text-muted small">%</span>
+                                    </th>
+                                    <td class="text-end"><span id="totalTVA">0,00</span> MGA</td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <th class="text-end">Montant TTC</th>
+                                    <td class="text-end fw-bold fs-5"><span id="totalTTC">0,00</span> MGA</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-end bg-white">
+                    <a th:href="${bonCommandeMere.id == null} ? @{/bon-commande/list} : @{/bon-commande/{id}(id=${bonCommandeMere.id})}"
+                       class="btn btn-secondary me-2">
+                        <i class="fas fa-times me-1"></i> Annuler
+                    </a>
+                    <button type="submit" class="btn btn-gradient-green">
+                        <i class="fas fa-save me-1"></i> Enregistrer le brouillon
+                    </button>
+                </div>
+            </div>
+        </form>
+    </section>
+</div>
+
+<!-- Modèle d'une ligne vide -->
+<template id="modeleLigne">
+    <tr class="ligne-bc">
+        <td><textarea class="form-control form-control-sm" name="designation[]" rows="3" required></textarea></td>
+        <td><input type="text" class="form-control form-control-sm champ-article" name="codeArticle[]"
+                   list="articlesDatalist" autocomplete="off" placeholder="Code ou désignation"></td>
+        <td><input type="number" class="form-control form-control-sm champ-qte" name="quantite[]"
+                   min="0" step="any" required value="1"></td>
+        <td><input type="text" class="form-control form-control-sm" name="unite[]" placeholder="Unité" value="Unité"></td>
+        <td><input type="number" class="form-control form-control-sm champ-prix" name="prixUnitaire[]"
+                   min="0" step="any" required></td>
+        <td class="text-end fw-semibold montant-ligne">0,00</td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger btn-supprimer-ligne" title="Supprimer la ligne">
+            <i class="fas fa-trash"></i></button></td>
+    </tr>
+</template>
+
+<script th:inline="none">
+    /*<![CDATA[*/
+    (function () {
+        const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
+        const corps = document.getElementById('corpsLignes');
+        const modele = document.getElementById('modeleLigne');
+        const datalist = document.getElementById('articlesDatalist');
+
+        const formater = v => new Intl.NumberFormat('fr-FR', {
+            minimumFractionDigits: 2, maximumFractionDigits: 2
+        }).format(v);
+        const nombre = el => parseFloat(el && el.value) || 0;
+
+        // Montant de chaque ligne et récapitulatif : HT → remise → HT remisé → TVA → TTC
+        function recalculer() {
+            let totalHT = 0;
+            corps.querySelectorAll('tr.ligne-bc').forEach(tr => {
+                const montant = nombre(tr.querySelector('.champ-qte')) * nombre(tr.querySelector('.champ-prix'));
+                tr.querySelector('.montant-ligne').textContent = formater(montant);
+                totalHT += montant;
+            });
+            const remise = totalHT * nombre(document.getElementById('tauxRemise')) / 100;
+            const htRemise = totalHT - remise;
+            const tva = htRemise * nombre(document.getElementById('tauxTVA')) / 100;
+
+            document.getElementById('totalHT').textContent = formater(totalHT);
+            document.getElementById('totalRemise').textContent = (remise > 0 ? '− ' : '') + formater(remise);
+            document.getElementById('totalHTRemise').textContent = formater(htRemise);
+            document.getElementById('totalTVA').textContent = formater(tva);
+            document.getElementById('totalTTC').textContent = formater(htRemise + tva);
+        }
+
+        function ajouterLigne() {
+            corps.appendChild(modele.content.cloneNode(true));
+            recalculer();
+        }
+
+        document.getElementById('btnAjouterLigne').addEventListener('click', ajouterLigne);
+
+        corps.addEventListener('click', e => {
+            const bouton = e.target.closest('.btn-supprimer-ligne');
+            if (!bouton) return;
+            bouton.closest('tr').remove();
+            if (corps.querySelectorAll('tr.ligne-bc').length === 0) ajouterLigne();
+            recalculer();
+        });
+
+        // Suggestions d'articles actifs pour la colonne « Article concerné »
+        let minuterie;
+        corps.addEventListener('input', e => {
+            if (e.target.matches('.champ-qte, .champ-prix')) recalculer();
+            if (!e.target.matches('.champ-article')) return;
+
+            const motCle = e.target.value.trim();
+            clearTimeout(minuterie);
+            if (motCle.length < 2) return;
+            minuterie = setTimeout(() => {
+                fetch(`${CONTEXT_PATH}api/articles/search?keyword=${encodeURIComponent(motCle)}`)
+                    .then(r => r.ok ? r.json() : [])
+                    .then(articles => {
+                        datalist.innerHTML = '';
+                        (articles || []).slice(0, 15).forEach(a => {
+                            const option = document.createElement('option');
+                            option.value = a.code;
+                            option.label = a.designation;
+                            datalist.appendChild(option);
+                        });
+                    })
+                    .catch(() => { /* pas de suggestion */ });
+            }, 250);
+        });
+
+        document.getElementById('tauxRemise').addEventListener('input', recalculer);
+        document.getElementById('tauxTVA').addEventListener('input', recalculer);
+
+        if (corps.querySelectorAll('tr.ligne-bc').length === 0) ajouterLigne();
+        recalculer();
+    })();
+    /*]]>*/
+</script>
+</body>
+</html>

@@ -12,6 +12,19 @@ import java.util.List;
 @Repository
 public interface VEtatStockRepo extends JpaRepository<VEtatStock, Integer> {
 
+    /**
+     * Condition SQL : l'article de la ligne n'est pas inactif.
+     * Les articles inactifs n'ont plus d'état de stock ni d'alertes.
+     */
+    String GERE_EN_STOCK = """
+             NOT EXISTS (
+                SELECT 1
+                FROM article a_stock
+                WHERE a_stock.id_article = v_etat_stock.id_article
+                  AND a_stock.actif = false
+            )
+            """;
+
     @Query("SELECT v FROM VEtatStock v WHERE v.codeArticle = :codeArticle")
     VEtatStock findByCodeArticle(String codeArticle);
 
@@ -26,16 +39,17 @@ public interface VEtatStockRepo extends JpaRepository<VEtatStock, Integer> {
             value = """
             SELECT *
             FROM v_etat_stock
-            WHERE CAST(stock_disponible AS numeric) <= 0
-               OR CAST(stock_disponible AS numeric) <= CAST(seuil_min AS numeric)
+            WHERE (CAST(stock_disponible AS numeric) <= 0
+               OR CAST(stock_disponible AS numeric) <= CAST(seuil_min AS numeric))
+              AND""" + GERE_EN_STOCK + """
             ORDER BY v_etat_stock.code_article DESC
         """,
             countQuery = """
             SELECT COUNT(*)
             FROM v_etat_stock
-            WHERE CAST(stock_disponible AS numeric) <= 0
-               OR CAST(stock_disponible AS numeric) <= CAST(seuil_min AS numeric)
-        """,
+            WHERE (CAST(stock_disponible AS numeric) <= 0
+               OR CAST(stock_disponible AS numeric) <= CAST(seuil_min AS numeric))
+              AND""" + GERE_EN_STOCK,
             nativeQuery = true
     )
     Page<VEtatStock> findAlertesPage(Pageable pageable);
@@ -46,9 +60,9 @@ public interface VEtatStockRepo extends JpaRepository<VEtatStock, Integer> {
             value = """
       SELECT COUNT(*)
       FROM v_etat_stock
-      WHERE CAST(stock_disponible AS DECIMAL(18,2)) <= 0
-         OR CAST(stock_disponible AS DECIMAL(18,2)) <= CAST(seuil_min AS DECIMAL(18,2))
-  """,
+      WHERE (CAST(stock_disponible AS DECIMAL(18,2)) <= 0
+         OR CAST(stock_disponible AS DECIMAL(18,2)) <= CAST(seuil_min AS DECIMAL(18,2)))
+        AND""" + GERE_EN_STOCK,
             nativeQuery = true
     )
     long countAlertes();
@@ -62,7 +76,7 @@ public interface VEtatStockRepo extends JpaRepository<VEtatStock, Integer> {
             CAST(stock_disponible AS DECIMAL(18,2)) <= 0
             OR CAST(stock_disponible AS DECIMAL(18,2)) <= CAST(seuil_min AS DECIMAL(18,2))
         )
-  """,
+        AND""" + GERE_EN_STOCK,
             nativeQuery = true
     )
     List<VEtatStock> findAlertesForCodes(@Param("codes") java.util.List<String> codes);
@@ -71,8 +85,9 @@ public interface VEtatStockRepo extends JpaRepository<VEtatStock, Integer> {
             value = """
           SELECT *
           FROM v_etat_stock
-          WHERE CAST(stock_disponible AS numeric) <= 0
-             OR CAST(stock_disponible AS numeric) <= CAST(seuil_min AS numeric)
+          WHERE (CAST(stock_disponible AS numeric) <= 0
+             OR CAST(stock_disponible AS numeric) <= CAST(seuil_min AS numeric))
+            AND""" + GERE_EN_STOCK + """
           ORDER BY code_article DESC
         """,
             nativeQuery = true
@@ -90,6 +105,7 @@ WHERE 1=1
   AND (:udm = '' OR lower(coalesce(v.unite_de_mesure,'')) LIKE lower(concat('%', :udm, '%'))
                OR lower(coalesce(v.desc_udm,'')) LIKE lower(concat('%', :udm, '%')))
   AND (:familleId IS NULL OR f.id_famille = :familleId)
+  AND COALESCE(a.actif, true)
 
   AND (
         :etat = '' OR
@@ -117,6 +133,7 @@ WHERE 1=1
   AND (:udm = '' OR lower(coalesce(v.unite_de_mesure,'')) LIKE lower(concat('%', :udm, '%'))
                OR lower(coalesce(v.desc_udm,'')) LIKE lower(concat('%', :udm, '%')))
   AND (:familleId IS NULL OR f.id_famille = :familleId)
+  AND COALESCE(a.actif, true)
 
   AND (
         :etat = '' OR
@@ -148,6 +165,7 @@ FROM v_etat_stock v
 JOIN article a ON a.id_article = v.id_article
 JOIN famille f ON f.id_famille = a.id_famille
 WHERE f.id_famille = :familleId
+  AND COALESCE(a.actif, true)
   AND (CAST(v.stock_disponible AS numeric) <= 0
        OR CAST(v.stock_disponible AS numeric) <= CAST(v.seuil_min AS numeric))
 ORDER BY v.code_article DESC
@@ -160,6 +178,7 @@ FROM v_etat_stock v
 JOIN article a ON a.id_article = v.id_article
 JOIN famille f ON f.id_famille = a.id_famille
 WHERE f.id_famille = :familleId
+  AND COALESCE(a.actif, true)
   AND (CAST(v.stock_disponible AS numeric) <= 0
        OR CAST(v.stock_disponible AS numeric) <= CAST(v.seuil_min AS numeric))
 """, nativeQuery = true)

@@ -67,11 +67,85 @@ public class BonCommandeMere {
     @Column(name = "statut")
     StatutBonCommande statut;
 
+    // ── Informations du bon de commande imprimé ─────────────────────────────
+
+    @Column(name = "modalite_paiement")
+    String modalitePaiement;
+
+    /** Référence de la décision qui autorise la dépense, ex. « CODEP 007/26 du 06/03/26 ». */
+    @Column(name = "reference_approbation")
+    String referenceApprobation;
+
+    // ── Validation (Moyens Généraux puis S.G.) ──────────────────────────────
+
+    /** Validateur attendu quand le statut est EN_ATTENTE_VALIDATION ; {@code null} sinon. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "etape_validation")
+    EtapeValidation etapeValidation;
+
+    @ManyToOne @JoinColumn(name = "id_soumis_par", referencedColumnName = "id_utilisateur")
+    Utilisateur soumisPar;
+    @Column(name = "date_soumission")
+    LocalDateTime dateSoumission;
+
+    @ManyToOne @JoinColumn(name = "id_valide_mg_par", referencedColumnName = "id_utilisateur")
+    Utilisateur valideMgPar;
+    @Column(name = "date_validation_mg")
+    LocalDateTime dateValidationMg;
+
+    @ManyToOne @JoinColumn(name = "id_valide_sg_par", referencedColumnName = "id_utilisateur")
+    Utilisateur valideSgPar;
+    @Column(name = "date_validation_sg")
+    LocalDateTime dateValidationSg;
+
+    /** Motif du dernier rejet ; effacé à la soumission suivante. */
+    @Column(name = "motif_rejet", columnDefinition = "TEXT")
+    String motifRejet;
+    @ManyToOne @JoinColumn(name = "id_rejete_par", referencedColumnName = "id_utilisateur")
+    Utilisateur rejetePar;
+
     public enum StatutBonCommande {
         BROUILLON,
         EN_ATTENTE_VALIDATION,
         VALIDE,
         ANNULE
+    }
+
+    /** Étapes de validation d'un bon de commande, dans l'ordre. */
+    public enum EtapeValidation {
+        MG("Moyens Généraux", "MG_VALIDATOR"),
+        SG("Secrétariat Général", "SG");
+
+        private final String libelle;
+        private final String role;
+
+        EtapeValidation(String libelle, String role) {
+            this.libelle = libelle;
+            this.role = role;
+        }
+
+        public String getLibelle() { return libelle; }
+
+        /** Rôle (sans préfixe ROLE_) qui valide à cette étape. */
+        public String getRole() { return role; }
+    }
+
+    /** Bon de commande saisi directement, sans demande d'achat à l'origine. */
+    public boolean estManuel() {
+        return demandeMere == null;
+    }
+
+    /** Libellé du statut, précisé par le validateur attendu. */
+    public String getLibelleStatut() {
+        if (statut == null) return "—";
+        return switch (statut) {
+            case BROUILLON -> "Brouillon";
+            case EN_ATTENTE_VALIDATION -> etapeValidation != null
+                    ? "En attente " + etapeValidation.getLibelle()
+                    : "En attente de validation";
+            case VALIDE -> "Validé";
+            case ANNULE -> "Annulé";
+        };
     }
 
     public void setId(IdGenerator idGenerator) {

@@ -2,14 +2,12 @@ package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.bonSortie.BonSortieFille;
 import afg.achat.afgApprovAchat.model.bonSortie.BonSortieMere;
-import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.bonSortie.BonSortieFilleRepo;
 import afg.achat.afgApprovAchat.repository.bonSortie.BonSortieMereRepo;
 import afg.achat.afgApprovAchat.service.BonSortieService;
-import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
 import afg.achat.afgApprovAchat.service.workflow.WorkflowService;
@@ -21,15 +19,24 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/bon-sortie")
 @RequiredArgsConstructor
 public class BonSortieController {
+    /** Préfixe des champs de quantité du formulaire : qte_&lt;id de la ligne de demande&gt;. */
+    static final String PREFIXE_QUANTITE = "qte_";
+
     private final BonSortieService bonSortieService;
     private final DemandeMereService demandeMereService;
-    private final DemandeFilleService demandeFilleService;
     private final BonSortieMereRepo bsMereRepo;
     private final BonSortieFilleRepo bsFilleRepo;
     private final WorkflowService workflowService;
@@ -40,9 +47,8 @@ public class BonSortieController {
     @PreAuthorize("hasRole('MOYENS_GENERAUX')")
     @PostMapping("/creer/{idDemande}")
     public String creerBonSortie(@PathVariable String idDemande,
-                                 @RequestParam("commentaire") String commentaire,
-                                 @RequestParam("lignes[]") List<Integer> demandeFilleIds,
-                                 @RequestParam("quantites[]") List<Double> quantites,
+                                 @RequestParam(name = "commentaire", required = false) String commentaire,
+                                 @RequestParam Map<String, String> parametres,
                                  RedirectAttributes redirectAttributes) {
         try {
             Utilisateur mg = (Utilisateur) SecurityContextHolder
@@ -57,35 +63,30 @@ public class BonSortieController {
                 return "redirect:/demande/fiche/" + idDemande;
             }
 
-            if (demandeFilleIds == null || demandeFilleIds.isEmpty()) {
+            if (!demande.getTypeDemandeEffectif().isArticlesEnStock()) {
                 redirectAttributes.addFlashAttribute("ko",
-                        "Veuillez sélectionner au moins un article.");
+                        "Un bon de sortie ne concerne que les demandes de matériel (articles en stock).");
                 return "redirect:/demande/fiche/" + idDemande;
             }
 
-            // Créer le brouillon
-            BonSortieMere bs = bonSortieService.creerBrouillon(demande, mg);
-            bs.setCommentaire(commentaire);
-            bsMereRepo.save(bs);
-
-            // Ajouter les lignes
-            for (int i = 0; i < demandeFilleIds.size(); i++) {
-                int dfId       = demandeFilleIds.get(i);
-                double quantite = quantites.get(i);
-                if (quantite <= 0) continue;
-
-                DemandeFille df = demandeFilleService.getDemandeFilleById(dfId);
-                // La ligne doit appartenir à la demande du bon de sortie
-                if (df == null || df.getDemandeMere() == null
-                        || !idDemande.equals(df.getDemandeMere().getId())) {
-                    throw new IllegalArgumentException("Ligne de demande invalide pour cette demande.");
+            // Quantités envoyées sous la forme qte_<id de la ligne de demande> : chaque
+            // quantité reste attachée à sa ligne, même si des champs ne sont pas envoyés
+            // (lignes sans stock, champ désactivé).
+            Map<Integer, Double> quantitesParLigne = new LinkedHashMap<>();
+            for (Map.Entry<String, String> p : parametres.entrySet()) {
+                if (!p.getKey().startsWith(PREFIXE_QUANTITE)) continue;
+                String valeur = p.getValue() == null ? "" : p.getValue().trim().replace(',', '.');
+                if (valeur.isEmpty()) continue;
+                try {
+                    quantitesParLigne.put(Integer.parseInt(p.getKey().substring(PREFIXE_QUANTITE.length())),
+                            Double.parseDouble(valeur));
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Quantité invalide : " + p.getValue());
                 }
-
-                bonSortieService.ajouterLigne(bs, df, quantite);
             }
 
-            // Confirmer directement (brouillon + confirmation en une passe)
-            bonSortieService.confirmerBonSortie(bs.getId());
+            // Création + confirmation en une seule transaction : tout ou rien
+            BonSortieMere bs = bonSortieService.creerEtConfirmer(demande, mg, commentaire, quantitesParLigne);
 
             redirectAttributes.addFlashAttribute("ok",
                     "Bon de sortie " + bs.getNumeroBs() + " créé et confirmé.");
@@ -95,6 +96,45 @@ public class BonSortieController {
         }
 
         return "redirect:/demande/fiche/" + idDemande;
+    }
+
+    // ── Liste de tous les bons de sortie (Moyens Généraux) ──────────────────
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
+    @GetMapping("/list")
+    public String listeBonsSortie(@RequestParam(defaultValue = "0") int page,
+                                  @RequestParam(defaultValue = "20") int size,
+                                  @RequestParam(required = false) String statut,
+                                  @RequestParam(required = false) String numero,
+                                  @RequestParam(required = false) String demandeur,
+                                  @RequestParam(required = false) String article,
+                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+                                  Model model) {
+        BonSortieMere.StatutBonSortie statutFiltre = null;
+        if (statut != null && !statut.isBlank()) {
+            try {
+                statutFiltre = BonSortieMere.StatutBonSortie.valueOf(statut.trim().toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+                // statut inconnu : pas de filtre
+            }
+        }
+        int taille = Math.min(Math.max(size, 5), 100);
+
+        Page<BonSortieMere> bons = bonSortieService.rechercher(statutFiltre, dateFrom, dateTo,
+                numero, demandeur, article, PageRequest.of(Math.max(page, 0), taille));
+
+        model.addAttribute("bons", bons);
+        model.addAttribute("totaux", bonSortieService.totauxParBon(bons.getContent()));
+        model.addAttribute("statuts", BonSortieService.STATUTS_LISTE);
+        model.addAttribute("statut", statutFiltre == null || !BonSortieService.STATUTS_LISTE.contains(statutFiltre)
+                ? "" : statutFiltre.name());
+        model.addAttribute("numero", numero == null ? "" : numero);
+        model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
+        model.addAttribute("article", article == null ? "" : article);
+        model.addAttribute("dateFrom", dateFrom);
+        model.addAttribute("dateTo", dateTo);
+        model.addAttribute("size", taille);
+        return "bonSortie/bs-liste";
     }
 
     // ── Fiche d'un BS (impression / aperçu) ─────────────────────────────────

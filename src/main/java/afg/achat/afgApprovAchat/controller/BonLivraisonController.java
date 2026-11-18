@@ -113,6 +113,18 @@ public class BonLivraisonController {
             Devise devise = deviseService.getDeviseById(Integer.parseInt(deviseId))
                     .orElseThrow(() -> new IllegalArgumentException("Devise introuvable"));
 
+            // Un bon de livraison alimente le stock : pas d'article inactif.
+            // Contrôle fait avant tout enregistrement.
+            for (String code : articleCodes) {
+                Article article = articleService.getArticleByCodeArticle(code)
+                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable avec le code: " + code));
+                if (!article.estActif()) {
+                    redirectAttributes.addFlashAttribute("ko", "L'article " + code
+                            + " est inactif : il ne peut pas figurer sur un bon de livraison.");
+                    return "redirect:/bonlivraison/add";
+                }
+            }
+
             double totalGeneral = MontantCalculator.calculerTotal(qteRecues, prixUnitaires);
 
 //            Enregistrement du bon de livraison mère

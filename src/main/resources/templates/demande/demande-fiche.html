@@ -169,7 +169,14 @@
 
 
                             <div>
-                                <strong>Type de Demande :</strong>
+                                <strong>Type de demande :</strong>
+
+                                <!-- Lecture seule : détermine le circuit de validation -->
+                                <div th:text="${demande.typeDemandeEffectif.libelle}">-</div>
+                            </div>
+
+                            <div>
+                                <strong>Nature (OPEX/CAPEX) :</strong>
 
                                 <!-- Lecture seule -->
                                 <div th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">-</div>
@@ -893,11 +900,11 @@
                                          th:if="${canDecisionMG and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
 
                                         <label class="form-label mb-1">
-                                            Type de demande <span class="text-danger">*</span>
+                                            Nature (OPEX/CAPEX) <span class="text-danger">*</span>
                                         </label>
 
                                         <select class="form-select form-select-sm"
-                                                name="typeDemande"
+                                                name="natureDemande"
                                                 id="typeDemandeSelect"
                                                 required>
                                             <option value="">-- Choisir --</option>
@@ -1497,9 +1504,6 @@
                                                 <tbody>
                                                 <tr th:each="ligne : ${lignesRestantes}">
                                                     <td>
-                                                        <input type="hidden"
-                                                               name="lignes[]"
-                                                               th:value="${ligne.demandeFille.id}"/>
                                                         <span th:text="${ligne.demandeFille.article.codeArticle
                             + ' - '
                             + ligne.demandeFille.article.designation}">
@@ -1554,8 +1558,10 @@
 
                                                     <!-- Qté à sortir -->
                                                     <td class="text-center">
+                                                        <!-- Nom lié à la ligne (qte_<id>) : la quantité reste attachée
+                                                             à sa ligne même si un champ désactivé n'est pas envoyé -->
                                                         <input type="number"
-                                                               name="quantites[]"
+                                                               th:name="'qte_' + ${ligne.demandeFille.id}"
                                                                class="form-control form-control-sm text-end bs-qte-input"
                                                                min="0"
                                                                step="1"
@@ -1850,8 +1856,7 @@
                   enctype="multipart/form-data">
 
                 <div class="modal-body">
-                    <input type="hidden" name="typeDemande" id="codepTypeDemande">
-                    <input type="hidden" name="priorite" id="codepPriorite">
+                    <input type="hidden" name="natureDemande" id="codepTypeDemande">                    <input type="hidden" name="priorite" id="codepPriorite">
                     <input type="hidden" name="modeTraitement" id="codepModeTraitement">
 
                     <!-- Message informatif -->
@@ -2379,12 +2384,12 @@
         const erreurs = [];
 
         // 1. Type de demande (OPEX/CAPEX)
-        const typeDemandeSelect = document.getElementById('typeDemandeSelect') || document.querySelector('select[name="typeDemande"]');
+        const typeDemandeSelect = document.getElementById('typeDemandeSelect') || document.querySelector('select[name="natureDemande"]');
         if (typeDemandeSelect && (!typeDemandeSelect.value || typeDemandeSelect.value.trim() === '')) {
             erreurs.push({
                 type: 'TYPE_DEMANDE',
                 element: typeDemandeSelect,
-                titre: 'Type de demande (OPEX / CAPEX)',
+                titre: 'Nature (OPEX / CAPEX)',
                 description: 'Le type de demande (OPEX ou CAPEX) doit être obligatoirement sélectionné.',
                 badge: 'À choisir',
                 icon: 'fa-tag'
@@ -2481,7 +2486,7 @@
             if (modal) modal.hide();
         }
 
-        const typeDemandeSelect = document.getElementById('typeDemandeSelect') || document.querySelector('select[name="typeDemande"]');
+        const typeDemandeSelect = document.getElementById('typeDemandeSelect') || document.querySelector('select[name="natureDemande"]');
         const modeTraitementSelect = document.getElementById('modeTraitementSelect') || document.querySelector('select[name="modeTraitement"]');
         const articlesSansPrix = getArticlesSansPrix();
 
@@ -2722,7 +2727,7 @@
             return;
         }
 
-        const typeDemandeSelect = document.getElementById('typeDemandeSelect') || document.querySelector('select[name="typeDemande"]');
+        const typeDemandeSelect = document.getElementById('typeDemandeSelect') || document.querySelector('select[name="natureDemande"]');
         const codepTypeDemandeInput = document.getElementById('codepTypeDemande');
         if (typeDemandeSelect && codepTypeDemandeInput)
             codepTypeDemandeInput.value = typeDemandeSelect.value;

@@ -38,6 +38,11 @@
 
                 <div class="d-flex gap-2">
                     <a class="btn btn-outline-secondary"
+                       sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
+                       th:href="@{/bon-sortie/list}">
+                        <i class="fas fa-list-ul me-1"></i> Liste des bons de sortie
+                    </a>
+                    <a class="btn btn-outline-secondary"
                        th:href="@{/demande/fiche/{id}(id=${bs.demandeMere.id})}">
                         <i class="fas fa-arrow-left me-1"></i> Retour à la demande
                     </a>
@@ -145,7 +150,7 @@
                             </div>
 
                             <div>
-                                <strong>Type de demande :</strong>
+                                <strong>Nature (OPEX/CAPEX) :</strong>
                                 <div th:text="${bs.demandeMere.natureDemande != null
                                                ? bs.demandeMere.natureDemande
                                                : '-'}">-</div>

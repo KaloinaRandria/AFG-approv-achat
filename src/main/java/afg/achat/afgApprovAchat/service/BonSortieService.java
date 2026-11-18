@@ -18,8 +18,15 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -32,6 +39,52 @@ public class BonSortieService {
     private final StockFilleRepo stockFilleRepo;
     private final StockMereRepo stockMereRepo;
     private final LotStockService lotStockService;
+
+    // ── Création + confirmation en une seule transaction ────────────────────
+    /**
+     * Crée le bon de sortie et le confirme (sortie de stock) en une seule transaction :
+     * à la moindre erreur (ligne invalide, quantité supérieure au restant, stock
+     * insuffisant), rien n'est enregistré, ni bon de sortie ni mouvement de stock.
+     *
+     * @param quantitesParLigne quantité à sortir par identifiant de ligne de demande ;
+     *                          les quantités nulles ou négatives sont ignorées
+     */
+    public BonSortieMere creerEtConfirmer(DemandeMere demande, Utilisateur mg, String commentaire,
+                                          Map<Integer, Double> quantitesParLigne) {
+        // ── 1. Contrôles (avant toute écriture) ──
+        Map<DemandeFille, Double> aSortir = new LinkedHashMap<>();
+        for (Map.Entry<Integer, Double> e : quantitesParLigne.entrySet()) {
+            Double quantite = e.getValue();
+            if (quantite == null || quantite <= 0) continue;
+
+            DemandeFille df = demandeFilleService.getDemandeFilleById(e.getKey());
+            // La ligne doit appartenir à la demande du bon de sortie
+            if (df == null || df.getDemandeMere() == null
+                    || !demande.getId().equals(df.getDemandeMere().getId())) {
+                throw new IllegalArgumentException("Ligne de demande invalide pour cette demande.");
+            }
+
+            String codeArticle = df.getArticle().getCodeArticle();
+            double stock = lotStockService.getStockDisponible(codeArticle);
+            if (quantite > stock + 0.001) {
+                throw new IllegalArgumentException("Stock insuffisant pour " + df.getArticle().getDesignation()
+                        + " : " + quantite + " demandé(s), " + stock + " disponible(s).");
+            }
+            aSortir.put(df, quantite);
+        }
+        if (aSortir.isEmpty()) {
+            throw new IllegalArgumentException("Veuillez saisir une quantité supérieure à 0 pour au moins un article.");
+        }
+
+        // ── 2. Écritures ──
+        BonSortieMere bs = creerBrouillon(demande, mg);
+        bs.setCommentaire(commentaire == null ? null : commentaire.trim());
+        bsMereRepo.save(bs);
+        // ajouterLigne contrôle aussi le restant à sortir de chaque ligne
+        aSortir.forEach((df, quantite) -> ajouterLigne(bs, df, quantite));
+        confirmerBonSortie(bs.getId());
+        return bs;
+    }
 
     // ── Création d'un BS en brouillon ───────────────────────────────────────
     public BonSortieMere creerBrouillon(DemandeMere demande, Utilisateur mg) {
@@ -160,8 +213,52 @@ public class BonSortieService {
     }
 
     // ── Getters utiles pour la vue ───────────────────────────────────────────
+    /**
+     * Bons de sortie à afficher pour une demande. Les brouillons sont exclus :
+     * un bon est toujours créé et confirmé d'un coup, un brouillon n'est donc
+     * qu'un reste d'une création interrompue (avant la mise en transaction unique).
+     */
     public List<BonSortieMere> getBonSortieByDemande(DemandeMere demande) {
-        return bsMereRepo.findByDemandeMere(demande);
+        return bsMereRepo.findByDemandeMere(demande).stream()
+                .filter(bs -> bs.getStatut() != BonSortieMere.StatutBonSortie.BROUILLON)
+                .toList();
+    }
+
+    // ── Liste des bons de sortie ─────────────────────────────────────────────
+
+    /** Statuts proposés dans la liste ; les brouillons (créations interrompues) n'y figurent jamais. */
+    public static final List<BonSortieMere.StatutBonSortie> STATUTS_LISTE =
+            List.of(BonSortieMere.StatutBonSortie.CONFIRME, BonSortieMere.StatutBonSortie.ANNULE);
+
+    /**
+     * Recherche paginée des bons de sortie (hors brouillons).
+     *
+     * @param statut statut demandé ; {@code null} ou BROUILLON : confirmés et annulés
+     * @param du     début de période inclus ; {@code null} : sans limite
+     * @param au     fin de période incluse (toute la journée) ; {@code null} : sans limite
+     */
+    public Page<BonSortieMere> rechercher(BonSortieMere.StatutBonSortie statut, LocalDate du, LocalDate au,
+                                          String numero, String demandeur, String article, Pageable pageable) {
+        List<BonSortieMere.StatutBonSortie> statuts =
+                (statut == null || !STATUTS_LISTE.contains(statut)) ? STATUTS_LISTE : List.of(statut);
+        return bsMereRepo.rechercher(statuts,
+                du == null ? LocalDateTime.of(1900, 1, 1, 0, 0) : du.atStartOfDay(),
+                au == null ? LocalDateTime.of(2999, 12, 31, 23, 59, 59) : au.atTime(LocalTime.MAX),
+                texte(numero), texte(demandeur), texte(article), pageable);
+    }
+
+    /** Nombre de lignes et montant total de chaque bon, par identifiant de bon. */
+    public Map<Integer, double[]> totauxParBon(List<BonSortieMere> bons) {
+        Map<Integer, double[]> totaux = new LinkedHashMap<>();
+        if (bons.isEmpty()) return totaux;
+        for (Object[] r : bsFilleRepo.totauxParBon(bons)) {
+            totaux.put((Integer) r[0], new double[]{((Number) r[1]).doubleValue(), ((Number) r[2]).doubleValue()});
+        }
+        return totaux;
+    }
+
+    private static String texte(String valeur) {
+        return valeur == null ? "" : valeur.trim();
     }
 
     public double getQuantiteRestante(DemandeFille demandeFille) {

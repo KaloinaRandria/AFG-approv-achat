@@ -7,7 +7,8 @@ public record ArticleDTO(
         String designation,
         int seuilMin,
         FamilleDTO famille,
-        UdmDTO udm
+        UdmDTO udm,
+        boolean actif
 ) {
     public static ArticleDTO from(Article a) {
         return new ArticleDTO(
@@ -19,7 +20,8 @@ public record ArticleDTO(
                         : null,
                 a.getUdm() != null
                         ? new UdmDTO(a.getUdm().getId(), a.getUdm().getDescription(), a.getUdm().getAcronyme())
-                        : null
+                        : null,
+                a.estActif()
         );
     }
 

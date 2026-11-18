@@ -8,87 +8,286 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <style>
+        /* Document imprimé : même structure que le bon de commande papier */
+        .bc-document { background: #fff; color: #000; padding: 24px; }
+        .bc-document table { width: 100%; border-collapse: collapse; }
+        .bc-titre { text-align: center; font-weight: 700; font-size: 1.4rem; letter-spacing: 2px; margin: 12px 0 16px; }
+        .bc-entete td { border: 1px solid #000; padding: 4px 8px; vertical-align: top; width: 33.33%; }
+        .bc-entete .bc-libelle { background: #e9ecef; font-weight: 700; font-size: .8rem; text-transform: uppercase; }
+        .bc-lignes th, .bc-lignes td { border: 1px solid #000; padding: 6px 8px; vertical-align: top; }
+        .bc-lignes th { background: #e9ecef; text-align: center; font-size: .85rem; }
+        .bc-lignes .bc-objet { text-align: center; font-weight: 700; background: #f8f9fa; }
+        .bc-designation { white-space: pre-line; }
+        .bc-totaux td { border: 1px solid #000; padding: 4px 8px; }
+        .bc-signatures { margin-top: 48px; }
+        .bc-signatures td { width: 50%; text-align: center; vertical-align: top; height: 110px; font-weight: 700; }
+        .bc-signature-nom { font-weight: 400; font-size: .85rem; margin-top: 6px; }
+
+        @media print {
+            #sidebar, .no-print { display: none !important; }
+            .main-content { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+            .bc-document { padding: 0; box-shadow: none !important; border: 0 !important; }
+            /* La colonne « Article » sert au suivi interne : elle n'est pas imprimée */
+            .col-article { display: none !important; }
+        }
+    </style>
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
 <div class="main-content">
     <section>
-        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+        <div class="no-print" th:insert="~{fragment/load_pop_up :: pop_up}"></div>
 
-        <div class="container mt-3">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">
-                        <i class="fas fa-file-invoice me-2"></i>
-                        Fiche bon de commande
-                    </h4>
-                    <a class="btn btn-outline-secondary"
-                       th:if="${bonCommandeMere.demandeMere != null}"
-                       th:href="@{/demande/fiche/{id}(id=${bonCommandeMere.demandeMere.id})}">
-                        <i class="fas fa-arrow-left me-1"></i> Retour demande
-                    </a>
+        <!-- ── Barre d'actions (jamais imprimée) ─────────────────────────────── -->
+        <div class="no-print d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <h1 class="fw-bold text-gradient-blue mb-0">
+                <i class="fas fa-file-invoice me-3 icon-gradient-blue"></i> Bon de commande
+                <span class="badge fs-6 align-middle ms-2"
+                      th:classappend="${bonCommandeMere.statut?.name() == 'VALIDE'} ? 'bg-success' :
+                                      (${bonCommandeMere.statut?.name() == 'ANNULE'} ? 'bg-danger' :
+                                      (${bonCommandeMere.statut?.name() == 'EN_ATTENTE_VALIDATION'} ? 'bg-warning text-dark' : 'bg-secondary'))"
+                      th:text="${bonCommandeMere.libelleStatut}">Statut</span>
+            </h1>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-outline-secondary" th:href="@{/bon-commande/list}">
+                    <i class="fas fa-list-ul me-1"></i> Liste
+                </a>
+                <a class="btn btn-outline-secondary"
+                   th:if="${bonCommandeMere.demandeMere != null}"
+                   th:href="@{/demande/fiche/{id}(id=${bonCommandeMere.demandeMere.id})}">
+                    <i class="fas fa-arrow-left me-1"></i> Demande
+                </a>
+                <button type="button" class="btn btn-gradient-blue" onclick="window.print()">
+                    <i class="fas fa-print me-1"></i> Imprimer
+                </button>
+
+                <!-- Créateur : brouillon -->
+                <a class="btn btn-outline-primary" th:if="${peutModifier}"
+                   th:href="@{/bon-commande/manuel/{id}/modifier(id=${bonCommandeMere.id})}">
+                    <i class="fas fa-edit me-1"></i> Modifier
+                </a>
+                <form method="post" class="m-0" th:if="${peutModifier}"
+                      th:action="@{/bon-commande/manuel/{id}/soumettre(id=${bonCommandeMere.id})}">
+                    <button type="submit" class="btn btn-gradient-green">
+                        <i class="fas fa-paper-plane me-1"></i> Soumettre à validation
+                    </button>
+                </form>
+                <form method="post" class="m-0" th:if="${peutModifier}"
+                      th:action="@{/bon-commande/manuel/{id}/annuler(id=${bonCommandeMere.id})}"
+                      onsubmit="return confirm('Annuler définitivement ce bon de commande ?');">
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="fas fa-ban me-1"></i> Annuler le bon
+                    </button>
+                </form>
+
+                <!-- Validateur de l'étape en cours -->
+                <form method="post" class="m-0" th:if="${peutValider}"
+                      th:action="@{/bon-commande/manuel/{id}/valider(id=${bonCommandeMere.id})}">
+                    <button type="submit" class="btn btn-gradient-green">
+                        <i class="fas fa-check me-1"></i> Valider
+                    </button>
+                </form>
+                <button type="button" class="btn btn-outline-danger" th:if="${peutValider}"
+                        data-bs-toggle="modal" data-bs-target="#modalRejet">
+                    <i class="fas fa-times me-1"></i> Rejeter
+                </button>
+            </div>
+        </div>
+
+        <!-- Suivi de la validation (jamais imprimé) -->
+        <div class="no-print card shadow-sm border-0 mb-3" th:if="${bonCommandeMere.estManuel()}">
+            <div class="card-body py-2">
+                <div class="row small">
+                    <div class="col-md-3">
+                        <strong>Créé par :</strong>
+                        <span th:text="${bonCommandeMere.createur != null ? bonCommandeMere.createur.prenom + ' ' + bonCommandeMere.createur.nom : '—'}"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Soumis le :</strong>
+                        <span th:text="${bonCommandeMere.dateSoumission != null ? #temporals.format(bonCommandeMere.dateSoumission, 'dd/MM/yyyy HH:mm') : '—'}"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Moyens Généraux :</strong>
+                        <span th:text="${bonCommandeMere.valideMgPar != null ? bonCommandeMere.valideMgPar.prenom + ' ' + bonCommandeMere.valideMgPar.nom + ' — ' + #temporals.format(bonCommandeMere.dateValidationMg, 'dd/MM/yyyy HH:mm') : 'en attente'}"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>S.G. :</strong>
+                        <span th:text="${bonCommandeMere.valideSgPar != null ? bonCommandeMere.valideSgPar.prenom + ' ' + bonCommandeMere.valideSgPar.nom + ' — ' + #temporals.format(bonCommandeMere.dateValidationSg, 'dd/MM/yyyy HH:mm') : 'en attente'}"></span>
+                    </div>
                 </div>
-
-                <div class="card-body">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Numero BC</label>
-                            <div th:text="${bonCommandeMere.numero != null && !#strings.isEmpty(bonCommandeMere.numero) ? bonCommandeMere.numero : bonCommandeMere.id}">-</div>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Statut</label>
-                            <div th:text="${bonCommandeMere.statut}">-</div>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Date creation</label>
-                            <div th:text="${bonCommandeMere.dateCreation != null ? #temporals.format(bonCommandeMere.dateCreation, 'dd/MM/yyyy HH:mm') : '—'}">-</div>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Date livraison prevue</label>
-                            <div th:text="${bonCommandeMere.dateLivraisonPrevue != null ? #temporals.format(bonCommandeMere.dateLivraisonPrevue, 'dd/MM/yyyy') : '—'}">-</div>
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Fournisseur</label>
-                            <div th:text="${bonCommandeMere.fournisseur != null ? bonCommandeMere.fournisseur.nom : '—'}">-</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Lieu livraison</label>
-                            <div th:text="${bonCommandeMere.lieuLivraison != null && !#strings.isEmpty(bonCommandeMere.lieuLivraison) ? bonCommandeMere.lieuLivraison : '—'}">-</div>
-                        </div>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle bg-white">
-                            <thead class="table-light">
-                            <tr>
-                                <th>Article</th>
-                                <th>Designation fournisseur</th>
-                                <th class="text-end">Quantite</th>
-                                <th class="text-end">Prix unitaire HT</th>
-                                <th class="text-end">Montant HT</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:if="${lignes == null || lignes.isEmpty()}">
-                                <td colspan="5" class="text-center text-muted">Aucune ligne</td>
-                            </tr>
-                            <tr th:each="ligne : ${lignes}">
-                                <td th:text="${ligne.article != null ? ligne.article.codeArticle + ' - ' + ligne.article.designation : '—'}"></td>
-                                <td th:text="${ligne.designationFournisseur != null && !#strings.isEmpty(ligne.designationFournisseur) ? ligne.designationFournisseur : '—'}"></td>
-                                <td class="text-end" th:text="${#numbers.formatDecimal(ligne.quantiteCommandee, 1, 'DEFAULT', 2, 'DEFAULT')}"></td>
-                                <td class="text-end" th:text="${#numbers.formatDecimal(ligne.prixUnitaireHT, 1, 'DEFAULT', 2, 'DEFAULT')}"></td>
-                                <td class="text-end" th:text="${#numbers.formatDecimal(ligne.montantHT, 1, 'DEFAULT', 2, 'DEFAULT')}"></td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="alert alert-warning mb-0 mt-2 py-2"
+                     th:if="${bonCommandeMere.motifRejet != null and !#strings.isEmpty(bonCommandeMere.motifRejet)}">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    <strong>Rejeté<span th:if="${bonCommandeMere.rejetePar != null}"
+                                        th:text="' par ' + ${bonCommandeMere.rejetePar.prenom} + ' ' + ${bonCommandeMere.rejetePar.nom}"></span> :</strong>
+                    <span th:text="${bonCommandeMere.motifRejet}"></span>
                 </div>
             </div>
         </div>
+
+        <!-- ── Document ──────────────────────────────────────────────────────── -->
+        <div class="bc-document card shadow-sm border-0">
+            <img th:src="@{/img/logo_afg.png}" alt="AFG Bank" height="60">
+            <div class="bc-titre">BON DE COMMANDE</div>
+
+            <table class="bc-entete">
+                <tr>
+                    <td class="bc-libelle">Personne de contact AFG Bank</td>
+                    <td class="bc-libelle">Service</td>
+                    <td class="bc-libelle">Numéro</td>
+                </tr>
+                <tr>
+                    <td th:text="${bonCommandeMere.createur != null ? bonCommandeMere.createur.prenom + ' ' + bonCommandeMere.createur.nom : ''}"></td>
+                    <td th:text="${bonCommandeMere.createur != null and bonCommandeMere.createur.service != null ? bonCommandeMere.createur.service.libelle : ''}"></td>
+                    <td class="fw-bold"
+                        th:text="${bonCommandeMere.numero != null and !#strings.isEmpty(bonCommandeMere.numero) ? bonCommandeMere.numero : bonCommandeMere.id}"></td>
+                </tr>
+                <tr>
+                    <td class="bc-libelle">Téléphone</td>
+                    <td class="bc-libelle">Email</td>
+                    <td class="bc-libelle">Date</td>
+                </tr>
+                <tr>
+                    <td th:text="${bonCommandeMere.createur != null ? bonCommandeMere.createur.contact : ''}"></td>
+                    <td th:text="${bonCommandeMere.createur != null ? bonCommandeMere.createur.mail : ''}"></td>
+                    <td th:text="${bonCommandeMere.dateCreation != null ? #temporals.format(bonCommandeMere.dateCreation, 'dd/MM/yyyy') : ''}"></td>
+                </tr>
+                <tr>
+                    <td class="bc-libelle">Fournisseur</td>
+                    <td class="bc-libelle">Adresse du fournisseur</td>
+                    <td class="bc-libelle">Date et lieu de livraison</td>
+                </tr>
+                <tr>
+                    <td class="fw-bold" th:text="${bonCommandeMere.fournisseur != null ? bonCommandeMere.fournisseur.nom : ''}"></td>
+                    <td th:text="${bonCommandeMere.adresseFournisseur != null ? bonCommandeMere.adresseFournisseur.adresse.libelle
+                                  : (bonCommandeMere.fournisseur != null ? bonCommandeMere.fournisseur.adressePhysique : '')}"></td>
+                    <td>
+                        <span th:if="${bonCommandeMere.dateLivraisonPrevue != null}"
+                              th:text="${#temporals.format(bonCommandeMere.dateLivraisonPrevue, 'dd/MM/yyyy')}"></span>
+                        <span th:text="${bonCommandeMere.lieuLivraison}"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="bc-libelle">Personne de contact</td>
+                    <td class="bc-libelle">Contact du fournisseur</td>
+                    <td class="bc-libelle">Votre réf</td>
+                </tr>
+                <tr>
+                    <td th:text="${bonCommandeMere.responsableFournisseur != null ? bonCommandeMere.responsableFournisseur.responsable.prenom + ' ' + bonCommandeMere.responsableFournisseur.responsable.nom : ''}"></td>
+                    <td th:text="${bonCommandeMere.responsableFournisseur != null and bonCommandeMere.responsableFournisseur.responsable.contact != null
+                                  ? bonCommandeMere.responsableFournisseur.responsable.contact
+                                  : (bonCommandeMere.fournisseur != null ? bonCommandeMere.fournisseur.contact : '')}"></td>
+                    <td th:text="${bonCommandeMere.referenceFournisseur}"></td>
+                </tr>
+                <tr>
+                    <td class="bc-libelle" colspan="2">Référence d'approbation</td>
+                    <td class="bc-libelle">Modalité de paiement</td>
+                </tr>
+                <tr>
+                    <td colspan="2" th:text="${bonCommandeMere.referenceApprobation}"></td>
+                    <td th:text="${bonCommandeMere.modalitePaiement}"></td>
+                </tr>
+            </table>
+
+            <table class="bc-lignes mt-3">
+                <thead>
+                <tr>
+                    <th style="width:6%">N°</th>
+                    <th>Désignations</th>
+                    <th class="col-article" style="width:16%">Article</th>
+                    <th style="width:8%">Qté</th>
+                    <th style="width:9%">Unité</th>
+                    <th style="width:14%">PU HT en MGA</th>
+                    <th style="width:15%">Montant HT en MGA</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${bonCommandeMere.description != null and !#strings.isEmpty(bonCommandeMere.description)}">
+                    <!-- 7 colonnes à l'écran ; à l'impression la colonne Article disparaît et la cellule reste pleine largeur -->
+                    <td class="bc-objet" colspan="7" th:text="${bonCommandeMere.description}"></td>
+                </tr>
+                <tr th:if="${lignes == null or lignes.isEmpty()}">
+                    <td colspan="7" class="text-center text-muted">Aucune ligne</td>
+                </tr>
+                <tr th:each="ligne, stat : ${lignes}">
+                    <td class="text-center" th:text="${stat.count}"></td>
+                    <td class="bc-designation" th:text="${ligne.designationAffichee}"></td>
+                    <td class="col-article"
+                        th:text="${ligne.article != null ? ligne.article.codeArticle + ' - ' + ligne.article.designation : '—'}"></td>
+                    <td class="text-center" th:text="${#numbers.formatDecimal(ligne.quantiteCommandee, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                    <td class="text-center" th:text="${ligne.uniteAffichee}"></td>
+                    <td class="text-end" th:text="${#numbers.formatDecimal(ligne.prixUnitaireHT, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                    <td class="text-end" th:text="${#numbers.formatDecimal(ligne.montantHT, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="d-flex justify-content-end mt-0">
+                <table class="bc-totaux" style="width:45%">
+                    <tr>
+                        <td class="fw-bold">Montant HT</td>
+                        <td class="text-end" th:text="${#numbers.formatDecimal(montantHT, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                    </tr>
+                    <tr th:if="${bonCommandeMere.remise > 0}">
+                        <td class="fw-bold" th:text="'Remise ' + ${#numbers.formatDecimal(bonCommandeMere.remise, 1, 'NONE', 2, 'COMMA')} + '%'"></td>
+                        <td class="text-end" th:text="${#numbers.formatDecimal(montantRemise, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                    </tr>
+                    <tr th:if="${bonCommandeMere.remise > 0}">
+                        <td class="fw-bold">Montant HT remisé</td>
+                        <td class="text-end" th:text="${#numbers.formatDecimal(montantHTRemise, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold"
+                            th:text="${bonCommandeMere.tauxTVA > 0} ? 'TVA ' + ${#numbers.formatDecimal(bonCommandeMere.tauxTVA, 1, 'NONE', 2, 'COMMA')} + '%' : 'TVA'"></td>
+                        <td class="text-end" th:text="${#numbers.formatDecimal(montantTVA, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">Montant TTC</td>
+                        <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(montantTTC, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                    </tr>
+                </table>
+            </div>
+
+            <table class="bc-signatures">
+                <tr>
+                    <td>
+                        DEPARTEMENT ACHATS
+                        <div class="bc-signature-nom" th:if="${bonCommandeMere.valideMgPar != null}"
+                             th:text="${bonCommandeMere.valideMgPar.prenom + ' ' + bonCommandeMere.valideMgPar.nom + ' — validé le ' + #temporals.format(bonCommandeMere.dateValidationMg, 'dd/MM/yyyy')}"></div>
+                    </td>
+                    <td>
+                        SECRETARIAT GENERAL
+                        <div class="bc-signature-nom" th:if="${bonCommandeMere.valideSgPar != null}"
+                             th:text="${bonCommandeMere.valideSgPar.prenom + ' ' + bonCommandeMere.valideSgPar.nom + ' — validé le ' + #temporals.format(bonCommandeMere.dateValidationSg, 'dd/MM/yyyy')}"></div>
+                    </td>
+                </tr>
+            </table>
+        </div>
     </section>
+</div>
+
+<!-- ── Rejet : le motif est obligatoire ─────────────────────────────────────── -->
+<div class="modal fade no-print" id="modalRejet" tabindex="-1" aria-hidden="true" th:if="${peutValider}">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" th:action="@{/bon-commande/manuel/{id}/rejeter(id=${bonCommandeMere.id})}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Rejeter le bon de commande</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="motifRejet" class="form-label fw-bold required-field">Motif du rejet</label>
+                    <textarea class="form-control" id="motifRejet" name="motif" rows="4" required></textarea>
+                    <div class="form-text">Le bon revient en brouillon chez son créateur, qui pourra le corriger et le soumettre à nouveau.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="submit" class="btn btn-danger">Rejeter</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 </body>
 </html>

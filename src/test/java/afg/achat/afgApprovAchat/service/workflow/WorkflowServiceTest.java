@@ -6,6 +6,7 @@ import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.util.ModeTraitement;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
+import afg.achat.afgApprovAchat.model.util.TypeDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.CentreBudgetaireService;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
@@ -287,6 +288,81 @@ class WorkflowServiceTest {
         verify(demandeMereService, never()).appliquerDecisionGlobale(any(), anyInt());
     }
 
+    // ── Type de demande ──────────────────────────────────────────────────────
+
+    @Test
+    void fournitureEstValideeParLeControleur() {
+        demande.setTypeDemande(TypeDemande.FOURNITURE);
+        demande.setStatut(StatutDemande.VALIDATION_N2);
+        when(centreBudgetaireService.getCentreBudgetaireById(5)).thenReturn(new CentreBudgetaire());
+
+        String message = service.approuver(demande, current, auth("ROLE_CONTROLEUR"),
+                new DecisionDemande("ok", null, null, null, null, "5", "avis"));
+
+        assertEquals("Demande validée et finalisée par le contrôleur de gestion.", message);
+        verify(demandeMereService).appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
+        verify(demandeMereService, never()).appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
+        verify(demandeMereService).preparerTransmissionFinance(demande);
+        verify(ess).envoyerMailValidateur(demande, current, StatutDemande.VALIDATION_N2, StatutDemande.VALIDE, null);
+        verify(utilisateurService, never()).getUtilisateursByRole("DFC");
+    }
+
+    @Test
+    void fournitureGardeLesControlesDuControleur() {
+        demande.setTypeDemande(TypeDemande.FOURNITURE);
+        demande.setStatut(StatutDemande.VALIDATION_N2);
+
+        assertThrows(WorkflowException.class, () -> service.approuver(demande, current,
+                auth("ROLE_CONTROLEUR"), new DecisionDemande("ok", null, null, null, null, null, "avis")));
+        verify(demandeMereService, never()).appliquerDecisionGlobale(any(), anyInt());
+    }
+
+    @Test
+    void fourniturePasseParLesMGPuisLeControleur() {
+        demande.setTypeDemande(TypeDemande.FOURNITURE);
+        demande.setStatut(StatutDemande.VALIDATION_N1);
+        when(modeTraitementService.getModeTraitementById(1)).thenReturn(new ModeTraitement());
+
+        service.approuver(demande, current, auth("ROLE_MOYENS_GENERAUX"),
+                new DecisionDemande("ok", null, "OPEX", null, "1", null, null));
+
+        verify(demandeMereService).appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
+        assertEquals(TypeDemande.FOURNITURE, demande.getTypeDemande());
+    }
+
+    @Test
+    void demandeSansTypeSuitLeCircuitStandard() {
+        demande.setTypeDemande(null);
+        demande.setStatut(StatutDemande.VALIDATION_N2);
+        when(centreBudgetaireService.getCentreBudgetaireById(5)).thenReturn(new CentreBudgetaire());
+
+        service.approuver(demande, current, auth("ROLE_CONTROLEUR"),
+                new DecisionDemande("ok", null, null, null, null, "5", "avis"));
+
+        verify(demandeMereService).appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N3);
+    }
+
+    @Test
+    void adminForceUneFournitureDuControleurVersValide() {
+        demande.setTypeDemande(TypeDemande.FOURNITURE);
+        demande.setStatut(StatutDemande.VALIDATION_N2);
+
+        service.approuver(demande, current, auth("ROLE_ADMIN"), cmd());
+
+        verify(demandeMereService).appliquerDecisionGlobale(demande, StatutDemande.VALIDE);
+        verify(demandeMereService).preparerTransmissionFinance(demande);
+    }
+
+    @Test
+    void fournitureViaCodepRevientAuControleurPuisEstValidee() {
+        demande.setTypeDemande(TypeDemande.FOURNITURE);
+        demande.setStatut(StatutDemande.DECISION_CODEP);
+
+        service.approuver(demande, current, auth("ROLE_MOYENS_GENERAUX"), cmd());
+
+        verify(demandeMereService).appliquerDecisionGlobale(demande, StatutDemande.VALIDATION_N2);
+    }
+
     // ── Rejet ────────────────────────────────────────────────────────────────
 
     @Test
@@ -320,7 +396,7 @@ class WorkflowServiceTest {
     @Test
     void envoiCodepMarqueLaDemande() {
         demande.setStatut(StatutDemande.VALIDATION_N1);
-        service.envoyerAuCodep(demande, current, auth("ROLE_MOYENS_GENERAUX"), "OPEX", "P1", null, null);
+        service.envoyerAuCodep(demande, current, auth("ROLE_MOYENS_GENERAUX"), "OPEX", "P1",null, null);
 
         assertTrue(demande.getViaCodep());
         assertEquals(DemandeMere.NatureDemande.OPEX, demande.getNatureDemande());
@@ -334,7 +410,7 @@ class WorkflowServiceTest {
         mode.setLibelle("Achat");
         when(modeTraitementService.getModeTraitementById(1)).thenReturn(mode);
 
-        service.envoyerAuCodep(demande, current, auth("ROLE_MOYENS_GENERAUX"), "OPEX", "P1", "1", null);
+        service.envoyerAuCodep(demande, current, auth("ROLE_MOYENS_GENERAUX"), "OPEX", "P1","1", null);
 
         assertSame(mode, demande.getModeTraitement());
         verify(demandeMereService).appliquerDecisionGlobale(demande, StatutDemande.DECISION_CODEP);
@@ -343,7 +419,7 @@ class WorkflowServiceTest {
     @Test
     void envoiCodepSansModeDeTraitementResteAccepte() {
         demande.setStatut(StatutDemande.VALIDATION_N1);
-        service.envoyerAuCodep(demande, current, auth("ROLE_MOYENS_GENERAUX"), "OPEX", "P1", "", null);
+        service.envoyerAuCodep(demande, current, auth("ROLE_MOYENS_GENERAUX"), "OPEX", "P1","", null);
 
         assertNull(demande.getModeTraitement());
         assertTrue(demande.getViaCodep());

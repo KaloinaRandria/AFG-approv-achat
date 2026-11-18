@@ -9,6 +9,7 @@ import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.fournisseur.*;
 import afg.achat.afgApprovAchat.service.bonCommande.BcContactService;
+import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeManuelService;
 import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeService;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
@@ -29,7 +30,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-@PreAuthorize("hasAnyRole('ADMIN', 'MOYENS_GENERAUX')")
+// Consultation : Moyens Généraux et acteurs du bon de commande manuel (créateur, validateur MG, S.G.).
+// La création et la modification à partir d'une demande restent réservées aux Moyens Généraux.
+@PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_CREATOR','MG_VALIDATOR','SG')")
 @Controller
 @RequestMapping("/bon-commande")
 @RequiredArgsConstructor
@@ -53,9 +56,36 @@ public class BonCommandeController {
     }
 
     @GetMapping("/list")
-    public String bonCommandeList() {
-        return "";
+    public String bonCommandeList(@RequestParam(required = false) String statut, Model model) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+
+        BonCommandeMere.StatutBonCommande filtre = null;
+        if (statut != null && !statut.isBlank()) {
+            try {
+                filtre = BonCommandeMere.StatutBonCommande.valueOf(statut.trim().toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+                // statut inconnu : pas de filtre
+            }
+        }
+        final BonCommandeMere.StatutBonCommande statutFiltre = filtre;
+
+        List<BonCommandeMere> bonsCommande = bonCommandeService.getAllBonCommandes().stream()
+                .filter(bc -> statutFiltre == null || bc.getStatut() == statutFiltre)
+                .toList();
+
+        model.addAttribute("bonsCommande", bonsCommande);
+        // Bons qui attendent une décision de l'utilisateur connecté
+        model.addAttribute("idsAValider", bonsCommande.stream()
+                .filter(bc -> BonCommandeManuelService.peutValider(bc, auth))
+                .map(BonCommandeMere::getId)
+                .toList());
+        model.addAttribute("statuts", BonCommandeMere.StatutBonCommande.values());
+        model.addAttribute("statut", statutFiltre == null ? "" : statutFiltre.name());
+        model.addAttribute("peutCreer", BonCommandeManuelService.peutCreer(auth));
+        return "bc/bon-commande-liste";
     }
+
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @GetMapping("/creer/{id}")
     public String creeBonCommandeByDemande(@PathVariable(name = "id") String demandeMereId,
                                            RedirectAttributes redirectAttributes) {
@@ -83,6 +113,7 @@ public class BonCommandeController {
         return "redirect:/bon-commande/" + bcSauvegardee.getId();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @PostMapping("/sauvegarder")
     public String sauvegarderBonCommande(
             @RequestParam(required = false) String idBcMere,
@@ -351,7 +382,14 @@ public class BonCommandeController {
                 .orElseThrow(() -> new IllegalArgumentException("Bon de commande non trouvé"));
         List<BonCommandeFille> lignes = bonCommandeService.getBonCommandeFillesByBonCommandeMere(bonCommandeMere);
 
-        if (bonCommandeMere.getStatut() == BonCommandeMere.StatutBonCommande.BROUILLON) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean peutCompleterDepuisDemande = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_MOYENS_GENERAUX"));
+
+        // Brouillon issu d'une demande : écran de saisie des Moyens Généraux.
+        // Un bon manuel, lui, s'affiche toujours en fiche (avec ses actions de validation).
+        if (bonCommandeMere.getStatut() == BonCommandeMere.StatutBonCommande.BROUILLON
+                && !bonCommandeMere.estManuel() && peutCompleterDepuisDemande) {
             model.addAttribute("demandeMereId", bonCommandeMere.getDemandeMere().getId());
             model.addAttribute("bonCommandeMere", bonCommandeMere);
             model.addAttribute("bcContacts", bcContactService.getAllContacts());
@@ -403,6 +441,19 @@ public class BonCommandeController {
 
         model.addAttribute("bonCommandeMere", bonCommandeMere);
         model.addAttribute("lignes", lignes);
+        model.addAttribute("peutModifier", BonCommandeManuelService.peutModifier(bonCommandeMere, auth));
+        model.addAttribute("peutValider", BonCommandeManuelService.peutValider(bonCommandeMere, auth));
+
+        // Montants du récapitulatif (la remise et la TVA sont enregistrées en pourcentage)
+        double montantHT = lignes.stream().mapToDouble(BonCommandeFille::getMontantHT).sum();
+        double montantRemise = montantHT * bonCommandeMere.getRemise() / 100;
+        double montantHTRemise = montantHT - montantRemise;
+        double montantTVA = montantHTRemise * bonCommandeMere.getTauxTVA() / 100;
+        model.addAttribute("montantHT", montantHT);
+        model.addAttribute("montantRemise", montantRemise);
+        model.addAttribute("montantHTRemise", montantHTRemise);
+        model.addAttribute("montantTVA", montantTVA);
+        model.addAttribute("montantTTC", montantHTRemise + montantTVA);
         return "bc/bon-commande-fiche";
     }
 

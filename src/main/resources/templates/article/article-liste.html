@@ -127,7 +127,10 @@
                         <!-- CHANGEMENT IMPORTANT: articlesPage.content -->
                         <tr th:each="a : ${articlesPage.content}">
                             <td th:text="${a.codeArticle}"></td>
-                            <td th:text="${a.designation}"></td>
+                            <td>
+                                <span th:text="${a.designation}"></span>
+                                <span class="badge bg-secondary ms-1" th:unless="${a.estActif()}">Inactif</span>
+                            </td>
                             <td th:text="${a.famille != null ? a.famille.description : '---'}"></td>
 
                             <td class="text-end"
@@ -151,6 +154,18 @@
                                         title="Modifier l'article">
                                     <i class="fas fa-edit"></i>
                                 </button>
+
+                                <!-- Activer / désactiver : un article inactif n'est plus proposé dans les saisies -->
+                                <form method="post" class="d-inline m-0"
+                                      sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
+                                      th:action="@{/article/actif}">
+                                    <input type="hidden" name="codeArticle" th:value="${a.codeArticle}">
+                                    <input type="hidden" name="actif" th:value="${!a.estActif()}">
+                                    <button type="submit" class="btn btn-sm"
+                                            th:title="${a.estActif() ? 'Désactiver cet article' : 'Réactiver cet article'}">
+                                        <i class="fas" th:classappend="${a.estActif()} ? 'fa-toggle-on text-success' : 'fa-toggle-off text-muted'"></i>
+                                    </button>
+                                </form>
 
                                 <button type="button"
                                         class="btn btn-sm historique-btn"
@@ -361,11 +376,14 @@
         </div>
     </div>
 </div>
+<!-- Présent seulement pour les rôles qui peuvent activer / désactiver un article -->
+<span id="peutGererArticles" class="d-none" sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"></span>
 <script th:inline="none">
     /*<![CDATA[*/
     const CONTEXT_PATH = document
         .querySelector('meta[name="context-path"]')
         .getAttribute('content');
+    const PEUT_GERER_ARTICLES = document.getElementById('peutGererArticles') !== null;
     document.addEventListener('DOMContentLoaded', function () {
         // Modal pour modifier
         $('#modifierModal').on('show.bs.modal', function (event) {
@@ -577,7 +595,7 @@
             tbody.innerHTML = data.content.map(a => `
             <tr>
                 <td>${a.codeArticle || ''}</td>
-                <td>${a.designation || ''}</td>
+                <td>${a.designation || ''}${a.actif === false ? ' <span class="badge bg-secondary ms-1">Inactif</span>' : ''}</td>
                 <td>${a.famille?.description ?? '---'}</td>
                 <td class="text-end">${a.seuilMin ?? ''}</td>
                 <td>${a.udm?.description ?? '---'}</td>
@@ -592,6 +610,15 @@
                         title="Modifier l'article">
                         <i class="fas fa-edit"></i>
                     </button>
+                    ${PEUT_GERER_ARTICLES ? `
+                    <form method="post" class="d-inline m-0" action="${CONTEXT_PATH}article/actif">
+                        <input type="hidden" name="codeArticle" value="${a.codeArticle}">
+                        <input type="hidden" name="actif" value="${a.actif === false}">
+                        <button type="submit" class="btn btn-sm"
+                            title="${a.actif === false ? "Réactiver l'article" : "Désactiver l'article"}">
+                            <i class="fas ${a.actif === false ? 'fa-toggle-off text-muted' : 'fa-toggle-on text-success'}"></i>
+                        </button>
+                    </form>` : ''}
                     <button type="button" class="btn btn-sm historique-btn"
                         data-bs-toggle="modal" data-bs-target="#historiqueModal"
                         data-codearticle="${a.codeArticle}"
