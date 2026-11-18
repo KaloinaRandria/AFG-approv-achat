@@ -25,6 +25,38 @@
             </div>
         </div>
 
+        <!-- Recherche multicritère (filtrage et pagination côté serveur) -->
+        <div class="card shadow-lg border-0 mb-3">
+            <div class="card-body">
+                <form method="get" th:action="@{/fournisseur/list}" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label mb-1" for="fNom">Nom ou acronyme</label>
+                        <input class="form-control" type="text" id="fNom" name="nom" th:value="${nom}"
+                               placeholder="Nom…">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1" for="fMail">Mail</label>
+                        <input class="form-control" type="text" id="fMail" name="mail" th:value="${mail}"
+                               placeholder="Adresse mail…">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fContact">Téléphone</label>
+                        <input class="form-control" type="text" id="fContact" name="contact" th:value="${contact}"
+                               placeholder="Numéro…">
+                    </div>
+                    <div th:replace="~{fragment/pagination :: taille(${size})}"></div>
+                    <div class="col-md-2 d-flex gap-2 align-items-end">
+                        <button class="btn btn-gradient-blue" type="submit">
+                            <i class="fas fa-filter me-1"></i>Filtrer
+                        </button>
+                        <a class="btn btn-outline-secondary" th:href="@{/fournisseur/list}" title="Réinitialiser">
+                            <i class="fas fa-undo"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Carte contenant le tableau -->
         <div class="card shadow-lg border-0">
             <div class="card-body">
@@ -55,7 +87,10 @@
                         </tr>
                         </thead>
                         <tbody>
-                        <tr th:each="fr : ${fournisseurs}">
+                        <tr th:if="${fournisseurs.totalElements == 0}">
+                            <td colspan="5" class="text-center text-muted py-4">Aucun fournisseur trouvé.</td>
+                        </tr>
+                        <tr th:each="fr : ${fournisseurs.content}">
                             <td th:text="${fr.getId()}"></td>
                             <td th:text="${fr.getNom() + ' (' + (fr.getAcronyme() != null ? fr.getAcronyme() : '---') + ')'}"></td>
                             <td th:text="${fr.getMail()}"></td>
@@ -79,6 +114,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div th:replace="~{fragment/pagination :: pagination(${fournisseurs}, ${urlPagination})}"></div>
             </div>
         </div>
     </section>
@@ -170,15 +206,11 @@
                     const description = this.getAttribute('data-description');
                     const acronyme    = this.getAttribute('data-acronyme');
 
-                    // Acronyme : ton bouton ne l'envoie pas encore => on le récupère depuis l'affichage "Nom (ACR)"
-                    // (Sinon, ajoute th:data-acronyme="${fr.getAcronyme()}" et prends-le directement)
-                    // const nomAffiche = nom || "";
-                    // const match = nomAffiche.match(/\(([^)]+)\)\s*$/);
-                    // const acronyme = match ? match[1] : "";
-
+                    // data-nom contient le nom brut : on ne retire plus de parenthèses finales,
+                    // ce qui tronquait les noms comme « ABC (Madagascar) »
                     document.getElementById('modalFournisseurId').value = id || "";
-                    document.getElementById('modalNom').value = nom.replace(/\s*\([^)]+\)\s*$/, '').trim();
-                    document.getElementById('modalAcronyme').value = acronyme;
+                    document.getElementById('modalNom').value = (nom || "").trim();
+                    document.getElementById('modalAcronyme').value = acronyme || "";
                     document.getElementById('modalMail').value = mail || "";
                     document.getElementById('modalTelephone').value = contact || "";
                     document.getElementById('modalDescription').value = description || "";
@@ -186,64 +218,6 @@
             });
 
 
-            const table = $('#fournisseurTable').DataTable({
-                language: {
-                    zeroRecords: "Aucun fournisseur correspondant trouvé",
-                    search: "Rechercher:",
-                    lengthMenu: "Afficher _MENU_",
-                    info: "Affichage de _START_ à _END_ sur _TOTAL_ articles",
-                    infoEmpty: "Aucun fournisseur à afficher",
-                    infoFiltered: "(filtrés sur _MAX_ articles au total)",
-                    paginate: {first: "Première", last: "Dernière", next: "Suivante", previous: "Précédente"}
-                },
-                pageLength: 10,
-                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-                responsive: true,
-                dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
-                initComplete: function () {
-                    const api = this.api();
-                    // Cloner header pour filtres
-                    $('#fournisseurTable thead tr').clone(true).appendTo('#fournisseurTable thead');
-                    $('#fournisseurTable thead tr:eq(1) th').each(function (i) {
-                        if (i < 4) {
-                            $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
-                            $('input', this).on('keyup change', function () {
-                                if (api.column(i).search() !== this.value) {
-                                    api.column(i).search(this.value).draw();
-                                }
-                            });
-                        } else {
-                            $(this).html('<div style="height:32px;"></div>');
-                        }
-                    });
-
-                    // Recherche mobile
-                    $('<div class="mobile-search-container mb-3">' +
-                        '<div class="input-group">' +
-                        '<span class="input-group-text"><i class="fas fa-search icon-gradient-blue"></i></span>' +
-                        '<input type="text" class="form-control" id="mobileGlobalSearch" placeholder="Rechercher...">' +
-                        '</div></div>').insertBefore('#articlesTable');
-
-                    $('#mobileGlobalSearch').on('keyup', function () {
-                        api.search(this.value).draw();
-                    });
-
-                    function toggleMobileSearch() {
-                        if ($(window).width() <= 768) {
-                            $('.mobile-search-container').show();
-                            $('#fournisseurTable thead tr:eq(1)').hide();
-                            $('.dataTables_filter').hide();
-                        } else {
-                            $('.mobile-search-container').hide();
-                            $('#fournisseurTable thead tr:eq(1)').show();
-                            $('.dataTables_filter').show();
-                        }
-                    }
-
-                    toggleMobileSearch();
-                    $(window).on('resize', toggleMobileSearch);
-                }
-            });
         });
     /*]]>*/
 </script>

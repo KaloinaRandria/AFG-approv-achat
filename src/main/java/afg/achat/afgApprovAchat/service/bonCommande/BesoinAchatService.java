@@ -6,8 +6,14 @@ import afg.achat.afgApprovAchat.repository.bonCommande.BonCommandeFilleRepo;
 import afg.achat.afgApprovAchat.repository.bonSortie.BonSortieFilleRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeFilleRepo;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -50,12 +56,26 @@ public class BesoinAchatService {
         return Math.max(0, demandee - sortie - commandee);
     }
 
-    /** Toutes les lignes de demandes validées qui ont encore un reste à commander. */
-    public List<BesoinAchat> lignesEnAttente() {
-        List<DemandeFille> lignes = demandeFilleRepo.findLignesAchetables(StatutDemande.VALIDE, StatutDemande.REFUSE);
-        return besoins(lignes).stream()
-                .filter(b -> b.getResteACommander() > 0)
-                .toList();
+    /** Critères de l'écran « Lignes à acheter » ; les champs vides ou {@code null} sont ignorés. */
+    public record Recherche(String demande, String demandeur, String article, String motif,
+                            LocalDate du, LocalDate au) {
+    }
+
+    /**
+     * Lignes de demandes de matériel validées qui ont encore un reste à commander, filtrées et
+     * paginées par la base (le reste à commander est calculé dans la requête).
+     */
+    public Page<BesoinAchat> lignesEnAttente(Recherche r, Pageable pageable) {
+        Page<DemandeFille> page = demandeFilleRepo.rechercherLignesAAcheter(StatutDemande.VALIDE, StatutDemande.REFUSE,
+                r.du() == null ? LocalDateTime.of(1900, 1, 1, 0, 0) : r.du().atStartOfDay(),
+                r.au() == null ? LocalDateTime.of(2999, 12, 31, 23, 59, 59) : r.au().atTime(LocalTime.MAX),
+                texte(r.demande()), texte(r.demandeur()), texte(r.article()), texte(r.motif()), pageable);
+        // Détail des quantités (sorti, commandé) pour les seules lignes de la page
+        return new PageImpl<>(besoins(page.getContent()), pageable, page.getTotalElements());
+    }
+
+    private static String texte(String valeur) {
+        return valeur == null ? "" : valeur.trim();
     }
 
     /** Besoins des lignes données (avec ou sans reste à commander), dans le même ordre. */

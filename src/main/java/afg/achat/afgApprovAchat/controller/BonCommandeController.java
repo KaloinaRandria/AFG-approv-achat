@@ -17,7 +17,12 @@ import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
 import afg.achat.afgApprovAchat.service.fournisseur.ResponsableFournisseurService;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
 import afg.achat.afgApprovAchat.service.workflow.WorkflowException;
+import afg.achat.afgApprovAchat.service.workflow.WorkflowService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +31,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -58,31 +64,60 @@ public class BonCommandeController {
     // ── Liste ────────────────────────────────────────────────────────────────
 
     @GetMapping("/list")
-    public String bonCommandeList(@RequestParam(required = false) String statut, Model model) {
+    public String bonCommandeList(@RequestParam(defaultValue = "0") int page,
+                                  @RequestParam(defaultValue = "20") int size,
+                                  @RequestParam(required = false) String statut,
+                                  @RequestParam(defaultValue = "false") boolean aValider,
+                                  @RequestParam(required = false) String numero,
+                                  @RequestParam(required = false) String fournisseur,
+                                  @RequestParam(required = false) String objet,
+                                  @RequestParam(required = false) String demande,
+                                  @RequestParam(required = false) String article,
+                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+                                  HttpServletRequest request,
+                                  Model model) {
         Authentication auth = auth();
 
-        BonCommandeMere.StatutBonCommande filtre = null;
+        BonCommandeMere.StatutBonCommande statutFiltre = null;
         if (statut != null && !statut.isBlank()) {
             try {
-                filtre = BonCommandeMere.StatutBonCommande.valueOf(statut.trim().toUpperCase());
+                statutFiltre = BonCommandeMere.StatutBonCommande.valueOf(statut.trim().toUpperCase());
             } catch (IllegalArgumentException ignored) {
                 // statut inconnu : pas de filtre
             }
         }
-        final BonCommandeMere.StatutBonCommande statutFiltre = filtre;
 
-        List<BonCommandeMere> bonsCommande = bonCommandeService.getAllBonCommandes().stream()
-                .filter(bc -> statutFiltre == null || bc.getStatut() == statutFiltre)
+        // Étapes que l'utilisateur connecté peut valider (filtre « À valider par moi »)
+        List<BonCommandeMere.EtapeValidation> etapesValidables = Arrays.stream(BonCommandeMere.EtapeValidation.values())
+                .filter(e -> WorkflowService.hasRole(auth, "ROLE_" + e.getRole()) || WorkflowService.hasRole(auth, "ROLE_ADMIN"))
                 .toList();
 
-        model.addAttribute("bonsCommande", bonsCommande);
-        // Bons qui attendent une décision de l'utilisateur connecté
-        model.addAttribute("idsAValider", bonsCommande.stream()
+        int taille = Math.min(Math.max(size, 5), 100);
+        Page<BonCommandeMere> bons = bonCommandeService.rechercher(new BonCommandeService.Recherche(
+                        statutFiltre, aValider, etapesValidables, dateFrom, dateTo,
+                        numero, fournisseur, objet, demande, article),
+                PageRequest.of(Math.max(page, 0), taille));
+
+        model.addAttribute("bons", bons);
+        // Bons de la page qui attendent une décision de l'utilisateur connecté
+        model.addAttribute("idsAValider", bons.getContent().stream()
                 .filter(bc -> BonCommandeManuelService.peutValider(bc, auth))
                 .map(BonCommandeMere::getId)
                 .toList());
         model.addAttribute("statuts", BonCommandeMere.StatutBonCommande.values());
         model.addAttribute("statut", statutFiltre == null ? "" : statutFiltre.name());
+        model.addAttribute("aValider", aValider);
+        model.addAttribute("peutValiderUneEtape", !etapesValidables.isEmpty());
+        model.addAttribute("numero", numero == null ? "" : numero);
+        model.addAttribute("fournisseur", fournisseur == null ? "" : fournisseur);
+        model.addAttribute("objet", objet == null ? "" : objet);
+        model.addAttribute("demande", demande == null ? "" : demande);
+        model.addAttribute("article", article == null ? "" : article);
+        model.addAttribute("dateFrom", dateFrom);
+        model.addAttribute("dateTo", dateTo);
+        model.addAttribute("size", taille);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
         model.addAttribute("peutCreer", BonCommandeManuelService.peutCreer(auth));
         return "bc/bon-commande-liste";
     }
@@ -95,26 +130,31 @@ public class BonCommandeController {
      */
     @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_CREATOR')")
     @GetMapping("/lignes-a-acheter")
-    public String lignesAAcheter(@RequestParam(required = false) String recherche, Model model) {
-        String filtre = recherche == null ? "" : recherche.trim().toLowerCase();
-        List<BesoinAchatService.BesoinAchat> besoins = besoinAchatService.lignesEnAttente().stream()
-                .filter(b -> filtre.isEmpty() || correspond(b, filtre))
-                .toList();
-        model.addAttribute("besoins", besoins);
-        model.addAttribute("recherche", recherche == null ? "" : recherche);
-        return "bc/lignes-a-acheter";
-    }
+    public String lignesAAcheter(@RequestParam(defaultValue = "0") int page,
+                                 @RequestParam(defaultValue = "50") int size,
+                                 @RequestParam(required = false) String demande,
+                                 @RequestParam(required = false) String demandeur,
+                                 @RequestParam(required = false) String article,
+                                 @RequestParam(required = false) String motif,
+                                 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+                                 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+                                 HttpServletRequest request,
+                                 Model model) {
+        int taille = Math.min(Math.max(size, 5), 100);
+        Page<BesoinAchatService.BesoinAchat> besoins = besoinAchatService.lignesEnAttente(
+                new BesoinAchatService.Recherche(demande, demandeur, article, motif, dateFrom, dateTo),
+                PageRequest.of(Math.max(page, 0), taille));
 
-    /** Recherche sur la demande, le demandeur et l'article. */
-    private static boolean correspond(BesoinAchatService.BesoinAchat b, String filtre) {
-        var df = b.getLigne();
-        var dm = df.getDemandeMere();
-        String texte = String.join(" ",
-                dm.getId(),
-                dm.getDemandeur() != null ? dm.getDemandeur().getNom() + " " + dm.getDemandeur().getPrenom() : "",
-                df.getArticle() != null ? df.getArticle().getCodeArticle() + " " + df.getArticle().getDesignation() : "",
-                dm.getMotifEvoque() != null ? dm.getMotifEvoque() : "");
-        return texte.toLowerCase().contains(filtre);
+        model.addAttribute("besoins", besoins);
+        model.addAttribute("demande", demande == null ? "" : demande);
+        model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
+        model.addAttribute("article", article == null ? "" : article);
+        model.addAttribute("motif", motif == null ? "" : motif);
+        model.addAttribute("dateFrom", dateFrom);
+        model.addAttribute("dateTo", dateTo);
+        model.addAttribute("size", taille);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
+        return "bc/lignes-a-acheter";
     }
 
     // ── Bon issu d'une demande (bons existants) ──────────────────────────────

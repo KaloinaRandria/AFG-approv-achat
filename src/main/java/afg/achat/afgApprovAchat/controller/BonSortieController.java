@@ -11,6 +11,7 @@ import afg.achat.afgApprovAchat.service.BonSortieService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
 import afg.achat.afgApprovAchat.service.workflow.WorkflowService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -109,6 +110,7 @@ public class BonSortieController {
                                   @RequestParam(required = false) String article,
                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+                                  HttpServletRequest request,
                                   Model model) {
         BonSortieMere.StatutBonSortie statutFiltre = null;
         if (statut != null && !statut.isBlank()) {
@@ -134,6 +136,7 @@ public class BonSortieController {
         model.addAttribute("dateFrom", dateFrom);
         model.addAttribute("dateTo", dateTo);
         model.addAttribute("size", taille);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
         return "bonSortie/bs-liste";
     }
 

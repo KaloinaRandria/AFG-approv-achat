@@ -32,13 +32,38 @@
 
         <div class="card shadow-lg border-0 mb-3">
             <div class="card-body">
+                <!-- Recherche multicritère -->
                 <form method="get" th:action="@{/bon-commande/lignes-a-acheter}" class="row g-2 align-items-end">
-                    <div class="col-md-5">
-                        <label class="form-label mb-1">Recherche</label>
-                        <input class="form-control" type="text" name="recherche" th:value="${recherche}"
-                               placeholder="N° de demande, demandeur, article, motif…">
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fDemande">Demande</label>
+                        <input class="form-control" type="text" id="fDemande" name="demande" th:value="${demande}"
+                               placeholder="DM…">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fDemandeur">Demandeur</label>
+                        <input class="form-control" type="text" id="fDemandeur" name="demandeur" th:value="${demandeur}"
+                               placeholder="Nom ou prénom">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fArticle">Article</label>
+                        <input class="form-control" type="text" id="fArticle" name="article" th:value="${article}"
+                               placeholder="Code ou désignation">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fMotif">Motif</label>
+                        <input class="form-control" type="text" id="fMotif" name="motif" th:value="${motif}"
+                               placeholder="Motif de la demande">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fDu">Demande du</label>
+                        <input class="form-control" type="date" id="fDu" name="dateFrom" th:value="${dateFrom}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fAu">au</label>
+                        <input class="form-control" type="date" id="fAu" name="dateTo" th:value="${dateTo}">
+                    </div>
+                    <div th:replace="~{fragment/pagination :: taille(${size})}"></div>
+                    <div class="col-md-10 d-flex gap-2 align-items-end">
                         <button class="btn btn-gradient-blue" type="submit">
                             <i class="fas fa-filter me-1"></i>Filtrer
                         </button>
@@ -54,7 +79,7 @@
             <div class="card shadow-lg border-0">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small" th:text="${besoins.size()} + ' ligne(s) à acheter'"></span>
+                        <span class="text-muted small" th:text="${besoins.totalElements} + ' ligne(s) à acheter' + (${besoins.totalPages > 1} ? ' — la sélection porte sur la page affichée' : '')"></span>
                         <button type="submit" class="btn btn-gradient-green" id="btnCreerBc" disabled>
                             <i class="fas fa-file-invoice me-1"></i>
                             Créer un bon de commande avec la sélection (<span id="nbSelection">0</span>)
@@ -80,10 +105,10 @@
                             </tr>
                             </thead>
                             <tbody>
-                            <tr th:if="${besoins.isEmpty()}">
+                            <tr th:if="${besoins.totalElements == 0}">
                                 <td colspan="9" class="text-center text-muted py-4">Aucune ligne à acheter.</td>
                             </tr>
-                            <tr th:each="b : ${besoins}" th:with="df=${b.ligne}, dm=${b.ligne.demandeMere}">
+                            <tr th:each="b : ${besoins.content}" th:with="df=${b.ligne}, dm=${b.ligne.demandeMere}">
                                 <td>
                                     <input type="checkbox" class="form-check-input case-ligne" name="lignes"
                                            th:value="${df.id}"
@@ -110,6 +135,7 @@
                             </tbody>
                         </table>
                     </div>
+                    <div th:replace="~{fragment/pagination :: pagination(${besoins}, ${urlPagination})}"></div>
                 </div>
             </div>
         </form>

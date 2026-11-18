@@ -57,8 +57,8 @@
                                     th:selected="${statut == s.name()}"></option>
                         </select>
                     </div>
-                    <div class="col-md-12 d-flex gap-2 mt-2">
-                        <input type="hidden" name="size" th:value="${size}">
+                    <div th:replace="~{fragment/pagination :: taille(${size})}"></div>
+                    <div class="col-md-10 d-flex gap-2 align-items-end">
                         <button class="btn btn-gradient-blue" type="submit">
                             <i class="fas fa-filter me-1"></i>Filtrer
                         </button>
@@ -121,27 +121,7 @@
                     </table>
                 </div>
 
-                <!-- Pagination : conserve les filtres -->
-                <nav th:if="${bons.totalPages > 1}" class="mt-3">
-                    <ul class="pagination justify-content-center mb-0">
-                        <li class="page-item" th:classappend="${bons.first} ? 'disabled'">
-                            <a class="page-link"
-                               th:href="@{/bon-sortie/list(page=${bons.number - 1}, size=${size}, statut=${statut},
-                                        numero=${numero}, demandeur=${demandeur}, article=${article},
-                                        dateFrom=${dateFrom}, dateTo=${dateTo})}">Précédente</a>
-                        </li>
-                        <li class="page-item disabled">
-                            <span class="page-link"
-                                  th:text="'Page ' + ${bons.number + 1} + ' / ' + ${bons.totalPages}"></span>
-                        </li>
-                        <li class="page-item" th:classappend="${bons.last} ? 'disabled'">
-                            <a class="page-link"
-                               th:href="@{/bon-sortie/list(page=${bons.number + 1}, size=${size}, statut=${statut},
-                                        numero=${numero}, demandeur=${demandeur}, article=${article},
-                                        dateFrom=${dateFrom}, dateTo=${dateTo})}">Suivante</a>
-                        </li>
-                    </ul>
-                </nav>
+                <div th:replace="~{fragment/pagination :: pagination(${bons}, ${urlPagination})}"></div>
             </div>
         </div>
     </section>

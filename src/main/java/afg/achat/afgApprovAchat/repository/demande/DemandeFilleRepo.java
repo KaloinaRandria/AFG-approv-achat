@@ -3,11 +3,14 @@ package afg.achat.afgApprovAchat.repository.demande;
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,20 +29,70 @@ public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
                          @Param("statutRefuse") int statutRefuse);
 
     /**
-     * Lignes susceptibles d'être achetées : lignes non refusées des demandes de matériel
-     * validées, hors lignes servies depuis le stock (scindées en type STOCK). Les anciennes
-     * demandes (remboursement, sponsoring…, type STANDARD ou sans type) ne sont pas reprises.
+     * Lignes à acheter : lignes non refusées des demandes de matériel validées, hors lignes
+     * servies depuis le stock (scindées en type STOCK), dont le reste à commander est positif.
+     * Reste = quantité demandée − sorties confirmées − commandes non annulées (voir BesoinAchatService).
+     * Les anciennes demandes (type STANDARD ou sans type) ne sont pas reprises.
+     * Chaque filtre texte vide est ignoré ; la période porte sur la date de la demande.
      */
-    @Query("""
+    @Query(value = """
     SELECT df FROM DemandeFille df
-    JOIN FETCH df.demandeMere dm
+    JOIN df.demandeMere dm
+    LEFT JOIN dm.demandeur u
+    LEFT JOIN df.article a
     WHERE dm.statut = :valide
       AND dm.typeDemande = afg.achat.afgApprovAchat.model.util.TypeDemande.FOURNITURE
       AND df.statut <> :refuse
       AND df.typeApprovisionnement <> afg.achat.afgApprovAchat.model.demande.DemandeFille.TypeApprovisionnement.STOCK
+      AND df.quantite
+          - COALESCE((SELECT SUM(bs.quantiteSortie) FROM BonSortieFille bs
+                      WHERE bs.demandeFille = df AND bs.bonSortieMere.statut = 'CONFIRME'), 0)
+          - COALESCE((SELECT SUM(bc.quantiteCommandee) FROM BonCommandeFille bc
+                      WHERE bc.demandeFille = df
+                        AND bc.bonCommandeMere.statut <> afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere.StatutBonCommande.ANNULE), 0)
+          > 0.0001
+      AND dm.dateDemande BETWEEN :du AND :au
+      AND (:demande = '' OR LOWER(dm.id) LIKE LOWER(CONCAT('%', :demande, '%')))
+      AND (:demandeur = '' OR LOWER(CONCAT(COALESCE(u.nom, ''), ' ', COALESCE(u.prenom, '')))
+                              LIKE LOWER(CONCAT('%', :demandeur, '%')))
+      AND (:article = '' OR LOWER(COALESCE(a.codeArticle, '')) LIKE LOWER(CONCAT('%', :article, '%'))
+                         OR LOWER(COALESCE(a.designation, '')) LIKE LOWER(CONCAT('%', :article, '%')))
+      AND (:motif = '' OR LOWER(COALESCE(dm.motifEvoque, '')) LIKE LOWER(CONCAT('%', :motif, '%')))
     ORDER BY dm.dateDemande ASC, df.id ASC
+""",
+    countQuery = """
+    SELECT COUNT(df) FROM DemandeFille df
+    JOIN df.demandeMere dm
+    LEFT JOIN dm.demandeur u
+    LEFT JOIN df.article a
+    WHERE dm.statut = :valide
+      AND dm.typeDemande = afg.achat.afgApprovAchat.model.util.TypeDemande.FOURNITURE
+      AND df.statut <> :refuse
+      AND df.typeApprovisionnement <> afg.achat.afgApprovAchat.model.demande.DemandeFille.TypeApprovisionnement.STOCK
+      AND df.quantite
+          - COALESCE((SELECT SUM(bs.quantiteSortie) FROM BonSortieFille bs
+                      WHERE bs.demandeFille = df AND bs.bonSortieMere.statut = 'CONFIRME'), 0)
+          - COALESCE((SELECT SUM(bc.quantiteCommandee) FROM BonCommandeFille bc
+                      WHERE bc.demandeFille = df
+                        AND bc.bonCommandeMere.statut <> afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere.StatutBonCommande.ANNULE), 0)
+          > 0.0001
+      AND dm.dateDemande BETWEEN :du AND :au
+      AND (:demande = '' OR LOWER(dm.id) LIKE LOWER(CONCAT('%', :demande, '%')))
+      AND (:demandeur = '' OR LOWER(CONCAT(COALESCE(u.nom, ''), ' ', COALESCE(u.prenom, '')))
+                              LIKE LOWER(CONCAT('%', :demandeur, '%')))
+      AND (:article = '' OR LOWER(COALESCE(a.codeArticle, '')) LIKE LOWER(CONCAT('%', :article, '%'))
+                         OR LOWER(COALESCE(a.designation, '')) LIKE LOWER(CONCAT('%', :article, '%')))
+      AND (:motif = '' OR LOWER(COALESCE(dm.motifEvoque, '')) LIKE LOWER(CONCAT('%', :motif, '%')))
 """)
-    List<DemandeFille> findLignesAchetables(@Param("valide") int valide, @Param("refuse") int refuse);
+    Page<DemandeFille> rechercherLignesAAcheter(@Param("valide") int valide,
+                                               @Param("refuse") int refuse,
+                                               @Param("du") LocalDateTime du,
+                                               @Param("au") LocalDateTime au,
+                                               @Param("demande") String demande,
+                                               @Param("demandeur") String demandeur,
+                                               @Param("article") String article,
+                                               @Param("motif") String motif,
+                                               Pageable pageable);
 
     @Query("select dmf.article from DemandeFille dmf where dmf.id = :idDemandeFille")
     Article findArticleByIdDemandeFille(int idDemandeFille);

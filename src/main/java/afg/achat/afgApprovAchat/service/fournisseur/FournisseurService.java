@@ -7,6 +7,8 @@ import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.fournisseur.FournisseurRepo;
 import afg.achat.afgApprovAchat.service.util.FournisseurHistoriqueService;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,15 @@ public class FournisseurService {
 
     public Fournisseur[] getAllFournisseurs() {
         return fournisseurRepo.findAll().toArray(new Fournisseur[0]);
+    }
+
+    /** Liste paginée des fournisseurs ; filtres vides ou {@code null} ignorés. */
+    public Page<Fournisseur> rechercher(String nom, String mail, String contact, Pageable pageable) {
+        return fournisseurRepo.rechercher(texte(nom), texte(mail), texte(contact), pageable);
+    }
+
+    private static String texte(String valeur) {
+        return valeur == null ? "" : valeur.trim();
     }
 
     public Optional<Fournisseur> getFournisseurById(int id) {

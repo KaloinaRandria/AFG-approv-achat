@@ -1,0 +1,55 @@
+<!--
+    Pagination commune des listes.
+    Paramètres :
+      page : org.springframework.data.domain.Page affichée
+      url  : adresse de la liste sans le paramètre page (PaginationUrl.sansPage), filtres compris
+    Affiche « Affichage x–y sur N » et les numéros de page autour de la page courante.
+-->
+<div th:fragment="pagination(page, url)"
+     th:if="${page.totalElements > 0}"
+     class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3"
+     th:with="sep=${url.contains('?') ? '&amp;' : '?'},
+              debutFenetre=${page.number - 2 < 0 ? 0 : page.number - 2},
+              finFenetre=${page.number + 2 > page.totalPages - 1 ? page.totalPages - 1 : page.number + 2}">
+
+    <span class="text-muted small"
+          th:text="'Affichage ' + ${page.number * page.size + 1} + '–' + ${page.number * page.size + page.numberOfElements}
+                   + ' sur ' + ${page.totalElements}"></span>
+
+    <nav th:if="${page.totalPages > 1}" aria-label="Pagination">
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item" th:classappend="${page.first} ? 'disabled'">
+                <a class="page-link" th:href="${url + sep + 'page=0'}" aria-label="Première page">&laquo;</a>
+            </li>
+            <li class="page-item" th:classappend="${page.first} ? 'disabled'">
+                <a class="page-link" th:href="${url + sep + 'page=' + (page.number - 1)}" aria-label="Page précédente">&lsaquo;</a>
+            </li>
+
+            <li class="page-item disabled" th:if="${debutFenetre > 0}"><span class="page-link">…</span></li>
+            <li class="page-item" th:each="n : ${#numbers.sequence(debutFenetre, finFenetre)}"
+                th:classappend="${n == page.number} ? 'active'">
+                <a class="page-link" th:href="${url + sep + 'page=' + n}" th:text="${n + 1}"
+                   th:attr="aria-current=${n == page.number ? 'page' : null}"></a>
+            </li>
+            <li class="page-item disabled" th:if="${finFenetre < page.totalPages - 1}"><span class="page-link">…</span></li>
+
+            <li class="page-item" th:classappend="${page.last} ? 'disabled'">
+                <a class="page-link" th:href="${url + sep + 'page=' + (page.number + 1)}" aria-label="Page suivante">&rsaquo;</a>
+            </li>
+            <li class="page-item" th:classappend="${page.last} ? 'disabled'">
+                <a class="page-link" th:href="${url + sep + 'page=' + (page.totalPages - 1)}" aria-label="Dernière page">&raquo;</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+<!--
+    Choix du nombre de lignes par page, à placer dans le formulaire de filtres de la liste.
+    Paramètre : size (taille actuelle).
+-->
+<div th:fragment="taille(size)" class="col-md-2">
+    <label class="form-label mb-1" for="fTaille">Par page</label>
+    <select class="form-select" id="fTaille" name="size">
+        <option th:each="t : ${ {10, 20, 50, 100} }" th:value="${t}" th:text="${t}" th:selected="${t == size}"></option>
+    </select>
+</div>

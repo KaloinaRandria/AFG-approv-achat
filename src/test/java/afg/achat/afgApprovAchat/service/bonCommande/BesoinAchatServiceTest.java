@@ -13,6 +13,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -37,24 +44,41 @@ class BesoinAchatServiceTest {
     }
 
     @Test
-    void seulesLesLignesAvecUnResteSontEnAttente() {
+    void pageDeLignesAvecLeDetailDesQuantites() {
+        // La requête ne renvoie que les lignes avec un reste ; le service ajoute le détail
         DemandeFille aCommander = ligne(1, 10);   // 4 sortis : reste 6
-        DemandeFille couverte = ligne(2, 5);      // 5 commandés : reste 0
         DemandeFille partielle = ligne(3, 8);     // 2 sortis, 3 commandés : reste 3
-        when(demandeFilleRepo.findLignesAchetables(StatutDemande.VALIDE, StatutDemande.REFUSE))
-                .thenReturn(List.of(aCommander, couverte, partielle));
+        PageRequest page = PageRequest.of(1, 2);
+        when(demandeFilleRepo.rechercherLignesAAcheter(anyInt(), anyInt(), any(), any(),
+                any(), any(), any(), any(), eq(page)))
+                .thenReturn(new PageImpl<>(List.of(aCommander, partielle), page, 7));
         when(bonSortieFilleRepo.quantitesSortiesParLigne(anyList()))
                 .thenReturn(List.of(new Object[]{1, 4.0}, new Object[]{3, 2.0}));
         when(bonCommandeFilleRepo.quantitesCommandeesParLigne(anyList()))
-                .thenReturn(List.of(new Object[]{2, 5.0}, new Object[]{3, 3.0}));
+                .thenReturn(List.<Object[]>of(new Object[]{3, 3.0}));
 
-        List<BesoinAchatService.BesoinAchat> enAttente = service.lignesEnAttente();
+        Page<BesoinAchatService.BesoinAchat> enAttente = service.lignesEnAttente(
+                new BesoinAchatService.Recherche(null, null, null, null, null, null), page);
 
-        assertEquals(2, enAttente.size());
-        assertSame(aCommander, enAttente.get(0).getLigne());
-        assertEquals(6, enAttente.get(0).getResteACommander());
-        assertSame(partielle, enAttente.get(1).getLigne());
-        assertEquals(3, enAttente.get(1).getResteACommander());
+        assertEquals(7, enAttente.getTotalElements());
+        assertEquals(1, enAttente.getNumber());
+        assertEquals(6, enAttente.getContent().get(0).getResteACommander());
+        assertEquals(3, enAttente.getContent().get(1).getResteACommander());
+        assertEquals(3, enAttente.getContent().get(1).getQuantiteCommandee());
+    }
+
+    @Test
+    void filtresNettoyesEtPeriodeCouvrantToutLeDernierJour() {
+        PageRequest page = PageRequest.of(0, 50);
+        when(demandeFilleRepo.rechercherLignesAAcheter(anyInt(), anyInt(), any(), any(),
+                any(), any(), any(), any(), any())).thenReturn(Page.empty(page));
+
+        service.lignesEnAttente(new BesoinAchatService.Recherche(" DM12 ", null, " stylo ", "",
+                LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 18)), page);
+
+        verify(demandeFilleRepo).rechercherLignesAAcheter(StatutDemande.VALIDE, StatutDemande.REFUSE,
+                LocalDateTime.of(2026, 11, 1, 0, 0), LocalDate.of(2026, 11, 18).atTime(LocalTime.MAX),
+                "DM12", "", "stylo", "", page);
     }
 
     @Test

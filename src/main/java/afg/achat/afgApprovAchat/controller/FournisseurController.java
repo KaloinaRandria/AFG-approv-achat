@@ -4,6 +4,8 @@ import afg.achat.afgApprovAchat.exception.FournisseurAlreadyExistsException;
 import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -69,9 +71,22 @@ public class FournisseurController {
     }
 
     @GetMapping("/list")
-    public String getListFournisseur(Model model , HttpServletRequest request) {
-        Fournisseur[] fournisseurs = fournisseurService.getAllFournisseurs();
+    public String getListFournisseur(@RequestParam(defaultValue = "0") int page,
+                                     @RequestParam(defaultValue = "20") int size,
+                                     @RequestParam(required = false) String nom,
+                                     @RequestParam(required = false) String mail,
+                                     @RequestParam(required = false) String contact,
+                                     Model model, HttpServletRequest request) {
+        int taille = Math.min(Math.max(size, 5), 100);
+        Page<Fournisseur> fournisseurs = fournisseurService.rechercher(nom, mail, contact,
+                PageRequest.of(Math.max(page, 0), taille));
+
         model.addAttribute("fournisseurs", fournisseurs);
+        model.addAttribute("nom", nom == null ? "" : nom);
+        model.addAttribute("mail", mail == null ? "" : mail);
+        model.addAttribute("contact", contact == null ? "" : contact);
+        model.addAttribute("size", taille);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
         return "fournisseur/fournisseur-liste";
     }
 
