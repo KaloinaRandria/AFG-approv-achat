@@ -161,7 +161,7 @@
                     <thead><tr><th>Bon de livraison</th><th>Date</th><th>Observation</th></tr></thead>
                     <tbody>
                     <tr th:each="bl : ${bonsLivraison}">
-                        <td th:text="${bl.id}"></td>
+                        <td><a th:href="@{/bonlivraison/fiche/{id}(id=${bl.id})}" th:text="${bl.id}"></a></td>
                         <td th:text="${#temporals.format(bl.dateReception, 'dd/MM/yyyy HH:mm')}"></td>
                         <td th:text="${bl.description}"></td>
                     </tr>

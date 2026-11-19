@@ -156,7 +156,7 @@
                         <div class="small text-muted" th:if="${bonsLivraison.isEmpty()}">Aucune réception enregistrée.</div>
                         <ul class="list-unstyled small mb-0" th:unless="${bonsLivraison.isEmpty()}">
                             <li th:each="bl : ${bonsLivraison}">
-                                <a th:href="@{/bonlivraison/list(num=${bl.id})}" th:text="${bl.id}"
+                                <a th:href="@{/bonlivraison/fiche/{id}(id=${bl.id})}" th:text="${bl.id}"
                                    sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"></a>
                                 <span th:text="${bl.id}" sec:authorize="!hasAnyRole('ADMIN','MOYENS_GENERAUX')"></span>
                                 — <span th:text="${#temporals.format(bl.dateReception, 'dd/MM/yyyy HH:mm')}"></span>

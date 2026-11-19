@@ -23,6 +23,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -238,45 +239,72 @@ public class BonLivraisonController {
         }
     }
 
+    // ── Fiche ────────────────────────────────────────────────────────────────
+
+    @GetMapping("/fiche/{id}")
+    public String ficheBonLivraison(@PathVariable String id, Model model, RedirectAttributes redirectAttributes) {
+        BonLivraisonMere bl = bonLivraisonMereService.getBonLivraisonMereById(id).orElse(null);
+        if (bl == null) {
+            redirectAttributes.addFlashAttribute("ko", "Bon de livraison introuvable.");
+            return "redirect:/bonlivraison/list";
+        }
+        List<BonLivraisonFille> lignes = bonLivraisonFilleService.getBonLivraisonFillesByMereId(id);
+        double totalLignes = lignes.stream().mapToDouble(l -> l.getQuantiteRecu() * l.getPrixUnitaire()).sum();
+
+        model.addAttribute("bl", bl);
+        model.addAttribute("lignes", lignes);
+        // Total enregistré sur le BL ; à défaut, recalculé depuis les lignes
+        model.addAttribute("total", bl.getTotalPrix() != null ? bl.getTotalPrix() : totalLignes);
+        return "bl/bl-fiche";
+    }
+
     @GetMapping("/list")
-    public String bonLivraisonMereListe(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "dateReception") String sort,
-            @RequestParam(defaultValue = "desc") String dir,
+    public String bonLivraisonMereListe(@RequestParam(defaultValue = "0") int page,
+                                        @RequestParam(defaultValue = "20") int size,
+                                        @RequestParam(required = false) String numero,
+                                        @RequestParam(required = false) String fournisseur,
+                                        @RequestParam(required = false) String bonCommande,
+                                        @RequestParam(required = false) String article,
+                                        @RequestParam(required = false) String devise,
+                                        @RequestParam(required = false) String origine,
+                                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+                                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+                                        HttpServletRequest request,
+                                        Model model) {
+        Integer deviseId = null;
+        if (devise != null && !devise.isBlank()) {
+            try {
+                deviseId = Integer.parseInt(devise.trim());
+            } catch (NumberFormatException ignored) {
+                // devise inconnue : pas de filtre
+            }
+        }
+        BonLivraisonMereService.Origine origineFiltre = null;
+        if (origine != null && !origine.isBlank()) {
+            try {
+                origineFiltre = BonLivraisonMereService.Origine.valueOf(origine.trim().toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+                // origine inconnue : pas de filtre
+            }
+        }
 
-            @RequestParam(required = false) String num,
-            @RequestParam(required = false) String fournisseur,
-            @RequestParam(required = false) String devise,
+        int taille = Math.min(Math.max(size, 5), 100);
+        Page<BonLivraisonMere> bons = bonLivraisonMereService.rechercher(new BonLivraisonMereService.Recherche(
+                        numero, fournisseur, bonCommande, article, deviseId, origineFiltre, dateFrom, dateTo),
+                PageRequest.of(Math.max(page, 0), taille));
 
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
-
-            Model model,
-            HttpServletRequest request
-    ) {
-        // sécurité sort (évite PropertyReferenceException)
-        if (!Set.of("id", "dateReception").contains(sort)) sort = "dateReception";
-
-        Page<BonLivraisonMere> result = bonLivraisonMereService.searchBonLivraisonMeres(
-                num, fournisseur, devise, dateFrom, dateTo, page, size, sort, dir
-        );
-
-        model.addAttribute("bonLivraisonMeres", result);
-
-        model.addAttribute("page", page);
-        model.addAttribute("size", size);
-        model.addAttribute("sort", sort);
-        model.addAttribute("dir", dir);
-
-        // pour afficher la valeur dans les inputs
-        model.addAttribute("num", num == null ? "" : num);
+        model.addAttribute("bons", bons);
+        model.addAttribute("devises", deviseService.getAllDevises());
+        model.addAttribute("numero", numero == null ? "" : numero);
         model.addAttribute("fournisseur", fournisseur == null ? "" : fournisseur);
-        model.addAttribute("devise", devise == null ? "" : devise);
-
+        model.addAttribute("bonCommande", bonCommande == null ? "" : bonCommande);
+        model.addAttribute("article", article == null ? "" : article);
+        model.addAttribute("devise", deviseId == null ? "" : String.valueOf(deviseId));
+        model.addAttribute("origine", origineFiltre == null ? "" : origineFiltre.name());
         model.addAttribute("dateFrom", dateFrom);
         model.addAttribute("dateTo", dateTo);
-
+        model.addAttribute("size", taille);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
         return "bl/bl-liste";
     }
 
