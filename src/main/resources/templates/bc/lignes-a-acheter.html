@@ -124,10 +124,10 @@
                                     <span class="fw-semibold" th:text="${df.article != null ? df.article.codeArticle : ''}"></span>
                                     <span th:text="${df.article != null ? df.article.designation : ''}"></span>
                                 </td>
-                                <td class="text-end" th:text="${#numbers.formatDecimal(b.quantiteDemandee, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
-                                <td class="text-end" th:text="${#numbers.formatDecimal(b.quantiteSortie, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
-                                <td class="text-end" th:text="${#numbers.formatDecimal(b.quantiteCommandee, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
-                                <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(b.resteACommander, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                <td class="text-end" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(b.quantiteDemandee)}"></td>
+                                <td class="text-end" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(b.quantiteSortie)}"></td>
+                                <td class="text-end" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(b.quantiteCommandee)}"></td>
+                                <td class="text-end fw-bold" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(b.resteACommander)}"></td>
                                 <td class="text-end"
                                     th:text="${df.prixUnitaire != null and df.prixUnitaire > 0
                                               ? #numbers.formatDecimal(df.prixUnitaire, 1, 'WHITESPACE', 2, 'COMMA') : '—'}"></td>

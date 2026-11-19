@@ -8,14 +8,6 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
-    <style>
-        @media print {
-            .no-print { display: none !important; }
-            .main-content { margin: 0 !important; padding: 0 !important; }
-            .card { box-shadow: none !important; border: none !important; }
-            .bl-document { padding: 0 !important; }
-        }
-    </style>
 </head>
 
 <body>
@@ -112,8 +104,8 @@
                                     <th style="width:8%" class="text-center">UDM</th>
                                     <th style="width:11%" class="text-end">QTÉ ATTENDUE</th>
                                     <th style="width:11%" class="text-end">QTÉ REÇUE</th>
-                                    <th style="width:13%" class="text-end">PRIX UNITAIRE</th>
-                                    <th style="width:14%" class="text-end">MONTANT</th>
+                                    <th style="width:13%" class="text-end">PU H.T.</th>
+                                    <th style="width:14%" class="text-end">MONTANT H.T.</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -126,22 +118,33 @@
                                     <td>
                                         <div th:text="${l.article != null ? l.article.designation : '—'}"></div>
                                         <!-- Désignation du bon de commande quand elle diffère de l'article -->
-                                        <small class="text-muted"
-                                               th:if="${l.bonCommandeFille != null and l.article != null
-                                                        and l.bonCommandeFille.designationAffichee != l.article.designation}"
-                                               th:text="${'BC : ' + l.bonCommandeFille.designationAffichee}"></small>
+                                        <small class="text-muted d-block" th:if="${l.designationBonCommande != null}"
+                                               th:text="${'BC : ' + l.designationBonCommande}"></small>
+                                        <!-- Suivi interne (non imprimé) : répartition de la quantité reçue par demande -->
+                                        <small class="text-muted d-block no-print" th:if="${l.fusionnee}">
+                                            <th:block th:each="d, s : ${l.details}">
+                                                <span th:if="${d.bonCommandeFille != null and d.bonCommandeFille.demandeFille != null}">
+                                                    <a th:href="@{/demande/fiche/{id}(id=${d.bonCommandeFille.demandeFille.demandeMere.id})}"
+                                                       th:text="${d.bonCommandeFille.demandeFille.demandeMere.id}"></a>
+                                                    : <span th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(d.quantiteRecu)}"></span>
+                                                </span>
+                                                <span th:unless="${d.bonCommandeFille != null and d.bonCommandeFille.demandeFille != null}"
+                                                      th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(d.quantiteRecu)}"></span>
+                                                <span th:unless="${s.last}"> · </span>
+                                            </th:block>
+                                        </small>
                                     </td>
                                     <td class="text-center"
                                         th:text="${l.article != null and l.article.udm != null ? l.article.udm.description : ''}"></td>
-                                    <td class="text-end" th:text="${#numbers.formatDecimal(l.quantiteDemande, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
-                                    <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(l.quantiteRecu, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                    <td class="text-end" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantiteAttendue)}"></td>
+                                    <td class="text-end fw-semibold" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantiteRecue)}"></td>
                                     <td class="text-end" th:text="${#numbers.formatDecimal(l.prixUnitaire, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
-                                    <td class="text-end" th:text="${#numbers.formatDecimal(l.quantiteRecu * l.prixUnitaire, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                    <td class="text-end" th:text="${#numbers.formatDecimal(l.montant, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
                                 </tr>
                                 </tbody>
                                 <tfoot>
                                 <tr class="fw-bold">
-                                    <td colspan="7" class="text-end text-uppercase">Total</td>
+                                    <td colspan="7" class="text-end text-uppercase">Total H.T.</td>
                                     <td class="text-end"
                                         th:text="${#numbers.formatDecimal(total, 1, 'WHITESPACE', 2, 'COMMA') + ' ' + devise}"></td>
                                 </tr>

@@ -22,14 +22,16 @@
         .bc-lignes th { background: #e9ecef; text-align: center; font-size: .85rem; }
         .bc-lignes .bc-objet { text-align: center; font-weight: 700; background: #f8f9fa; }
         .bc-designation { white-space: pre-line; }
+        /* Les montants restent sur une ligne (pas de coupure au milieu des milliers) */
+        .bc-lignes .bc-montant, .bc-lignes td.text-end { white-space: nowrap; }
         .bc-totaux td { border: 1px solid #000; padding: 4px 8px; }
         .bc-signatures { margin-top: 48px; }
         .bc-signatures td { width: 50%; text-align: center; vertical-align: top; height: 110px; font-weight: 700; }
         .bc-signature-nom { font-weight: 400; font-size: .85rem; margin-top: 6px; }
 
+        /* Impression : sidebar, barres d'actions et marges sont gérées par la règle commune (datatables.css) */
         @media print {
-            #sidebar, .no-print { display: none !important; }
-            .main-content { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+            .main-content { width: 100% !important; }
             .bc-document { padding: 0; box-shadow: none !important; border: 0 !important; }
             /* La colonne « Article » sert au suivi interne : elle n'est pas imprimée */
             .col-article { display: none !important; }
@@ -144,9 +146,9 @@
                             <tbody>
                             <tr th:each="l : ${lignes}">
                                 <td th:text="${l.designationAffichee}"></td>
-                                <td class="text-end" th:text="${#numbers.formatDecimal(l.quantiteCommandee, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
-                                <td class="text-end" th:text="${#numbers.formatDecimal(l.quantiteRecue, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
-                                <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(l.resteARecevoir, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                <td class="text-end" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantiteCommandee)}"></td>
+                                <td class="text-end" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantiteRecue)}"></td>
+                                <td class="text-end fw-bold" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.resteARecevoir)}"></td>
                             </tr>
                             </tbody>
                         </table>
@@ -267,13 +269,13 @@
             <table class="bc-lignes mt-3">
                 <thead>
                 <tr>
-                    <th style="width:6%">N°</th>
+                    <th style="width:5%">N°</th>
                     <th>Désignations</th>
-                    <th class="col-article" style="width:16%">Article / demande</th>
-                    <th style="width:8%">Qté</th>
-                    <th style="width:9%">Unité</th>
-                    <th style="width:14%">PU HT en MGA</th>
-                    <th style="width:15%">Montant HT en MGA</th>
+                    <th class="col-article" style="width:14%">Article / demande</th>
+                    <th style="width:7%">Qté</th>
+                    <th style="width:8%">Unité</th>
+                    <th class="bc-montant" style="width:17%">PU HT en MGA</th>
+                    <th class="bc-montant" style="width:20%">Montant HT en MGA</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -295,12 +297,12 @@
                             <a th:href="@{/demande/fiche/{id}(id=${d.demandeFille.demandeMere.id})}"
                                th:text="${d.demandeFille.demandeMere.id}"></a>
                             <span th:if="${ligne.fusionnee}"
-                                  th:text="' : ' + ${#numbers.formatDecimal(d.quantiteCommandee, 1, 'WHITESPACE', 2, 'COMMA')}"></span>
+                                  th:text="' : ' + ${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(d.quantiteCommandee)}"></span>
                         </div>
                         <div th:if="${ligne.fusionnee}" class="small text-muted"
                              th:text="${ligne.details.size()} + ' lignes regroupées'"></div>
                     </td>
-                    <td class="text-center" th:text="${#numbers.formatDecimal(ligne.quantite, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                    <td class="text-center" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(ligne.quantite)}"></td>
                     <td class="text-center" th:text="${ligne.unite}"></td>
                     <td class="text-end" th:text="${#numbers.formatDecimal(ligne.prixUnitaireHT, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
                     <td class="text-end" th:text="${#numbers.formatDecimal(ligne.montantHT, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
@@ -308,7 +310,8 @@
                 </tbody>
             </table>
 
-            <div class="d-flex justify-content-end mt-0">
+            <!-- Espace entre les lignes et le récapitulatif des montants -->
+            <div class="d-flex justify-content-end mt-4">
                 <table class="bc-totaux" style="width:45%">
                     <tr>
                         <td class="fw-bold">Montant HT</td>

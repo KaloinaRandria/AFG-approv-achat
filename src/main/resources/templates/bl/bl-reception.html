@@ -74,7 +74,9 @@
                     <h5 class="mb-0 fw-bold text-gradient-blue">Lignes à réceptionner</h5>
                     <p class="text-muted mb-0 mt-1 small">
                         Saisissez la quantité effectivement livrée (0 ou vide = non livrée cette fois).
-                        Elle ne peut pas dépasser le reste à recevoir. Le prix est celui du bon de commande ;
+                        Elle ne peut pas dépasser le reste à recevoir. Une ligne regroupant plusieurs demandes
+                        (comme sur le bon imprimé) est répartie automatiquement, la demande la plus ancienne
+                        d'abord. Le prix est celui du bon de commande ;
                         modifiez-le seulement s'il diffère sur le bon de livraison du fournisseur.
                     </p>
                 </div>
@@ -95,11 +97,13 @@
                             <tbody>
                             <tr th:each="l : ${lignes}" th:classappend="${l.resteARecevoir <= 0} ? 'ligne-soldee'">
                                 <td>
-                                    <div th:text="${l.designationAffichee}"></div>
-                                    <div class="small" th:if="${l.demandeFille != null}">
-                                        Demande
-                                        <a th:href="@{/demande/fiche/{id}(id=${l.demandeFille.demandeMere.id})}"
-                                           th:text="${l.demandeFille.demandeMere.id}"></a>
+                                    <div th:text="${l.designation}"></div>
+                                    <!-- Demandes regroupées sur cette ligne : commandé / reçu par demande -->
+                                    <div class="small text-muted" th:each="d : ${l.lignes}" th:if="${d.demandeFille != null}">
+                                        <a th:href="@{/demande/fiche/{id}(id=${d.demandeFille.demandeMere.id})}"
+                                           th:text="${d.demandeFille.demandeMere.id}"></a>
+                                        <span th:text="${': ' + T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(d.quantiteRecue)
+                                                        + ' reçu sur ' + T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(d.quantiteCommandee)}"></span>
                                     </div>
                                 </td>
                                 <td>
@@ -113,9 +117,9 @@
                                            th:name="'article_' + ${l.id}" th:value="${valeurs['article_' + l.id]}"
                                            placeholder="Code article">
                                 </td>
-                                <td class="num" th:text="${#numbers.formatDecimal(l.quantiteCommandee, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
-                                <td class="num" th:text="${#numbers.formatDecimal(l.quantiteRecue, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
-                                <td class="num fw-bold" th:text="${#numbers.formatDecimal(l.resteARecevoir, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                <td class="num" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantiteCommandee)}"></td>
+                                <td class="num" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantiteRecue)}"></td>
+                                <td class="num fw-bold" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.resteARecevoir)}"></td>
                                 <td>
                                     <input th:if="${l.resteARecevoir > 0}" type="number" step="any" min="0"
                                            th:max="${l.resteARecevoir}" class="form-control form-control-sm"

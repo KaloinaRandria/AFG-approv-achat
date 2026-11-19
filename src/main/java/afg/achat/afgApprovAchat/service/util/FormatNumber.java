@@ -26,6 +26,19 @@ public class FormatNumber {
         return formatter.format(number);
     }
 
+    /**
+     * Quantité d'articles : sans décimales quand elle est entière (« 20 », « 1 250 »),
+     * avec au plus 2 décimales sinon (« 2,5 »). Vide si la quantité n'est pas renseignée.
+     */
+    public static String quantite(Double quantite) {
+        if (quantite == null) return "";
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols();
+        symbols.setGroupingSeparator(' ');
+        symbols.setDecimalSeparator(',');
+        symbols.setMinusSign('-');
+        return new DecimalFormat("#,##0.##", symbols).format(quantite);
+    }
+
     public static String formatDate() {
         LocalDate date = LocalDate.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("ddMMyyyy");

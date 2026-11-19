@@ -431,7 +431,7 @@
                                     <!-- QUANTITE -->
                                     <td class="text-end" th:data-ligne-id="${l.id}">
                 <span class="qte-display"
-                      th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                      th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantite)}">
                 </span>
 
                                         <input type="number"
@@ -634,7 +634,7 @@
                                     <!-- Quantité -->
                                     <td class="text-end" th:data-ligne-id="${l.id}">
                                     <span class="qte-display"
-                                          th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                                          th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantite)}">
                                     </span>
                                         <input type="number"
                                                class="form-control form-control-sm qte-input d-none text-end"
@@ -1298,12 +1298,17 @@
                                                 <th>Créé par</th>
                                                 <th>Statut</th>
                                                 <th>Montant total</th>
-                                                <th class="text-center">Action</th>
                                             </tr>
                                             </thead>
                                             <tbody>
                                             <tr th:each="bc : ${bonsCommande}">
-                                                <td class="fw-semibold" th:text="${bc.numero}"></td>
+                                                <td>
+                                                    <!-- Brouillon : la fiche ouvre l'écran de saisie pour le compléter -->
+                                                    <a class="fw-semibold text-decoration-none"
+                                                       th:href="@{/bon-commande/{id}(id=${bc.id})}"
+                                                       th:text="${bc.numero != null and !#strings.isEmpty(bc.numero) ? bc.numero : bc.id}"
+                                                       th:title="${bc.statut?.name() == 'BROUILLON' ? 'Compléter le bon de commande' : 'Voir le bon de commande'}"></a>
+                                                </td>
                                                 <td th:text="${bc.dateCreation != null ? #temporals.format(bc.dateCreation, 'dd/MM/yyyy HH:mm') : '—'}"></td>
                                                 <td th:text="${bc.dateValidationSg != null ? #temporals.format(bc.dateValidationSg, 'dd/MM/yyyy HH:mm') : '—'}"></td>
                                                 <td th:text="${bc.createur != null ? bc.createur.nom + ' ' + bc.createur.prenom : '—'}"></td>
@@ -1330,14 +1335,6 @@
                                                     th:text="${bc.montantTTC > 0
                                                  ? #numbers.formatDecimal(bc.montantTTC, 1, 'DEFAULT', 2, 'DEFAULT')
                                                  : '—'}">
-                                                </td>
-                                                <td class="text-center">
-                                                    <a th:href="@{/bon-commande/{id}(id=${bc.id})}"
-                                                       class="btn btn-sm btn-outline-gradient-blue"
-                                                       title="Voir le bon de commande">
-                                                        <i class="fas fa-eye me-1"></i>
-                                                        <span th:text="${bc.statut?.name() == 'BROUILLON' ? 'Compléter' : 'Voir'}">Voir</span>
-                                                    </a>
                                                 </td>
                                             </tr>
                                             </tbody>
@@ -1368,7 +1365,7 @@
                                                 </td>
                                                 <td th:text="${lc.bonCommandeMere.fournisseur != null ? lc.bonCommandeMere.fournisseur.nom : '—'}"></td>
                                                 <td class="text-end"
-                                                    th:text="${#numbers.formatDecimal(lc.quantiteCommandee, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                                    th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(lc.quantiteCommandee)}"></td>
                                                 <td th:text="${lc.bonCommandeMere.libelleStatut}"></td>
                                             </tr>
                                             </tbody>
@@ -1417,12 +1414,15 @@
                                                 <th>Date confirmation</th>
                                                 <th>Créé par</th>
                                                 <th>Statut</th>
-                                                <th class="text-center">Action</th>
                                             </tr>
                                             </thead>
                                             <tbody>
                                             <tr th:each="bs : ${bonsSortie}">
-                                                <td class="fw-semibold" th:text="${bs.numeroBs}"></td>
+                                                <td>
+                                                    <a class="fw-semibold text-decoration-none"
+                                                       th:href="@{/bon-sortie/{id}(id=${bs.id})}"
+                                                       th:text="${bs.numeroBs}" title="Voir le bon de sortie"></a>
+                                                </td>
                                                 <td th:text="${#temporals.format(bs.dateCreation, 'dd/MM/yyyy HH:mm')}"></td>
                                                 <td th:text="${bs.dateConfirmation != null
                                                               ? #temporals.format(bs.dateConfirmation, 'dd/MM/yyyy HH:mm')
@@ -1444,14 +1444,6 @@
                                                             <i class="fas fa-times me-1"></i>Annulé
                                                         </span>
                                                     </span>
-                                                </td>
-                                                <td class="text-center">
-                                                    <a th:href="@{/bon-sortie/{id}(id=${bs.id})}"
-                                                       class="btn btn-sm btn-outline-gradient-blue"
-                                                       title="Voir le bon de sortie"
-                                                       >
-                                                        <i class="fas fa-eye me-1"></i> Voir
-                                                    </a>
                                                 </td>
                                             </tr>
                                             </tbody>
@@ -1514,7 +1506,7 @@
 
                                                     <!-- Qté demandée -->
                                                     <td class="text-end"
-                                                        th:text="${#numbers.formatDecimal(ligne.demandeFille.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                                                        th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(ligne.demandeFille.quantite)}">
                                                     </td>
 
                                                     <!-- Déjà sorti -->

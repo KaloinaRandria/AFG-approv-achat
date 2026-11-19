@@ -19,8 +19,14 @@
             <h1 class="fw-bold text-gradient-blue">
                 <i class="fas fa-clipboard-list icon-gradient-blue"></i> Bons de livraison
             </h1>
+            <!--/* Saisie directe masquée : un BL se crée en réceptionnant un bon de commande (fiche du BC).
             <a th:href="@{/bonlivraison/add}" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')" class="btn btn-gradient-green">
                 <i class="fas fa-plus-circle me-1"></i> Nouveau bon de livraison
+            </a>
+            */-->
+            <a th:href="@{/bon-commande/list(statut='VALIDE')}" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
+               class="btn btn-outline-secondary" title="Un bon de livraison se crée depuis la fiche d'un bon de commande validé">
+                <i class="fas fa-truck-loading me-1"></i> Réceptionner un bon de commande
             </a>
         </div>
 

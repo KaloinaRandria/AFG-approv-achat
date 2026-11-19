@@ -84,7 +84,7 @@ class ReceptionBonCommandeServiceTest {
         stylo.setDesignation("Stylo");
 
         ligneA = ligne(1, stylo, 10, 500);
-        ligneB = ligne(2, stylo, 4, 500);   // même article sur une deuxième ligne (autre demande)
+        ligneB = ligne(2, stylo, 4, 600);   // même article à un autre prix : ligne livrée distincte
 
         when(bonCommandeMereRepo.verrouiller("BC1")).thenReturn(Optional.of(bc));
         when(bonCommandeFilleRepo.findBonCommandeFillesByBonCommandeMere(bc)).thenReturn(List.of(ligneA, ligneB));
@@ -209,6 +209,74 @@ class ReceptionBonCommandeServiceTest {
         assertEquals(StatutReception.SOLDE, bc.getStatutReception());
         assertEquals("rupture fournisseur", bc.getMotifClotureReception());
         assertSame(u, bc.getClotureReceptionPar());
+    }
+
+    // ── Bon groupé : lignes de demandes fusionnées (9 + 11 cahiers) ──
+
+    private BonCommandeFille cahiers9;
+    private BonCommandeFille cahiers11;
+
+    private void bonGroupe() {
+        Article cahier = new Article();
+        cahier.setId(3);
+        cahier.setCodeArticle("ART3");
+        cahier.setDesignation("Cahier");
+        cahiers9 = ligne(10, cahier, 9, 1500);
+        cahiers11 = ligne(11, cahier, 11, 1500);
+        // Ordre volontairement inversé : la répartition suit l'ordre de création (identifiant)
+        when(bonCommandeFilleRepo.findBonCommandeFillesByBonCommandeMere(bc)).thenReturn(List.of(cahiers11, cahiers9));
+    }
+
+    @Test
+    void ligneFusionneeRepartieDansLOrdreDesDemandes() {
+        bonGroupe();
+        BonLivraisonMere bl = service.receptionner("BC1", saisie(Map.of(10, new LigneSaisie("15", "1500", null))));
+
+        assertEquals(9, cahiers9.getQuantiteRecue());
+        assertEquals(6, cahiers11.getQuantiteRecue());
+        assertEquals(5, cahiers11.getResteARecevoir());
+        assertEquals(StatutReception.PARTIELLEMENT_RECU, bc.getStatutReception());
+        assertEquals(22500, bl.getTotalPrix());
+
+        ArgumentCaptor<BonLivraisonFille> blf = ArgumentCaptor.forClass(BonLivraisonFille.class);
+        verify(bonLivraisonFilleRepo, times(2)).save(blf.capture());
+        assertEquals(List.of(9.0, 11.0), blf.getAllValues().stream().map(BonLivraisonFille::getQuantiteDemande).toList());
+        assertEquals(List.of(9.0, 6.0), blf.getAllValues().stream().map(BonLivraisonFille::getQuantiteRecu).toList());
+        verify(prixArticleService, times(1)).insert(any());
+        verify(lotStockService, times(2)).creerLot(any(), eq(bl), anyDouble(), eq(1500.0));
+    }
+
+    @Test
+    void ligneFusionneePartiellementServieGardeLAttenduComplet() {
+        bonGroupe();
+        service.receptionner("BC1", saisie(Map.of(10, new LigneSaisie("4", "1500", null))));
+
+        // La deuxième demande figure sur le BL avec 0 reçu : la fiche affiche 20 attendus
+        ArgumentCaptor<BonLivraisonFille> blf = ArgumentCaptor.forClass(BonLivraisonFille.class);
+        verify(bonLivraisonFilleRepo, times(2)).save(blf.capture());
+        assertEquals(0, blf.getAllValues().get(1).getQuantiteRecu());
+        verify(lotStockService, times(1)).creerLot(any(), any(), eq(4.0), anyDouble());
+        verify(stockMereService, times(1)).addEntree(any(), any(), anyDouble());
+    }
+
+    @Test
+    void ligneFusionneeRefuseAuDelaDuResteDuGroupe() {
+        bonGroupe();
+        WorkflowException e = assertThrows(WorkflowException.class,
+                () -> service.receptionner("BC1", saisie(Map.of(10, new LigneSaisie("21", "1500", null)))));
+        assertTrue(e.getMessage().contains("(20)"));
+    }
+
+    @Test
+    void ligneFusionneeIgnoreLesDemandesDejaRecues() {
+        bonGroupe();
+        cahiers9.setQuantiteRecue(9);
+        service.receptionner("BC1", saisie(Map.of(10, new LigneSaisie("11", "1500", null))));
+
+        ArgumentCaptor<BonLivraisonFille> blf = ArgumentCaptor.forClass(BonLivraisonFille.class);
+        verify(bonLivraisonFilleRepo, times(1)).save(blf.capture());
+        assertSame(cahiers11, blf.getValue().getBonCommandeFille());
+        assertEquals(StatutReception.RECU, bc.getStatutReception());
     }
 
     @Test

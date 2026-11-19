@@ -6,7 +6,9 @@ import afg.achat.afgApprovAchat.model.VEtatStock;
 import afg.achat.afgApprovAchat.model.stock.StockAlerte;
 import afg.achat.afgApprovAchat.model.stock.StockFille;
 import afg.achat.afgApprovAchat.model.stock.StockMere;
+import afg.achat.afgApprovAchat.model.Famille;
 import afg.achat.afgApprovAchat.service.ArticleService;
+import afg.achat.afgApprovAchat.service.FamilleService;
 import afg.achat.afgApprovAchat.service.VEtatStockService;
 import afg.achat.afgApprovAchat.service.stock.StockAlerteService;
 import afg.achat.afgApprovAchat.service.stock.StockFilleService;
@@ -42,6 +44,8 @@ public class StockController {
     VEtatStockService vEtatStockService;
     @Autowired
     StockAlerteService stockAlerteService;
+    @Autowired
+    FamilleService familleService;
     private static final int FAMILLE_MATERIELS_INFORMATIQUE_ID = 19;
 
 
@@ -128,23 +132,31 @@ public class StockController {
             @RequestParam(required = false) String designation,
             @RequestParam(required = false) String udm,
             @RequestParam(required = false) String etat, // RUPTURE / SEUIL / NORMAL
+            @RequestParam(required = false) String famille,
 
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "codeArticle") String sort,
-            @RequestParam(defaultValue = "asc") String dir
+            @RequestParam(defaultValue = "20") int size
     ) {
-        // sécurité sort (évite PropertyReferenceException)
-        if (!Set.of("codeArticle", "designation", "stockDisponible", "seuilMin").contains(sort)) {
-            sort = "codeArticle";
-        }
-
-        Pageable pageable = PageRequest.of(page, size);
+        int taille = Math.min(Math.max(size, 5), 100);
+        Pageable pageable = PageRequest.of(Math.max(page, 0), taille);
         // Recherche multi-critère
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         boolean hasFullStockAccess = hasRole(authentication, "ROLE_ADMIN")
                 || hasRole(authentication, "ROLE_MOYENS_GENERAUX");
-        Integer familleVisibleId = hasFullStockAccess ? null : FAMILLE_MATERIELS_INFORMATIQUE_ID;
+        // Accès complet : filtre de famille au choix ; sinon, seulement la famille autorisée
+        Integer familleFiltre = null;
+        if (hasFullStockAccess && famille != null && !famille.isBlank()) {
+            try {
+                familleFiltre = Integer.parseInt(famille.trim());
+            } catch (NumberFormatException ignored) {
+                // famille inconnue : pas de filtre
+            }
+        }
+        // Pas de ternaire Integer/int ici : il déballerait familleFiltre (null = toutes) en int
+        Integer familleVisibleId = familleFiltre;
+        if (!hasFullStockAccess) {
+            familleVisibleId = FAMILLE_MATERIELS_INFORMATIQUE_ID;
+        }
 
         Page<VEtatStock> etatPage = vEtatStockService.searchEtatStockMulti(
                 code, designation, udm, etat, familleVisibleId, pageable);
@@ -167,28 +179,29 @@ public class StockController {
 
         Page<EtatStockAlerteDTO> etatStocks = new PageImpl<>(dtoContent, pageable, etatPage.getTotalElements());
 
-        // badge + modal alertes (inchangé)
+        // badge + modal alertes : toutes les familles visibles, indépendamment du filtre
         int alertesCount = hasFullStockAccess
                 ? stockAlerteService.getAlertesCount()
-                : stockAlerteService.getAlertesCountByFamilleId(familleVisibleId);
+                : stockAlerteService.getAlertesCountByFamilleId(FAMILLE_MATERIELS_INFORMATIQUE_ID);
         List<StockAlerte> alertes = hasFullStockAccess
                 ? stockAlerteService.getAlertesAll()
-                : stockAlerteService.getAlertesAllByFamilleId(familleVisibleId);
+                : stockAlerteService.getAlertesAllByFamilleId(FAMILLE_MATERIELS_INFORMATIQUE_ID);
         long ruptureCount = alertes.stream().filter(a -> "RUPTURE".equals(a.getTypeAlerte())).count();
         long seuilCount   = alertes.stream().filter(a -> "SEUIL".equals(a.getTypeAlerte())).count();
 
         model.addAttribute("etatStocks", etatStocks);
 
-        model.addAttribute("page", page);
-        model.addAttribute("size", size);
-        model.addAttribute("sort", sort);
-        model.addAttribute("dir", dir);
+        model.addAttribute("size", taille);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
 
         // pour garder les valeurs dans les inputs
         model.addAttribute("code", code == null ? "" : code);
         model.addAttribute("designation", designation == null ? "" : designation);
         model.addAttribute("udm", udm == null ? "" : udm);
-        model.addAttribute("etat", etat == null ? "" : etat);
+        model.addAttribute("etat", etat == null ? "" : etat.trim().toUpperCase());
+        model.addAttribute("famille", familleFiltre == null ? "" : String.valueOf(familleFiltre));
+        model.addAttribute("peutFiltrerFamille", hasFullStockAccess);
+        model.addAttribute("familles", hasFullStockAccess ? familleService.getAllFamilles() : new Famille[0]);
 
         model.addAttribute("alertesCount", alertesCount);
         model.addAttribute("alertes", alertes);

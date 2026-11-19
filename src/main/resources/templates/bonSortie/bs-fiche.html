@@ -8,14 +8,6 @@
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
     <meta name="context-path" th:content="@{/}" />
-    <style>
-        @media print {
-            .no-print { display: none !important; }
-            .main-content { margin: 0 !important; padding: 0 !important; }
-            .card { box-shadow: none !important; border: none !important; }
-            .bl-document { padding: 0 !important; }
-        }
-    </style>
 </head>
 
 <body>
@@ -208,11 +200,11 @@
                                     </td>
                                     <td class="text-end"
                                         th:text="${l.demandeFille != null
-                                                   ? #numbers.formatDecimal(l.demandeFille.quantite, 1, 'DEFAULT', 2, 'DEFAULT')
+                                                   ? T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.demandeFille.quantite)
                                                    : '-'}">
                                     </td>
                                     <td class="text-end fw-semibold"
-                                        th:text="${#numbers.formatDecimal(l.quantiteSortie, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                                        th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantiteSortie)}">
                                     </td>
                                     <td class="text-end"
                                         th:text="${l.article != null and l.article.udm != null

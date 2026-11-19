@@ -62,7 +62,8 @@ public class ReceptionBonCommandeService {
     /**
      * Saisie d'une réception.
      *
-     * @param lignes saisie par identifiant de ligne du bon de commande ; une ligne absente ou à 0 n'est pas reçue
+     * @param lignes saisie par ligne livrée, identifiée par {@link GroupeReception#getId()} (sa première
+     *               ligne de bon de commande) ; une ligne absente ou à 0 n'est pas reçue
      */
     public record SaisieReception(String deviseId, String dateReception, String description,
                                   Map<Integer, LigneSaisie> lignes) {
@@ -93,22 +94,33 @@ public class ReceptionBonCommandeService {
         List<BonCommandeFille> lignesBc = bonCommandeFilleRepo.findBonCommandeFillesByBonCommandeMere(bc);
         Map<Integer, LigneSaisie> saisies = saisie.lignes() == null ? Map.of() : saisie.lignes();
 
+        // Une saisie par ligne du bon imprimé ; la quantité est répartie entre ses lignes de demande
         List<LigneRecue> recues = new ArrayList<>();
-        for (BonCommandeFille ligne : lignesBc) {
-            LigneSaisie s = saisies.get(ligne.getId());
+        for (GroupeReception groupe : GroupeReception.grouper(lignesBc)) {
+            LigneSaisie s = saisies.get(groupe.getId());
             if (s == null) continue;
-            String libelle = "Ligne « " + ligne.getDesignationAffichee() + " »";
+            String libelle = "Ligne « " + groupe.getDesignation() + " »";
 
             double quantite = lireNombre(s.quantiteRecue(), libelle + " : quantité reçue");
             if (quantite <= EPSILON) continue;
-            double reste = ligne.getResteARecevoir();
+            double reste = groupe.getResteARecevoir();
             if (quantite > reste + EPSILON) {
                 throw new WorkflowException(libelle + " : la quantité reçue (" + format(quantite)
                         + ") dépasse le reste à recevoir (" + format(reste) + ").");
             }
             double prix = lireNombre(s.prixUnitaire(), libelle + " : prix unitaire");
-            Article article = articleDeLaLigne(ligne, s.codeArticle(), libelle);
-            recues.add(new LigneRecue(ligne, article, quantite, prix, reste));
+            Article article = articleDeLaLigne(groupe.lignes().get(0), s.codeArticle(), libelle);
+
+            // Chaque ligne de demande encore attendue figure sur le BL, même servie à 0 :
+            // la fiche affiche ainsi l'attendu complet de la ligne fusionnée
+            List<Double> parts = groupe.repartir(quantite);
+            boolean premiere = true;
+            for (int i = 0; i < parts.size(); i++) {
+                BonCommandeFille ligne = groupe.lignes().get(i);
+                if (ligne.getResteARecevoir() <= EPSILON) continue;
+                recues.add(new LigneRecue(ligne, article, parts.get(i), prix, ligne.getResteARecevoir(), premiere));
+                premiere = false;
+            }
         }
         if (recues.isEmpty()) {
             throw new WorkflowException("Saisissez au moins une ligne avec une quantité reçue.");
@@ -137,13 +149,18 @@ public class ReceptionBonCommandeService {
             blf.setPrixUnitaire(String.valueOf(r.prix()));
             bonLivraisonFilleRepo.save(blf);
 
-            // Historique du prix, lot valorisé (FIFO) et mouvement d'entrée
-            PrixArticle prixArticle = new PrixArticle();
-            prixArticle.setArticle(r.article());
-            prixArticle.setBonLivraisonMere(bl);
-            prixArticle.setPrixUnitaire(r.prix());
-            prixArticle.setDatePrix(LocalDate.from(dateReception));
-            prixArticleService.insert(prixArticle);
+            // Historique du prix : une fois par ligne livrée, pas par ligne de demande
+            if (r.premiereDuGroupe()) {
+                PrixArticle prixArticle = new PrixArticle();
+                prixArticle.setArticle(r.article());
+                prixArticle.setBonLivraisonMere(bl);
+                prixArticle.setPrixUnitaire(r.prix());
+                prixArticle.setDatePrix(LocalDate.from(dateReception));
+                prixArticleService.insert(prixArticle);
+            }
+            if (r.quantite() <= EPSILON) continue;
+
+            // Lot valorisé (FIFO) et mouvement d'entrée
             lotStockService.creerLot(r.article(), bl, r.quantite(), r.prix());
             stockMereService.addEntree(entreeStock, r.article(), r.quantite());
 
@@ -190,8 +207,9 @@ public class ReceptionBonCommandeService {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
+    /** Part d'une ligne de demande dans une ligne livrée ; {@code quantite} peut être 0. */
     private record LigneRecue(BonCommandeFille ligne, Article article, double quantite, double prix,
-                              double resteAvant) {
+                              double resteAvant, boolean premiereDuGroupe) {
     }
 
     /** Un BL alimente le stock : la ligne doit porter un article actif (choisi à la réception s'il manque). */

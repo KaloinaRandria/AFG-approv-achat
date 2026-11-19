@@ -85,15 +85,17 @@
                             <th class="text-center">Articles</th>
                             <th class="text-end">Montant</th>
                             <th>Statut</th>
-                            <th></th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr th:if="${bons.totalElements == 0}">
-                            <td colspan="9" class="text-center text-muted py-4">Aucun bon de sortie.</td>
+                            <td colspan="8" class="text-center text-muted py-4">Aucun bon de sortie.</td>
                         </tr>
                         <tr th:each="bs : ${bons.content}" th:with="t=${totaux.get(bs.id)}">
-                            <td class="fw-semibold" th:text="${bs.numeroBs}"></td>
+                            <td>
+                                <a class="fw-semibold text-decoration-none"
+                                   th:href="@{/bon-sortie/{id}(id=${bs.id})}" th:text="${bs.numeroBs}"></a>
+                            </td>
                             <td th:text="${#temporals.format(bs.dateConfirmation != null ? bs.dateConfirmation : bs.dateCreation, 'dd/MM/yyyy HH:mm')}"></td>
                             <td>
                                 <a th:if="${bs.demandeMere != null}"
@@ -110,11 +112,6 @@
                                 <span class="badge"
                                       th:classappend="${bs.statut?.name() == 'CONFIRME'} ? 'bg-success' : 'bg-danger'"
                                       th:text="${bs.statut?.name() == 'CONFIRME' ? 'Confirmé' : 'Annulé'}"></span>
-                            </td>
-                            <td class="text-end">
-                                <a th:href="@{/bon-sortie/{id}(id=${bs.id})}" class="btn btn-sm btn-outline-gradient-blue">
-                                    <i class="fas fa-eye me-1"></i> Voir
-                                </a>
                             </td>
                         </tr>
                         </tbody>

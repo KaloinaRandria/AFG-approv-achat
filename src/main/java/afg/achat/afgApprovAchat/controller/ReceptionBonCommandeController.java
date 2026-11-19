@@ -8,6 +8,7 @@ import afg.achat.afgApprovAchat.model.util.Devise;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeService;
+import afg.achat.afgApprovAchat.service.bonlivraison.GroupeReception;
 import afg.achat.afgApprovAchat.service.bonlivraison.ReceptionBonCommandeService;
 import afg.achat.afgApprovAchat.service.bonlivraison.ReceptionBonCommandeService.LigneSaisie;
 import afg.achat.afgApprovAchat.service.bonlivraison.ReceptionBonCommandeService.SaisieReception;
@@ -96,10 +97,11 @@ public class ReceptionBonCommandeController {
             return "redirect:/bon-commande/list";
         }
 
+        // Champs nommés d'après l'identifiant de chaque ligne livrée (GroupeReception.getId())
         Map<Integer, LigneSaisie> lignes = new HashMap<>();
-        for (BonCommandeFille l : bonCommandeService.getBonCommandeFillesByBonCommandeMere(bc)) {
-            lignes.put(l.getId(), new LigneSaisie(params.get("quantite_" + l.getId()),
-                    params.get("prix_" + l.getId()), params.get("article_" + l.getId())));
+        for (GroupeReception g : GroupeReception.grouper(bonCommandeService.getBonCommandeFillesByBonCommandeMere(bc))) {
+            lignes.put(g.getId(), new LigneSaisie(params.get("quantite_" + g.getId()),
+                    params.get("prix_" + g.getId()), params.get("article_" + g.getId())));
         }
         try {
             BonLivraisonMere bl = receptionService.receptionner(idBc, new SaisieReception(
@@ -140,7 +142,8 @@ public class ReceptionBonCommandeController {
 
         model.addAttribute("jeton", jeton);
         model.addAttribute("bonCommandeMere", bc);
-        model.addAttribute("lignes", lignes);
+        // Une ligne par ligne du bon imprimé : les lignes de demandes fusionnées se reçoivent ensemble
+        model.addAttribute("lignes", GroupeReception.grouper(lignes));
         model.addAttribute("devises", devises);
         model.addAttribute("articlesActifs", articlesActifs);
         model.addAttribute("valeurs", valeurs);
