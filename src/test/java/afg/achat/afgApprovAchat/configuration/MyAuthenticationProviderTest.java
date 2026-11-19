@@ -71,6 +71,22 @@ class MyAuthenticationProviderTest {
     }
 
     @Test
+    void unCompteInactifEstRefuse() throws Exception {
+        Utilisateur parti = new Utilisateur();
+        parti.setMail(COMPTE);
+        parti.setRoles(new java.util.HashSet<>());
+        parti.setActif(false);
+        when(utilisateurService.getUtilisateurByMail(COMPTE)).thenReturn(parti);
+        when(activeDir.authentify(COMPTE, "vraiMdp")).thenReturn(true);
+        ReflectionTestUtils.setField(provider, "testLoginEnabled", true);
+
+        assertThrows(org.springframework.security.authentication.DisabledException.class,
+                () -> login(COMPTE, "vraiMdp"));
+        assertThrows(org.springframework.security.authentication.DisabledException.class,
+                () -> login(COMPTE, "mdp"));
+    }
+
+    @Test
     void activeDirectoryResteLaVoieNormale() throws Exception {
         ReflectionTestUtils.setField(provider, "testLoginEnabled", false);
         when(activeDir.authentify(COMPTE, "vraiMdp")).thenReturn(true);

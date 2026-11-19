@@ -5,6 +5,7 @@ import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -54,12 +55,7 @@ public class MyAuthenticationProvider implements AuthenticationProvider{
                     throw new BadCredentialsException("Utilisateur non autorisé");
                 }
 
-                Collection<GrantedAuthority> authorities = user.getRoles().stream()
-                        .map(role ->(GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
-                        .toList();
-
-                return new UsernamePasswordAuthenticationToken(user, null, authorities);
-
+                return authentifier(user);
 
             }else {
 				throw new BadCredentialsException ("Email ou Mot de passe incorrect");
@@ -97,6 +93,9 @@ public class MyAuthenticationProvider implements AuthenticationProvider{
 	}
 
 	private Authentication authentifier(Utilisateur user) {
+		if (!user.isActif()) {
+			throw new DisabledException("Compte désactivé : contactez l'administrateur.");
+		}
 		Collection<GrantedAuthority> authorities = user.getRoles().stream()
 				.map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getRole()))
 				.toList();
