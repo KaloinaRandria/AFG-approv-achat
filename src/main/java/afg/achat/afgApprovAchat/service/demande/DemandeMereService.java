@@ -81,26 +81,10 @@ public class DemandeMereService {
         }
     }
 
-    public List<DemandeMere>getPaiementsDirectsATransmettre() {
-        return demandeMereRepo.findByStatutOrderByDateDemandeAsc(StatutDemande.VALIDE).stream()
-                .filter(this::estPaiementDirect)
-                .filter(d -> d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE
-                        || d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE)
-                .toList();
-    }
-
     @Transactional
     public boolean transmettreAFinance(DemandeMere demande, Utilisateur transmetteur, String commentaire) {
         if (!estPaiementDirect(demande)) return false;
         return paiementDirectService.transmettreAFinance(demande, transmetteur, commentaire);
-    }
-
-    public List<DemandeMere> getPaiementsDirectsTransmisAFinance() {
-        return demandeMereRepo.findByStatutOrderByDateDemandeAsc(StatutDemande.VALIDE).stream()
-                .filter(this::estPaiementDirect)
-                .filter(d -> d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE
-                        || d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.PAYEE)
-                .toList();
     }
 
     @Transactional

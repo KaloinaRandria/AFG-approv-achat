@@ -5,14 +5,12 @@ import afg.achat.afgApprovAchat.model.paiement.PaiementDirect;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.paiement.PaiementDirectRepo;
-import afg.achat.afgApprovAchat.repository.paiement.PaiementDirectSpec;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
+
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -93,22 +91,4 @@ public class PaiementDirectService {
         return true;
     }
 
-    public Page<PaiementDirect> search(PaiementDirectSpec.SearchCriteria criteria,
-                                      int page, int size,
-                                      String sort, String dir) {
-        Pageable pageable = buildPageable(page, size, sort, dir);
-        return paiementDirectRepo.findAll(PaiementDirectSpec.build(criteria), pageable);
-    }
-
-    private Pageable buildPageable(int page, int size, String sort, String dir) {
-        String sortBy = (sort == null || sort.isBlank()) ? "demande.dateDemande" : sort;
-        if ("id".equalsIgnoreCase(sortBy)) {
-            sortBy = "demande.id";
-        } else if ("dateDemande".equalsIgnoreCase(sortBy)) {
-            sortBy = "demande.dateDemande";
-        }
-        Sort.Direction direction = "desc".equalsIgnoreCase(dir)
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-        return PageRequest.of(page, size, Sort.by(direction, sortBy));
-    }
 }

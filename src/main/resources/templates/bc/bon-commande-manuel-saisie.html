@@ -48,7 +48,8 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="fournisseur" class="form-label fw-bold required-field">Fournisseur</label>
-                            <select id="fournisseur" name="fournisseur" class="form-select" required>
+                            <select id="fournisseur" name="fournisseur" class="form-select" required
+                                    data-placeholder="Rechercher un fournisseur...">
                                 <option value="">-- Choisir --</option>
                                 <option th:each="f : ${fournisseurs}"
                                         th:value="${f.id}"
@@ -154,7 +155,7 @@
                                            th:value="${l.article != null ? l.article.codeArticle : ''}"></td>
                                 <td><input type="number" class="form-control form-control-sm champ-qte" name="quantite[]"
                                            min="0" step="any" required th:value="${l.quantiteCommandee}"></td>
-                                <td><input type="text" class="form-control form-control-sm" name="unite[]"
+                                <td><input type="text" class="form-control form-control-sm champ-unite" name="unite[]"
                                            placeholder="Unité" th:value="${l.uniteAffichee}"></td>
                                 <td><input type="number" class="form-control form-control-sm champ-prix" name="prixUnitaire[]"
                                            min="0" step="any" required th:value="${l.prixUnitaireHT}"></td>
@@ -245,7 +246,7 @@
                    list="articlesDatalist" autocomplete="off" placeholder="Code ou désignation"></td>
         <td><input type="number" class="form-control form-control-sm champ-qte" name="quantite[]"
                    min="0" step="any" required value="1"></td>
-        <td><input type="text" class="form-control form-control-sm" name="unite[]" placeholder="Unité" value="Unité"></td>
+        <td><input type="text" class="form-control form-control-sm champ-unite" name="unite[]" placeholder="Unité" value="Unité"></td>
         <td><input type="number" class="form-control form-control-sm champ-prix" name="prixUnitaire[]"
                    min="0" step="any" required></td>
         <td class="text-end fw-semibold montant-ligne">0,00</td>
@@ -258,6 +259,21 @@
     /*<![CDATA[*/
     (function () {
         const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
+
+        // Fournisseur : liste longue -> champ avec recherche
+        if (window.jQuery && $.fn.select2) {
+            $('#fournisseur').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                allowClear: true,
+                placeholder: $('#fournisseur').data('placeholder'),
+                language: {
+                    noResults: () => 'Aucun fournisseur trouvé',
+                    searching: () => 'Recherche...'
+                }
+            });
+        }
+
         const corps = document.getElementById('corpsLignes');
         const modele = document.getElementById('modeleLigne');
         const datalist = document.getElementById('articlesDatalist');
@@ -339,12 +355,62 @@
             recalculer();
         });
 
+        // ── Unité : pré-remplie avec l'UDM de l'article choisi ──────────────────
+        // code article (majuscules) -> UDM, alimenté par les recherches
+        const udmParCode = new Map();
+        const UNITE_PAR_DEFAUT = 'Unité';
+
+        function memoriserUdm(articles) {
+            (articles || []).forEach(a => {
+                if (a.code && a.udm && a.udm !== '—') udmParCode.set(a.code.trim().toUpperCase(), a.udm);
+            });
+        }
+
+        function appliquerUdm(tr, udm) {
+            const champ = tr.querySelector('.champ-unite');
+            if (!champ || !udm) return;
+            // On ne remplace jamais une unité saisie à la main
+            const valeur = champ.value.trim();
+            if (valeur === '' || valeur === UNITE_PAR_DEFAUT || champ.dataset.auto === '1') {
+                champ.value = udm;
+                champ.dataset.auto = '1';
+            }
+        }
+
+        function remplirUniteDepuisArticle(champArticle) {
+            const code = (champArticle.value || '').trim().toUpperCase();
+            const tr = champArticle.closest('tr');
+            if (!code || !tr) return;
+            if (udmParCode.has(code)) {
+                appliquerUdm(tr, udmParCode.get(code));
+                return;
+            }
+            fetch(`${CONTEXT_PATH}api/articles/search?keyword=${encodeURIComponent(code)}`)
+                .then(r => r.ok ? r.json() : [])
+                .then(articles => {
+                    memoriserUdm(articles);
+                    if (udmParCode.has(code)) appliquerUdm(tr, udmParCode.get(code));
+                })
+                .catch(() => { /* unité laissée telle quelle */ });
+        }
+
+        // Choix dans la liste de suggestions ou sortie du champ
+        corps.addEventListener('change', e => {
+            if (e.target.matches('.champ-article')) remplirUniteDepuisArticle(e.target);
+        });
+
         // Suggestions d'articles actifs pour la colonne « Article concerné »
         let minuterie;
         corps.addEventListener('input', e => {
             if (e.target.matches('.champ-qte, .champ-prix')) recalculer();
+            // Unité modifiée à la main : on ne l'écrasera plus
+            if (e.target.matches('.champ-unite')) delete e.target.dataset.auto;
             if (!e.target.matches('.champ-article')) return;
             verifierRegroupements();
+
+            // Code d'un article déjà connu (ex. choisi dans les suggestions) : unité immédiate
+            const codeSaisi = e.target.value.trim().toUpperCase();
+            if (udmParCode.has(codeSaisi)) appliquerUdm(e.target.closest('tr'), udmParCode.get(codeSaisi));
 
             const motCle = e.target.value.trim();
             clearTimeout(minuterie);
@@ -353,6 +419,7 @@
                 fetch(`${CONTEXT_PATH}api/articles/search?keyword=${encodeURIComponent(motCle)}`)
                     .then(r => r.ok ? r.json() : [])
                     .then(articles => {
+                        memoriserUdm(articles);
                         datalist.innerHTML = '';
                         (articles || []).slice(0, 15).forEach(a => {
                             const option = document.createElement('option');
