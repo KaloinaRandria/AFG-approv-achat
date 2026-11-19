@@ -70,6 +70,7 @@
                         <label class="form-label mb-1" for="fEtat">État</label>
                         <select class="form-select" id="fEtat" name="etat">
                             <option value="" th:selected="${etat == ''}">Tous</option>
+                            <option value="ALERTE" th:selected="${etat == 'ALERTE'}">En alerte (rupture ou seuil)</option>
                             <option value="RUPTURE" th:selected="${etat == 'RUPTURE'}">Rupture</option>
                             <option value="SEUIL" th:selected="${etat == 'SEUIL'}">Seuil atteint</option>
                             <option value="NORMAL" th:selected="${etat == 'NORMAL'}">Normal</option>

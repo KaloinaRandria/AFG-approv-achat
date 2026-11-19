@@ -70,6 +70,7 @@ public class BonCommandeController {
                                   @RequestParam(defaultValue = "20") int size,
                                   @RequestParam(required = false) String statut,
                                   @RequestParam(defaultValue = "false") boolean aValider,
+                                  @RequestParam(defaultValue = "false") boolean aRecevoir,
                                   @RequestParam(required = false) String numero,
                                   @RequestParam(required = false) String fournisseur,
                                   @RequestParam(required = false) String objet,
@@ -98,7 +99,7 @@ public class BonCommandeController {
         int taille = Math.min(Math.max(size, 5), 100);
         Page<BonCommandeMere> bons = bonCommandeService.rechercher(new BonCommandeService.Recherche(
                         statutFiltre, aValider, etapesValidables, dateFrom, dateTo,
-                        numero, fournisseur, objet, demande, article),
+                        numero, fournisseur, objet, demande, article, aRecevoir),
                 PageRequest.of(Math.max(page, 0), taille));
 
         model.addAttribute("bons", bons);
@@ -110,6 +111,9 @@ public class BonCommandeController {
         model.addAttribute("statuts", BonCommandeMere.StatutBonCommande.values());
         model.addAttribute("statut", statutFiltre == null ? "" : statutFiltre.name());
         model.addAttribute("aValider", aValider);
+        model.addAttribute("aRecevoir", aRecevoir);
+        model.addAttribute("peutReceptionner",
+                WorkflowService.hasRole(auth, "ROLE_MOYENS_GENERAUX") || WorkflowService.hasRole(auth, "ROLE_ADMIN"));
         model.addAttribute("peutValiderUneEtape", !etapesValidables.isEmpty());
         model.addAttribute("numero", numero == null ? "" : numero);
         model.addAttribute("fournisseur", fournisseur == null ? "" : fournisseur);

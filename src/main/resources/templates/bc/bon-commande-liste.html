@@ -84,6 +84,15 @@
                             </label>
                         </div>
                     </div>
+                    <div class="col-md-3 d-flex align-items-end" th:if="${peutReceptionner}">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="fARecevoir" name="aRecevoir" value="true"
+                                   th:checked="${aRecevoir}">
+                            <label class="form-check-label" for="fARecevoir">
+                                <i class="fas fa-truck-loading me-1 text-primary"></i>À réceptionner seulement
+                            </label>
+                        </div>
+                    </div>
                     <div th:replace="~{fragment/pagination :: taille(${size})}"></div>
                     <div class="col-md-10 d-flex gap-2 align-items-end">
                         <button class="btn btn-gradient-blue" type="submit">

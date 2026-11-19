@@ -44,6 +44,7 @@ public interface BonCommandeMereRepo extends JpaRepository<BonCommandeMere, Stri
 		LEFT JOIN FETCH bc.demandeMere dm
 		WHERE bc.statut IN :statuts
 		  AND (:filtrerEtape = false OR bc.etapeValidation IN :etapes)
+		  AND (:aRecevoir = false OR bc.statutReception IS NULL OR bc.statutReception IN :receptionsOuvertes)
 		  AND bc.dateCreation BETWEEN :du AND :au
 		  AND (:numero = '' OR LOWER(COALESCE(bc.numero, '')) LIKE LOWER(CONCAT('%', :numero, '%'))
 		                    OR LOWER(bc.id) LIKE LOWER(CONCAT('%', :numero, '%')))
@@ -68,6 +69,7 @@ public interface BonCommandeMereRepo extends JpaRepository<BonCommandeMere, Stri
 		LEFT JOIN bc.demandeMere dm
 		WHERE bc.statut IN :statuts
 		  AND (:filtrerEtape = false OR bc.etapeValidation IN :etapes)
+		  AND (:aRecevoir = false OR bc.statutReception IS NULL OR bc.statutReception IN :receptionsOuvertes)
 		  AND bc.dateCreation BETWEEN :du AND :au
 		  AND (:numero = '' OR LOWER(COALESCE(bc.numero, '')) LIKE LOWER(CONCAT('%', :numero, '%'))
 		                    OR LOWER(bc.id) LIKE LOWER(CONCAT('%', :numero, '%')))
@@ -95,5 +97,75 @@ public interface BonCommandeMereRepo extends JpaRepository<BonCommandeMere, Stri
 	                                 @Param("objet") String objet,
 	                                 @Param("demande") String demande,
 	                                 @Param("article") String article,
+	                                 @Param("aRecevoir") boolean aRecevoir,
+	                                 @Param("receptionsOuvertes") List<BonCommandeMere.StatutReception> receptionsOuvertes,
 	                                 Pageable pageable);
+
+	// ── Tableau de bord ─────────────────────────────────────────────────────
+
+	/** Bons en attente de validation : [étape, nombre, plus ancienne date de soumission]. */
+	@Query("""
+		SELECT bc.etapeValidation, COUNT(bc), MIN(COALESCE(bc.dateSoumission, bc.dateCreation))
+		FROM BonCommandeMere bc
+		WHERE bc.statut = :statut
+		GROUP BY bc.etapeValidation
+		""")
+	List<Object[]> compterEnAttenteParEtape(@Param("statut") BonCommandeMere.StatutBonCommande statut);
+
+	/** Bons d'un statut : [nombre, dont rejetés (motif présent), plus ancienne date de création]. */
+	@Query("""
+		SELECT COUNT(bc), SUM(CASE WHEN bc.motifRejet IS NOT NULL THEN 1 ELSE 0 END), MIN(bc.dateCreation)
+		FROM BonCommandeMere bc
+		WHERE bc.statut = :statut
+		""")
+	List<Object[]> compterParStatutAvecRejets(@Param("statut") BonCommandeMere.StatutBonCommande statut);
+
+	/** Bons validés encore à réceptionner : [nombre, dont livraison prévue dépassée, plus ancienne date prévue]. */
+	@Query("""
+		SELECT COUNT(bc), SUM(CASE WHEN bc.dateLivraisonPrevue < :maintenant THEN 1 ELSE 0 END),
+		       MIN(bc.dateLivraisonPrevue)
+		FROM BonCommandeMere bc
+		WHERE bc.statut = :statut
+		  AND (bc.statutReception IS NULL OR bc.statutReception IN :receptionsOuvertes)
+		""")
+	List<Object[]> compterAReceptionner(@Param("statut") BonCommandeMere.StatutBonCommande statut,
+	                                    @Param("receptionsOuvertes") List<BonCommandeMere.StatutReception> receptionsOuvertes,
+	                                    @Param("maintenant") LocalDateTime maintenant);
+
+	/**
+	 * Bons validés sur la période (date de validation S.G., à défaut de création) :
+	 * [nombre, montant TTC total].
+	 */
+	@Query("""
+		SELECT COUNT(bc), COALESCE(SUM(bc.montantTTC), 0)
+		FROM BonCommandeMere bc
+		WHERE bc.statut = :statut
+		  AND COALESCE(bc.dateValidationSg, bc.dateCreation) BETWEEN :du AND :au
+		""")
+	List<Object[]> totauxValides(@Param("statut") BonCommandeMere.StatutBonCommande statut,
+	                             @Param("du") LocalDateTime du, @Param("au") LocalDateTime au);
+
+	/** Fournisseurs des bons validés sur la période : [nom, nombre de bons, montant TTC], montant décroissant. */
+	@Query("""
+		SELECT f.nom, COUNT(bc), SUM(bc.montantTTC)
+		FROM BonCommandeMere bc JOIN bc.fournisseur f
+		WHERE bc.statut = :statut
+		  AND COALESCE(bc.dateValidationSg, bc.dateCreation) BETWEEN :du AND :au
+		GROUP BY f.nom
+		ORDER BY SUM(bc.montantTTC) DESC
+		""")
+	List<Object[]> topFournisseurs(@Param("statut") BonCommandeMere.StatutBonCommande statut,
+	                               @Param("du") LocalDateTime du, @Param("au") LocalDateTime au,
+	                               Pageable limite);
+
+	/** Bons validés sur la période par avancement de réception : [statut de réception (null = non reçu), nombre]. */
+	@Query("""
+		SELECT bc.statutReception, COUNT(bc)
+		FROM BonCommandeMere bc
+		WHERE bc.statut = :statut
+		  AND COALESCE(bc.dateValidationSg, bc.dateCreation) BETWEEN :du AND :au
+		GROUP BY bc.statutReception
+		""")
+	List<Object[]> receptionsParStatut(@Param("statut") BonCommandeMere.StatutBonCommande statut,
+	                                   @Param("du") LocalDateTime du, @Param("au") LocalDateTime au);
 }

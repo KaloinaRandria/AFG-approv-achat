@@ -46,7 +46,7 @@ public class StockController {
     StockAlerteService stockAlerteService;
     @Autowired
     FamilleService familleService;
-    private static final int FAMILLE_MATERIELS_INFORMATIQUE_ID = 19;
+    public static final int FAMILLE_MATERIELS_INFORMATIQUE_ID = 19;
 
 
     @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")

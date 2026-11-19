@@ -12,6 +12,41 @@
             padding: 0.2rem 0.5rem;
             font-size: 0.75rem;
         }
+
+        /* À traiter */
+        .action-tuile {
+            display: flex; align-items: center; gap: .75rem; height: 100%;
+            padding: .75rem 1rem; border: 1px solid #e3e8f0; border-left: 4px solid #0d6efd;
+            border-radius: .5rem; background: #fff; color: inherit; text-decoration: none;
+            transition: box-shadow .15s, transform .15s;
+        }
+        .action-tuile:hover { box-shadow: 0 .25rem .75rem rgba(0, 16, 81, .12); transform: translateY(-1px); color: inherit; }
+        .action-tuile.urgent { border-left-color: #dc3545; }
+        .action-icone {
+            flex: 0 0 2.5rem; height: 2.5rem; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: #e7f0ff; color: #0d6efd;
+        }
+        .action-tuile.urgent .action-icone { background: #fdecee; color: #dc3545; }
+        .action-texte { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+        .action-titre { font-weight: 600; color: #001051; }
+        .action-detail, .action-age { font-size: .8rem; color: #6c757d; }
+        .action-tuile.urgent .action-age { color: #dc3545; font-weight: 600; }
+        .action-nombre { font-size: 1.6rem; font-weight: 700; color: #001051; }
+
+        /* Indicateurs d'achats */
+        .kpi-tuile {
+            display: block; height: 100%; padding: 1rem; border-radius: .5rem; background: #fff;
+            border: 1px solid #e3e8f0; color: inherit; text-decoration: none;
+        }
+        a.kpi-tuile:hover { box-shadow: 0 .25rem .75rem rgba(0, 16, 81, .12); color: inherit; }
+        .kpi-tuile.alerte { border-left: 4px solid #dc3545; }
+        .kpi-libelle { font-size: .8rem; color: #6c757d; text-transform: uppercase; letter-spacing: .02em; }
+        .kpi-valeur { font-size: 1.6rem; font-weight: 700; color: #001051; margin: .25rem 0; }
+        .kpi-valeur small { font-size: .8rem; font-weight: 500; color: #6c757d; }
+        .kpi-sous { font-size: .8rem; color: #6c757d; }
+
+        tr.ligne-cliquable { cursor: pointer; }
     </style>
 </head>
 <body>
@@ -23,7 +58,7 @@
         <!-- En-tête avec icônes en dégradé bleu -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="fw-bold text-gradient-blue">
-                <i class="fas fa-chart-line me-2"></i>Tableau de bord – Demandes de matériels
+                <i class="fas fa-chart-line me-2"></i>Tableau de bord
             </h1>
         </div>
 
@@ -83,6 +118,98 @@
                 </div>
             </form>
 
+
+            <!-- ===== À TRAITER : ce qui attend une action de l'utilisateur, selon ses rôles ===== -->
+            <div class="chart-card shadow-sm border-0 mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-tasks me-2"></i>À traiter</span>
+                    <span class="text-muted small" th:unless="${#lists.isEmpty(actions)}">
+                        <i class="fas fa-circle text-danger me-1" style="font-size:8px;"></i>
+                        en attente depuis plus de <span th:text="${joursRetard}"></span> jours ou en retard
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div th:if="${#lists.isEmpty(actions)}" class="text-muted py-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>Rien à traiter pour le moment.
+                    </div>
+                    <div class="row g-2" th:unless="${#lists.isEmpty(actions)}">
+                        <div class="col-xxl-3 col-xl-4 col-md-6" th:each="a : ${actions}">
+                            <a th:href="@{${a.url}}" class="action-tuile" th:classappend="${a.urgent} ? 'urgent'">
+                                <span class="action-icone"><i class="fas" th:classappend="${a.icone}"></i></span>
+                                <span class="action-texte">
+                                    <span class="action-titre" th:text="${a.titre}"></span>
+                                    <span class="action-detail" th:text="${a.detail}"></span>
+                                    <span class="action-age" th:if="${a.joursAttente != null}"
+                                          th:text="${a.joursAttente == 0 ? 'Le plus ancien : aujourd’hui'
+                                                    : 'Le plus ancien : il y a ' + a.joursAttente + ' j'}"></span>
+                                </span>
+                                <span class="action-nombre" th:text="${a.nombre}"></span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== MES DEMANDES ===== -->
+            <div class="row g-3 mb-3">
+                <div th:class="${#lists.isEmpty(mesRefus) ? 'col-12' : 'col-xl-7'}">
+                    <div class="chart-card shadow-sm border-0 h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-user me-2"></i>Mes dernières demandes</span>
+                            <span class="d-flex gap-2">
+                                <a th:href="@{/demande/add}" class="btn btn-xs btn-gradient-blue">
+                                    <i class="fas fa-plus me-1"></i>Nouvelle demande
+                                </a>
+                                <a th:href="@{/demande/list(scope='ME')}" class="btn btn-xs btn-outline-secondary">Toutes</a>
+                            </span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div th:if="${#lists.isEmpty(mesDemandes)}" class="text-muted p-3">
+                                Vous n'avez encore fait aucune demande.
+                            </div>
+                            <table class="table table-hover table-sm align-middle mb-0" th:unless="${#lists.isEmpty(mesDemandes)}">
+                                <tbody>
+                                <tr th:each="d : ${mesDemandes}" class="ligne-cliquable"
+                                    th:attr="data-href=@{/demande/fiche/{id}(id=${d.id})}">
+                                    <td class="ps-3 fw-semibold text-nowrap">
+                                        <a th:href="@{/demande/fiche/{id}(id=${d.id})}" th:text="${d.id}"></a>
+                                    </td>
+                                    <td class="text-muted small text-nowrap"
+                                        th:text="${d.date != null ? #temporals.format(d.date, 'dd/MM/yyyy') : ''}"></td>
+                                    <td class="text-truncate" style="max-width: 280px;" th:text="${d.motif}"></td>
+                                    <td class="pe-3 text-end"><span class="badge" th:classappend="${d.badge}" th:text="${d.etape}"></span></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-5" th:unless="${#lists.isEmpty(mesRefus)}">
+                    <div class="chart-card shadow-sm border-0 h-100">
+                        <div class="card-header">
+                            <i class="fas fa-times-circle text-danger me-2"></i>Mes demandes refusées (30 derniers jours)
+                        </div>
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item" th:each="r : ${mesRefus}">
+                                    <div class="d-flex justify-content-between">
+                                        <a class="fw-semibold" th:href="@{/demande/fiche/{id}(id=${r.demandeId})}" th:text="${r.demandeId}"></a>
+                                        <small class="text-muted" th:text="${#temporals.format(r.date, 'dd/MM/yyyy')}"></small>
+                                    </div>
+                                    <div class="small text-muted text-truncate" th:text="${r.motif}"></div>
+                                    <div class="small mt-1">
+                                        Refusée par <strong th:text="${r.par}"></strong>
+                                        (<span th:text="${r.etape}"></span>)
+                                        <span th:if="${r.commentaire != null and !#strings.isEmpty(r.commentaire)}">
+                                            : « <span th:text="${r.commentaire}"></span> »
+                                        </span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- ===== 3 CARTES PRINCIPALES AVEC TENDANCES MO/MO ===== -->
             <div class="row g-3 mb-3">
@@ -212,6 +339,118 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ===== ACHATS ET DÉLAIS (encadrement), sur la période choisie ===== -->
+            <th:block th:if="${indicateurs != null}">
+                <div class="row g-3 mb-3">
+                    <div class="col-xl-3 col-md-6">
+                        <div class="kpi-tuile">
+                            <div class="kpi-libelle"><i class="fas fa-file-invoice-dollar me-1"></i>Achats engagés (BC validés)</div>
+                            <div class="kpi-valeur">
+                                <span th:text="${#numbers.formatDecimal(indicateurs.montantTtc, 1, 'WHITESPACE', 0, 'COMMA')}"></span>
+                                <small>MGA TTC</small>
+                            </div>
+                            <div class="kpi-sous">
+                                <span th:text="${indicateurs.nombreBc}"></span> bon(s) — moyenne
+                                <span th:text="${#numbers.formatDecimal(indicateurs.montantMoyen, 1, 'WHITESPACE', 0, 'COMMA')}"></span> MGA
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <a class="kpi-tuile" th:href="@{/bon-commande/list(aRecevoir=true)}">
+                            <div class="kpi-libelle"><i class="fas fa-truck me-1"></i>Réception des BC de la période</div>
+                            <div class="kpi-valeur">
+                                <span th:text="${indicateurs.tauxReception != null ? indicateurs.tauxReception + ' %' : '—'}"></span>
+                                <small>reçus</small>
+                            </div>
+                            <div class="kpi-sous">
+                                <span th:text="${indicateurs.bcRecus}"></span> / <span th:text="${indicateurs.bcValides}"></span> bon(s) entièrement reçus
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <a class="kpi-tuile" th:classappend="${indicateurs.bcEnRetard > 0} ? 'alerte'"
+                           th:href="@{/bon-commande/list(aRecevoir=true)}">
+                            <div class="kpi-libelle"><i class="fas fa-hourglass-end me-1"></i>Livraisons en retard</div>
+                            <div class="kpi-valeur"><span th:text="${indicateurs.bcEnRetard}"></span> <small>BC</small></div>
+                            <div class="kpi-sous">Date de livraison prévue dépassée (à ce jour)</div>
+                        </a>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <a class="kpi-tuile" th:classappend="${indicateurs.alertesStock > 0} ? 'alerte'"
+                           th:href="@{/stock/etat-stock(etat='ALERTE')}">
+                            <div class="kpi-libelle"><i class="fas fa-boxes me-1"></i>Articles en alerte de stock</div>
+                            <div class="kpi-valeur"><span th:text="${indicateurs.alertesStock}"></span> <small>article(s)</small></div>
+                            <div class="kpi-sous">En rupture ou sous le seuil (à ce jour)</div>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <!-- Délais par étape -->
+                    <div class="col-xl-7">
+                        <div class="chart-card shadow-sm border-0 h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-route me-2"></i>Temps moyen passé à chaque étape</span>
+                                <span class="text-muted small">Demandes émises sur la période</span>
+                            </div>
+                            <div class="card-body">
+                                <div th:if="${#lists.isEmpty(indicateurs.delais)}" class="text-muted">
+                                    Aucune étape franchie sur la période.
+                                </div>
+                                <div th:each="d : ${indicateurs.delais}" class="mb-2">
+                                    <div class="d-flex justify-content-between small mb-1">
+                                        <span>
+                                            <span class="fw-semibold" th:text="${d.etape}"></span>
+                                            <span class="badge bg-danger ms-1" th:if="${d.plusLente() and #lists.size(indicateurs.delais) > 1}">plus lente</span>
+                                        </span>
+                                        <span>
+                                            <strong th:text="${d.joursMoyens + ' j'}"></strong>
+                                            <span class="text-muted" th:text="'(' + ${d.nombre} + ' demande(s))'"></span>
+                                        </span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar" th:classappend="${d.plusLente() ? 'bg-danger' : 'bg-primary'}"
+                                             role="progressbar" th:style="'width: ' + ${d.largeur} + '%'"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Top fournisseurs -->
+                    <div class="col-xl-5">
+                        <div class="chart-card shadow-sm border-0 h-100">
+                            <div class="card-header">
+                                <i class="fas fa-trophy me-2"></i>Principaux fournisseurs (BC validés)
+                            </div>
+                            <div class="card-body p-0">
+                                <div th:if="${#lists.isEmpty(indicateurs.topFournisseurs)}" class="text-muted p-3">
+                                    Aucun bon de commande validé sur la période.
+                                </div>
+                                <table class="table table-sm align-middle mb-0" th:unless="${#lists.isEmpty(indicateurs.topFournisseurs)}">
+                                    <thead>
+                                    <tr class="small text-muted">
+                                        <th class="ps-3">Fournisseur</th>
+                                        <th class="text-center">BC</th>
+                                        <th class="text-end pe-3">Montant TTC (MGA)</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr th:each="f : ${indicateurs.topFournisseurs}">
+                                        <td class="ps-3">
+                                            <a th:href="@{/bon-commande/list(fournisseur=${f.nom}, statut='VALIDE')}" th:text="${f.nom}"></a>
+                                        </td>
+                                        <td class="text-center" th:text="${f.nombreBons}"></td>
+                                        <td class="text-end pe-3 fw-semibold"
+                                            th:text="${#numbers.formatDecimal(f.montant, 1, 'WHITESPACE', 0, 'COMMA')}"></td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </th:block>
 
             <!-- ===== GRAPHIQUES ===== -->
             <div class="row g-3">
@@ -701,5 +940,14 @@
     </section>
 </div>
 
+<script>
+    // Lignes « Mes dernières demandes » : clic n'importe où sur la ligne
+    document.querySelectorAll('tr.ligne-cliquable').forEach(function (tr) {
+        tr.addEventListener('click', function (e) {
+            if (e.target.closest('a, button')) return;
+            window.location.href = tr.getAttribute('data-href');
+        });
+    });
+</script>
 </body>
 </html>

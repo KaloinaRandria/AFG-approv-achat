@@ -68,4 +68,8 @@ public interface BonSortieMereRepo extends JpaRepository<BonSortieMere, Integer>
                                    @Param("demandeur") String demandeur,
                                    @Param("article") String article,
                                    Pageable pageable);
+
+    /** Tableau de bord : [nombre, plus ancienne date de création] des bons d'un statut. */
+    @Query("SELECT COUNT(b), MIN(b.dateCreation) FROM BonSortieMere b WHERE b.statut = :statut")
+    List<Object[]> compterParStatut(@Param("statut") BonSortieMere.StatutBonSortie statut);
 }

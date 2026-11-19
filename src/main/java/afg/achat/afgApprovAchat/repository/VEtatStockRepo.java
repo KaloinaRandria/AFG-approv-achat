@@ -119,6 +119,11 @@ WHERE 1=1
         (:etat = 'NORMAL'
             AND CAST(v.stock_disponible AS numeric) > CAST(v.seuil_min AS numeric)
         )
+        OR
+        (:etat = 'ALERTE'
+            AND (CAST(v.stock_disponible AS numeric) <= 0
+                 OR CAST(v.stock_disponible AS numeric) <= CAST(v.seuil_min AS numeric))
+        )
   )
 ORDER BY v.code_article ASC
 """,
@@ -146,6 +151,11 @@ WHERE 1=1
         OR
         (:etat = 'NORMAL'
             AND CAST(v.stock_disponible AS numeric) > CAST(v.seuil_min AS numeric)
+        )
+        OR
+        (:etat = 'ALERTE'
+            AND (CAST(v.stock_disponible AS numeric) <= 0
+                 OR CAST(v.stock_disponible AS numeric) <= CAST(v.seuil_min AS numeric))
         )
   )
 """,

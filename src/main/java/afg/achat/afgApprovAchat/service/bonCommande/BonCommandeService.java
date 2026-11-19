@@ -76,8 +76,20 @@ public class BonCommandeService {
                             List<BonCommandeMere.EtapeValidation> etapesDuValideur,
                             LocalDate du, LocalDate au,
                             String numero, String fournisseur, String objet,
-                            String demande, String article) {
+                            String demande, String article,
+                            boolean aRecevoirSeulement) {
+
+        /** Sans le filtre « à réceptionner ». */
+        public Recherche(BonCommandeMere.StatutBonCommande statut, boolean aValiderSeulement,
+                         List<BonCommandeMere.EtapeValidation> etapesDuValideur, LocalDate du, LocalDate au,
+                         String numero, String fournisseur, String objet, String demande, String article) {
+            this(statut, aValiderSeulement, etapesDuValideur, du, au, numero, fournisseur, objet, demande, article, false);
+        }
     }
+
+    /** Réception pas encore terminée : le bon validé attend (encore) une livraison. */
+    public static final List<BonCommandeMere.StatutReception> RECEPTIONS_OUVERTES =
+            List.of(BonCommandeMere.StatutReception.NON_RECU, BonCommandeMere.StatutReception.PARTIELLEMENT_RECU);
 
     /**
      * Recherche paginée des bons de commande.
@@ -96,6 +108,9 @@ public class BonCommandeService {
                 return Page.empty(pageable);
             }
             etapes = r.etapesDuValideur();
+        } else if (r.aRecevoirSeulement()) {
+            // À réceptionner : bons validés dont la réception n'est pas terminée
+            statuts = List.of(BonCommandeMere.StatutBonCommande.VALIDE);
         } else {
             statuts = r.statut() != null ? List.of(r.statut()) : List.of(BonCommandeMere.StatutBonCommande.values());
         }
@@ -104,7 +119,8 @@ public class BonCommandeService {
                 r.du() == null ? LocalDateTime.of(1900, 1, 1, 0, 0) : r.du().atStartOfDay(),
                 r.au() == null ? LocalDateTime.of(2999, 12, 31, 23, 59, 59) : r.au().atTime(LocalTime.MAX),
                 texte(r.numero()), texte(r.fournisseur()), texte(r.objet()),
-                texte(r.demande()), texte(r.article()), pageable);
+                texte(r.demande()), texte(r.article()),
+                r.aRecevoirSeulement(), RECEPTIONS_OUVERTES, pageable);
     }
 
     private static String texte(String valeur) {
