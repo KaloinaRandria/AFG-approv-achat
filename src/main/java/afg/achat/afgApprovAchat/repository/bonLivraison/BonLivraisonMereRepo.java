@@ -50,9 +50,9 @@ public interface BonLivraisonMereRepo extends JpaRepository<BonLivraisonMere,Str
      */
     @Query(value = """
         SELECT bl FROM BonLivraisonMere bl
-        LEFT JOIN bl.fournisseur f
-        LEFT JOIN bl.devise d
-        LEFT JOIN bl.bonCommandeMere bc
+        LEFT JOIN FETCH bl.fournisseur f
+        LEFT JOIN FETCH bl.devise d
+        LEFT JOIN FETCH bl.bonCommandeMere bc
         WHERE bl.dateReception BETWEEN :du AND :au
           AND (:numero = '' OR LOWER(bl.id) LIKE LOWER(CONCAT('%', :numero, '%'))
                             OR LOWER(COALESCE(bl.description, '')) LIKE LOWER(CONCAT('%', :numero, '%')))

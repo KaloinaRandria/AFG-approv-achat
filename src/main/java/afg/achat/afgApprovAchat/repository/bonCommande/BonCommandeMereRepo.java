@@ -40,8 +40,8 @@ public interface BonCommandeMereRepo extends JpaRepository<BonCommandeMere, Stri
 	 */
 	@Query(value = """
 		SELECT bc FROM BonCommandeMere bc
-		LEFT JOIN bc.fournisseur f
-		LEFT JOIN bc.demandeMere dm
+		LEFT JOIN FETCH bc.fournisseur f
+		LEFT JOIN FETCH bc.demandeMere dm
 		WHERE bc.statut IN :statuts
 		  AND (:filtrerEtape = false OR bc.etapeValidation IN :etapes)
 		  AND bc.dateCreation BETWEEN :du AND :au
