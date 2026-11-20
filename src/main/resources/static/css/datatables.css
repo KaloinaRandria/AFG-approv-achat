@@ -565,7 +565,7 @@ table.dataTable td,
 .dataTables_filter,
 .dataTables_length,
 .dataTables_processing {
-    font-family: 'Mark Pro', sans-serif !important;
+    font-family: 'Figtree', 'Segoe UI', sans-serif !important;
 }
 
 table.dataTable {
@@ -1088,7 +1088,7 @@ table.dataTable tbody tr:hover {
 /* ── 9. Documents : bon de livraison, bon de sortie, demande ──────────────── */
 
 .bl-document {
-    font-family: 'Mark Pro', sans-serif;
+    font-family: 'Figtree', 'Segoe UI', sans-serif;
     background: #fff;
     padding: 30px;
     width: 100%;

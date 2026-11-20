@@ -43,6 +43,7 @@ public class WebSecurityConfig {
                             "/select2/**",
                             "/js/**",
                             "/css/**",
+                            "/fonts/**",
                             "/assets/**",
                             "/jqueryFiler/**",
                             "/fileUpload/**"
