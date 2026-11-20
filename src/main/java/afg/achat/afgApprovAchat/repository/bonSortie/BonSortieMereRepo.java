@@ -4,13 +4,16 @@ import afg.achat.afgApprovAchat.model.bonSortie.BonSortieMere;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface BonSortieMereRepo extends JpaRepository<BonSortieMere, Integer> {
@@ -19,6 +22,11 @@ public interface BonSortieMereRepo extends JpaRepository<BonSortieMere, Integer>
                                                    BonSortieMere.StatutBonSortie statut);
     // Compte le nombre de BS pour générer le numéro
     long countByDemandeMere(DemandeMere demandeMere);
+
+    /** Bon verrouillé jusqu'à la fin de la transaction (deux annulations simultanées ne passent pas). */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT bs FROM BonSortieMere bs WHERE bs.id = :id")
+    Optional<BonSortieMere> findByIdPourMiseAJour(@Param("id") int id);
 
     /**
      * Recherche de la liste des bons de sortie. Chaque filtre texte vide est ignoré ;
@@ -68,8 +76,4 @@ public interface BonSortieMereRepo extends JpaRepository<BonSortieMere, Integer>
                                    @Param("demandeur") String demandeur,
                                    @Param("article") String article,
                                    Pageable pageable);
-
-    /** Tableau de bord : [nombre, plus ancienne date de création] des bons d'un statut. */
-    @Query("SELECT COUNT(b), MIN(b.dateCreation) FROM BonSortieMere b WHERE b.statut = :statut")
-    List<Object[]> compterParStatut(@Param("statut") BonSortieMere.StatutBonSortie statut);
 }

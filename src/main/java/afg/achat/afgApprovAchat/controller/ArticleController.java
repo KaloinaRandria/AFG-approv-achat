@@ -35,6 +35,8 @@ public class ArticleController {
     FamilleService familleService;
     @Autowired
     IdGenerator idGenerator;
+    @Autowired
+    afg.achat.afgApprovAchat.service.util.PrixArticleService prixArticleService;
 
 
     @GetMapping("/list")
@@ -88,6 +90,9 @@ public class ArticleController {
     public String entreeArticle(@PathVariable String codeArticle, Model model, HttpServletRequest request) {
         Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));
         model.addAttribute("article", article);
+        // Prix du lot proposé : dernier prix d'achat connu
+        model.addAttribute("prixUnitaire", prixArticleService.getDernierPrixByArticle(codeArticle)
+                .map(p -> String.valueOf(p.getPrixUnitaire())).orElse(""));
         return "stock/entree-saisie";
     }
 

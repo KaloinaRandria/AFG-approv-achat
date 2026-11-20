@@ -99,6 +99,25 @@ public class BonSortieController {
         return "redirect:/demande/fiche/" + idDemande;
     }
 
+    // ── Annuler un BS confirmé (remise en stock) ────────────────────────────
+    // Mêmes droits que la création ; le motif est obligatoire
+    @PreAuthorize("hasRole('MOYENS_GENERAUX')")
+    @PostMapping("/{id}/annuler")
+    public String annulerBonSortie(@PathVariable("id") int id,
+                                   @RequestParam(name = "motif", required = false) String motif,
+                                   RedirectAttributes redirectAttributes) {
+        try {
+            Utilisateur auteur = (Utilisateur) SecurityContextHolder
+                    .getContext().getAuthentication().getPrincipal();
+            BonSortieMere bs = bonSortieService.annulerBonSortie(id, auteur, motif);
+            redirectAttributes.addFlashAttribute("ok",
+                    "Bon de sortie " + bs.getNumeroBs() + " annulé : les quantités sont remises en stock.");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+        }
+        return "redirect:/bon-sortie/" + id;
+    }
+
     // ── Liste de tous les bons de sortie (Moyens Généraux) ──────────────────
     @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @GetMapping("/list")

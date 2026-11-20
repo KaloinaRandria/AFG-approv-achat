@@ -29,6 +29,12 @@
                 </div>
 
                 <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-danger"
+                            th:if="${bs.statut?.name() == 'CONFIRME'}"
+                            sec:authorize="hasRole('ROLE_MOYENS_GENERAUX')"
+                            data-bs-toggle="modal" data-bs-target="#modalAnnulerBs">
+                        <i class="fas fa-undo me-1"></i> Annuler le bon
+                    </button>
                     <a class="btn btn-outline-secondary"
                        sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
                        th:href="@{/bon-sortie/list}">
@@ -155,6 +161,22 @@
                                                : '-'}">-</div>
                             </div>
 
+                        </div>
+
+                        <!-- ANNULATION -->
+                        <div class="px-3 pb-2" th:if="${bs.statut?.name() == 'ANNULE'}">
+                            <div class="p-3 border border-danger rounded" style="background:#fdf2f2">
+                                <div class="fw-bold mb-1 text-danger">
+                                    <i class="fas fa-undo me-2"></i> Bon annulé, quantités remises en stock
+                                </div>
+                                <div class="small text-muted"
+                                     th:if="${bs.dateAnnulation != null}"
+                                     th:text="${'Le ' + #temporals.format(bs.dateAnnulation, 'dd/MM/yyyy HH:mm')
+                                               + (bs.annulePar != null ? ' par ' + bs.annulePar.nom + ' ' + bs.annulePar.prenom : '')}">
+                                </div>
+                                <div class="mt-1" th:if="${bs.motifAnnulation != null}"
+                                     th:text="${'Motif : ' + bs.motifAnnulation}"></div>
+                            </div>
                         </div>
 
                         <!-- COMMENTAIRE BS -->
@@ -285,6 +307,34 @@
             </div>
         </div>
     </section>
+</div>
+
+<!-- MODAL ANNULATION -->
+<div class="modal fade no-print" id="modalAnnulerBs" tabindex="-1" aria-hidden="true"
+     th:if="${bs.statut?.name() == 'CONFIRME'}" sec:authorize="hasRole('ROLE_MOYENS_GENERAUX')">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" th:action="@{/bon-sortie/{id}/annuler(id=${bs.id})}"
+                  data-chargement="Annulation en cours…">
+                <div class="modal-header">
+                    <h5 class="modal-title">Annuler le bon de sortie <span th:text="${bs.numeroBs}"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted">
+                        Les quantités sorties seront remises en stock et pourront faire l'objet
+                        d'un nouveau bon de sortie. Cette annulation est définitive.
+                    </p>
+                    <label for="motifAnnulation" class="form-label fw-bold required-field">Motif de l'annulation</label>
+                    <textarea class="form-control" id="motifAnnulation" name="motif" rows="3" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="submit" class="btn btn-danger">Annuler le bon</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 </body>

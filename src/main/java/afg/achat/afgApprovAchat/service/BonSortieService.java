@@ -189,6 +189,54 @@ public class BonSortieService {
         recalculerEtatLivraison(demande);
     }
 
+    // ── Annulation d'un BS confirmé → remise en stock ───────────────────────
+    /**
+     * Annule un bon de sortie confirmé, en une seule transaction : les quantités
+     * sorties sont remises en stock, le bon passe en ANNULE (avec son motif) et
+     * l'état de livraison de la demande est recalculé ; les quantités redeviennent
+     * disponibles pour un nouveau bon de sortie.
+     */
+    public BonSortieMere annulerBonSortie(int bsId, Utilisateur auteur, String motif) {
+        String motifNettoye = motif == null ? "" : motif.trim();
+        if (motifNettoye.isEmpty()) {
+            throw new IllegalArgumentException("Le motif d'annulation est obligatoire.");
+        }
+
+        BonSortieMere bs = bsMereRepo.findByIdPourMiseAJour(bsId)
+                .orElseThrow(() -> new IllegalArgumentException("Bon de sortie introuvable."));
+        if (bs.getStatut() != BonSortieMere.StatutBonSortie.CONFIRME) {
+            throw new IllegalStateException("Seul un bon de sortie confirmé peut être annulé.");
+        }
+
+        DemandeMere demande = bs.getDemandeMere();
+        StockMere stockMere = stockMereRepo.findByDemandeMere(demande).orElse(null);
+        LocalDateTime dateSortie = bs.getDateConfirmation() != null ? bs.getDateConfirmation() : bs.getDateCreation();
+
+        for (BonSortieFille ligne : bsFilleRepo.findByBonSortieMere(bs)) {
+            double quantite = ligne.getQuantiteSortie();
+            if (quantite <= 0) continue;
+
+            // Mouvements de stock de la demande : on retire la sortie enregistrée
+            if (stockMere != null) {
+                stockFilleRepo.findByStockMereAndArticle(stockMere, ligne.getArticle()).ifPresent(sf -> {
+                    sf.setSortie(String.valueOf(Math.max(0.0, sf.getSortie() - quantite)));
+                    stockFilleRepo.save(sf);
+                });
+            }
+            // Lots FIFO : la quantité redevient disponible
+            lotStockService.restituerStock(ligne.getArticle(), quantite, ligne.getPrixUnitaire(), dateSortie);
+        }
+
+        bs.setStatut(BonSortieMere.StatutBonSortie.ANNULE);
+        bs.setDateAnnulation(LocalDateTime.now());
+        bs.setAnnulePar(auteur);
+        bs.setMotifAnnulation(motifNettoye);
+        bsMereRepo.save(bs);
+
+        recalculerEtatLivraison(demande);
+        return bs;
+    }
+
     // ── Recalcul EtatLivraison ───────────────────────────────────────────────
     private void recalculerEtatLivraison(DemandeMere demande) {
         List<DemandeFille> lignes = demandeFilleService

@@ -243,17 +243,6 @@ public class ArticleService {
     }
 
 
-    @Transactional
-    public void updatePrixUnitaire(String codeArticle, String prixUnitaireStr) {
-        if (prixUnitaireStr == null || prixUnitaireStr.isBlank()) return;
-
-        Article a = this.getArticleByCodeArticle(codeArticle)
-                .orElseThrow(() -> new IllegalArgumentException("Article introuvable: " + codeArticle));
-
-        a.setPrixUnitaire(prixUnitaireStr);
-        articleRepo.save(a);
-    }
-
     public Article getArticleByCodeProvisoire(String codeProvisoire) {
         return articleRepo.findArticlesByCodeProvisoire(codeProvisoire);
     }

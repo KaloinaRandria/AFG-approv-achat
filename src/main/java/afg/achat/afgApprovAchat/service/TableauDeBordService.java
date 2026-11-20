@@ -2,14 +2,12 @@ package afg.achat.afgApprovAchat.service;
 
 import afg.achat.afgApprovAchat.controller.StockController;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
-import afg.achat.afgApprovAchat.model.bonSortie.BonSortieMere;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.demande.ValidationDemande;
 import afg.achat.afgApprovAchat.model.util.EtapeWorkflow;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.bonCommande.BonCommandeMereRepo;
-import afg.achat.afgApprovAchat.repository.bonSortie.BonSortieMereRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereRepo;
 import afg.achat.afgApprovAchat.repository.demande.ValidationDemandeRepo;
 import afg.achat.afgApprovAchat.service.bonCommande.BesoinAchatService;
@@ -51,7 +49,6 @@ public class TableauDeBordService {
     private final DemandeMereRepo demandeMereRepo;
     private final ValidationDemandeRepo validationDemandeRepo;
     private final BonCommandeMereRepo bonCommandeMereRepo;
-    private final BonSortieMereRepo bonSortieMereRepo;
     private final BesoinAchatService besoinAchatService;
     private final StockAlerteService stockAlerteService;
     private final UtilisateurService utilisateurService;
@@ -140,7 +137,9 @@ public class TableauDeBordService {
                     "fa-file-alt", brouillons, jours(r[2], maintenant), rejetes > 0, "/bon-commande/list?statut=BROUILLON");
         }
 
-        // ── Moyens Généraux : réception, sorties de stock, paiements directs ──
+        // ── Moyens Généraux : réception, paiements directs ──
+        // (pas de compteur de bons de sortie en brouillon : un bon est créé et confirmé
+        // dans une seule transaction, un brouillon n'est qu'un reste de création interrompue)
         if (admin || mg) {
             Object[] r = premiere(bonCommandeMereRepo.compterAReceptionner(
                     BonCommandeMere.StatutBonCommande.VALIDE, BonCommandeService.RECEPTIONS_OUVERTES, maintenant));
@@ -148,10 +147,6 @@ public class TableauDeBordService {
             ajouterSiNonVide(actions, "Bons de commande à réceptionner",
                     retard > 0 ? "Dont " + retard + " en retard de livraison" : "Livraison attendue",
                     "fa-truck-loading", nombre(r[0]), null, retard > 0, "/bon-commande/list?aRecevoir=true");
-
-            r = premiere(bonSortieMereRepo.compterParStatut(BonSortieMere.StatutBonSortie.BROUILLON));
-            ajouterSiNonVide(actions, "Bons de sortie en brouillon", "À confirmer pour sortir le stock",
-                    "fa-file-export", nombre(r[0]), jours(r[1], maintenant), "/bon-sortie/list?statut=BROUILLON");
 
             r = premiere(demandeMereRepo.compterPaiementsDirects(StatutDemande.VALIDE,
                     DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE));

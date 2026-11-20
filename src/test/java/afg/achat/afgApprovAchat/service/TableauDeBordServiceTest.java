@@ -3,7 +3,6 @@ package afg.achat.afgApprovAchat.service;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.bonCommande.BonCommandeMereRepo;
-import afg.achat.afgApprovAchat.repository.bonSortie.BonSortieMereRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereRepo;
 import afg.achat.afgApprovAchat.repository.demande.ValidationDemandeRepo;
 import afg.achat.afgApprovAchat.service.bonCommande.BesoinAchatService;
@@ -34,7 +33,6 @@ class TableauDeBordServiceTest {
     @Mock DemandeMereRepo demandeMereRepo;
     @Mock ValidationDemandeRepo validationDemandeRepo;
     @Mock BonCommandeMereRepo bonCommandeMereRepo;
-    @Mock BonSortieMereRepo bonSortieMereRepo;
     @Mock BesoinAchatService besoinAchatService;
     @Mock StockAlerteService stockAlerteService;
     @Mock UtilisateurService utilisateurService;
@@ -96,7 +94,7 @@ class TableauDeBordServiceTest {
         // Aucun accès achats / réception / stock pour le seul rôle SG
         assertTrue(actions.stream().noneMatch(a -> a.url().startsWith("/stock")
                 || a.url().contains("aRecevoir") || a.url().contains("lignes-a-acheter")));
-        verifyNoInteractions(besoinAchatService, stockAlerteService, bonSortieMereRepo);
+        verifyNoInteractions(besoinAchatService, stockAlerteService);
     }
 
     @Test

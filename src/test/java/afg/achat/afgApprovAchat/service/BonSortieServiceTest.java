@@ -5,6 +5,7 @@ import afg.achat.afgApprovAchat.model.bonSortie.BonSortieFille;
 import afg.achat.afgApprovAchat.model.bonSortie.BonSortieMere;
 import afg.achat.afgApprovAchat.model.demande.DemandeFille;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.model.stock.StockFille;
 import afg.achat.afgApprovAchat.model.stock.StockMere;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.bonSortie.BonSortieFilleRepo;
@@ -176,6 +177,60 @@ class BonSortieServiceTest {
                 eq(java.time.LocalDateTime.of(2026, 11, 1, 0, 0)),
                 eq(java.time.LocalDate.of(2026, 11, 18).atTime(java.time.LocalTime.MAX)),
                 eq("BS-DM1"), eq(""), eq("ART1"), eq(pageable));
+    }
+
+    @Test
+    void annulationRemetEnStockEtRecalculeLaLivraison() {
+        BonSortieMere bs = bonConfirme();
+        Article article = new Article();
+        article.setCodeArticle("ART1");
+        BonSortieFille l = new BonSortieFille();
+        l.setArticle(article);
+        l.setQuantiteSortie(3.0);
+        l.setPrixUnitaire(250.0);
+        lignesEnregistrees.add(l);
+
+        StockFille sf = new StockFille();
+        sf.setSortie("5.0");
+        when(stockFilleRepo.findByStockMereAndArticle(any(), eq(article))).thenReturn(Optional.of(sf));
+
+        BonSortieMere annule = service.annulerBonSortie(1, mg, "  erreur de quantité ");
+
+        assertEquals(BonSortieMere.StatutBonSortie.ANNULE, annule.getStatut());
+        assertEquals("erreur de quantité", annule.getMotifAnnulation());
+        assertSame(mg, annule.getAnnulePar());
+        assertNotNull(annule.getDateAnnulation());
+        assertEquals(2.0, sf.getSortie());
+        // Lot recréé au prix de la ligne, daté de la sortie annulée
+        verify(lotStockService).restituerStock(article, 3.0, 250.0, bs.getDateConfirmation());
+        verify(demandeMereService).saveDemandeMere(demande);
+    }
+
+    @Test
+    void annulationSansMotifRefusee() {
+        bonConfirme();
+        assertThrows(IllegalArgumentException.class, () -> service.annulerBonSortie(1, mg, "  "));
+        verify(lotStockService, never()).restituerStock(any(), anyDouble(), anyDouble(), any());
+    }
+
+    @Test
+    void seulUnBonConfirmePeutEtreAnnule() {
+        BonSortieMere bs = bonConfirme();
+        bs.setStatut(BonSortieMere.StatutBonSortie.ANNULE);
+        assertThrows(IllegalStateException.class, () -> service.annulerBonSortie(1, mg, "doublon"));
+        verify(lotStockService, never()).restituerStock(any(), anyDouble(), anyDouble(), any());
+        verify(bsMereRepo, never()).save(any());
+    }
+
+    private BonSortieMere bonConfirme() {
+        BonSortieMere bs = new BonSortieMere();
+        bs.setId(1);
+        bs.setNumeroBs("BS-DM1-1");
+        bs.setDemandeMere(demande);
+        bs.setStatut(BonSortieMere.StatutBonSortie.CONFIRME);
+        bs.setDateConfirmation(java.time.LocalDateTime.of(2026, 11, 18, 10, 0));
+        when(bsMereRepo.findByIdPourMiseAJour(1)).thenReturn(Optional.of(bs));
+        return bs;
     }
 
     private DemandeFille ligne(int id, String codeArticle, double quantite, double stock) {

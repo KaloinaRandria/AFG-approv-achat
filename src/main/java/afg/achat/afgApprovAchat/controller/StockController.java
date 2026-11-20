@@ -13,6 +13,7 @@ import afg.achat.afgApprovAchat.service.VEtatStockService;
 import afg.achat.afgApprovAchat.service.stock.StockAlerteService;
 import afg.achat.afgApprovAchat.service.stock.StockFilleService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
+import afg.achat.afgApprovAchat.service.stock.MouvementStockService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
@@ -46,6 +47,8 @@ public class StockController {
     StockAlerteService stockAlerteService;
     @Autowired
     FamilleService familleService;
+    @Autowired
+    MouvementStockService mouvementStockService;
     public static final int FAMILLE_MATERIELS_INFORMATIQUE_ID = 19;
 
 
@@ -53,34 +56,29 @@ public class StockController {
     @PostMapping("/save-entree")
     public String insertEntreeStock(@RequestParam(name = "codeArticle") String codeArticle,
                                     @RequestParam(name = "quantite") String quantiteEntree,
+                                    @RequestParam(name = "prixUnitaire", required = false) String prixUnitaire,
                                     Model model) {
         Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));
         model.addAttribute("article", article);
+        model.addAttribute("quantiteEntree", quantiteEntree);
+        model.addAttribute("prixUnitaire", prixUnitaire);
 
         // Un article inactif n'a plus de stock
         if (!article.estActif()) {
             model.addAttribute("error", "Cet article est inactif : il n'est plus géré en stock.");
-            model.addAttribute("quantiteEntree", quantiteEntree);
             return "stock/entree-saisie";
         }
 
         try {
-            StockMere stockMere = new StockMere();
-
-            StockFille stockFille = new StockFille();
-            stockFille.setArticle(article);
-            stockFille.setEntree(quantiteEntree);
-            stockFille.setStockMere(stockMere);
-
-            stockMereService.insertStockMere(stockMere);
-            stockFilleService.insertStockFille(stockFille);
-            
+            double quantite = nombre(quantiteEntree);
+            double prix = prixUnitaire == null || prixUnitaire.isBlank() ? 0.0 : nombre(prixUnitaire);
+            // Lot FIFO + mouvement d'entrée : l'état de stock et le stock FIFO restent égaux
+            mouvementStockService.entreeManuelle(article, quantite, prix);
         } catch (IllegalArgumentException e) {
-            model.addAttribute("error", "Quantité d'entrée invalide.");
-            model.addAttribute("quantiteEntree", quantiteEntree);
+            model.addAttribute("error", e instanceof NumberFormatException
+                    ? "Quantité ou prix invalide." : e.getMessage());
             return "stock/entree-saisie";
         }
-
 
         return "redirect:/stock/etat-stock";
     }
@@ -92,34 +90,23 @@ public class StockController {
                                     Model model) {
         Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));
         model.addAttribute("article", article);
+        model.addAttribute("quantiteSortie", quantiteSortie);
 
         try {
-            double qSortie = Double.parseDouble(quantiteSortie);
-            VEtatStock etat = vEtatStockService.getEtatStockByCode(codeArticle);
-            double stockDisponible = Double.parseDouble(etat.getStockDisponible());
-
-            if (qSortie > stockDisponible) {
-                model.addAttribute("error", "La quantité de sortie dépasse le stock disponible. Quantité disponible: " + stockDisponible);
-                model.addAttribute("quantiteSortie", quantiteSortie);
-                return "stock/sortie-saisie";
-            }
-
-            StockMere stockMere = new StockMere();
-            StockFille stockFille = new StockFille();
-            stockFille.setArticle(article);
-            stockFille.setSortie(quantiteSortie); // ici le setter peut lancer IllegalArgumentException
-            stockFille.setStockMere(stockMere);
-
-            stockMereService.insertStockMere(stockMere);
-            stockFilleService.insertStockFille(stockFille);
-
+            // Consommation FIFO des lots (contrôle du disponible inclus) + mouvement de sortie
+            mouvementStockService.sortieManuelle(article, nombre(quantiteSortie));
         } catch (IllegalArgumentException e) {
-            model.addAttribute("error", "Quantité de sortie invalide.");
-            model.addAttribute("quantiteSortie", quantiteSortie);
+            model.addAttribute("error", e instanceof NumberFormatException
+                    ? "Quantité de sortie invalide." : e.getMessage());
             return "stock/sortie-saisie";
         }
 
         return "redirect:/stock/etat-stock";
+    }
+
+    private static double nombre(String valeur) {
+        if (valeur == null || valeur.isBlank()) throw new NumberFormatException("vide");
+        return Double.parseDouble(valeur.trim().replace(',', '.'));
     }
 
     @GetMapping("/etat-stock")
