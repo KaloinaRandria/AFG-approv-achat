@@ -104,6 +104,10 @@ public class DemandeController {
 
     private final PieceJointeWorkflowService pieceJointeService;
 
+    private final afg.achat.afgApprovAchat.service.stock.ReservationStockService reservationStockService;
+
+    private final afg.achat.afgApprovAchat.service.demande.ApprovisionnementLigneService approvisionnementLigneService;
+
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
 
@@ -650,27 +654,13 @@ public class DemandeController {
 
         // VÉRIFICATION STOCK POUR LES LIGNES STOCK
         if (ligne.getTypeApprovisionnement() == DemandeFille.TypeApprovisionnement.STOCK) {
-            String codeArticle = ligne.getArticle().getCodeArticle();
-            double stockDisponible = lotStockService.getStockDisponible(codeArticle);
+            // Stock libre pour CETTE ligne : lots moins les réservations de toutes les autres lignes
+            // STOCK (toutes demandes). La quantité déjà sortie de la ligne n'est plus dans les lots.
+            double dejaSorti = bonSortieService.getQuantiteDejaSortie(ligne);
+            double stockReelDisponible = reservationStockService.stockLibre(
+                    ligne.getArticle().getCodeArticle(), List.of(ligneId)) + dejaSorti;
 
-            // Récupérer la demande mère pour connaître les autres lignes du même article
-            DemandeMere demande = ligne.getDemandeMere();
-            List<DemandeFille> autresLignesStock = demandeFilleService.getDemandeFilleByDemandeMere(demande)
-                    .stream()
-                    .filter(l -> l.getId() != ligneId)  // Exclure la ligne en cours
-                    .filter(l -> l.getTypeApprovisionnement() == DemandeFille.TypeApprovisionnement.STOCK)
-                    .filter(l -> l.getArticle().getCodeArticle().equals(codeArticle))
-                    .toList();
-
-            // Calculer la quantité totale déjà réservée par d'autres lignes stock du même article
-            double totalReserveAutres = autresLignesStock.stream()
-                    .mapToDouble(DemandeFille::getQuantite)
-                    .sum();
-
-            // Stock réellement disponible pour CETTE ligne
-            double stockReelDisponible = stockDisponible - totalReserveAutres;
-
-            if (quantite > stockReelDisponible) {
+            if (quantite > stockReelDisponible + 0.001) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", String.format(
                                 "Stock insuffisant pour l'article %s - %s. " +
@@ -902,15 +892,15 @@ public class DemandeController {
         model.addAttribute("bonsSortie", bonSortieService.getBonSortieByDemande(demande));
 
         if (canCreateBS) {
+            // Même calcul que la sortie : lots FIFO moins le stock réservé par les autres demandes
+            List<Integer> lignesDeLaDemande = lignes.stream().map(DemandeFille::getId).toList();
             List<LigneRestanteDTO> lignesRestantes = lignes.stream()
                     .filter(df -> df.getStatut() != StatutDemande.REFUSE)
                     .map(df -> {
                         double restant         = bonSortieService.getQuantiteRestante(df);
                         double totalSorti      = df.getQuantite() - restant;
-                        // Même source que la sortie : les lots FIFO consommés à la confirmation
-                        double stockDisponible = lotStockService.getStockDisponible(
-                                df.getArticle().getCodeArticle()
-                        );
+                        double stockDisponible = reservationStockService.stockLibre(
+                                df.getArticle().getCodeArticle(), lignesDeLaDemande);
                         return new LigneRestanteDTO(df, totalSorti, restant, stockDisponible);
                     })
                     .filter(l -> l.getRestant() > 0)
@@ -1360,16 +1350,10 @@ public class DemandeController {
             @PathVariable String codeArticle,
             @RequestParam(required = false) String demandeId) {
 
-        // Utiliser LotStock au lieu de StockFille
+        // Stock des lots FIFO moins le stock réservé par toutes les demandes de matériel
+        // (demandeId est conservé pour compatibilité de l'appel, la réservation est globale)
         double stockPhysique = lotStockService.getStockDisponible(codeArticle);
-
-        double quantiteReservee = 0;
-        if (demandeId != null && !demandeId.isBlank()) {
-            Double reserved = demandeFilleService
-                    .getQuantiteStockReserveePourDemande(demandeId, codeArticle);
-            quantiteReservee = (reserved != null) ? reserved : 0;
-        }
-
+        double quantiteReservee = reservationStockService.quantiteReservee(codeArticle, List.of());
         double stockDisponible = Math.max(0, stockPhysique - quantiteReservee);
 
         // Prix FIFO : prix du premier lot disponible
@@ -1413,49 +1397,48 @@ public class DemandeController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Accès refusé."));
 
-        double qteTotale = ligneOriginale.getQuantite();
-        double qteStock  = dto.getQteStock();
-        double qteAchat  = qteTotale - qteStock;
-
-        // Correction : > au lieu de >=
-        if (qteStock <= 0 || qteStock > qteTotale)
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Quantité stock invalide."));
-
-        double prixFifo;
+        // Contrôles (quantité, stock libre toutes demandes) et écritures en une transaction
         try {
-            prixFifo = lotStockService.getPrixFifo(
-                    ligneOriginale.getArticle().getCodeArticle(), qteStock
-            );
-        } catch (Exception e) {
-            prixFifo = dto.getPrixStock(); // fallback sur le prix envoyé par le JS
+            approvisionnementLigneService.scinder(id, dto.getQteStock(), dto.getPrixStock());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
-
-        // Cas conversion totale
-        if (qteStock == qteTotale) {
-            ligneOriginale.setTypeApprovisionnement(DemandeFille.TypeApprovisionnement.STOCK);
-            ligneOriginale.setPrixUnitaire(prixFifo);
-            demandeFilleService.saveDemandeFille(ligneOriginale);
-            demandeMereService.recalculerTotal(ligneOriginale.getDemandeMere());
-            return ResponseEntity.ok(Map.of("ok", true));
-        }
-
-        // Scission normale
-        ligneOriginale.setQuantite(String.valueOf(qteAchat));
-        ligneOriginale.setTypeApprovisionnement(DemandeFille.TypeApprovisionnement.ACHAT);
-        demandeFilleService.saveDemandeFille(ligneOriginale);
-
-        DemandeFille ligneStock = new DemandeFille();
-        ligneStock.setDemandeMere(ligneOriginale.getDemandeMere());
-        ligneStock.setArticle(ligneOriginale.getArticle());
-        ligneStock.setQuantite(String.valueOf(qteStock));
-        ligneStock.setPrixUnitaire(prixFifo);
-        ligneStock.setStatut(ligneOriginale.getStatut());
-        ligneStock.setTypeApprovisionnement(DemandeFille.TypeApprovisionnement.STOCK);
-        demandeFilleService.saveDemandeFille(ligneStock);
-
-        demandeMereService.recalculerTotal(ligneOriginale.getDemandeMere());
         return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    /**
+     * Remet une ligne servie depuis le stock à l'achat (stock promis disparu, par exemple).
+     * Moyens Généraux : à leur étape de validation, ou sur une demande validée.
+     */
+    @PostMapping("/ligne/{id}/remettre-achat")
+    public String remettreLigneEnAchat(@PathVariable int id, RedirectAttributes redirectAttributes) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        DemandeFille ligne = demandeFilleService.getDemandeFilleById(id);
+        if (ligne == null) {
+            redirectAttributes.addFlashAttribute("ko", "Ligne introuvable.");
+            return "redirect:/demande/list";
+        }
+        DemandeMere demande = ligne.getDemandeMere();
+        String fiche = "redirect:/demande/fiche/" + demande.getId();
+
+        boolean etapeMG = workflowService.calculerDroits(demande, utilisateurCourant(auth), auth).mg();
+        boolean mgSurDemandeValidee = demande.getStatut() == StatutDemande.VALIDE
+                && hasRole(auth, "ROLE_MOYENS_GENERAUX");
+        if (!etapeMG && !mgSurDemandeValidee) {
+            redirectAttributes.addFlashAttribute("ko", "Accès refusé.");
+            return fiche;
+        }
+
+        try {
+            approvisionnementLigneService.remettreEnAchat(id);
+            redirectAttributes.addFlashAttribute("ok", "La ligne " + ligne.getArticle().getCodeArticle()
+                    + " est remise à l'achat : sa réservation de stock est libérée"
+                    + (demande.getStatut() == StatutDemande.VALIDE
+                       ? " et le reste à sortir apparaît dans les lignes à acheter." : "."));
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+        }
+        return fiche;
     }
 
     @GetMapping("/ligne/{ligneId}/stock-disponible")
@@ -1473,15 +1456,8 @@ public class DemandeController {
         String codeArticle = ligne.getArticle().getCodeArticle();
         double stockPhysique = lotStockService.getStockDisponible(codeArticle);
 
-        // Récupérer toutes les lignes stock du même article dans la même demande
-        DemandeMere demande = ligne.getDemandeMere();
-        double totalReserveAutres = demandeFilleService.getDemandeFilleByDemandeMere(demande)
-                .stream()
-                .filter(l -> l.getId() != ligneId)
-                .filter(l -> l.getTypeApprovisionnement() == DemandeFille.TypeApprovisionnement.STOCK)
-                .filter(l -> l.getArticle().getCodeArticle().equals(codeArticle))
-                .mapToDouble(DemandeFille::getQuantite)
-                .sum();
+        // Réservations de toutes les autres lignes STOCK, toutes demandes de matériel confondues
+        double totalReserveAutres = reservationStockService.quantiteReservee(codeArticle, List.of(ligneId));
 
         double stockDisponible = Math.max(0, stockPhysique - totalReserveAutres);
 

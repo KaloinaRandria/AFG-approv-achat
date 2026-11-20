@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -110,6 +111,43 @@ public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
     Optional<DemandeFille> findByDemandeMereIdAndArticleCodeArticle(
             String demandeId, String codeArticle
     );
+
+    /**
+     * Quantité des lignes servies depuis le stock (type STOCK) d'un article, pour les demandes
+     * de matériel non refusées, hors lignes exclues. Avec {@link #sommeSortiesLignesStock}, donne
+     * le stock réservé : ce qui a été promis mais pas encore sorti.
+     * Les anciennes demandes (type STANDARD ou sans type) ne réservent rien : elles ne font pas
+     * de bon de sortie.
+     */
+    @Query("""
+    SELECT COALESCE(SUM(df.quantite), 0)
+    FROM DemandeFille df JOIN df.demandeMere dm
+    WHERE df.article.codeArticle = :codeArticle
+      AND df.typeApprovisionnement = afg.achat.afgApprovAchat.model.demande.DemandeFille.TypeApprovisionnement.STOCK
+      AND df.statut <> :refuse
+      AND dm.statut <> :refuse
+      AND dm.typeDemande = afg.achat.afgApprovAchat.model.util.TypeDemande.FOURNITURE
+      AND df.id NOT IN :exclues
+""")
+    double sommeQuantiteLignesStock(@Param("codeArticle") String codeArticle,
+                                    @Param("refuse") int refuse,
+                                    @Param("exclues") Collection<Integer> exclues);
+
+    /** Sorties confirmées des lignes comptées par {@link #sommeQuantiteLignesStock}. */
+    @Query("""
+    SELECT COALESCE(SUM(bs.quantiteSortie), 0)
+    FROM BonSortieFille bs JOIN bs.demandeFille df JOIN df.demandeMere dm
+    WHERE df.article.codeArticle = :codeArticle
+      AND bs.bonSortieMere.statut = 'CONFIRME'
+      AND df.typeApprovisionnement = afg.achat.afgApprovAchat.model.demande.DemandeFille.TypeApprovisionnement.STOCK
+      AND df.statut <> :refuse
+      AND dm.statut <> :refuse
+      AND dm.typeDemande = afg.achat.afgApprovAchat.model.util.TypeDemande.FOURNITURE
+      AND df.id NOT IN :exclues
+""")
+    double sommeSortiesLignesStock(@Param("codeArticle") String codeArticle,
+                                   @Param("refuse") int refuse,
+                                   @Param("exclues") Collection<Integer> exclues);
 
     /**
      * Calcule la quantité totale réservée en stock pour un article dans une demande spécifique

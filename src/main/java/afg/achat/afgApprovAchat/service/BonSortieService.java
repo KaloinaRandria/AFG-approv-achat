@@ -14,6 +14,8 @@ import afg.achat.afgApprovAchat.repository.stock.StockMereRepo;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.stock.LotStockService;
+import afg.achat.afgApprovAchat.service.stock.ReservationStockService;
+import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ public class BonSortieService {
     private final StockFilleRepo stockFilleRepo;
     private final StockMereRepo stockMereRepo;
     private final LotStockService lotStockService;
+    private final ReservationStockService reservationStockService;
 
     // ── Création + confirmation en une seule transaction ────────────────────
     /**
@@ -63,17 +66,30 @@ public class BonSortieService {
                     || !demande.getId().equals(df.getDemandeMere().getId())) {
                 throw new IllegalArgumentException("Ligne de demande invalide pour cette demande.");
             }
-
-            String codeArticle = df.getArticle().getCodeArticle();
-            double stock = lotStockService.getStockDisponible(codeArticle);
-            if (quantite > stock + 0.001) {
-                throw new IllegalArgumentException("Stock insuffisant pour " + df.getArticle().getDesignation()
-                        + " : " + quantite + " demandé(s), " + stock + " disponible(s).");
-            }
             aSortir.put(df, quantite);
         }
         if (aSortir.isEmpty()) {
             throw new IllegalArgumentException("Veuillez saisir une quantité supérieure à 0 pour au moins un article.");
+        }
+
+        // Stock par article (un article peut figurer sur une ligne STOCK et une ligne ACHAT) :
+        // stock libre = lots moins les réservations des AUTRES demandes ; celles de cette demande
+        // sont justement celles que l'on sert.
+        List<Integer> lignesDeLaDemande = demandeFilleService.getDemandeFilleByDemandeMere(demande)
+                .stream().map(DemandeFille::getId).toList();
+        Map<String, Double> parArticle = new LinkedHashMap<>();
+        Map<String, String> designations = new LinkedHashMap<>();
+        aSortir.forEach((df, quantite) -> {
+            parArticle.merge(df.getArticle().getCodeArticle(), quantite, Double::sum);
+            designations.put(df.getArticle().getCodeArticle(), df.getArticle().getDesignation());
+        });
+        for (Map.Entry<String, Double> e : parArticle.entrySet()) {
+            double libre = reservationStockService.stockLibre(e.getKey(), lignesDeLaDemande);
+            if (e.getValue() > libre + ReservationStockService.TOLERANCE) {
+                throw new IllegalArgumentException("Stock insuffisant pour " + designations.get(e.getKey())
+                        + " : " + e.getValue() + " demandé(s), " + libre + " disponible(s)"
+                        + " (stock réservé par d'autres demandes déduit).");
+            }
         }
 
         // ── 2. Écritures ──
@@ -239,8 +255,11 @@ public class BonSortieService {
 
     // ── Recalcul EtatLivraison ───────────────────────────────────────────────
     private void recalculerEtatLivraison(DemandeMere demande) {
+        // Les lignes refusées ne sont pas à livrer : sinon la demande ne serait jamais soldée
         List<DemandeFille> lignes = demandeFilleService
-                .getDemandeFilleByDemandeMere(demande);
+                .getDemandeFilleByDemandeMere(demande).stream()
+                .filter(l -> l.getStatut() != StatutDemande.REFUSE)
+                .toList();
 
         double totalDemande = lignes.stream()
                 .mapToDouble(DemandeFille::getQuantite).sum();
@@ -310,7 +329,11 @@ public class BonSortieService {
     }
 
     public double getQuantiteRestante(DemandeFille demandeFille) {
-        double dejasorti = bsFilleRepo.sumQuantiteSortieByDemandeFille(demandeFille);
-        return demandeFille.getQuantite() - dejasorti;
+        return demandeFille.getQuantite() - getQuantiteDejaSortie(demandeFille);
+    }
+
+    /** Quantité sortie par les bons de sortie confirmés de la ligne. */
+    public double getQuantiteDejaSortie(DemandeFille demandeFille) {
+        return bsFilleRepo.sumQuantiteSortieByDemandeFille(demandeFille);
     }
 }

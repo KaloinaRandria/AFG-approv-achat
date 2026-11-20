@@ -15,6 +15,8 @@ import afg.achat.afgApprovAchat.repository.stock.StockMereRepo;
 import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.stock.LotStockService;
+import afg.achat.afgApprovAchat.service.stock.ReservationStockService;
+import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,6 +49,7 @@ class BonSortieServiceTest {
     @Mock StockFilleRepo stockFilleRepo;
     @Mock StockMereRepo stockMereRepo;
     @Mock LotStockService lotStockService;
+    @Mock ReservationStockService reservationStockService;
 
     @InjectMocks BonSortieService service;
 
@@ -77,6 +80,45 @@ class BonSortieServiceTest {
         when(stockMereRepo.findByDemandeMere(any())).thenReturn(Optional.of(new StockMere()));
         when(stockFilleRepo.findByStockMereAndArticle(any(), any())).thenReturn(Optional.empty());
         when(demandeFilleService.getDemandeFilleByDemandeMere(any())).thenReturn(List.of());
+        // Par défaut, aucune réservation : stock libre = stock des lots
+        when(reservationStockService.stockLibre(anyString(), any()))
+                .thenAnswer(i -> lotStockService.getStockDisponible(i.getArgument(0)));
+    }
+
+    @Test
+    void memeArticleSurDeuxLignesControleSurLeTotal() {
+        // Ligne STOCK + ligne ACHAT du même article après scission : 3 + 3 > 5
+        ligne(10, "ART1", 3, 5);
+        ligne(11, "ART1", 3, 5);
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> service.creerEtConfirmer(demande, mg, null, Map.of(10, 3.0, 11, 3.0)));
+        assertTrue(e.getMessage().startsWith("Stock insuffisant"));
+        verify(bsMereRepo, never()).save(any());
+    }
+
+    @Test
+    void stockReserveParUneAutreDemandeNeSortPas() {
+        ligne(10, "ART1", 5, 100);
+        when(reservationStockService.stockLibre(eq("ART1"), any())).thenReturn(2.0);
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> service.creerEtConfirmer(demande, mg, null, Map.of(10, 3.0)));
+        assertTrue(e.getMessage().contains("réservé"));
+        verify(lotStockService, never()).consommerStock(any(), anyDouble());
+    }
+
+    @Test
+    void uneLigneRefuseeNEmpechePasLaDemandeDEtreSoldee() {
+        DemandeFille servie = ligne(10, "ART1", 5, 100);
+        DemandeFille refusee = ligne(11, "ART2", 3, 100);
+        refusee.setStatut(StatutDemande.REFUSE);
+        when(demandeFilleService.getDemandeFilleByDemandeMere(any())).thenReturn(List.of(servie, refusee));
+        when(bsFilleRepo.sumQuantiteSortieByDemandeFille(any())).thenAnswer(i -> lignesEnregistrees.stream()
+                .filter(l -> l.getDemandeFille() == i.getArgument(0))
+                .mapToDouble(BonSortieFille::getQuantiteSortie).sum());
+
+        service.creerEtConfirmer(demande, mg, null, Map.of(10, 5.0));
+
+        assertEquals(DemandeMere.EtatLivraison.SOLDEE, demande.getEtatLivraison());
     }
 
     @Test

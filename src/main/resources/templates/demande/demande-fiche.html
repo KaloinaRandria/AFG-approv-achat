@@ -741,6 +741,17 @@
                                                 <i class="fas fa-layer-group me-1"></i>Scinder
                                             </button>
 
+                                            <!-- REMETTRE À L'ACHAT (ligne STOCK) : libère la réservation de stock -->
+                                            <form th:if="${l.typeApprovisionnement?.name() == 'STOCK'}"
+                                                  th:action="@{/demande/ligne/{id}/remettre-achat(id=${l.id})}"
+                                                  method="post" class="d-inline"
+                                                  onsubmit="return confirm('Remettre cette ligne à l\'achat ? Sa réservation de stock sera libérée.');">
+                                                <button type="submit" class="btn btn-sm btn-outline-primary"
+                                                        title="Remettre à l'achat (libère la réservation de stock)">
+                                                    <i class="fas fa-shopping-cart me-1"></i>Remettre à l'achat
+                                                </button>
+                                            </form>
+
                                         </div>
                                     </td>
                                 </tr>
@@ -1577,6 +1588,22 @@
                                                         </small>
                                                     </td>
                                                 </tr>
+                                                <!-- Ligne STOCK dont le stock promis manque : la remettre à l'achat.
+                                                     Formulaire hors du formulaire du bon (pas de formulaires imbriqués). -->
+                                                <tr th:each="ligne : ${lignesRestantes}"
+                                                    th:if="${ligne.demandeFille.typeApprovisionnement?.name() == 'STOCK'
+                                                             and ligne.stockDisponible < ligne.restant}"
+                                                    class="table-warning">
+                                                    <td colspan="7" class="small">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                                        <span th:text="${ligne.demandeFille.article.codeArticle}"></span> :
+                                                        le stock promis ne couvre plus le restant.
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary ms-2"
+                                                                th:form="'remettreAchat-' + ${ligne.demandeFille.id}">
+                                                            <i class="fas fa-shopping-cart me-1"></i>Remettre à l'achat
+                                                        </button>
+                                                    </td>
+                                                </tr>
                                                 </tbody>
                                             </table>
                                         </div>
@@ -1614,6 +1641,16 @@
                                             </button>
                                         </div>
 
+                                    </form>
+
+                                    <!-- Formulaires « Remettre à l'achat » (boutons liés par l'attribut form) -->
+                                    <form th:each="ligne : ${lignesRestantes}"
+                                          th:if="${ligne.demandeFille.typeApprovisionnement?.name() == 'STOCK'
+                                                   and ligne.stockDisponible < ligne.restant}"
+                                          th:id="'remettreAchat-' + ${ligne.demandeFille.id}"
+                                          th:action="@{/demande/ligne/{id}/remettre-achat(id=${ligne.demandeFille.id})}"
+                                          method="post" class="d-none"
+                                          onsubmit="return confirm('Remettre cette ligne à l\'achat ? Sa réservation de stock sera libérée et le restant apparaîtra dans les lignes à acheter.');">
                                     </form>
                                 </div>
 
