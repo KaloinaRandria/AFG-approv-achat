@@ -451,8 +451,17 @@
             return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
         }
 
+        // Champ article : valide seulement si un article a été choisi dans la liste
+        // et que le texte n'a pas été retouché depuis (le texte seul ne suffit pas)
+        function syncArticleValidity(input) {
+            const hidden = input.closest("td")?.querySelector('input[name="articleCodes[]"]');
+            const choisi = !!hidden?.value && input.value === input.dataset.libelleChoisi;
+            input.setCustomValidity(choisi ? "" : "Choisissez un article dans la liste proposée.");
+        }
+
         function mark(el) {
             if (!el) return;
+            if (el.classList.contains("article-input")) syncArticleValidity(el);
             if (el.checkValidity()) {
                 el.classList.remove("is-invalid");
                 el.classList.add("is-valid");
@@ -638,11 +647,13 @@
                             e.preventDefault();
 
                             input.value = `${article.code} - ${article.designation}`;
+                            input.dataset.libelleChoisi = input.value;
 
                             //Dans ta ligne demande: hidden est input[name="articleCodes[]"] dans le même td
                             const td = input.closest("td");
                             const hidden = td?.querySelector('input[name="articleCodes[]"]');
                             if (hidden) hidden.value = article.code;
+                            mark(input); // article choisi : contour vert
 
                             const row = input.closest("tr");
                             const udmLabel = row?.querySelector(".udm-label");
@@ -681,6 +692,8 @@
                 const td = input.closest("td");
                 const hidden = td?.querySelector('input[name="articleCodes[]"]');
                 if (hidden) hidden.value = "";
+                delete input.dataset.libelleChoisi;
+                mark(input); // texte libre : contour rouge tant qu'aucun article n'est choisi
 
                 const row = input.closest("tr");
                 const udmLabel = row?.querySelector(".udm-label");

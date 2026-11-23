@@ -46,15 +46,16 @@ public class ApiController {
     @Autowired
     afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService utilisateurService;
 
+    @Autowired
+    afg.achat.afgApprovAchat.service.ArticleService articleService;
+
     @GetMapping("/articles/search")
     @ResponseBody
     public List<Map<String, String>> searchArticles(@RequestParam String keyword) {
         // Recherche utilisée par les saisies (demande, bon de livraison, bon de commande) :
-        // les articles inactifs ne sont plus proposés
-        return articleRepo
-                .findByCodeArticleContainingIgnoreCaseOrDesignationContainingIgnoreCase(keyword, keyword)
+        // articles actifs dont le code ou la désignation contient chaque mot saisi
+        return articleService.rechercherPourSaisie(keyword, 50)
                 .stream()
-                .filter(a -> a.estActif())
                 .map(a -> {
                     Map<String, String> map = new HashMap<>();
                     map.put("code", a.getCodeArticle());

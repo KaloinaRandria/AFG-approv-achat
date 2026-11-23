@@ -165,6 +165,63 @@ public class ArticleService {
         return articleRepo.findByCodeArticleContainingIgnoreCaseOrDesignationContainingIgnoreCase(q, q);
     }
 
+    /**
+     * Recherche d'articles actifs pour les saisies (demande, bon de livraison, bon de commande).
+     *
+     * <p>Chaque mot saisi doit se trouver dans le code ou dans la désignation, dans n'importe
+     * quel ordre, sans tenir compte de la casse ni des accents : « encre cyan » trouve
+     * « ART002363 - Encre HP415A Cyan », « electrique » trouve « Électrique ».</p>
+     */
+    public List<Article> rechercherPourSaisie(String saisie, int limite) {
+        List<String> mots = saisie == null ? List.of()
+                : java.util.Arrays.stream(sansAccents(saisie.trim().toLowerCase()).split("\\s+"))
+                        .filter(m -> !m.isBlank())
+                        .toList();
+        if (mots.isEmpty()) return List.of();
+
+        org.springframework.data.jpa.domain.Specification<Article> spec = (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> conditions = new java.util.ArrayList<>();
+            // Articles actifs (sans indicateur : actifs)
+            conditions.add(cb.or(cb.isNull(root.get("actif")), cb.isTrue(root.get("actif"))));
+            var code = sansAccentsSql(cb, cb.lower(cb.coalesce(root.<String>get("codeArticle"), "")));
+            var designation = sansAccentsSql(cb, cb.lower(cb.coalesce(root.<String>get("designation"), "")));
+            for (String mot : mots) {
+                String motif = "%" + echapperLike(mot) + "%";
+                conditions.add(cb.or(cb.like(code, motif, '\\'), cb.like(designation, motif, '\\')));
+            }
+            return cb.and(conditions.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+        return articleRepo.findAll(spec,
+                org.springframework.data.domain.PageRequest.of(0, limite,
+                        org.springframework.data.domain.Sort.by("designation", "codeArticle")))
+                .getContent();
+    }
+
+    // Lettres accentuées (minuscules, après LOWER) et leur équivalent sans accent, caractère pour caractère
+    private static final String ACCENTUES     = "àáâãäåçèéêëìíîïñòóôõöùúûüýÿœæ";
+    private static final String NON_ACCENTUES = "aaaaaaceeeeiiiinooooouuuuyyoa";
+
+    /** Retire les accents en base avec translate() (l'extension unaccent n'est pas installée). */
+    private static jakarta.persistence.criteria.Expression<String> sansAccentsSql(
+            jakarta.persistence.criteria.CriteriaBuilder cb, jakarta.persistence.criteria.Expression<String> texte) {
+        return cb.function("translate", String.class, texte, cb.literal(ACCENTUES), cb.literal(NON_ACCENTUES));
+    }
+
+    /** Même correspondance que {@link #sansAccentsSql} pour les mots saisis. */
+    private static String sansAccents(String texte) {
+        StringBuilder sb = new StringBuilder(texte.length());
+        for (char c : texte.toCharArray()) {
+            int i = ACCENTUES.indexOf(c);
+            sb.append(i >= 0 ? NON_ACCENTUES.charAt(i) : c);
+        }
+        return sb.toString();
+    }
+
+    /** Les caractères joker du LIKE saisis par l'utilisateur sont cherchés tels quels. */
+    private static String echapperLike(String mot) {
+        return mot.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
     public Page<Article> searchArticlesMulti(
             String code,
             String designation,
