@@ -21,11 +21,28 @@
 
             <!-- PAGE ACTIONS -->
             <div class="page-actions no-print">
-                <div class="d-flex align-items-center gap-2">
-                    <h1 class="fw-bold text-gradient-blue mb-0">
-                        <i class="fas fa-file-export icon-gradient-blue me-2"></i>
-                        Bon de Sortie
-                    </h1>
+                <div>
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <h1 class="fw-bold text-gradient-blue mb-0">
+                            <i class="fas fa-file-export icon-gradient-blue me-2"></i>
+                            Bon de Sortie
+                        </h1>
+                        <!-- Hors du titre : text-gradient-blue rendrait le libellé transparent -->
+                        <span th:switch="${bs.statut?.name()}">
+                            <span th:case="'BROUILLON'" class="badge bg-warning text-dark fs-6"><i class="fas fa-pencil-alt me-1"></i>Brouillon</span>
+                            <span th:case="'CONFIRME'" class="badge bg-success fs-6"><i class="fas fa-check-circle me-1"></i>Confirmé</span>
+                            <span th:case="'ANNULE'" class="badge bg-danger fs-6"><i class="fas fa-times-circle me-1"></i>Annulé</span>
+                        </span>
+                    </div>
+                    <div class="ui-subtitle">
+                        N° <strong th:text="${bs.numeroBs}"></strong>
+                        · demande <a class="fw-semibold text-decoration-none"
+                                     th:href="@{/demande/fiche/{id}(id=${bs.demandeMere.id})}"
+                                     th:text="${bs.demandeMere.id}"></a>
+                        <th:block th:if="${bs.dateCreation != null}">
+                            · créé le <span th:text="${#temporals.format(bs.dateCreation, 'dd/MM/yyyy')}"></span>
+                        </th:block>
+                    </div>
                 </div>
 
                 <div class="d-flex gap-2">
@@ -54,36 +71,27 @@
 
             <div class="card shadow-lg border-0">
                 <div class="card-body p-0">
-                    <div class="bl-document">
+                    <div class="bl-document ui-doc">
 
                         <!-- EN-TÊTE -->
                         <div class="bl-header">
                             <div class="bl-company">
                                 <img th:src="@{/img/logo_afg.png}" alt="Logo" height="60">
                             </div>
-                            <div class="bl-title">
+                            <div class="bl-title text-end">
                                 <h3>BON DE SORTIE</h3>
                                 <span>Référence : <strong th:text="${bs.numeroBs}">-</strong></span>
+                                <!-- Statut imprimé : discret, le bon annulé reste reconnaissable sur papier -->
+                                <div class="mt-1" th:switch="${bs.statut?.name()}">
+                                    <span th:case="'BROUILLON'" class="ui-doc-statut ui-doc-statut-brouillon">Brouillon</span>
+                                    <span th:case="'CONFIRME'" class="ui-doc-statut ui-doc-statut-ok">Confirmé</span>
+                                    <span th:case="'ANNULE'" class="ui-doc-statut ui-doc-statut-annule">Annulé</span>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- STATUT BS -->
-                        <div class="px-3 pb-2 text-center">
-                            <span th:switch="${bs.statut?.name()}">
-                                <span th:case="'BROUILLON'" class="badge bg-warning text-dark fs-6 px-3 py-2">
-                                    <i class="fas fa-pencil me-1"></i> Brouillon
-                                </span>
-                                <span th:case="'CONFIRME'" class="badge bg-success fs-6 px-3 py-2">
-                                    <i class="fas fa-check-circle me-1"></i> Confirmé
-                                </span>
-                                <span th:case="'ANNULE'" class="badge bg-danger fs-6 px-3 py-2">
-                                    <i class="fas fa-times-circle me-1"></i> Annulé
-                                </span>
-                            </span>
-                        </div>
-
                         <!-- INFOS GÉNÉRALES -->
-                        <div class="bl-infos">
+                        <div class="bl-infos ui-infos-4">
 
                             <div>
                                 <strong>Numéro BS :</strong>
@@ -164,12 +172,11 @@
                         </div>
 
                         <!-- ANNULATION -->
-                        <div class="px-3 pb-2" th:if="${bs.statut?.name() == 'ANNULE'}">
-                            <div class="p-3 border border-danger rounded" style="background:#fdf2f2">
-                                <div class="fw-bold mb-1 text-danger">
-                                    <i class="fas fa-undo me-2"></i> Bon annulé, quantités remises en stock
-                                </div>
-                                <div class="small text-muted"
+                        <div class="ui-callout ui-callout-danger" th:if="${bs.statut?.name() == 'ANNULE'}">
+                            <span class="ui-callout-icon"><i class="fas fa-undo"></i></span>
+                            <div>
+                                <div class="ui-callout-title">Bon annulé, quantités remises en stock</div>
+                                <div class="ui-callout-meta"
                                      th:if="${bs.dateAnnulation != null}"
                                      th:text="${'Le ' + #temporals.format(bs.dateAnnulation, 'dd/MM/yyyy HH:mm')
                                                + (bs.annulePar != null ? ' par ' + bs.annulePar.nom + ' ' + bs.annulePar.prenom : '')}">
@@ -180,19 +187,22 @@
                         </div>
 
                         <!-- COMMENTAIRE BS -->
-                        <div class="px-3 pb-2"
+                        <div class="ui-callout"
                              th:if="${bs.commentaire != null and !bs.commentaire.isBlank()}">
-                            <div class="p-3 border rounded bg-light">
-                                <div class="fw-bold mb-1">
-                                    <i class="fas fa-comment me-2"></i> Commentaire
-                                </div>
-                                <div th:text="${bs.commentaire}"></div>
+                            <span class="ui-callout-icon"><i class="fas fa-comment"></i></span>
+                            <div>
+                                <div class="ui-callout-title">Commentaire</div>
+                                <div th:text="${bs.commentaire}" style="white-space: pre-wrap;"></div>
                             </div>
                         </div>
 
                         <!-- TABLE ARTICLES -->
                         <div class="bl-body">
-                            <table class="bl-table table table-hover align-middle">
+                            <div class="ui-lines-head">
+                                <span class="ui-lines-title"><i class="fas fa-box-open"></i>Articles sortis</span>
+                                <span class="ui-lines-count" th:text="${lignes != null ? #lists.size(lignes) : 0}">0</span>
+                            </div>
+                            <table class="bl-table ui-lines table table-hover align-middle">
                                 <thead class="table-light">
                                 <tr>
                                     <th style="width:45%">DÉSIGNATION</th>
@@ -215,20 +225,21 @@
                                 <!-- LIGNES -->
                                 <tr th:each="l : ${lignes}">
                                     <td>
-                                        <div th:text="${l.article != null
-                                                        ? l.article.codeArticle + ' - ' + l.article.designation
-                                                        : '-'}">
+                                        <div class="ui-art" th:if="${l.article != null}">
+                                            <span class="ui-art-code" th:text="${l.article.codeArticle}"></span>
+                                            <span class="ui-art-des" th:text="${l.article.designation}"></span>
                                         </div>
+                                        <span th:if="${l.article == null}">-</span>
                                     </td>
                                     <td class="text-end"
                                         th:text="${l.demandeFille != null
                                                    ? T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.demandeFille.quantite)
                                                    : '-'}">
                                     </td>
-                                    <td class="text-end fw-semibold"
+                                    <td class="text-end fw-bold"
                                         th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantiteSortie)}">
                                     </td>
-                                    <td class="text-end"
+                                    <td class="text-end ui-udm"
                                         th:text="${l.article != null and l.article.udm != null
                                                    ? l.article.udm.description
                                                    : '-'}">
@@ -248,12 +259,9 @@
 
                                 <!-- TOTAL -->
                                 <tfoot>
-                                <tr class="table-light fw-bold border-top">
-                                    <td colspan="4" class="text-end text-muted text-uppercase small">
-                                        Total
-                                    </td>
-                                    <td></td>
-                                    <td class="text-end"
+                                <tr class="fw-bold">
+                                    <td colspan="5" class="text-end ui-total-label">Total</td>
+                                    <td class="text-end ui-total"
                                         th:text="${totalBs != null and totalBs > 0
                                                    ? #numbers.formatDecimal(totalBs, 1, 'DEFAULT', 2, 'DEFAULT')
                                                    : '—'}">
@@ -264,11 +272,11 @@
                         </div>
 
                         <!-- SIGNATURES -->
-                        <div class="px-3 pb-4 mt-4">
-                            <div class="row g-4">
+                        <div class="pb-2 mt-4">
+                            <div class="row g-3 ui-signatures">
 
                                 <!-- Demandeur -->
-                                <div class="col-md-4 text-center">
+                                <div class="col-4 text-center">
                                     <div class="border-top pt-3 mx-4">
                                         <div class="fw-bold mb-1">Le demandeur</div>
                                         <small class="text-muted"
@@ -280,7 +288,7 @@
                                 </div>
 
                                 <!-- Moyens Généraux -->
-                                <div class="col-md-4 text-center">
+                                <div class="col-4 text-center">
                                     <div class="border-top pt-3 mx-4">
                                         <div class="fw-bold mb-1">Moyens Généraux</div>
                                         <small class="text-muted"
@@ -292,7 +300,7 @@
                                 </div>
 
                                 <!-- Responsable -->
-                                <div class="col-md-4 text-center">
+                                <div class="col-4 text-center">
                                     <div class="border-top pt-3 mx-4">
                                         <div class="fw-bold mb-1">Responsable hiérarchique</div>
                                         <small class="text-muted">&nbsp;</small>

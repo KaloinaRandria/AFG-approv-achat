@@ -75,6 +75,9 @@
     margin-bottom: 1.5rem !important;
 }
 
+/* Barre de titre et d'actions des fiches (bon de livraison, bon de sortie) */
+.page-actions { flex-wrap: wrap; margin-bottom: 1.5rem !important; }
+
 .main-content h2, .main-content h3, .main-content h4,
 .main-content h5, .main-content h6 {
     letter-spacing: -.01em;
@@ -615,6 +618,55 @@ table.dataTable tbody tr:hover { background-color: #f3f6fc; }
 
     .ui-doc .bl-infos a { color: var(--ui-brand); }
 
+    /* Huit informations (bon de sortie) : deux rangées de quatre */
+    .ui-doc .bl-infos.ui-infos-4 { grid-template-columns: repeat(4, 1fr); }
+
+    /* Statut porté par le document (imprimé aussi) */
+    .ui-doc-statut {
+        display: inline-block;
+        font-size: .7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        padding: .15rem .55rem;
+        border-radius: 999px;
+        border: 1px solid currentColor;
+    }
+    .ui-doc-statut-ok { color: #1e7e34; background: #e9f6ec; }
+    .ui-doc-statut-brouillon { color: #9a5b00; background: #fff4e0; }
+    .ui-doc-statut-annule { color: #b42318; background: #fdecec; }
+
+    /* Encadré (commentaire, annulation) */
+    .ui-callout {
+        display: flex;
+        gap: .75rem;
+        align-items: flex-start;
+        padding: .8rem 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--ui-line);
+        border-left: 4px solid var(--ui-brand);
+        border-radius: 10px;
+        background: #fafbfd;
+        font-size: .88rem;
+        page-break-inside: avoid;
+    }
+    .ui-callout-icon {
+        flex: 0 0 2rem;
+        height: 2rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #e8ebf6;
+        color: var(--ui-brand);
+        font-size: .85rem;
+    }
+    .ui-callout-title { font-weight: 700; color: var(--ui-ink); margin-bottom: .15rem; }
+    .ui-callout-meta { font-size: .78rem; color: var(--ui-muted); }
+    .ui-callout-danger { border-left-color: #d03b3b; background: #fff8f8; }
+    .ui-callout-danger .ui-callout-icon { background: #fdecec; color: #b42318; }
+    .ui-callout-danger .ui-callout-title { color: #b42318; }
+
     .ui-doc .table-responsive { border-radius: 12px; }
 
     .ui-doc .ui-signatures .border-top {
@@ -628,7 +680,7 @@ table.dataTable tbody tr:hover { background-color: #f3f6fc; }
 }
 
 @media screen and (max-width: 768px) {
-    .ui-doc .bl-infos { grid-template-columns: 1fr; }
+    .ui-doc .bl-infos, .ui-doc .bl-infos.ui-infos-4 { grid-template-columns: 1fr; }
     .bl-document.ui-doc { padding: 18px; }
 }
 
