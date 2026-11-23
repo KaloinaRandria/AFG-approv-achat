@@ -88,9 +88,13 @@
 
                                 <span class="badge bg-success" th:if="${isValidated}">
                                     <i class="fas fa-check-circle me-1"></i>
+                                    <!-- Dernier validateur selon le type : contrôleur de gestion pour le matériel,
+                                         S.G. pour les anciennes demandes (circuit standard) -->
                                     <span th:text="${isCodepWorkflow ?
                                                     'Demande validée par le Comité de dépense' :
-                                                    'Demande validée par le S.G.'}">
+                                                    (demande.typeDemandeEffectif.derniereValidation.name() == 'VALIDATION_N2'
+                                                        ? 'Demande validée par le contrôleur de gestion'
+                                                        : 'Demande validée par le S.G.')}">
                                     </span>
                                 </span>
 
@@ -362,7 +366,11 @@
                         <!-- TABLE ARTICLES -->
                         <div class="bl-body" th:if="${not (canDecisionMG and demande.statut
      == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1)}">
-                            <table class="bl-table table table-hover align-middle">
+                            <div class="ui-lines-head">
+                                <span class="ui-lines-title"><i class="fas fa-box-open"></i>Articles demandés</span>
+                                <span class="ui-lines-count" th:text="${lignes != null ? #lists.size(lignes) : 0}">0</span>
+                            </div>
+                            <table class="bl-table ui-lines table table-hover align-middle">
 
                                 <thead class="table-light">
                                 <tr>
@@ -417,7 +425,7 @@
                                 <tr th:if="${lignes == null || lignes.isEmpty()}">
                                     <td th:colspan="${canVoirPrix} ? 5 : 4"
                                         class="text-center text-muted py-4">
-                                        Aucun article
+                                        <i class="fas fa-inbox d-block mb-2" style="font-size:1.4rem; opacity:.5"></i>Aucun article
                                     </td>
                                 </tr>
 
@@ -426,7 +434,17 @@
                                     th:classappend="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' table-danger opacity-75'" th:attr="data-type-appro=${l.typeApprovisionnement?.name()}">
 
                                     <!-- DESIGNATION -->
-                                    <td th:text="${l.article != null ? l.article.codeArticle +' - '+ l.article.designation : '-'}"></td>
+                                    <td>
+                                        <div class="ui-art" th:if="${l.article != null}">
+                                            <span class="ui-art-code" th:text="${l.article.codeArticle}"></span>
+                                            <span class="ui-art-des" th:text="${l.article.designation}"></span>
+                                            <span class="ui-art-refus"
+                                                  th:if="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE}">
+                                                <i class="fas fa-ban"></i>Refusé
+                                            </span>
+                                        </div>
+                                        <span th:if="${l.article == null}">-</span>
+                                    </td>
 
                                     <!-- QUANTITE -->
                                     <td class="text-end" th:data-ligne-id="${l.id}">
@@ -445,11 +463,15 @@
                                     </td>
 
                                     <!-- UDM -->
-                                    <td th:text="${l.article.udm.description}"></td>
+                                    <td class="text-end ui-udm" th:text="${l.article.udm.description}"></td>
 
                                     <td class="text-center"
-                                        th:if="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}"
-                                        th:text="${l.typeApprovisionnement?.name()}">
+                                        th:if="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}">
+                                        <span th:switch="${l.typeApprovisionnement?.name()}">
+                                            <span th:case="'STOCK'" class="ui-type ui-type-stock"><i class="fas fa-warehouse"></i>Stock</span>
+                                            <span th:case="'ACHAT'" class="ui-type ui-type-achat"><i class="fas fa-shopping-cart"></i>Achat</span>
+                                            <span th:case="*" class="ui-type">—</span>
+                                        </span>
 <!--                                        <span th:switch="${l.typeApprovisionnement?.name()}">-->
 <!--                                            <span th:case="'STOCK'" class="badge bg-success">-->
 <!--                                                <i class="fas fa-warehouse me-1"></i>Stock-->
@@ -557,9 +579,9 @@
                                     <!-- Cellule vide TYPE — uniquement si le rôle la voit -->
                                     <td th:if="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}"></td>
 
-                                    <td class="text-end text-muted text-uppercase small">Total</td>
+                                    <td class="text-end ui-total-label">Total estimé HT</td>
 
-                                    <td class="text-end" id="totalEstimeDisplay"
+                                    <td class="text-end ui-total" id="totalEstimeDisplay"
                                         th:text="${demande.totalEstime != null and demande.totalEstime > 0
             ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')
             : '—'}">
@@ -634,7 +656,11 @@
                                 </div>
                             </div>
 
-                            <table class="bl-table table table-hover align-middle">
+                            <div class="ui-lines-head">
+                                <span class="ui-lines-title"><i class="fas fa-box-open"></i>Articles demandés</span>
+                                <span class="ui-lines-count" th:text="${lignes != null ? #lists.size(lignes) : 0}">0</span>
+                            </div>
+                            <table class="bl-table ui-lines table table-hover align-middle">
                                 <thead class="table-light">
                                 <tr>
                                     <th style="width:30%">DÉSIGNATION</th>
@@ -652,7 +678,10 @@
 
                                     <!-- Désignation -->
                                     <td>
-                                        <span th:text="${l.article.codeArticle + ' - ' + l.article.designation}"></span>
+                                        <div class="ui-art">
+                                            <span class="ui-art-code" th:text="${l.article.codeArticle}"></span>
+                                            <span class="ui-art-des" th:text="${l.article.designation}"></span>
+                                        </div>
 <!--                                        &lt;!&ndash; Badge si ligne générée par scission &ndash;&gt;-->
 <!--                                        <span th:if="${l.typeApprovisionnement?.name() == 'STOCK'}"-->
 <!--                                              class="badge bg-success ms-1">-->
@@ -677,7 +706,7 @@
                                     </td>
 
                                     <!-- UDM -->
-                                    <td class="text-end" th:text="${l.article.udm.description}"></td>
+                                    <td class="text-end ui-udm" th:text="${l.article.udm.description}"></td>
 
                                     <!-- Prix unitaire -->
                                     <td class="text-end" th:data-ligne-prix-id="${l.id}">
@@ -703,7 +732,12 @@
                                     </td>
 
                                     <!-- Type -->
-                                    <td class="text-center" th:text="${l.typeApprovisionnement?.name()}">
+                                    <td class="text-center">
+                                        <span th:switch="${l.typeApprovisionnement?.name()}">
+                                            <span th:case="'STOCK'" class="ui-type ui-type-stock"><i class="fas fa-warehouse"></i>Stock</span>
+                                            <span th:case="'ACHAT'" class="ui-type ui-type-achat"><i class="fas fa-shopping-cart"></i>Achat</span>
+                                            <span th:case="*" class="ui-type">—</span>
+                                        </span>
 <!--                                        <span th:switch="${l.typeApprovisionnement?.name()}">-->
 <!--                                            <span th:case="'STOCK'" class="badge bg-success">-->
 <!--                                                <i class="fas fa-warehouse me-1"></i>Stock-->
@@ -792,9 +826,9 @@
                                 <tfoot>
                                 <tr class="table-light fw-bold border-top">
                                     <td></td>
-                                    <td class="text-end text-muted text-uppercase small">Total</td>
+                                    <td class="text-end ui-total-label">Total</td>
                                     <td></td>
-                                    <td class="text-end" id="totalEstimeDisplayMG"
+                                    <td class="text-end ui-total" id="totalEstimeDisplayMG"
                                         th:text="${demande.totalEstime != null and demande.totalEstime > 0
                            ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')
                            : '—'}">
@@ -2434,7 +2468,7 @@
             const val = parseFloat(inp.value);
             if (!inp.value || isNaN(val) || val <= 0) {
                 const tr = inp.closest('tr');
-                const designation = tr?.querySelector('td:first-child')?.textContent?.trim() || `Ligne #${inp.dataset.ligneId}`;
+                const designation = tr?.querySelector('td:first-child')?.textContent?.replace(/\s+/g, ' ').trim() ||`Ligne #${inp.dataset.ligneId}`;
                 articles.push({ input: inp, designation: designation });
             }
         });
