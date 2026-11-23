@@ -239,6 +239,9 @@
                                         data-bs-toggle="modal"
                                         data-bs-target="#historiqueModal"
                                         th:data-codearticle = "${e.codeArticle}"
+                                        th:data-designation="${e.designation}"
+                                        th:data-stock="${e.stockDisponible}"
+                                        th:data-udm="${e.udm}"
                                         title="Voir l'historique des mouvements">
                                     <i class="fas fa-history"></i>
                                 </button>
@@ -449,9 +452,19 @@
             </div>
 
             <div class="modal-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <!-- Exemple: "Article: CONS0001 - Encre HP..." -->
-                    <h6 id="historiqueInfo" class="mb-0"></h6>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                    <!-- Article de l'historique : identique sur toutes les lignes, affiché une seule fois -->
+                    <div class="hist-article" id="historiqueInfo">
+                        <span class="hist-article-icon"><i class="fas fa-box"></i></span>
+                        <div class="min-w-0">
+                            <div class="hist-article-code" id="historiqueCode">—</div>
+                            <div class="hist-article-des" id="historiqueDesignation"></div>
+                        </div>
+                        <div class="hist-article-stock" id="historiqueStockBloc">
+                            <span class="hist-article-stock-label">Stock disponible</span>
+                            <span class="hist-article-stock-value" id="historiqueStock">—</span>
+                        </div>
+                    </div>
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-gradient-blue" id="historiqueCount">0 mouvement(s)</span>
 
@@ -479,15 +492,7 @@
                                 </th>
 
                                 <th class="border-0 py-3">
-                                    <i class="fas fa-box-open me-2 text-muted"></i>Article
-                                </th>
-
-                                <th class="border-0 py-3">
                                     <i class="fas fa-balance-scale me-2 text-muted"></i>Quantité
-                                </th>
-
-                                <th class="border-0 py-3">
-                                    <i class="fas fa-ruler-combined me-2 text-muted"></i>UDM
                                 </th>
 
                                 <th class="border-0 py-3">
@@ -503,7 +508,7 @@
                             <tbody id="historiqueTableBody">
                             <!-- Les données seront chargées dynamiquement ici -->
                             <tr id="historiqueEmptyRow">
-                                <td colspan="7" class="text-center py-5">
+                                <td colspan="5" class="text-center py-5">
                                     <div class="empty-state-content">
                                         <div class="empty-state-icon bg-light rounded-circle p-4 mb-3">
                                             <i class="fas fa-inbox fa-lg text-muted"></i>
@@ -560,7 +565,7 @@
         // Loading
         $('#historiqueTableBody').html(`
       <tr>
-        <td colspan="7" class="text-center py-4">
+        <td colspan="5" class="text-center py-4">
           <div class="spinner-border text-primary" role="status"></div>
           <p class="mt-2 text-muted">Chargement de l'historique...</p>
         </td>
@@ -585,7 +590,7 @@
                 if (data.length === 0) {
                     $('#historiqueTableBody').html(`
             <tr>
-              <td colspan="7" class="text-center py-4">
+              <td colspan="5" class="text-center py-4">
                 <i class="fas fa-history fa-2x text-muted mb-2"></i>
                 <p class="text-muted">Aucun mouvement trouvé</p>
               </td>
@@ -614,8 +619,8 @@
                         ? 'mv-qty mv-qty-entree'
                         : (type === 'SORTIE' ? 'mv-qty mv-qty-sortie' : 'mv-qty');
 
-                    const articleLabel = `${h.codeArticle || '-'}${h.designation ? ' - ' + h.designation : ''}`;
-                    const udmLabel = `${h.descUdm || '-'}${h.udm ? ' (' + h.udm + ')' : ''}`;
+                    // Article et unité : identiques sur toutes les lignes, affichés dans l'en-tête du modal
+                    afficherArticleHistorique(h);
 
                     html += `
             <tr class="${rowClass}">
@@ -624,9 +629,7 @@
                 <div class="mv-muted">${h.refBlMere ? 'BL: ' + h.refBlMere : (h.refDemandeMere ? 'DM: ' + h.refDemandeMere : '')}</div>
               </td>
               <td>${pill}</td>
-              <td><div class="fw-semibold">${articleLabel}</div></td>
-              <td class="${qtyClass}">${qtySign}${h.quantite ?? '-'}</td>
-              <td>${udmLabel}</td>
+              <td class="${qtyClass}">${qtySign}${h.quantite ?? '-'}<span class="hist-udm">${h.udm || ''}</span></td>
               <td>${h.reference || '-'}</td>
               <td class="pe-4">${h.auteur || '-'}</td>
             </tr>
@@ -645,7 +648,7 @@
             error: function (xhr, status, error) {
                 $('#historiqueTableBody').html(`
           <tr>
-            <td colspan="7" class="text-center py-4 text-danger">
+            <td colspan="5" class="text-center py-4 text-danger">
               <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
               <p>Erreur lors du chargement de l'historique</p>
               <small class="text-muted">Status: ${status}, Erreur: ${error}</small>
@@ -712,10 +715,26 @@
         loadHistorique(0);
     });
 
+    // En-tête de l'article (complété par la première ligne reçue si le bouton n'a pas tout)
+    function afficherArticleHistorique(h) {
+        if (h.codeArticle) $('#historiqueCode').text(h.codeArticle);
+        if (h.designation && !$('#historiqueDesignation').text()) $('#historiqueDesignation').text(h.designation);
+    }
+
     // Modal open
     $('#historiqueModal').on('show.bs.modal', function (event) {
         const button = $(event.relatedTarget);
         historiqueState.codeArticle = button.data('codearticle');
+        // .attr : la désignation et le stock restent du texte (pas de conversion en nombre par jQuery)
+        $('#historiqueCode').text(button.attr('data-codearticle') || '—');
+        $('#historiqueDesignation').text(button.attr('data-designation') || '');
+        // Valeur brute (Thymeleaf interdit T(...) dans un attribut data-*) : formatée ici
+        const stock = button.attr('data-stock');
+        const stockNombre = parseFloat(stock);
+        const stockTexte = isNaN(stockNombre) ? stock
+            : new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 2}).format(stockNombre);
+        $('#historiqueStock').text(stock ? stockTexte + ' ' + (button.attr('data-udm') || '') : '—');
+        $('#historiqueStockBloc').toggle(!!stock);
         historiqueState.size = parseInt($('#historiqueSize').val(), 10) || 10;
         loadHistorique(0);
     });

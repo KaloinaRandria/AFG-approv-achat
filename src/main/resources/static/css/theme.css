@@ -436,6 +436,49 @@ table.dataTable tbody tr:hover { background-color: #f3f6fc; }
 .ui-empty i { display: block; font-size: 1.6rem; margin-bottom: .5rem; opacity: .6; }
 
 
+/* Historique des mouvements (état de stock) : l'article, commun à toutes les lignes, en en-tête */
+.hist-article {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: .7rem .9rem;
+    background: #f6f7fa;
+    border: 1px solid var(--ui-line-2);
+    border-radius: 12px;
+}
+.hist-article-icon {
+    flex: 0 0 2.4rem;
+    height: 2.4rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e8ebf6;
+    color: var(--ui-brand);
+}
+.hist-article-code { font-size: .72rem; font-weight: 700; color: var(--ui-muted); letter-spacing: .03em; }
+.hist-article-des { font-weight: 700; color: var(--ui-ink); font-size: 1rem; }
+.hist-article-stock {
+    margin-left: auto;
+    text-align: right;
+    padding-left: 1rem;
+    border-left: 1px solid var(--ui-line);
+    white-space: nowrap;
+}
+.hist-article-stock-label {
+    display: block;
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--ui-muted);
+}
+.hist-article-stock-value { font-size: 1.15rem; font-weight: 800; color: var(--ui-ink); font-variant-numeric: tabular-nums; }
+.hist-udm { margin-left: .3rem; font-size: .78em; font-weight: 600; opacity: .75; }
+
+
 /* ── 8 bis. Lignes d'articles d'un document (.bl-table.ui-lines) ─────────────
    À l'écran : style du tableau de bord (entête gris clair, lignes séparées
    par un filet, code article au-dessus de la désignation, type en pastille).
