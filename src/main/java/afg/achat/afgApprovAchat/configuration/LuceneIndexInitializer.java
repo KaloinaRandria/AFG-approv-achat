@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.configuration;
 
 import afg.achat.afgApprovAchat.model.Article;
+import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ public class LuceneIndexInitializer implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) throws Exception {
         SearchSession searchSession = Search.session((Session) entityManager);
-        searchSession.massIndexer(Article.class)
+        searchSession.massIndexer(Article.class, Fournisseur.class)
                 .threadsToLoadObjects(4)
                 .startAndWait();
     }

@@ -6,15 +6,23 @@ import afg.achat.afgApprovAchat.model.util.FournisseurHistorique;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.fournisseur.FournisseurRepo;
 import afg.achat.afgApprovAchat.service.util.FournisseurHistoriqueService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
+import org.hibernate.Session;
+import org.hibernate.search.engine.search.query.SearchResult;
+import org.hibernate.search.mapper.orm.Search;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -25,17 +33,61 @@ public class FournisseurService {
     @Autowired
     FournisseurHistoriqueService fournisseurHistoriqueService;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     public Fournisseur[] getAllFournisseurs() {
         return fournisseurRepo.findAll().toArray(new Fournisseur[0]);
     }
 
     /** Liste paginée des fournisseurs ; filtres vides ou {@code null} ignorés. */
     public Page<Fournisseur> rechercher(String nom, String mail, String contact, Pageable pageable) {
-        return fournisseurRepo.rechercher(texte(nom), texte(mail), texte(contact), pageable);
+        String n = texte(nom);
+        String m = motif(mail);
+        String c = motif(contact);
+
+        SearchResult<Fournisseur> resultat = Search.session((Session) entityManager)
+                .search(Fournisseur.class)
+                .where(f -> f.bool(b -> {
+                    if (n.isEmpty() && m.isEmpty() && c.isEmpty()) {
+                        b.must(f.matchAll());
+                        return;
+                    }
+                    // Nom : mot proche (1 faute tolérée), ou morceau du nom ou de l'acronyme
+                    if (!n.isEmpty()) {
+                        String morceau = "*" + motif(n) + "*";
+                        b.must(f.bool(nomOuAcronyme -> nomOuAcronyme
+                                .should(f.match().field("nom").matching(n).fuzzy(1))
+                                .should(f.wildcard().field("nom_kw").matching(morceau))
+                                .should(f.wildcard().field("acronyme_kw").matching(morceau))));
+                    }
+                    if (!m.isEmpty()) {
+                        b.must(f.wildcard().field("mail_kw").matching("*" + m + "*"));
+                    }
+                    if (!c.isEmpty()) {
+                        b.must(f.wildcard().field("contact_kw").matching("*" + c + "*"));
+                    }
+                }))
+                // Pertinence d'abord, puis ordre alphabétique (seul critère sans recherche)
+                .sort(s -> s.score().then().field("nom_kw"))
+                .fetch((int) pageable.getOffset(), pageable.getPageSize());
+
+        return new PageImpl<>(resultat.hits(), pageable, resultat.total().hitCount());
     }
 
     private static String texte(String valeur) {
         return valeur == null ? "" : valeur.trim();
+    }
+
+    /**
+     * Saisie prête pour une recherche joker sur un champ mot-clé : minuscules et sans accents
+     * (comme le normaliseur « lowercase »), sans les caractères jokers de l'utilisateur.
+     */
+    private static String motif(String valeur) {
+        String t = Normalizer.normalize(texte(valeur), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT);
+        return t.replace("*", "").replace("?", "");
     }
 
     public Optional<Fournisseur> getFournisseurById(int id) {

@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.controller;
 
+import afg.achat.afgApprovAchat.DTO.FournisseurDTO;
 import afg.achat.afgApprovAchat.exception.FournisseurAlreadyExistsException;
 import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
@@ -88,6 +90,19 @@ public class FournisseurController {
         model.addAttribute("size", taille);
         model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
         return "fournisseur/fournisseur-liste";
+    }
+
+    /** Recherche instantanée de la liste (index Lucene), même filtres que la page. */
+    @GetMapping("/list/ajax")
+    @ResponseBody
+    public Page<FournisseurDTO> getListFournisseurAjax(@RequestParam(defaultValue = "0") int page,
+                                                      @RequestParam(defaultValue = "20") int size,
+                                                      @RequestParam(required = false) String nom,
+                                                      @RequestParam(required = false) String mail,
+                                                      @RequestParam(required = false) String contact) {
+        int taille = Math.min(Math.max(size, 5), 100);
+        return fournisseurService.rechercher(nom, mail, contact, PageRequest.of(Math.max(page, 0), taille))
+                .map(FournisseurDTO::from);
     }
 
     @PostMapping("/modifier")
