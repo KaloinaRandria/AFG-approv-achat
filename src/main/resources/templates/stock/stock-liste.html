@@ -626,7 +626,7 @@
             <tr class="${rowClass}">
               <td class="ps-4">
                 <div class="fw-semibold">${h.dateMouvement || '-'}</div>
-                <div class="mv-muted">${h.refBlMere ? 'BL: ' + h.refBlMere : (h.refDemandeMere ? 'DM: ' + h.refDemandeMere : '')}</div>
+                <div class="mv-muted">${h.refBlMere ? h.refBlMere : (h.refDemandeMere ? h.refDemandeMere : '')}</div>
               </td>
               <td>${pill}</td>
               <td class="${qtyClass}">${qtySign}${h.quantite ?? '-'}<span class="hist-udm">${h.udm || ''}</span></td>
