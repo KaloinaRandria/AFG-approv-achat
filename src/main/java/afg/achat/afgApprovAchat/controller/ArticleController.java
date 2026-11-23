@@ -71,6 +71,7 @@ public class ArticleController {
         model.addAttribute("size", size);
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
 
         //garder valeurs dans inputs
         model.addAttribute("code", code == null ? "" : code);

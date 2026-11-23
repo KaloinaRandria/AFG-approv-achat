@@ -48,7 +48,7 @@
                                th:value="${code}" placeholder="CONS0001..." />
                     </div>
 
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label mb-1">Désignation</label>
                         <input class="form-control search-input" type="text" id="inputDesignation"
                                th:value="${designation}" placeholder="Papier, Encre..." />
@@ -66,15 +66,8 @@
                                th:value="${udm}" placeholder="PCS, KG..." />
                     </div>
 
-                    <div class="col-md-1">
-                        <label class="form-label mb-1">Taille</label>
-                        <select class="form-select" id="inputSize">
-                            <option th:value="10" th:selected="${size == 10}">10</option>
-                            <option th:value="25" th:selected="${size == 25}">25</option>
-                            <option th:value="50" th:selected="${size == 50}">50</option>
-                            <option th:value="100" th:selected="${size == 100}">100</option>
-                        </select>
-                    </div>
+                    <!-- Taille page (fragment commun ; select id="fTaille") -->
+                    <div th:replace="~{fragment/pagination :: taille(${size})}"></div>
 
                     <!-- Indicateur de chargement + bouton reset -->
                     <div class="col-md-12 d-flex gap-2 align-items-center mt-2">
@@ -189,54 +182,10 @@
                     </table>
                 </div>
 
-                <!-- PAGINATION -->
-                <nav th:if="${articlesPage.totalPages > 1}" class="mt-3" aria-label="Pagination articles">
-                    <ul class="pagination justify-content-center mb-0">
-
-                        <!-- Précédente -->
-                        <li class="page-item" th:classappend="${articlesPage.first} ? 'disabled'">
-                            <a class="page-link"
-                               th:href="@{/article/list(page=${articlesPage.number - 1}, size=${size},
-                               code=${code},designation=${designation},famille=${famille},udm=${udm},
-                               sort=${sort},dir=${dir})}">
-                                Précédente
-                            </a>
-                        </li>
-
-                        <!-- Pages autour -->
-                        <th:block th:with="
-                            start=${T(java.lang.Math).max(0, articlesPage.number - 2)},
-                            end=${T(java.lang.Math).min(articlesPage.totalPages - 1, articlesPage.number + 2)}
-                        ">
-                            <li class="page-item"
-                                th:each="p : ${#numbers.sequence(start, end)}"
-                                th:classappend="${p == articlesPage.number} ? 'active'">
-                                <a class="page-link"
-                                   th:href="@{/article/list(page=${p}, size=${size},
-                                   code=${code},designation=${designation},famille=${famille},udm=${udm},
-                                   sort=${sort},dir=${dir})}"
-                                   th:text="${p + 1}">
-                                </a>
-                            </li>
-                        </th:block>
-
-                        <!-- Suivante -->
-                        <li class="page-item" th:classappend="${articlesPage.last} ? 'disabled'">
-                            <a class="page-link"
-                               th:href="@{/article/list(page=${articlesPage.number + 1}, size=${size},
-                               code=${code},designation=${designation},famille=${famille},udm=${udm},
-                               sort=${sort},dir=${dir})}">
-                                Suivante
-                            </a>
-                        </li>
-                    </ul>
-
-                    <div class="text-center text-muted small mt-2">
-                        Page <span th:text="${articlesPage.number + 1}"></span> /
-                        <span th:text="${articlesPage.totalPages}"></span>
-                        — Total: <span th:text="${articlesPage.totalElements}"></span>
-                    </div>
-                </nav>
+                <!-- Pagination commune ; reconstruite à l identique par la recherche instantanée -->
+                <div id="articlesPagination">
+                    <div th:replace="~{fragment/pagination :: pagination(${articlesPage}, ${urlPagination})}"></div>
+                </div>
 
             </div>
         </div>
@@ -542,7 +491,7 @@
                 designation: document.getElementById('inputDesignation').value.trim(),
                 famille:     document.getElementById('inputFamille').value.trim(),
                 udm:         document.getElementById('inputUdm').value.trim(),
-                size:        document.getElementById('inputSize').value,
+                size:        document.getElementById('fTaille').value,
                 sort:        document.getElementById('hiddenSort').value,
                 dir:         document.getElementById('hiddenDir').value,
                 page:        page || 0
@@ -631,54 +580,66 @@
         `).join('');
         }
 
+        // Même rendu que le fragment commun fragment/pagination :: pagination(page, url)
         function renderPagination(data, params) {
-            const nav = document.querySelector('nav[aria-label="Pagination articles"]');
-            if (!nav) return;
-
-            if (data.totalPages <= 1) {
-                nav.style.display = 'none';
-                return;
-            }
-            nav.style.display = '';
+            const conteneur = document.getElementById('articlesPagination');
+            if (!conteneur) return;
+            if (!data.totalElements) { conteneur.innerHTML = ''; return; }
 
             const current = data.number;
             const total   = data.totalPages;
-            const start   = Math.max(0, current - 2);
-            const end     = Math.min(total - 1, current + 2);
+            const debut   = Math.max(0, current - 2);
+            const fin     = Math.min(total - 1, current + 2);
+            const premier = current * data.size + 1;
+            const dernier = current * data.size + data.numberOfElements;
+
+            // Liens réels (comme le fragment) ; le clic est intercepté pour rester en recherche instantanée
+            const base = new URLSearchParams(params);
+            base.delete('page');
+            const lien = p => `${CONTEXT_PATH}article/list?${base.toString()}&page=${p}`;
+            const item = (p, libelle, desactive, actif, aria) =>
+                `<li class="page-item${desactive ? ' disabled' : ''}${actif ? ' active' : ''}">
+                    <a class="page-link page-btn" href="${lien(p)}" data-page="${p}"${aria ? ` aria-label="${aria}"` : ''}${actif ? ' aria-current="page"' : ''}>${libelle}</a>
+                 </li>`;
+            const ellipse = '<li class="page-item disabled"><span class="page-link">…</span></li>';
 
             let pages = '';
-            for (let p = start; p <= end; p++) {
-                pages += `<li class="page-item ${p === current ? 'active' : ''}">
-                <a class="page-link page-btn" data-page="${p}">${p + 1}</a>
-            </li>`;
-            }
+            if (debut > 0) pages += ellipse;
+            for (let p = debut; p <= fin; p++) pages += item(p, p + 1, false, p === current);
+            if (fin < total - 1) pages += ellipse;
 
-            nav.querySelector('ul').innerHTML = `
-            <li class="page-item ${data.first ? 'disabled' : ''}">
-                <a class="page-link page-btn" data-page="${current - 1}">Précédente</a>
-            </li>
-            ${pages}
-            <li class="page-item ${data.last ? 'disabled' : ''}">
-                <a class="page-link page-btn" data-page="${current + 1}">Suivante</a>
-            </li>`;
+            const nav = total > 1 ? `
+                <nav aria-label="Pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        ${item(0, '&laquo;', data.first, false, 'Première page')}
+                        ${item(current - 1, '&lsaquo;', data.first, false, 'Page précédente')}
+                        ${pages}
+                        ${item(current + 1, '&rsaquo;', data.last, false, 'Page suivante')}
+                        ${item(total - 1, '&raquo;', data.last, false, 'Dernière page')}
+                    </ul>
+                </nav>` : '';
 
-            // Relier les clics de pagination
-            nav.querySelectorAll('.page-btn').forEach(btn => {
-                btn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    doSearch(parseInt(this.dataset.page));
-                });
-            });
-
-            nav.querySelector('.text-center').textContent =
-                `Page ${current + 1} / ${total} — Total: ${data.totalElements}`;
+            conteneur.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+                    <span class="text-muted small">Affichage ${premier}–${dernier} sur ${data.totalElements}</span>
+                    ${nav}
+                </div>`;
         }
+
+        // Clic sur la pagination (rendue par le serveur ou par la recherche) : recherche instantanée
+        document.getElementById('articlesPagination')?.addEventListener('click', function (e) {
+            const lienPage = e.target.closest('a.page-link');
+            if (!lienPage || lienPage.closest('.disabled')) return;
+            const url = new URL(lienPage.href, window.location.href);
+            e.preventDefault();
+            doSearch(parseInt(url.searchParams.get('page') || '0', 10));
+        });
 
         // Écouter les champs de recherche
         document.querySelectorAll('.search-input').forEach(input => {
             input.addEventListener('input', () => doSearch(0));
         });
-        document.getElementById('inputSize').addEventListener('change', () => doSearch(0));
+        document.getElementById('fTaille').addEventListener('change', () => doSearch(0));
 
     })();
 

@@ -1095,6 +1095,7 @@ public class DemandeController {
         model.addAttribute("size",      size);
         model.addAttribute("sort",      sort);
         model.addAttribute("dir",       dir);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
         String qs = request.getQueryString();
         model.addAttribute("returnUrl", "/demande/paiements-directs" + (qs == null ? "" : "?" + qs));
 
