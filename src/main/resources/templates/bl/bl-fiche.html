@@ -45,7 +45,7 @@
 
             <div class="card shadow-lg border-0">
                 <div class="card-body p-0">
-                    <div class="bl-document">
+                    <div class="bl-document ui-doc">
 
                         <!-- EN-TÊTE -->
                         <div class="bl-header">
@@ -95,7 +95,7 @@
 
                         <!-- LIGNES -->
                         <div class="table-responsive">
-                            <table class="bl-table">
+                            <table class="bl-table ui-lines">
                                 <thead>
                                 <tr>
                                     <th style="width:5%" class="text-center">N°</th>
@@ -113,10 +113,10 @@
                                     <td colspan="8" class="text-center text-muted">Aucune ligne</td>
                                 </tr>
                                 <tr th:each="l, stat : ${lignes}">
-                                    <td class="text-center" th:text="${stat.count}"></td>
-                                    <td th:text="${l.article != null ? l.article.codeArticle : '—'}"></td>
+                                    <td class="text-center ui-num" th:text="${stat.count}"></td>
+                                    <td class="ui-art-code" th:text="${l.article != null ? l.article.codeArticle : '—'}"></td>
                                     <td>
-                                        <div th:text="${l.article != null ? l.article.designation : '—'}"></div>
+                                        <div class="ui-art-des" th:text="${l.article != null ? l.article.designation : '—'}"></div>
                                         <!-- Désignation du bon de commande quand elle diffère de l'article -->
                                         <small class="text-muted d-block" th:if="${l.designationBonCommande != null}"
                                                th:text="${'BC : ' + l.designationBonCommande}"></small>
@@ -134,18 +134,18 @@
                                             </th:block>
                                         </small>
                                     </td>
-                                    <td class="text-center"
+                                    <td class="text-center ui-udm"
                                         th:text="${l.article != null and l.article.udm != null ? l.article.udm.description : ''}"></td>
                                     <td class="text-end" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantiteAttendue)}"></td>
-                                    <td class="text-end fw-semibold" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantiteRecue)}"></td>
+                                    <td class="text-end fw-bold" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantiteRecue)}"></td>
                                     <td class="text-end" th:text="${#numbers.formatDecimal(l.prixUnitaire, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
                                     <td class="text-end" th:text="${#numbers.formatDecimal(l.montant, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
                                 </tr>
                                 </tbody>
                                 <tfoot>
                                 <tr class="fw-bold">
-                                    <td colspan="7" class="text-end text-uppercase">Total H.T.</td>
-                                    <td class="text-end"
+                                    <td colspan="7" class="text-end text-uppercase ui-total-label">Total H.T.</td>
+                                    <td class="text-end ui-total"
                                         th:text="${#numbers.formatDecimal(total, 1, 'WHITESPACE', 2, 'COMMA') + ' ' + devise}"></td>
                                 </tr>
                                 </tfoot>
@@ -153,7 +153,7 @@
                         </div>
 
                         <!-- SIGNATURES -->
-                        <div class="row g-4 mt-4 pb-2">
+                        <div class="row g-4 mt-4 pb-2 ui-signatures">
                             <div class="col-6 text-center">
                                 <div class="border-top pt-3 mx-4">
                                     <div class="fw-bold mb-1">Livré par (fournisseur)</div>

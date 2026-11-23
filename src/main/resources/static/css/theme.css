@@ -562,12 +562,130 @@ table.dataTable tbody tr:hover { background-color: #f3f6fc; }
 
     /* Boutons d'action compacts */
     table.bl-table.ui-lines .btn-sm { padding: .25rem .5rem; }
+
+    /* Numéro de ligne */
+    .ui-num { color: var(--ui-muted); font-weight: 700; }
+    td.ui-art-code { font-size: .78rem; white-space: nowrap; }
+}
+
+/* ── Document (.bl-document.ui-doc) : en-tête, informations en tuiles, signatures.
+   Écran et impression (bon de livraison). Sans .ui-doc, un document garde son
+   impression d'origine (fiche de demande). ── */
+@media screen, print {
+    .bl-document.ui-doc { padding: 32px; color: var(--ui-ink); }
+
+    .ui-doc .bl-header {
+        align-items: center;
+        border-bottom: 1px solid var(--ui-line);
+        padding-bottom: 18px;
+        margin-bottom: 22px;
+    }
+
+    .ui-doc .bl-title h3 {
+        font-size: 1.25rem;
+        font-weight: 800;
+        letter-spacing: .16em;
+        color: var(--ui-brand);
+        margin-bottom: .2rem;
+    }
+
+    .ui-doc .bl-title span { font-size: .85rem; color: var(--ui-ink-2); }
+
+    .ui-doc .bl-infos { gap: 12px; margin-bottom: 26px; }
+
+    .ui-doc .bl-infos > div {
+        background: #fafbfd;
+        border: 1px solid var(--ui-line-2);
+        border-radius: 10px;
+        padding: .7rem .9rem;
+        font-size: .88rem;
+        min-width: 0;
+        word-break: break-word;
+    }
+
+    .ui-doc .bl-infos > div > strong:first-child {
+        display: block;
+        font-size: .68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--ui-muted);
+        margin-bottom: .25rem;
+    }
+
+    .ui-doc .bl-infos a { color: var(--ui-brand); }
+
+    .ui-doc .table-responsive { border-radius: 12px; }
+
+    .ui-doc .ui-signatures .border-top {
+        border-top: 0 !important;
+        border: 1px dashed var(--ui-input);
+        border-radius: 12px;
+        padding: 1rem 1rem 2.5rem !important;
+        margin: 0 !important;
+        font-size: .82rem;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .ui-doc .bl-infos { grid-template-columns: 1fr; }
+    .bl-document.ui-doc { padding: 18px; }
+}
+
+/* Impression d'un document .ui-doc : mêmes lignes qu'à l'écran, filets renforcés pour le papier */
+@media print {
+    .ui-doc { -webkit-print-color-adjust: exact; print-color-adjust: exact; color: #000; }
+
+    .ui-doc table.bl-table.ui-lines {
+        border-collapse: separate;
+        border-spacing: 0;
+        border: 1px solid #b8bfcc;
+        border-radius: 12px;
+        overflow: hidden;
+        font-size: .85rem;
+    }
+
+    .ui-doc table.bl-table.ui-lines th,
+    .ui-doc table.bl-table.ui-lines td {
+        border: 0;
+        border-bottom: 1px solid #d5dae3;
+        padding: .55rem .75rem;
+        color: #000;
+    }
+
+    .ui-doc table.bl-table.ui-lines thead th {
+        background: #f1f3f7;
+        color: #535d75;
+        font-size: .68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        border-bottom: 1px solid #b8bfcc;
+    }
+
+    .ui-doc table.bl-table.ui-lines tbody tr:last-child td { border-bottom: 0; }
+    .ui-doc table.bl-table.ui-lines tfoot td { background: #f1f3f7; border-top: 1px solid #b8bfcc; border-bottom: 0; }
+    .ui-doc table.bl-table.ui-lines tr { page-break-inside: avoid; }
+
+    .ui-doc .ui-num, .ui-doc td.ui-art-code, .ui-doc .ui-udm { color: #535d75; }
+    .ui-doc .ui-art-des { font-weight: 600; }
+    .ui-doc .ui-total-label { font-size: .7rem; letter-spacing: .06em; color: #535d75 !important; }
+    /* Montants sur une seule ligne : la colonne MONTANT H.T. (14 %) est trop étroite
+       sur A4 pour « 1 234 567,00 MGA » sans cela */
+    .ui-doc .ui-total { font-size: 1rem; font-weight: 800; white-space: nowrap; }
+    .ui-doc .ui-total-label { white-space: nowrap; }
+    .ui-doc table.bl-table.ui-lines td.text-end { white-space: nowrap; }
+
+    .ui-doc .bl-header { border-bottom-color: #b8bfcc; }
+    .ui-doc .bl-infos > div { border-color: #d5dae3; }
+    .ui-doc .ui-signatures .border-top { border-color: #9aa2b1; }
+    .ui-doc .ui-signatures { page-break-inside: avoid; }
 }
 
 @media print {
     .ui-lines-head { display: none !important; }
     .ui-art { display: inline; }
-    .ui-art-code::after { content: " - "; }
+    .ui-art .ui-art-code::after { content: " - "; }
     .ui-art-refus { margin-left: .3rem; }
     .ui-type i { display: none; }
 }
