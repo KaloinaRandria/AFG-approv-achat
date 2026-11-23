@@ -22,8 +22,11 @@
                 <span th:text="${titreListe}">Liste des demandes</span>
             </h1>
             <div>
-                <!-- Seule la demande de matériel se crée encore -->
-                <a th:href="@{/demande/add}" class="btn btn-gradient-green">
+                <!-- Liste des demandes autres : création d'une demande autre ; sinon demande de matériel -->
+                <a th:if="${typeDemande == 'AUTRE'}" th:href="@{/demande/add(type='AUTRE')}" class="btn btn-gradient-green">
+                    <i class="fas fa-plus-circle me-1"></i> Nouvelle demande autre
+                </a>
+                <a th:unless="${typeDemande == 'AUTRE'}" th:href="@{/demande/add}" class="btn btn-gradient-green">
                     <i class="fas fa-plus-circle me-1"></i> Nouvelle demande de matériel
                 </a>
             </div>

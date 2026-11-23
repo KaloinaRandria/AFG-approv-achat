@@ -141,7 +141,7 @@
                             </div>
 
                             <div>
-                                <strong>Date prévue pour la livraison :</strong>
+                                <strong th:text="${estAutre ? 'Date souhaitée de paiement :' : 'Date prévue pour la livraison :'}">Date prévue pour la livraison :</strong>
                                 <div th:text="${demande.dateSortie != null ? #temporals.format(demande.dateSortie,'dd/MM/yyyy') : '-'}">-</div>
                             </div>
 
@@ -202,12 +202,13 @@
                                 <strong>Mode de traitement :</strong>
 
                                 <!-- Lecture seule -->
-                                <div th:text="${demande.modeTraitement != null ? demande.modeTraitement.libelle : '-'}">-</div>
+                                <div th:text="${demande.modeTraitement != null ? demande.modeTraitement.libelle
+                                               : (modeTraitementImpose != null ? modeTraitementImpose.libelle : '-')}">-</div>
                             </div>
                             <div th:if="${demande.statutTransmissionFinance != null and demande.statutTransmissionFinance.name() != 'NON_CONCERNEE'}">
                                 <strong>Transmission finance :</strong>
                                 <div th:if="${demande.statutTransmissionFinance.name() == 'A_TRANSMETTRE'}" class="text-warning fw-semibold">
-                                    À transmettre par les Moyens Généraux
+                                    À transmettre par le validateur des Moyens Généraux
                                 </div>
                                 <div th:if="${demande.statutTransmissionFinance.name() == 'TRANSMISE_FINANCE'}" class="text-primary fw-semibold">
                                     Transmise à la finance
@@ -363,8 +364,44 @@
                         </div>
 
 
+                        <!-- DÉPENSE DEMANDÉE (demande Autre : une seule dépense, paiement direct) -->
+                        <div class="bl-body" th:if="${estAutre}">
+                            <div class="ui-lines-head">
+                                <span class="ui-lines-title"><i class="fas fa-hand-holding-usd"></i>Dépense demandée</span>
+                            </div>
+                            <div th:if="${detailAutre == null}" class="px-3 pb-3 text-muted">
+                                <i class="fas fa-inbox me-1"></i>Aucune dépense enregistrée pour cette demande.
+                            </div>
+                            <table th:if="${detailAutre != null}" class="bl-table ui-lines table align-middle">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>CATÉGORIE</th>
+                                    <th>BÉNÉFICIAIRE</th>
+                                    <th class="text-end">QUANTITÉ</th>
+                                    <th class="text-end">MONTANT UNITAIRE (<span th:text="${demande.codeDevise}">MGA</span>)</th>
+                                    <th class="text-end">MONTANT (<span th:text="${demande.codeDevise}">MGA</span>)</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td class="fw-semibold" th:text="${detailAutre.categorie.libelle}">Sponsoring</td>
+                                    <td th:text="${detailAutre.beneficiaire != null ? detailAutre.beneficiaire : '-'}">-</td>
+                                    <td class="text-end" th:text="${detailAutre.quantite != null ? #numbers.formatDecimal(detailAutre.quantite, 1, 'DEFAULT', 2, 'DEFAULT') : '-'}">1</td>
+                                    <td class="text-end" th:text="${detailAutre.montantUnitaire != null ? #numbers.formatDecimal(detailAutre.montantUnitaire, 1, 'DEFAULT', 2, 'DEFAULT') : '-'}">0</td>
+                                    <td class="text-end ui-total" th:text="${detailAutre.montant != null ? #numbers.formatDecimal(detailAutre.montant, 1, 'DEFAULT', 2, 'DEFAULT') : '-'}">0</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                            <div class="px-3 pb-2 small text-muted text-end"
+                                 th:if="${detailAutre != null and detailAutre.montant != null and demande.deviseEtrangere}">
+                                ≈ <strong th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(demande.enAriary(detailAutre.montant), 'MGA')}"></strong>
+                                au taux du <span th:text="${demande.dateTaux != null ? #temporals.format(demande.dateTaux, 'dd/MM/yyyy') : '—'}"></span>,
+                                à titre indicatif.
+                            </div>
+                        </div>
+
                         <!-- TABLE ARTICLES -->
-                        <div class="bl-body" th:if="${not (canDecisionMG and demande.statut
+                        <div class="bl-body" th:if="${!estAutre and not (canDecisionMG and demande.statut
      == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1)}">
                             <div class="ui-lines-head">
                                 <span class="ui-lines-title"><i class="fas fa-box-open"></i>Articles demandés</span>
@@ -610,7 +647,7 @@
                         </div>
 
                         <!-- TABLE ARTICLES — version MG en VALIDATION_N1 -->
-                        <div class="bl-body" th:if="${canDecisionMG and demande.statut
+                        <div class="bl-body" th:if="${!estAutre and canDecisionMG and demande.statut
      == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
 
                             <!-- BANDEAU STYLISÉ STATUT PRIX & CONSIGNES MG -->
@@ -865,6 +902,7 @@
 
                                 <!-- Ligne des boutons -->
                                 <div class="d-flex align-items-center gap-2 mb-2">
+                                    <th:block th:unless="${estAutre}">
                                     <button type="button"
                                             id="btnSavePrix"
                                             class="btn btn-gradient-blue btn-sm px-3">
@@ -872,6 +910,7 @@
                                         <span class="btn-text">Enregistrer le prix</span>
                                     </button>
                                     <span id="prixSaveStatus" class="small"></span>
+                                    </th:block>
 
                                     <button type="button"
                                             id="btnSavePjMg"
@@ -995,9 +1034,17 @@
                                             Obligatoire pour valider en Moyens Généraux.
                                         </div>
                                     </div>
-                                    <!-- ================= MODE DE TRAITEMENT (MG seulement en N1) ================= -->
+                                    <!-- ================= MODE DE TRAITEMENT ================= -->
+                                    <!-- Fixé par le type de demande : simple rappel -->
+                                    <div class="mb-2 small text-muted"
+                                         th:if="${canDecisionMG and modeTraitementImpose != null and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
+                                        <i class="fas fa-cogs me-1"></i>
+                                        Mode de traitement : <strong th:text="${modeTraitementImpose.libelle}"></strong>
+                                        <span th:text="${modeTraitementImpose.necessiteBonCommande ? '(avec bon de commande)' : '(sans bon de commande)'}"></span>
+                                    </div>
+                                    <!-- Anciennes demandes seulement : choix par les M.G. en N1 -->
                                     <div class="mb-2"
-                                         th:if="${canDecisionMG and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
+                                         th:if="${canDecisionMG and modeTraitementImpose == null and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
                                         <label class="form-label mb-1">
                                             Mode de traitement <span class="text-danger">*</span>
                                         </label>
@@ -1453,7 +1500,7 @@
                         <!-- ===================== BON DE SORTIE ===================== -->
                         <!-- Section visible uniquement si demande VALIDE -->
                         <div class="px-3 pb-3 mt-3"
-                             th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE}">
+                             th:if="${!estAutre and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE}">
 
                             <div class="p-3 border rounded bg-light">
                                 <div class="d-flex align-items-center justify-content-between mb-3">
@@ -3617,7 +3664,8 @@
     });
 
     // ── Anti-double : Transmission à la finance ──────────────────────────────
-    (function () {
+    // Après le chargement de la page : le modal est déclaré plus bas que ce script
+    document.addEventListener('DOMContentLoaded', function () {
         const transmitModal = document.getElementById('transmitFinanceModal');
         if (!transmitModal) return;
 
@@ -3637,19 +3685,23 @@
 
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Transmission en cours...';
+            // Le modal reste ouvert pendant l'envoi : pas de fermeture ni de double clic
+            transmitModal.querySelectorAll('[data-bs-dismiss="modal"]').forEach(function (b) { b.disabled = true; });
 
             // Sécurité : réactiver après 15s en cas de timeout réseau
             setTimeout(function () {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Confirmer la transmission';
+                transmitModal.querySelectorAll('[data-bs-dismiss="modal"]').forEach(function (b) { b.disabled = false; });
             }, 15000);
         }, true);
-    })();
+    });
 
     /*]]>*/
 </script>
 
-<div class="modal fade" id="transmitFinanceModal" tabindex="-1" aria-labelledby="transmitFinanceModalLabel" aria-hidden="true">
+<div class="modal fade" id="transmitFinanceModal" tabindex="-1" aria-labelledby="transmitFinanceModalLabel" aria-hidden="true"
+     data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">

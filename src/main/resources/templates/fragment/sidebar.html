@@ -24,7 +24,7 @@
         </a>
     </div>
 
-    <div class="px-3 mb-2" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','FINANCE','FINANCE_CONSULT')">
+    <div class="px-3 mb-2" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_VALIDATOR','FINANCE','FINANCE_CONSULT')">
         <a class="nav-link text-white d-flex align-items-center sidebar-link"
            th:href="@{/demande/paiements-directs}"
            th:classappend="${currentUri == '/demande/paiements-directs' ? 'active' : ''}">
@@ -142,33 +142,47 @@
                  th:classappend="${currentUri.contains('/demande') ? 'show' : ''}">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
-                        <!-- Seule la demande de matériel se crée encore ; les anciennes demandes restent consultables -->
+                        <!-- Demandes de matériel et demandes autres (paiement direct) ; les anciennes demandes restent consultables -->
                         <li>
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/demande/list(typeDemande='FOURNITURE')}"
                                th:classappend="${currentUri == '/demande/list' and menuTypeDemande == 'FOURNITURE' ? 'active' : ''}">
-                                Demandes de matériel
+                                <i class="fas fa-boxes fa-fw me-2"></i> Demandes de matériel
                             </a>
                         </li>
                         <li>
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/demande/add}"
-                               th:classappend="${currentUri == '/demande/add' ? 'active' : ''}">
-                                Nouvelle demande de matériel
+                               th:classappend="${currentUri == '/demande/add' and typeDemande != null and typeDemande.name() == 'FOURNITURE' ? 'active' : ''}">
+                                <i class="fas fa-cart-plus fa-fw me-2"></i> Nouvelle demande de matériel
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/demande/list(typeDemande='AUTRE')}"
+                               th:classappend="${currentUri == '/demande/list' and menuTypeDemande == 'AUTRE' ? 'active' : ''}">
+                                <i class="fas fa-hand-holding-usd fa-fw me-2"></i> Demandes autres
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/demande/add(type='AUTRE')}"
+                               th:classappend="${currentUri == '/demande/add' and typeDemande != null and typeDemande.name() == 'AUTRE' ? 'active' : ''}">
+                                <i class="fas fa-file-invoice-dollar fa-fw me-2"></i> Nouvelle demande autre
                             </a>
                         </li>
                         <li>
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/demande/list(typeDemande='STANDARD')}"
                                th:classappend="${currentUri == '/demande/list' and menuTypeDemande == 'STANDARD' ? 'active' : ''}">
-                                Anciennes demandes
+                                <i class="fas fa-archive fa-fw me-2"></i> Anciennes demandes
                             </a>
                         </li>
                         <li>
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/demande/list}"
                                th:classappend="${currentUri == '/demande/list' and menuTypeDemande == '' ? 'active' : ''}">
-                                Toutes les demandes
+                                <i class="fas fa-list fa-fw me-2"></i> Toutes les demandes
                             </a>
                         </li>
                     </ul>

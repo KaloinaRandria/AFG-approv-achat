@@ -75,6 +75,11 @@ public class WorkflowService {
         return hasFinanceAccess(auth) || hasRole(auth, "ROLE_FINANCE_CONSULT");
     }
 
+    /** Transmission des paiements directs validés à la finance : validateur des Moyens Généraux. */
+    public static boolean peutTransmettreFinance(Authentication auth) {
+        return hasRole(auth, "ROLE_MG_VALIDATOR") || hasRole(auth, "ROLE_ADMIN");
+    }
+
     // ── Droits ───────────────────────────────────────────────────────────────
 
     public DroitsDecision calculerDroits(DemandeMere demande, Utilisateur current, Authentication auth) {
@@ -113,8 +118,15 @@ public class WorkflowService {
             return true;
         }
 
-        // La finance consulte les paiements directs qui lui ont été transmis
         DemandeMere.StatutTransmissionFinance tf = demande.getStatutTransmissionFinance();
+
+        // Le validateur M.G. transmet les paiements directs à la finance et en suit le paiement
+        if (peutTransmettreFinance(auth) && tf != null
+                && tf != DemandeMere.StatutTransmissionFinance.NON_CONCERNEE) {
+            return true;
+        }
+
+        // La finance consulte les paiements directs qui lui ont été transmis
         if (hasFinanceReadAccess(auth)
                 && (tf == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE
                 || tf == DemandeMere.StatutTransmissionFinance.PAYEE)) {
@@ -203,7 +215,11 @@ public class WorkflowService {
         verifierPrixLignes(demande, "Impossible de valider");
         DemandeMere.NatureDemande nature = parseNature(cmd.natureDemande());
         DemandeMere.PrioriteDemande priorite = parsePriorite(cmd.priorite());
-        ModeTraitement mode = parseModeTraitement(cmd.modeTraitement());
+        // Le type de demande impose le mode (matériel → M.G. avec bon de commande, Autre → paiement direct) ;
+        // seules les anciennes demandes le font encore choisir aux M.G.
+        ModeTraitement mode = imposeParLeType(demande)
+                ? modeImpose(demande)
+                : parseModeTraitement(cmd.modeTraitement());
 
         return () -> {
             demande.setNatureDemande(nature);
@@ -308,8 +324,11 @@ public class WorkflowService {
         DemandeMere.NatureDemande nature = parseNature(natureDemande);
         DemandeMere.PrioriteDemande priorite = parsePriorite(prioriteParam);
         // Facultatif à l'envoi au CODEP : conservé seulement s'il a été renseigné
-        ModeTraitement mode = (modeTraitement == null || modeTraitement.isBlank())
-                ? null : parseModeTraitement(modeTraitement);
+        // (le mode imposé par le type de demande l'emporte)
+        ModeTraitement mode = imposeParLeType(demande)
+                ? modeImpose(demande)
+                : (modeTraitement == null || modeTraitement.isBlank())
+                        ? null : parseModeTraitement(modeTraitement);
 
         // ── 2. Écritures ──
         int etape = demande.getStatut();
@@ -392,6 +411,19 @@ public class WorkflowService {
         }
         if (mt == null) {
             throw new WorkflowException("Mode de traitement invalide : " + modeTraitement);
+        }
+        return mt;
+    }
+
+    private static boolean imposeParLeType(DemandeMere demande) {
+        return demande.getTypeDemandeEffectif().getModeTraitement() != null;
+    }
+
+    private ModeTraitement modeImpose(DemandeMere demande) {
+        ModeTraitement mt = modeTraitementService.getModeImpose(demande.getTypeDemandeEffectif());
+        if (mt == null) {
+            throw new WorkflowException("Le mode de traitement « "
+                    + demande.getTypeDemandeEffectif().getModeTraitement().getLibelle() + " » n'est pas paramétré.");
         }
         return mt;
     }

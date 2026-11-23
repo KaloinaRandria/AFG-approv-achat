@@ -7,10 +7,13 @@ package afg.achat.afgApprovAchat.model.util;
  * situées après dans le circuit standard ne sont pas parcourues.</p>
  *
  * <ul>
- *   <li>FOURNITURE : la demande de matériel, seule demande que l'on peut encore créer.
- *       Elle porte sur des articles actifs, suivis en stock, et s'arrête au contrôleur
- *       de gestion (ni D.F.C. ni S.G.).</li>
- *   <li>STANDARD : les anciennes demandes hors matériel (remboursement, sponsoring, per diem…).
+ *   <li>FOURNITURE : la demande de matériel. Elle porte sur des articles actifs, suivis
+ *       en stock, et s'arrête au contrôleur de gestion (ni D.F.C. ni S.G.).</li>
+ *   <li>AUTRE : une dépense hors matériel (sponsoring, remboursement, indemnité de repas,
+ *       lot / récompense, droits divers / honoraires…). Une seule dépense par demande
+ *       ({@code DemandeAutreDetail}), sans article ni bon de commande : paiement direct.
+ *       Circuit complet, jusqu'au S.G.</li>
+ *   <li>STANDARD : les anciennes demandes hors matériel, saisies avec des articles.
  *       Elles ne se créent plus mais restent consultables et terminent leur circuit
  *       complet, jusqu'au S.G.</li>
  * </ul>
@@ -19,23 +22,33 @@ package afg.achat.afgApprovAchat.model.util;
  */
 public enum TypeDemande {
 
-    FOURNITURE("Matériel",       "Demandes de matériel", EtapeWorkflow.VALIDATION_N2, true,  true),
-    STANDARD  ("Autre (ancien)", "Anciennes demandes",   EtapeWorkflow.VALIDATION_N4, false, false);
+    FOURNITURE("Matériel",       "Demandes de matériel", EtapeWorkflow.VALIDATION_N2, true,  true,  ModeTraitementEnum.ATTENTE_AMG),
+    AUTRE     ("Autre",          "Demandes autres",      EtapeWorkflow.VALIDATION_N4, false, true,  ModeTraitementEnum.PAIEMENT_DIRECT),
+    STANDARD  ("Autre (ancien)", "Anciennes demandes",   EtapeWorkflow.VALIDATION_N4, false, false, null);
 
     private final String libelle;
     private final String libelleListe;
     private final EtapeWorkflow derniereValidation;
     private final boolean articlesEnStock;
     private final boolean creable;
+    private final ModeTraitementEnum modeTraitement;
 
     TypeDemande(String libelle, String libelleListe, EtapeWorkflow derniereValidation,
-                boolean articlesEnStock, boolean creable) {
+                boolean articlesEnStock, boolean creable, ModeTraitementEnum modeTraitement) {
         this.libelle = libelle;
         this.libelleListe = libelleListe;
         this.derniereValidation = derniereValidation;
         this.articlesEnStock = articlesEnStock;
         this.creable = creable;
+        this.modeTraitement = modeTraitement;
     }
+
+    /**
+     * Mode de traitement imposé par le type : matériel → en attente Moyens Généraux (bon de commande),
+     * Autre → paiement direct (sans bon de commande). {@code null} pour les anciennes demandes,
+     * dont le mode est encore choisi par les Moyens Généraux.
+     */
+    public ModeTraitementEnum getModeTraitement() { return modeTraitement; }
 
     public String getLibelle() { return libelle; }
 
@@ -47,6 +60,9 @@ public enum TypeDemande {
 
     /** On peut encore créer des demandes de ce type. */
     public boolean isCreable() { return creable; }
+
+    /** Une seule dépense, sans article, réglée en paiement direct. */
+    public boolean isDepenseAutre() { return this == AUTRE; }
 
     /** Étape dont l'approbation fait passer la demande à VALIDE. */
     public EtapeWorkflow getDerniereValidation() { return derniereValidation; }

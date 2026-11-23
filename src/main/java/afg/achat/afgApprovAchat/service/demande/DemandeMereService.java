@@ -32,6 +32,7 @@ public class DemandeMereService {
 
     private final DemandeMereRepo   demandeMereRepo;
     private final DemandeFilleRepo  demandeFilleRepo;
+    private final afg.achat.afgApprovAchat.repository.demande.DemandeAutreDetailRepo demandeAutreDetailRepo;
     private final IdGenerator       idGenerator;
     private final ModeTraitementRepo modeTraitementRepo;
     private final PaiementDirectService paiementDirectService;
@@ -125,7 +126,12 @@ public class DemandeMereService {
 
     @Transactional
     public void recalculerTotal(DemandeMere demande) {
-        double total = demandeFilleRepo.calculerTotal(demande, StatutDemande.REFUSE);
+        // Demande Autre : le total est le montant de son unique dépense (pas de ligne article)
+        double total = demande.getTypeDemandeEffectif().isDepenseAutre()
+                ? demandeAutreDetailRepo.findByDemandeMere(demande)
+                        .map(d -> d.getMontant() != null ? d.getMontant() : 0.0)
+                        .orElse(0.0)
+                : demandeFilleRepo.calculerTotal(demande, StatutDemande.REFUSE);
         demande.setTotalEstime(total);
         demandeMereRepo.save(demande);
     }

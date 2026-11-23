@@ -112,6 +112,8 @@ public class DemandeController {
 
     private final afg.achat.afgApprovAchat.service.demande.DeviseDemandeService deviseDemandeService;
 
+    private final DemandeAutreService demandeAutreService;
+
     /**
      * Les Moyens Généraux, à leur étape, choisissent la devise des prix proforma.
      * Les prix des lignes à acheter sont à ressaisir ; les lignes stock sont converties.
@@ -131,6 +133,11 @@ public class DemandeController {
             redirectAttributes.addFlashAttribute("ko", "Seuls les Moyens Généraux, à leur étape, choisissent la devise.");
             return fiche;
         }
+        // Demande Autre : la devise est celle du montant saisi par le demandeur
+        if (demande.getTypeDemandeEffectif().isDepenseAutre()) {
+            redirectAttributes.addFlashAttribute("ko", "La devise d'une demande Autre est fixée à la saisie.");
+            return fiche;
+        }
         try {
             int aRessaisir = deviseDemandeService.changerDevise(demande, deviseService.lireDevise(deviseId));
             redirectAttributes.addFlashAttribute("ok", "Devise de la demande : " + demande.getCodeDevise()
@@ -142,10 +149,20 @@ public class DemandeController {
     }
 
     @GetMapping("/add")
-    public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
+    public String addDemandePage(@RequestParam(name = "type", required = false) String type,
+                                 Model model, HttpServletRequest request, HttpSession session) {
 
-        // Seule la demande de matériel se crée encore
-        model.addAttribute("typeDemande", TypeDemande.FOURNITURE);
+        // Matériel par défaut ; « type=AUTRE » ouvre le formulaire des demandes Autres
+        TypeDemande typeDemande;
+        try {
+            typeDemande = TypeDemande.parse(type);
+        } catch (IllegalArgumentException e) {
+            typeDemande = null;
+        }
+        if (typeDemande == null || !typeDemande.isCreable()) {
+            typeDemande = TypeDemande.FOURNITURE;
+        }
+        model.addAttribute("typeDemande", typeDemande);
 
         // Token anti double-soumission
         String token = UUID.randomUUID().toString();
@@ -155,6 +172,12 @@ public class DemandeController {
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("ligneBudgetaires", centreBudgetaireService.getAllCentreBudgetaires());
 
+        if (typeDemande.isDepenseAutre()) {
+            model.addAttribute("categories", demandeAutreService.getCategoriesActives());
+            model.addAttribute("devises", deviseService.getAllDevises());
+            model.addAttribute("deviseReference", deviseService.getDeviseReference());
+            return "demande/demande-autre-saisie";
+        }
         return "demande/demande-saisie";
     }
     @PostMapping("/save")
@@ -190,6 +213,10 @@ public class DemandeController {
             type = TypeDemande.parse(typeDemande);
         } catch (IllegalArgumentException e) {
             type = null;
+        }
+        // Ce formulaire crée les demandes de matériel ; les demandes Autres ont le leur
+        if (type == TypeDemande.AUTRE) {
+            return "redirect:/demande/add?type=" + TypeDemande.AUTRE.name();
         }
         // Les anciennes demandes hors matériel ne se créent plus
         if (type == null || !type.isCreable()) {
@@ -264,6 +291,8 @@ public class DemandeController {
             demandeMere.setDateSortie(dateSortie + "T00:00");
             demandeMere.setPriorite(DemandeMere.PrioriteDemande.valueOf(priorite.trim()));
             demandeMere.setTypeDemande(type);
+            // Le type impose le mode de traitement (matériel → M.G. avec bon de commande)
+            demandeMere.setModeTraitement(modeTraitementService.getModeImpose(type));
             // Prix proposés en ariary (derniers prix d'achat) : la demande naît en ariary
             demandeMere.appliquerDevise(deviseService.getDeviseReference(), LocalDateTime.now());
             demandeMere.setMotifEvoque(motif);
@@ -281,6 +310,76 @@ public class DemandeController {
             }
             pieceJointeService.enregistrerPourDemande(piecesJointes, demandeMere, "");
 
+            notifierCreation(demandeMere, utilisateur);
+
+            redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
+            return "redirect:/demande/list?typeDemande=" + type.name();
+
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+            return retourSaisie;
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement : " + e.getMessage());
+            return retourSaisie;
+        }
+    }
+
+    /**
+     * Demande Autre : une seule dépense hors matériel (sponsoring, remboursement, indemnité de repas…),
+     * réglée en paiement direct. Circuit complet jusqu'au S.G.
+     */
+    @PostMapping("/autre/save")
+    public String insertDemandeAutre(@RequestParam(name = "categorie", required = false) String categorie,
+                                     @RequestParam(name = "beneficiaire", required = false) String beneficiaire,
+                                     @RequestParam(name = "quantite", required = false) String quantite,
+                                     @RequestParam(name = "montantUnitaire", required = false) String montantUnitaire,
+                                     @RequestParam(name = "devise", required = false) String devise,
+                                     @RequestParam(name = "dateSortie", required = false) String datePaiement,
+                                     @RequestParam(name = "priorite", required = false) String priorite,
+                                     @RequestParam(name = "motif", required = false) String motif,
+                                     @RequestParam(name = "description", required = false) String description,
+                                     @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
+                                     @RequestParam(name = "submissionToken") String submissionToken,
+                                     HttpSession session,
+                                     RedirectAttributes redirectAttributes) {
+        String sessionToken = (String) session.getAttribute("submissionToken");
+        if (sessionToken == null || !sessionToken.equals(submissionToken)) {
+            redirectAttributes.addFlashAttribute("warningMessage",
+                    "Cette demande a déjà été soumise. Veuillez vérifier la liste des demandes.");
+            return "redirect:/demande/list?typeDemande=" + TypeDemande.AUTRE.name();
+        }
+        session.removeAttribute("submissionToken");
+
+        final String retourSaisie = "redirect:/demande/add?type=" + TypeDemande.AUTRE.name();
+        Utilisateur utilisateur = utilisateurCourant(SecurityContextHolder.getContext().getAuthentication());
+
+        DemandeMere demande;
+        try {
+            demande = demandeAutreService.creer(utilisateur, new DemandeAutreService.NouvelleDemandeAutre(
+                    categorie, beneficiaire, quantite, montantUnitaire, devise,
+                    datePaiement, priorite, motif, description), piecesJointes);
+        } catch (IllegalArgumentException | WorkflowException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+            return retourSaisie;
+        } catch (Exception e) {
+            log.error("Échec de l'enregistrement d'une demande Autre", e);
+            redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement : " + e.getMessage());
+            return retourSaisie;
+        }
+
+        // Après le commit : un échec d'envoi ne remet pas la demande en cause
+        try {
+            notifierCreation(demande, utilisateur);
+        } catch (Exception e) {
+            log.error("Échec des notifications de création de la demande {}", demande.getId(), e);
+        }
+
+        redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
+        return "redirect:/demande/list?typeDemande=" + TypeDemande.AUTRE.name();
+    }
+
+    /** Mails de création : confirmation au demandeur, puis action requise pour le N+1 et les validateurs assignés. */
+    private void notifierCreation(DemandeMere demandeMere, Utilisateur utilisateur) {
             // ── Mail 1 : confirmation au demandeur ──────────────────────────────────
             Map<String, Object> propsDemandeur = new HashMap<>();
             propsDemandeur.put("id",          demandeMere.getId());
@@ -346,18 +445,6 @@ public class DemandeController {
                     ess.sendEmail(mailValidateur);
                 }
             }
-
-
-            redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
-            return "redirect:/demande/list?typeDemande=" + type.name();
-
-        } catch (IllegalArgumentException e) {
-            redirectAttributes.addFlashAttribute("ko", e.getMessage());
-            return retourSaisie;
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement : " + e.getMessage());
-            return retourSaisie;
-        }
     }
 
 
@@ -859,7 +946,14 @@ public class DemandeController {
         List<ValidationDemande> historiques = validationDemandeService.getHistorique(demande);
         CentreBudgetaire[] ligneBudgetaires = centreBudgetaireService.getAllCentreBudgetaires();
         ModeTraitement[] modeTraitements = modeTraitementService.getAllTraitements();
-        boolean canVoirPrix = isAdminOrSpecial || isViewerNplus1OfDemandeur;
+        // Demande Autre : une seule dépense, dont le montant a été saisi par le demandeur
+        boolean estAutre = typeCircuit.isDepenseAutre();
+        model.addAttribute("estAutre", estAutre);
+        // Mode de traitement fixé par le type : les M.G. ne le choisissent plus (sauf anciennes demandes)
+        model.addAttribute("modeTraitementImpose", typeCircuit.getModeTraitement());
+        model.addAttribute("detailAutre", estAutre ? demandeAutreService.getDetail(demande).orElse(null) : null);
+
+        boolean canVoirPrix = isAdminOrSpecial || isViewerNplus1OfDemandeur || estAutre;
         model.addAttribute("canVoirPrix", canVoirPrix);
 
         model.addAttribute("steps", steps);
@@ -904,7 +998,7 @@ public class DemandeController {
         model.addAttribute("isViewerNplus1OfDemandeur", isViewerNplus1OfDemandeur);
         model.addAttribute("returnUrl", returnUrl);
 
-        boolean canTransmitFinance = isMG
+        boolean canTransmitFinance = WorkflowService.peutTransmettreFinance(auth)
                 && demande.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE;
         model.addAttribute("canTransmitFinance", canTransmitFinance);
         boolean isFinance = hasFinanceAccess(auth);
@@ -1114,7 +1208,7 @@ public class DemandeController {
     }
 
     private static List<DemandeMere.StatutTransmissionFinance> statutsPaiementDirectVisibles(Authentication auth) {
-        if (hasRole(auth, "ROLE_MOYENS_GENERAUX") || hasRole(auth, "ROLE_ADMIN")) {
+        if (WorkflowService.peutTransmettreFinance(auth) || hasRole(auth, "ROLE_MOYENS_GENERAUX")) {
             return List.of(
                     DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE,
                     DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE,
@@ -1133,8 +1227,8 @@ public class DemandeController {
                                      @RequestParam(required = false) String commentaire,
                                      RedirectAttributes redirectAttributes) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (!hasRole(auth, "ROLE_MOYENS_GENERAUX") && !hasRole(auth, "ROLE_ADMIN")) {
-            redirectAttributes.addFlashAttribute("ko", "Action réservée aux Moyens Généraux.");
+        if (!WorkflowService.peutTransmettreFinance(auth)) {
+            redirectAttributes.addFlashAttribute("ko", "Action réservée au validateur des Moyens Généraux.");
             return "redirect:/demande/fiche/" + id;
         }
         Utilisateur principal = (Utilisateur) auth.getPrincipal();

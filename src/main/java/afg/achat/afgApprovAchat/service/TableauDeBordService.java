@@ -155,8 +155,11 @@ public class TableauDeBordService {
             ajouterSiNonVide(actions, "Bons de sortie à faire",
                     "Demandes de matériel validées avec du stock disponible", "fa-dolly",
                     sortieAFaireService.nombrePretes(), null, false, "/bon-sortie/a-faire");
+        }
 
-            r = premiere(demandeMereRepo.compterPaiementsDirects(StatutDemande.VALIDE,
+        // ── Validateur M.G. : paiements directs à transmettre à la finance ──
+        if (WorkflowService.peutTransmettreFinance(auth)) {
+            Object[] r = premiere(demandeMereRepo.compterPaiementsDirects(StatutDemande.VALIDE,
                     DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE));
             ajouterSiNonVide(actions, "Paiements directs à transmettre", "À envoyer à la Finance",
                     "fa-paper-plane", nombre(r[0]), jours(r[1], maintenant),
