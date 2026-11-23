@@ -107,6 +107,12 @@ public class WorkflowService {
     public boolean aAccesDemande(DemandeMere demande, Utilisateur current, Authentication auth) {
         if (estBackoffice(auth)) return true;
 
+        // Le validateur M.G. décide au CODEP : il ouvre les demandes qui l'attendent
+        if (demande.getStatut() == StatutDemande.DECISION_CODEP
+                && hasRole(auth, "ROLE_" + EtapeWorkflow.DECISION_CODEP.getRoleValidateur())) {
+            return true;
+        }
+
         // La finance consulte les paiements directs qui lui ont été transmis
         DemandeMere.StatutTransmissionFinance tf = demande.getStatutTransmissionFinance();
         if (hasFinanceReadAccess(auth)

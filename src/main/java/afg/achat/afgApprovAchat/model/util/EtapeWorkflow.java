@@ -26,7 +26,8 @@ public enum EtapeWorkflow {
     VALIDATION_N2 (StatutDemande.VALIDATION_N2,  "En attente Contrôle de gestion", "Contrôleur de gestion",   "CONTROLEUR",      "PJ_CONTROLEUR",  "badge-light-blue", "badge-purple",  "fa-coins"),
     VALIDATION_N3 (StatutDemande.VALIDATION_N3,  "En attente D.F.C.",              "D.F.C.",                  "DFC",             "PJ_DFC",         "badge-purple",     "badge-warning", "fa-gavel"),
     VALIDATION_N4 (StatutDemande.VALIDATION_N4,  "En attente S.G.",                "S.G.",                    "SG",              "PJ_SG",          "badge-green-soft", "badge-teal",    "fa-stamp"),
-    DECISION_CODEP(StatutDemande.DECISION_CODEP, "En attente CODEP",               "Comité de dépense",       "MOYENS_GENERAUX", "PV_CODEP",       "badge-orange",     "badge-codep",   "fa-landmark"),
+    // Décision CODEP : réservée au validateur des Moyens Généraux (les autres M.G. envoient au CODEP et consultent)
+    DECISION_CODEP(StatutDemande.DECISION_CODEP, "En attente CODEP",               "Comité de dépense",       "MG_VALIDATOR",    "PV_CODEP",       "badge-orange",     "badge-codep",   "fa-landmark"),
     VALIDE        (StatutDemande.VALIDE,         "VALIDÉE",                        null,                      null,              null,             "badge-green",      "badge-success", "fa-check-circle"),
     REFUSE        (StatutDemande.REFUSE,         "REFUSÉE",                        null,                      null,              null,             "badge-red",        "badge-danger",  "fa-times-circle");
 
