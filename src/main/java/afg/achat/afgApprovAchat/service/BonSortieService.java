@@ -72,23 +72,25 @@ public class BonSortieService {
             throw new IllegalArgumentException("Veuillez saisir une quantité supérieure à 0 pour au moins un article.");
         }
 
-        // Stock par article (un article peut figurer sur une ligne STOCK et une ligne ACHAT) :
-        // stock libre = lots moins les réservations des AUTRES demandes ; celles de cette demande
-        // sont justement celles que l'on sert.
-        List<Integer> lignesDeLaDemande = demandeFilleService.getDemandeFilleByDemandeMere(demande)
-                .stream().map(DemandeFille::getId).toList();
-        Map<String, Double> parArticle = new LinkedHashMap<>();
-        Map<String, String> designations = new LinkedHashMap<>();
-        aSortir.forEach((df, quantite) -> {
-            parArticle.merge(df.getArticle().getCodeArticle(), quantite, Double::sum);
-            designations.put(df.getArticle().getCodeArticle(), df.getArticle().getDesignation());
-        });
-        for (Map.Entry<String, Double> e : parArticle.entrySet()) {
-            double libre = reservationStockService.stockLibre(e.getKey(), lignesDeLaDemande);
-            if (e.getValue() > libre + ReservationStockService.TOLERANCE) {
-                throw new IllegalArgumentException("Stock insuffisant pour " + designations.get(e.getKey())
-                        + " : " + e.getValue() + " demandé(s), " + libre + " disponible(s)"
-                        + " (stock réservé par d'autres demandes déduit).");
+        // Stock par ligne : stock libre (lots moins les réservations des AUTRES demandes) réparti
+        // entre les lignes de cette demande, les lignes STOCK d'abord. Un article peut figurer sur
+        // une ligne STOCK et une ligne ACHAT (scission) : le stock réservé pour la ligne STOCK ne
+        // doit pas partir sur la ligne ACHAT.
+        List<DemandeFille> lignesActives = demandeFilleService.getDemandeFilleByDemandeMere(demande)
+                .stream().filter(df -> df.getStatut() != StatutDemande.REFUSE).toList();
+        Map<Integer, Double> stockParLigne = reservationStockService.repartirStockLibre(
+                lignesActives, this::getQuantiteRestante);
+        for (Map.Entry<DemandeFille, Double> e : aSortir.entrySet()) {
+            DemandeFille df = e.getKey();
+            double sortable = stockParLigne.getOrDefault(df.getId(), 0.0);
+            if (e.getValue() > sortable + ReservationStockService.TOLERANCE) {
+                boolean ligneAchat = df.getTypeApprovisionnement() != DemandeFille.TypeApprovisionnement.STOCK;
+                throw new IllegalArgumentException("Stock insuffisant pour " + df.getArticle().getDesignation()
+                        + (ligneAchat ? " (ligne achat)" : " (ligne stock)")
+                        + " : " + e.getValue() + " demandé(s), " + sortable + " disponible(s)"
+                        + (ligneAchat
+                            ? " (le stock réservé pour la ligne stock de cet article et par d'autres demandes est déduit)."
+                            : " (stock réservé par d'autres demandes déduit)."));
             }
         }
 

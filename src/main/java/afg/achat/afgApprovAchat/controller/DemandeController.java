@@ -928,16 +928,20 @@ public class DemandeController {
         model.addAttribute("bonsSortie", bonSortieService.getBonSortieByDemande(demande));
 
         if (canCreateBS) {
-            // Même calcul que la sortie : lots FIFO moins le stock réservé par les autres demandes
-            List<Integer> lignesDeLaDemande = lignes.stream().map(DemandeFille::getId).toList();
-            List<LigneRestanteDTO> lignesRestantes = lignes.stream()
+            // Même calcul que la sortie : lots FIFO moins le stock réservé par les autres demandes,
+            // réparti en priorité sur les lignes STOCK (leur réservation) avant les lignes ACHAT
+            List<DemandeFille> lignesActives = lignes.stream()
                     .filter(df -> df.getStatut() != StatutDemande.REFUSE)
+                    .toList();
+            Map<Integer, Double> restants = new HashMap<>();
+            lignesActives.forEach(df -> restants.put(df.getId(), bonSortieService.getQuantiteRestante(df)));
+            Map<Integer, Double> stockParLigne = reservationStockService.repartirStockLibre(
+                    lignesActives, df -> restants.get(df.getId()));
+            List<LigneRestanteDTO> lignesRestantes = lignesActives.stream()
                     .map(df -> {
-                        double restant         = bonSortieService.getQuantiteRestante(df);
-                        double totalSorti      = df.getQuantite() - restant;
-                        double stockDisponible = reservationStockService.stockLibre(
-                                df.getArticle().getCodeArticle(), lignesDeLaDemande);
-                        return new LigneRestanteDTO(df, totalSorti, restant, stockDisponible);
+                        double restant = restants.get(df.getId());
+                        return new LigneRestanteDTO(df, df.getQuantite() - restant, restant,
+                                stockParLigne.getOrDefault(df.getId(), 0.0));
                     })
                     .filter(l -> l.getRestant() > 0)
                     .toList();

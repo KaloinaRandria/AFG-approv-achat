@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,12 +61,16 @@ public class SortieAFaireService {
 
         List<DemandeASortir> resultat = new ArrayList<>();
         parDemande.forEach((demande, lignes) -> {
-            // Les réservations de la demande sont les siennes : on les exclut du calcul du stock libre
-            List<Integer> idsDemande = lignes.stream().map(DemandeFille::getId).toList();
+            // Les réservations de la demande sont les siennes : stock libre réparti entre ses lignes,
+            // les lignes STOCK d'abord (leur réservation), puis les lignes ACHAT
+            Map<Integer, Double> restants = new HashMap<>();
+            lignes.forEach(df -> restants.put(df.getId(),
+                    df.getQuantite() - bonSortieFilleRepo.sumQuantiteSortieByDemandeFille(df)));
+            Map<Integer, Double> stockParLigne = reservationStockService.repartirStockLibre(
+                    lignes, df -> restants.get(df.getId()));
             List<LigneASortir> aSortir = lignes.stream()
-                    .map(df -> new LigneASortir(df,
-                            df.getQuantite() - bonSortieFilleRepo.sumQuantiteSortieByDemandeFille(df),
-                            reservationStockService.stockLibre(df.getArticle().getCodeArticle(), idsDemande)))
+                    .map(df -> new LigneASortir(df, restants.get(df.getId()),
+                            stockParLigne.getOrDefault(df.getId(), 0.0)))
                     .toList();
             resultat.add(new DemandeASortir(demande, aSortir));
         });
