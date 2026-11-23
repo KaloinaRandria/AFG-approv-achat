@@ -16,6 +16,8 @@ import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
 import afg.achat.afgApprovAchat.service.fournisseur.AdresseFournisseurService;
 import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
 import afg.achat.afgApprovAchat.service.fournisseur.ResponsableFournisseurService;
+import afg.achat.afgApprovAchat.model.util.Devise;
+import afg.achat.afgApprovAchat.service.util.DeviseService;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.workflow.WorkflowException;
 import afg.achat.afgApprovAchat.service.workflow.WorkflowService;
@@ -58,6 +60,7 @@ public class BonCommandeManuelService {
     private final DemandeFilleService demandeFilleService;
     private final BesoinAchatService besoinAchatService;
     private final IdGenerator idGenerator;
+    private final DeviseService deviseService;
 
     // ── Droits ───────────────────────────────────────────────────────────────
 
@@ -112,7 +115,14 @@ public class BonCommandeManuelService {
         LocalDateTime dateLivraison = lireDate(saisie.dateLivraisonPrevue());
         double tauxRemise = lireTaux(saisie.tauxRemise(), "remise");
         double tauxTVA = lireTaux(saisie.tauxTVA(), "TVA");
-        List<BonCommandeFille> lignes = lireLignes(saisie.lignes(), saisie.id());
+        Devise devise;
+        try {
+            devise = deviseService.lireDevise(saisie.deviseId());
+        } catch (IllegalArgumentException e) {
+            throw new WorkflowException(e.getMessage());
+        }
+        String codeDevise = devise == null || devise.getAcronyme() == null ? Devise.CODE_REFERENCE : devise.getAcronyme();
+        List<BonCommandeFille> lignes = lireLignes(saisie.lignes(), saisie.id(), codeDevise);
 
         // ── 2. Écritures ──
         if (bc == null) {
@@ -133,6 +143,8 @@ public class BonCommandeManuelService {
         bc.setModalitePaiement(nettoyer(saisie.modalitePaiement()));
         bc.setReferenceApprobation(nettoyer(saisie.referenceApprobation()));
         bc.setDescription(nettoyer(saisie.description()));
+        // Cours du jour recopié à chaque enregistrement du brouillon, figé une fois le bon soumis
+        bc.appliquerDevise(devise, LocalDateTime.now());
 
         double montantHT = lignes.stream().mapToDouble(BonCommandeFille::getMontantHT).sum();
         double montantHTRemise = montantHT * (1 - tauxRemise / 100);
@@ -277,9 +289,11 @@ public class BonCommandeManuelService {
      * Une ligne liée à une ligne de demande prend l'article de la demande, et la quantité
      * totale commandée pour cette ligne ne peut pas dépasser son reste à commander.
      *
-     * @param bcEnCours identifiant du bon modifié ; {@code null} ou vide pour un nouveau bon
+     * @param bcEnCours  identifiant du bon modifié ; {@code null} ou vide pour un nouveau bon
+     * @param codeDevise devise du bon : chaque ligne de demande doit être dans cette devise
      */
-    private List<BonCommandeFille> lireLignes(List<SaisieBonCommande.Ligne> saisies, String bcEnCours) {
+    private List<BonCommandeFille> lireLignes(List<SaisieBonCommande.Ligne> saisies, String bcEnCours,
+                                              String codeDevise) {
         List<BonCommandeFille> lignes = new ArrayList<>();
         // Quantité totale commandée dans ce bon par ligne de demande (une ligne peut être répétée)
         Map<DemandeFille, Double> quantiteParLigneDemande = new LinkedHashMap<>();
@@ -300,6 +314,13 @@ public class BonCommandeManuelService {
             DemandeFille ligneDemande = lireLigneDemande(saisie.demandeFilleId(), numero);
             Article article = null;
             if (ligneDemande != null) {
+                // Un bon ne mélange pas les devises : ses prix viennent des prix de la demande
+                String deviseDemande = ligneDemande.getDemandeMere().getCodeDevise();
+                if (!deviseDemande.equalsIgnoreCase(codeDevise)) {
+                    throw new WorkflowException("Ligne " + numero + " : la demande " + ligneDemande.getDemandeMere().getId()
+                            + " est en " + deviseDemande + ", le bon de commande en " + codeDevise
+                            + ". Un bon de commande ne regroupe que des lignes de même devise.");
+                }
                 // L'article est celui de la ligne de demande, quel que soit le code saisi
                 article = ligneDemande.getArticle();
                 quantiteParLigneDemande.merge(ligneDemande, quantite, Double::sum);

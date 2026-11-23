@@ -87,6 +87,9 @@ public class BonCommandeDemandeService {
 
         // ── 2. Écritures ──
         if (!numero.isEmpty()) bc.setNumero(numero);
+        // Prix repris de la demande : le bon est dans sa devise, au cours du jour
+        bc.appliquerDevise(bc.getDemandeMere() != null ? bc.getDemandeMere().getDevise() : bc.getDevise(),
+                LocalDateTime.now());
         bc.setDateLivraisonPrevue(dateLivraison);
         bc.setReferenceFournisseur(referenceFournisseur);
         bc.setLieuLivraison(lieuLivraison);

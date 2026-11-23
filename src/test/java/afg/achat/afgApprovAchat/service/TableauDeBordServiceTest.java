@@ -36,6 +36,7 @@ class TableauDeBordServiceTest {
     @Mock BesoinAchatService besoinAchatService;
     @Mock StockAlerteService stockAlerteService;
     @Mock UtilisateurService utilisateurService;
+    @Mock SortieAFaireService sortieAFaireService;
     @InjectMocks TableauDeBordService service;
 
     private static final LocalDateTime D0 = LocalDateTime.of(2026, 10, 1, 8, 0);
@@ -94,7 +95,7 @@ class TableauDeBordServiceTest {
         // Aucun accès achats / réception / stock pour le seul rôle SG
         assertTrue(actions.stream().noneMatch(a -> a.url().startsWith("/stock")
                 || a.url().contains("aRecevoir") || a.url().contains("lignes-a-acheter")));
-        verifyNoInteractions(besoinAchatService, stockAlerteService);
+        verifyNoInteractions(besoinAchatService, stockAlerteService, sortieAFaireService);
     }
 
     @Test

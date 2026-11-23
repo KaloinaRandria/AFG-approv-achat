@@ -93,6 +93,17 @@ class ApprovisionnementLigneServiceTest {
     }
 
     @Test
+    void demandeEnDeviseEtrangereLePrixFifoEstConverti() {
+        afg.achat.afgApprovAchat.model.util.Devise eur = new afg.achat.afgApprovAchat.model.util.Devise();
+        eur.setAcronyme("EUR");
+        eur.setCoursAriary("5000");
+        demande.appliquerDevise(eur, java.time.LocalDateTime.now());
+
+        // 300 MGA (FIFO) = 0,06 EUR
+        assertEquals(0.06, service.scinder(1, 4, 0).getPrixUnitaire(), 1e-9);
+    }
+
+    @Test
     void prixDeRepliSiLePrixFifoEchoue() {
         when(lotStockService.getPrixFifo(eq("ART1"), anyDouble())).thenThrow(new IllegalStateException("x"));
         assertEquals(450.0, service.scinder(1, 4, 450).getPrixUnitaire());

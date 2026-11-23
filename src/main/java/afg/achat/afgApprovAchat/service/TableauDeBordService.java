@@ -4,6 +4,7 @@ import afg.achat.afgApprovAchat.controller.StockController;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.demande.ValidationDemande;
+import afg.achat.afgApprovAchat.model.util.Devise;
 import afg.achat.afgApprovAchat.model.util.EtapeWorkflow;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
@@ -52,6 +53,7 @@ public class TableauDeBordService {
     private final BesoinAchatService besoinAchatService;
     private final StockAlerteService stockAlerteService;
     private final UtilisateurService utilisateurService;
+    private final SortieAFaireService sortieAFaireService;
 
     // ════════════════════════════════════════════════════════════════════════
     // 1. À traiter
@@ -137,7 +139,7 @@ public class TableauDeBordService {
                     "fa-file-alt", brouillons, jours(r[2], maintenant), rejetes > 0, "/bon-commande/list?statut=BROUILLON");
         }
 
-        // ── Moyens Généraux : réception, paiements directs ──
+        // ── Moyens Généraux : réception, bons de sortie à faire, paiements directs ──
         // (pas de compteur de bons de sortie en brouillon : un bon est créé et confirmé
         // dans une seule transaction, un brouillon n'est qu'un reste de création interrompue)
         if (admin || mg) {
@@ -147,6 +149,12 @@ public class TableauDeBordService {
             ajouterSiNonVide(actions, "Bons de commande à réceptionner",
                     retard > 0 ? "Dont " + retard + " en retard de livraison" : "Livraison attendue",
                     "fa-truck-loading", nombre(r[0]), null, retard > 0, "/bon-commande/list?aRecevoir=true");
+
+            // Demandes de matériel validées dont des articles à sortir sont de nouveau en stock
+            // (après réception des achats, par exemple)
+            ajouterSiNonVide(actions, "Bons de sortie à faire",
+                    "Demandes de matériel validées avec du stock disponible", "fa-dolly",
+                    sortieAFaireService.nombrePretes(), null, false, "/bon-sortie/a-faire");
 
             r = premiere(demandeMereRepo.compterPaiementsDirects(StatutDemande.VALIDE,
                     DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE));
@@ -223,7 +231,12 @@ public class TableauDeBordService {
     // 3. Indicateurs d'achats et de délais (encadrement)
     // ════════════════════════════════════════════════════════════════════════
 
-    public record Fournisseur(String nom, long nombreBons, double montant) {
+    public record Fournisseur(String nom, String devise, long nombreBons, double montant) {
+    }
+
+    /** Achats engagés dans une devise : jamais additionnés avec ceux d'une autre devise. */
+    public record MontantDevise(String devise, long nombreBc, double montantTtc) {
+        public double montantMoyen() { return nombreBc == 0 ? 0 : montantTtc / nombreBc; }
     }
 
     /** Durée moyenne passée à une étape de validation, sur les demandes qui l'ont franchie. */
@@ -232,7 +245,8 @@ public class TableauDeBordService {
         public boolean plusLente() { return largeur == 100; }
     }
 
-    public record Indicateurs(long nombreBc, double montantTtc, double montantMoyen,
+    /** @param montants achats engagés par devise, l'ariary en premier */
+    public record Indicateurs(long nombreBc, List<MontantDevise> montants,
                               List<Fournisseur> topFournisseurs,
                               long bcValides, long bcRecus, Double tauxReception,
                               long bcEnRetard, long alertesStock,
@@ -249,12 +263,23 @@ public class TableauDeBordService {
         LocalDateTime fin = au.atTime(LocalTime.MAX);
         BonCommandeMere.StatutBonCommande valide = BonCommandeMere.StatutBonCommande.VALIDE;
 
-        Object[] totaux = premiere(bonCommandeMereRepo.totauxValides(valide, debut, fin));
-        long nombreBc = nombre(totaux[0]);
-        double montant = totaux[1] == null ? 0 : ((Number) totaux[1]).doubleValue();
+        // Par devise ; les bons antérieurs (sans devise) sont en ariary
+        Map<String, double[]> parDevise = new java.util.TreeMap<>();
+        for (Object[] r : bonCommandeMereRepo.totauxValides(valide, debut, fin)) {
+            double[] cumul = parDevise.computeIfAbsent(codeDevise(r[0]), k -> new double[2]);
+            cumul[0] += nombre(r[1]);
+            cumul[1] += r[2] == null ? 0 : ((Number) r[2]).doubleValue();
+        }
+        List<MontantDevise> montants = parDevise.entrySet().stream()
+                .map(e -> new MontantDevise(e.getKey(), (long) e.getValue()[0], e.getValue()[1]))
+                .sorted(java.util.Comparator.comparing((MontantDevise m) -> !Devise.CODE_REFERENCE.equals(m.devise()))
+                        .thenComparing(MontantDevise::devise))
+                .toList();
+        long nombreBc = montants.stream().mapToLong(MontantDevise::nombreBc).sum();
 
         List<Fournisseur> top = bonCommandeMereRepo.topFournisseurs(valide, debut, fin, PageRequest.of(0, 5)).stream()
-                .map(r -> new Fournisseur((String) r[0], nombre(r[1]), r[2] == null ? 0 : ((Number) r[2]).doubleValue()))
+                .map(r -> new Fournisseur((String) r[0], codeDevise(r[1]), nombre(r[2]),
+                        r[3] == null ? 0 : ((Number) r[3]).doubleValue()))
                 .toList();
 
         long recus = 0;
@@ -271,7 +296,7 @@ public class TableauDeBordService {
                 valide, BonCommandeService.RECEPTIONS_OUVERTES, LocalDateTime.now()));
 
         return new Indicateurs(
-                nombreBc, montant, nombreBc == 0 ? 0 : montant / nombreBc,
+                nombreBc, montants,
                 top,
                 total, recus, total == 0 ? null : Math.round(recus * 1000.0 / total) / 10.0,
                 nombre(aRecevoir[1]),
@@ -357,6 +382,11 @@ public class TableauDeBordService {
 
     private static long nombre(Object valeur) {
         return valeur == null ? 0 : ((Number) valeur).longValue();
+    }
+
+    /** Code de devise d'un agrégat ; un bon sans devise (antérieur) est en ariary. */
+    private static String codeDevise(Object valeur) {
+        return valeur == null ? Devise.CODE_REFERENCE : valeur.toString().toUpperCase();
     }
 
     private static Long jours(Object date, LocalDateTime maintenant) {

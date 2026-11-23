@@ -389,7 +389,7 @@
 
                                     <!-- PRIX -->
                                     <th th:if="${canVoirPrix}" class="text-end" style="width:25%">
-                                        PRIX UNITAIRE HT
+                                        PRIX UNITAIRE HT (<span th:text="${demande.codeDevise}">MGA</span>)
                                         <span th:if="${canDecisionMG}"
                                               id="badgePrixManquants"
                                               class="badge bg-danger ms-1"
@@ -572,6 +572,19 @@
                                 </tfoot>
 
                             </table>
+
+                            <!-- Devise de la demande et contre-valeur indicative en ariary (contrôle budgétaire) -->
+                            <div class="px-3 pb-2 small text-muted text-end"
+                                 th:if="${canVoirPrix and demande.deviseEtrangere}">
+                                Montants en <strong th:text="${demande.codeDevise}">EUR</strong>
+                                <th:block th:if="${demande.totalEstime != null and demande.totalEstime > 0}">
+                                    — total ≈ <strong th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(demande.enAriary(demande.totalEstime), 'MGA')}"></strong>
+                                </th:block>
+                                au taux du <span th:text="${demande.dateTaux != null ? #temporals.format(demande.dateTaux, 'dd/MM/yyyy') : '—'}"></span>
+                                (1 <span th:text="${demande.codeDevise}"></span> =
+                                <span th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(demande.tauxEffectif, 'MGA')}"></span>),
+                                à titre indicatif.
+                            </div>
                         </div>
 
                         <!-- TABLE ARTICLES — version MG en VALIDATION_N1 -->
@@ -599,6 +612,24 @@
                                         <p class="mb-0 text-muted small" id="alertPrixDescription">
                                             Pour chaque article, saisissez le prix proforma. Si du stock est disponible, utilisez le bouton <strong class="text-primary"><i class="fas fa-layer-group"></i> Scinder</strong> pour créer une ligne stock séparée.
                                         </p>
+
+                                        <!-- Devise des prix proforma : changer de devise vide les prix à acheter -->
+                                        <form th:action="@{/demande/fiche/{id}/devise(id=${demande.id})}" method="post"
+                                              class="d-flex align-items-center gap-2 mt-2 flex-wrap"
+                                              onsubmit="return confirm('Changer la devise de la demande ? Les prix proforma des articles à acheter seront à ressaisir dans la nouvelle devise ; les lignes servies depuis le stock seront converties.');">
+                                            <label for="deviseDemande" class="small fw-semibold mb-0">Devise des prix :</label>
+                                            <select id="deviseDemande" name="devise" class="form-select form-select-sm" style="width:auto;">
+                                                <option th:each="d : ${devises}" th:value="${d.id}"
+                                                        th:selected="${d.acronyme == demande.codeDevise}"
+                                                        th:text="${d.acronyme + ' — ' + d.designation}"></option>
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Appliquer</button>
+                                            <span class="small text-muted" th:if="${demande.deviseEtrangere}">
+                                                1 <span th:text="${demande.codeDevise}"></span> =
+                                                <span th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(demande.tauxEffectif, 'MGA')}"></span>
+                                                (cours du <span th:text="${demande.dateTaux != null ? #temporals.format(demande.dateTaux, 'dd/MM/yyyy') : '—'}"></span>)
+                                            </span>
+                                        </form>
                                     </div>
                                 </div>
                             </div>
@@ -609,7 +640,7 @@
                                     <th style="width:30%">DÉSIGNATION</th>
                                     <th class="text-end" style="width:10%">QUANTITÉ</th>
                                     <th class="text-end" style="width:8%">UDM</th>
-                                    <th class="text-end" style="width:12%">PRIX UNITAIRE HT</th>
+                                    <th class="text-end" style="width:12%">PRIX UNITAIRE HT (<span th:text="${demande.codeDevise}">MGA</span>)</th>
                                     <th class="text-center" style="width:10%">TYPE</th>
                                     <th class="text-center" style="width:10%">STOCK DISPO</th>
                                     <th class="text-center" style="width:20%">ACTIONS</th>
@@ -1496,7 +1527,7 @@
                                                     <th class="text-end" style="width:12%">Qté demandée</th>
                                                     <th class="text-end" style="width:12%">Déjà sorti</th>
                                                     <th class="text-end" style="width:12%">Restant</th>
-                                                    <th class="text-end" style="width:12%">Prix unitaire</th>
+                                                    <th class="text-end" style="width:12%">Prix unitaire (<span th:text="${demande.codeDevise}">MGA</span>)</th>
                                                     <th class="text-center" style="width:14%">
                                                         Stock disponible
                                                         <i class="fas fa-info-circle text-muted ms-1"
@@ -2058,7 +2089,7 @@
 
                 <div class="mb-3">
                     <label class="form-label fw-bold">
-                        Prix stock (auto — dernier BL)
+                        Prix stock en MGA (FIFO, converti dans la devise de la demande)
                     </label>
                     <div class="input-group">
                         <input type="number"

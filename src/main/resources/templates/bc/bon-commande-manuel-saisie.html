@@ -69,6 +69,21 @@
                         </div>
 
                         <div class="col-md-4 mb-3">
+                            <label for="devise" class="form-label fw-bold required-field">Devise</label>
+                            <select id="devise" name="devise" class="form-select">
+                                <option th:each="d : ${devises}" th:value="${d.id}"
+                                        th:attr="data-code=${d.acronyme}"
+                                        th:selected="${d.acronyme == bonCommandeMere.codeDevise}"
+                                        th:text="${d.acronyme + ' — ' + d.designation}"></option>
+                            </select>
+                            <div class="form-text text-muted">
+                                Prix et montants du bon sont dans cette devise ; son cours du jour est copié sur le bon.
+                                Les lignes de demandes doivent être dans la même devise.
+                            </div>
+                        </div>
+                        <div class="col-md-8"></div>
+
+                        <div class="col-md-4 mb-3">
                             <label for="dateLivraisonPrevue" class="form-label fw-bold">Date de livraison prévue</label>
                             <input type="date" class="form-control" id="dateLivraisonPrevue" name="dateLivraisonPrevue"
                                    th:value="${bonCommandeMere.dateLivraisonPrevue != null ? #temporals.format(bonCommandeMere.dateLivraisonPrevue, 'yyyy-MM-dd') : ''}">
@@ -130,7 +145,7 @@
                                 </th>
                                 <th style="width:9%">Qté <span class="text-danger">*</span></th>
                                 <th style="width:10%">Unité</th>
-                                <th style="width:13%">PU HT (MGA) <span class="text-danger">*</span></th>
+                                <th style="width:13%">PU HT (<span class="code-devise" th:text="${bonCommandeMere.codeDevise}">MGA</span>) <span class="text-danger">*</span></th>
                                 <th style="width:13%" class="text-end">Montant HT</th>
                                 <th style="width:3%"></th>
                             </tr>
@@ -184,7 +199,7 @@
                                 <tbody>
                                 <tr>
                                     <th class="text-end bg-light" style="width:55%">Montant HT</th>
-                                    <td class="text-end fw-bold"><span id="totalHT">0,00</span> MGA</td>
+                                    <td class="text-end fw-bold"><span id="totalHT">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.codeDevise}">MGA</span></td>
                                 </tr>
                                 <tr>
                                     <th class="text-end bg-light">
@@ -195,11 +210,11 @@
                                                th:value="${bonCommandeMere.remise > 0 ? bonCommandeMere.remise : ''}">
                                         <span class="text-muted small">%</span>
                                     </th>
-                                    <td class="text-end text-danger"><span id="totalRemise">0,00</span> MGA</td>
+                                    <td class="text-end text-danger"><span id="totalRemise">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.codeDevise}">MGA</span></td>
                                 </tr>
                                 <tr>
                                     <th class="text-end bg-light">Montant HT remisé</th>
-                                    <td class="text-end fw-semibold"><span id="totalHTRemise">0,00</span> MGA</td>
+                                    <td class="text-end fw-semibold"><span id="totalHTRemise">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.codeDevise}">MGA</span></td>
                                 </tr>
                                 <tr>
                                     <th class="text-end bg-light">
@@ -210,11 +225,11 @@
                                                th:value="${bonCommandeMere.tauxTVA > 0 ? bonCommandeMere.tauxTVA : ''}">
                                         <span class="text-muted small">%</span>
                                     </th>
-                                    <td class="text-end"><span id="totalTVA">0,00</span> MGA</td>
+                                    <td class="text-end"><span id="totalTVA">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.codeDevise}">MGA</span></td>
                                 </tr>
                                 <tr class="table-primary">
                                     <th class="text-end">Montant TTC</th>
-                                    <td class="text-end fw-bold fs-5"><span id="totalTTC">0,00</span> MGA</td>
+                                    <td class="text-end fw-bold fs-5"><span id="totalTTC">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.codeDevise}">MGA</span></td>
                                 </tr>
                                 </tbody>
                             </table>
@@ -434,6 +449,15 @@
 
         document.getElementById('tauxRemise').addEventListener('input', recalculer);
         document.getElementById('tauxTVA').addEventListener('input', recalculer);
+
+        // Libellés de devise des colonnes et des totaux
+        const choixDevise = document.getElementById('devise');
+        if (choixDevise) {
+            choixDevise.addEventListener('change', () => {
+                const code = choixDevise.selectedOptions[0]?.dataset.code || 'MGA';
+                document.querySelectorAll('.code-devise').forEach(s => s.textContent = code);
+            });
+        }
 
         if (corps.querySelectorAll('tr.ligne-bc').length === 0) ajouterLigne();
         recalculer();

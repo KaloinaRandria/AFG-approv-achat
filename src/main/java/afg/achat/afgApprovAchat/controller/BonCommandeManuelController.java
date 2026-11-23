@@ -50,6 +50,7 @@ public class BonCommandeManuelController {
     private final UtilisateurService utilisateurService;
     private final DemandeFilleService demandeFilleService;
     private final BesoinAchatService besoinAchatService;
+    private final afg.achat.afgApprovAchat.service.util.DeviseService deviseService;
 
     // ── Saisie ───────────────────────────────────────────────────────────────
 
@@ -76,6 +77,15 @@ public class BonCommandeManuelController {
                                     df.getArticle() != null ? df.getArticle().getCodeArticle() : "")
                             .thenComparing(df -> df.getDemandeMere().getId()))
                     .toList();
+            // Un bon ne regroupe qu'une devise : celle des demandes choisies
+            List<String> codes = selection.stream().map(df -> df.getDemandeMere().getCodeDevise()).distinct().toList();
+            if (codes.size() > 1) {
+                model.addAttribute("ko", "Les lignes choisies sont dans plusieurs devises (" + String.join(", ", codes)
+                        + ") : un bon de commande ne regroupe qu'une devise. Sélectionnez des lignes de même devise.");
+                selection = List.of();
+            } else if (!selection.isEmpty()) {
+                bc.appliquerDevise(selection.get(0).getDemandeMere().getDevise(), java.time.LocalDateTime.now());
+            }
             // Une ligne par besoin, avec le reste à commander, le prix et l'unité de la demande
             for (BesoinAchatService.BesoinAchat besoin : besoinAchatService.besoins(selection)) {
                 if (besoin.getResteACommander() <= 0) continue;
@@ -88,7 +98,7 @@ public class BonCommandeManuelController {
                 ligne.setPrixUnitaireHT(df.getPrixUnitaire() != null ? df.getPrixUnitaire() : 0);
                 bc.getLignes().add(ligne);
             }
-            if (bc.getLignes().isEmpty()) {
+            if (bc.getLignes().isEmpty() && !model.containsAttribute("ko")) {
                 model.addAttribute("ko", "Les lignes sélectionnées n'ont plus rien à commander.");
             }
         }
@@ -114,6 +124,7 @@ public class BonCommandeManuelController {
         model.addAttribute("bonCommandeMere", bc);
         model.addAttribute("lignes", bc.getLignes());
         model.addAttribute("fournisseurs", fournisseurService.getAllFournisseurs());
+        model.addAttribute("devises", deviseService.getAllDevises());
         return "bc/bon-commande-manuel-saisie";
     }
 
@@ -129,6 +140,7 @@ public class BonCommandeManuelController {
                               @RequestParam(required = false) String description,
                               @RequestParam(required = false) Double tauxRemise,
                               @RequestParam(required = false) Double tauxTVA,
+                              @RequestParam(name = "devise", required = false) String deviseId,
                               @RequestParam(name = "designation[]", required = false) List<String> designations,
                               @RequestParam(name = "codeArticle[]", required = false) List<String> codesArticle,
                               @RequestParam(name = "quantite[]", required = false) List<String> quantites,
@@ -145,7 +157,7 @@ public class BonCommandeManuelController {
         }
         SaisieBonCommande saisie = new SaisieBonCommande(id, fournisseurId, referenceFournisseur,
                 dateLivraisonPrevue, lieuLivraison, modalitePaiement, referenceApprobation, description,
-                tauxRemise, tauxTVA, lignes);
+                tauxRemise, tauxTVA, lignes, deviseId);
 
         try {
             BonCommandeMere bc = bonCommandeManuelService.enregistrer(saisie, utilisateurCourant(), auth());

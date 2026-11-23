@@ -89,7 +89,8 @@ public class ReceptionBonCommandeService {
         }
 
         // ── 1. Contrôles (aucune écriture avant qu'ils soient tous passés) ──
-        Devise devise = lireDevise(saisie.deviseId());
+        // Le bon de livraison est dans la devise du bon de commande (ariary pour les bons antérieurs)
+        Devise devise = bc.getDevise() != null ? bc.getDevise() : deviseParDefaut(saisie.deviseId());
         LocalDateTime dateReception = lireDate(saisie.dateReception());
         List<BonCommandeFille> lignesBc = bonCommandeFilleRepo.findBonCommandeFillesByBonCommandeMere(bc);
         Map<Integer, LigneSaisie> saisies = saisie.lignes() == null ? Map.of() : saisie.lignes();
@@ -149,19 +150,22 @@ public class ReceptionBonCommandeService {
             blf.setPrixUnitaire(String.valueOf(r.prix()));
             bonLivraisonFilleRepo.save(blf);
 
+            // Stock et prix d'achat sont en ariary : prix converti au cours copié sur le bon de commande
+            double prixAriary = bc.enAriary(r.prix());
+
             // Historique du prix : une fois par ligne livrée, pas par ligne de demande
             if (r.premiereDuGroupe()) {
                 PrixArticle prixArticle = new PrixArticle();
                 prixArticle.setArticle(r.article());
                 prixArticle.setBonLivraisonMere(bl);
-                prixArticle.setPrixUnitaire(r.prix());
+                prixArticle.setPrixUnitaire(prixAriary);
                 prixArticle.setDatePrix(LocalDate.from(dateReception));
                 prixArticleService.insert(prixArticle);
             }
             if (r.quantite() <= EPSILON) continue;
 
             // Lot valorisé (FIFO) et mouvement d'entrée
-            lotStockService.creerLot(r.article(), bl, r.quantite(), r.prix());
+            lotStockService.creerLot(r.article(), bl, r.quantite(), prixAriary);
             stockMereService.addEntree(entreeStock, r.article(), r.quantite());
 
             // Suivi de la ligne du bon de commande
@@ -229,15 +233,12 @@ public class ReceptionBonCommandeService {
         return article;
     }
 
-    private Devise lireDevise(String deviseId) {
-        if (deviseId == null || deviseId.isBlank()) {
-            throw new WorkflowException("Sélectionnez la devise.");
-        }
+    /** Bon de commande sans devise (antérieur) : devise saisie si fournie, sinon l'ariary. */
+    private Devise deviseParDefaut(String deviseId) {
         try {
-            return deviseService.getDeviseById(Integer.parseInt(deviseId.trim()))
-                    .orElseThrow(() -> new WorkflowException("Devise introuvable."));
-        } catch (NumberFormatException e) {
-            throw new WorkflowException("Devise invalide.");
+            return deviseService.lireDevise(deviseId);
+        } catch (IllegalArgumentException e) {
+            throw new WorkflowException(e.getMessage());
         }
     }
 

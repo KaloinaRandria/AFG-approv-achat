@@ -133,26 +133,32 @@ public interface BonCommandeMereRepo extends JpaRepository<BonCommandeMere, Stri
 	                                    @Param("maintenant") LocalDateTime maintenant);
 
 	/**
-	 * Bons validés sur la période (date de validation S.G., à défaut de création) :
-	 * [nombre, montant TTC total].
+	 * Bons validés sur la période (date de validation S.G., à défaut de création), par devise :
+	 * [code devise (null = bon antérieur, en ariary), nombre, montant TTC total]. Les montants de
+	 * devises différentes ne s'additionnent pas.
 	 */
 	@Query("""
-		SELECT COUNT(bc), COALESCE(SUM(bc.montantTTC), 0)
-		FROM BonCommandeMere bc
+		SELECT d.acronyme, COUNT(bc), COALESCE(SUM(bc.montantTTC), 0)
+		FROM BonCommandeMere bc LEFT JOIN bc.devise d
 		WHERE bc.statut = :statut
 		  AND COALESCE(bc.dateValidationSg, bc.dateCreation) BETWEEN :du AND :au
+		GROUP BY d.acronyme
 		""")
 	List<Object[]> totauxValides(@Param("statut") BonCommandeMere.StatutBonCommande statut,
 	                             @Param("du") LocalDateTime du, @Param("au") LocalDateTime au);
 
-	/** Fournisseurs des bons validés sur la période : [nom, nombre de bons, montant TTC], montant décroissant. */
+	/**
+	 * Fournisseurs des bons validés sur la période, par devise : [nom, code devise (null = ariary),
+	 * nombre de bons, montant TTC]. Classés par contre-valeur en ariary (cours copié sur chaque bon),
+	 * seulement pour l'ordre : les montants restent affichés dans leur devise.
+	 */
 	@Query("""
-		SELECT f.nom, COUNT(bc), SUM(bc.montantTTC)
-		FROM BonCommandeMere bc JOIN bc.fournisseur f
+		SELECT f.nom, d.acronyme, COUNT(bc), SUM(bc.montantTTC)
+		FROM BonCommandeMere bc JOIN bc.fournisseur f LEFT JOIN bc.devise d
 		WHERE bc.statut = :statut
 		  AND COALESCE(bc.dateValidationSg, bc.dateCreation) BETWEEN :du AND :au
-		GROUP BY f.nom
-		ORDER BY SUM(bc.montantTTC) DESC
+		GROUP BY f.nom, d.acronyme
+		ORDER BY SUM(bc.montantTTC * COALESCE(bc.tauxChange, 1)) DESC
 		""")
 	List<Object[]> topFournisseurs(@Param("statut") BonCommandeMere.StatutBonCommande statut,
 	                               @Param("du") LocalDateTime du, @Param("au") LocalDateTime au,

@@ -273,8 +273,16 @@
             <a class="nav-link text-white d-flex align-items-center sidebar-link"
                style="padding: 1rem 1.25rem;"
                th:href="@{/bon-sortie/list}"
-               th:classappend="${currentUri.startsWith('/bon-sortie') ? 'active' : ''}">
+               th:classappend="${currentUri.startsWith('/bon-sortie') and !currentUri.startsWith('/bon-sortie/a-faire') ? 'active' : ''}">
                 <i class="fas fa-file-export me-3"></i> Bons de sortie
+            </a>
+        </div>
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+            <a class="nav-link text-white d-flex align-items-center sidebar-link"
+               style="padding: 1rem 1.25rem;"
+               th:href="@{/bon-sortie/a-faire}"
+               th:classappend="${currentUri.startsWith('/bon-sortie/a-faire') ? 'active' : ''}">
+                <i class="fas fa-dolly me-3"></i> Bons de sortie à faire
             </a>
         </div>
 

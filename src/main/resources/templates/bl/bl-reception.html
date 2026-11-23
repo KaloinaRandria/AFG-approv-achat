@@ -46,13 +46,13 @@
                             <div class="form-text">Celui du bon de commande.</div>
                         </div>
                         <div class="col-md-3">
-                            <label for="devise" class="form-label fw-bold required-field">Devise</label>
-                            <select id="devise" name="devise" class="form-select" required>
-                                <option value="">— Choisir —</option>
-                                <option th:each="d : ${devises}" th:value="${d.id}"
-                                        th:text="${d.acronyme}"
-                                        th:selected="${valeurs['devise'] == #strings.toString(d.id)}"></option>
-                            </select>
+                            <label for="devise" class="form-label fw-bold">Devise</label>
+                            <input type="text" id="devise" class="form-control" readonly
+                                   th:value="${bonCommandeMere.codeDevise}">
+                            <div class="form-text" th:if="${bonCommandeMere.deviseEtrangere}"
+                                 th:text="'Celle du bon de commande. Stock valorisé en MGA au cours du bon : 1 ' + ${bonCommandeMere.codeDevise} + ' = '
+                                          + ${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(bonCommandeMere.tauxEffectif, 'MGA')} + '.'"></div>
+                            <div class="form-text" th:unless="${bonCommandeMere.deviseEtrangere}">Celle du bon de commande.</div>
                         </div>
                         <div class="col-md-3">
                             <label for="dateReception" class="form-label fw-bold required-field">Date de réception</label>

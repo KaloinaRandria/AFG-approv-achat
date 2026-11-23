@@ -48,6 +48,8 @@ class BonCommandeManuelServiceTest {
     @Mock IdGenerator idGenerator;
     @Mock afg.achat.afgApprovAchat.service.demande.DemandeFilleService demandeFilleService;
     @Mock BesoinAchatService besoinAchatService;
+    // Par défaut lireDevise renvoie null : bon en ariary
+    @Mock afg.achat.afgApprovAchat.service.util.DeviseService deviseService;
 
     @InjectMocks BonCommandeManuelService service;
 
@@ -258,6 +260,45 @@ class BonCommandeManuelServiceTest {
                     new SaisieBonCommande.Ligne("Ecran", null, "1", "Unité", "100", "50")), current, createur));
             assertTrue(e.getMessage().contains("pas une demande de matériel"));
         }
+        verify(bonCommandeMereRepo, never()).save(any());
+    }
+
+    // ── Devise ───────────────────────────────────────────────────────────────
+
+    private static afg.achat.afgApprovAchat.model.util.Devise devise(int id, String code, double cours) {
+        afg.achat.afgApprovAchat.model.util.Devise d = new afg.achat.afgApprovAchat.model.util.Devise();
+        d.setId(id);
+        d.setAcronyme(code);
+        d.setCoursAriary(String.valueOf(cours));
+        return d;
+    }
+
+    @Test
+    void leBonCopieLaDeviseEtSonCoursDuJour() {
+        when(deviseService.lireDevise("2")).thenReturn(devise(2, "EUR", 5272));
+        SaisieBonCommande s = saisie(null, null, null, ligne("Prestation", "2", "100"));
+        SaisieBonCommande enEuros = new SaisieBonCommande(s.id(), s.fournisseurId(), s.referenceFournisseur(),
+                s.dateLivraisonPrevue(), s.lieuLivraison(), s.modalitePaiement(), s.referenceApprobation(),
+                s.description(), s.tauxRemise(), s.tauxTVA(), s.lignes(), "2");
+
+        BonCommandeMere cree = service.enregistrer(enEuros, current, createur);
+
+        assertEquals("EUR", cree.getCodeDevise());
+        assertEquals(5272.0, cree.getTauxChange());
+        assertNotNull(cree.getDateTaux());
+        assertEquals(200.0 * 5272, cree.enAriary(cree.getMontantHT()), 0.001);
+    }
+
+    @Test
+    void uneLigneDeDemandeDansUneAutreDeviseEstRefusee() {
+        afg.achat.afgApprovAchat.model.demande.DemandeFille df = ligneDemande(50, afg.achat.afgApprovAchat.model.util.StatutDemande.VALIDE);
+        df.getDemandeMere().appliquerDevise(devise(2, "EUR", 5272), java.time.LocalDateTime.now());
+        when(besoinAchatService.resteACommander(df, null)).thenReturn(6.0);
+
+        // Bon en ariary (devise non choisie) avec une ligne d'une demande en euros
+        WorkflowException e = assertThrows(WorkflowException.class, () -> service.enregistrer(saisie(null, null, null,
+                new SaisieBonCommande.Ligne("Ecran", null, "1", "Unité", "100", "50")), current, createur));
+        assertTrue(e.getMessage().contains("même devise"));
         verify(bonCommandeMereRepo, never()).save(any());
     }
 

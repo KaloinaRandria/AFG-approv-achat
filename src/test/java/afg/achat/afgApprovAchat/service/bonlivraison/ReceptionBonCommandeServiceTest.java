@@ -90,6 +90,7 @@ class ReceptionBonCommandeServiceTest {
         when(bonCommandeFilleRepo.findBonCommandeFillesByBonCommandeMere(bc)).thenReturn(List.of(ligneA, ligneB));
         Devise mga = new Devise();
         when(deviseService.getDeviseById(1)).thenReturn(Optional.of(mga));
+        when(deviseService.lireDevise("1")).thenReturn(mga);
         when(stockMereService.getOrCreateStockMere(any(BonLivraisonMere.class))).thenReturn(new StockMere());
         when(idGenerator.generateId(eq("BL"), any())).thenReturn("BL1");
     }
@@ -125,6 +126,23 @@ class ReceptionBonCommandeServiceTest {
         assertEquals(10, blf.getValue().getQuantiteDemande());
         verify(lotStockService).creerLot(stylo, bl, 6, 500);
         verify(stockMereService).addEntree(any(), eq(stylo), eq(6.0));
+    }
+
+    @Test
+    void bonEnDeviseEtrangereValoriseLeStockEnAriary() {
+        Devise eur = new Devise();
+        eur.setAcronyme("EUR");
+        eur.setCoursAriary("5000");
+        bc.appliquerDevise(eur, LocalDateTime.now());
+
+        BonLivraisonMere bl = service.receptionner("BC1", saisie(Map.of(1, new LigneSaisie("2", "10", null))));
+
+        // Le bon de livraison reste dans la devise du bon de commande...
+        assertSame(eur, bl.getDevise());
+        assertEquals(20.0, bl.getTotalPrix());
+        // ...mais le lot FIFO et le prix d'achat sont en ariary (10 EUR x 5 000)
+        verify(lotStockService).creerLot(stylo, bl, 2, 50000.0);
+        verify(prixArticleService).insert(argThat(p -> p.getPrixUnitaire() == 50000.0));
     }
 
     @Test

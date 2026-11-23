@@ -79,7 +79,10 @@
             <div class="card shadow-lg border-0">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small" th:text="${besoins.totalElements} + ' ligne(s) à acheter' + (${besoins.totalPages > 1} ? ' — la sélection porte sur la page affichée' : '')"></span>
+                        <span class="text-muted small">
+                            <span th:text="${besoins.totalElements} + ' ligne(s) à acheter' + (${besoins.totalPages > 1} ? ' — la sélection porte sur la page affichée' : '')"></span>
+                            — un bon de commande ne regroupe que des lignes de même devise.
+                        </span>
                         <button type="submit" class="btn btn-gradient-green" id="btnCreerBc" disabled>
                             <i class="fas fa-file-invoice me-1"></i>
                             Créer un bon de commande avec la sélection (<span id="nbSelection">0</span>)
@@ -130,7 +133,7 @@
                                 <td class="text-end fw-bold" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(b.resteACommander)}"></td>
                                 <td class="text-end"
                                     th:text="${df.prixUnitaire != null and df.prixUnitaire > 0
-                                              ? #numbers.formatDecimal(df.prixUnitaire, 1, 'WHITESPACE', 2, 'COMMA') : '—'}"></td>
+                                              ? T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(df.prixUnitaire, df.demandeMere.codeDevise) : '—'}"></td>
                             </tr>
                             </tbody>
                         </table>

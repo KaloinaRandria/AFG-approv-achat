@@ -9,6 +9,7 @@ import java.util.List;
  * @param description titre du bon, imprimé au-dessus des lignes (ex. « BRANDING GAB AEROPORT IVATO »)
  * @param tauxRemise  remise en pourcentage du montant HT
  * @param tauxTVA     TVA en pourcentage du montant HT remisé
+ * @param deviseId    devise des prix du bon ; vide = ariary
  */
 public record SaisieBonCommande(String id,
                                 String fournisseurId,
@@ -20,7 +21,17 @@ public record SaisieBonCommande(String id,
                                 String description,
                                 Double tauxRemise,
                                 Double tauxTVA,
-                                List<Ligne> lignes) {
+                                List<Ligne> lignes,
+                                String deviseId) {
+
+    /** Saisie en ariary. */
+    public SaisieBonCommande(String id, String fournisseurId, String referenceFournisseur,
+                             String dateLivraisonPrevue, String lieuLivraison, String modalitePaiement,
+                             String referenceApprobation, String description, Double tauxRemise,
+                             Double tauxTVA, List<Ligne> lignes) {
+        this(id, fournisseurId, referenceFournisseur, dateLivraisonPrevue, lieuLivraison, modalitePaiement,
+                referenceApprobation, description, tauxRemise, tauxTVA, lignes, null);
+    }
 
     /**
      * Une ligne du bon : désignation libre, quantité, unité et prix unitaire HT.

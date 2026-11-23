@@ -108,6 +108,39 @@ public class DemandeController {
 
     private final afg.achat.afgApprovAchat.service.demande.ApprovisionnementLigneService approvisionnementLigneService;
 
+    private final afg.achat.afgApprovAchat.service.util.DeviseService deviseService;
+
+    private final afg.achat.afgApprovAchat.service.demande.DeviseDemandeService deviseDemandeService;
+
+    /**
+     * Les Moyens Généraux, à leur étape, choisissent la devise des prix proforma.
+     * Les prix des lignes à acheter sont à ressaisir ; les lignes stock sont converties.
+     */
+    @PostMapping("/fiche/{id}/devise")
+    public String changerDevise(@PathVariable("id") String id,
+                                @RequestParam(name = "devise", required = false) String deviseId,
+                                RedirectAttributes redirectAttributes) {
+        String fiche = "redirect:/demande/fiche/" + id;
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            redirectAttributes.addFlashAttribute("ko", "Demande introuvable.");
+            return "redirect:/demande/list";
+        }
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (!workflowService.calculerDroits(demande, utilisateurCourant(auth), auth).mg()) {
+            redirectAttributes.addFlashAttribute("ko", "Seuls les Moyens Généraux, à leur étape, choisissent la devise.");
+            return fiche;
+        }
+        try {
+            int aRessaisir = deviseDemandeService.changerDevise(demande, deviseService.lireDevise(deviseId));
+            redirectAttributes.addFlashAttribute("ok", "Devise de la demande : " + demande.getCodeDevise()
+                    + (aRessaisir > 0 ? ". Ressaisissez le prix proforma de " + aRessaisir + " article(s) dans cette devise." : "."));
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+        }
+        return fiche;
+    }
+
     @GetMapping("/add")
     public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
 
@@ -231,6 +264,8 @@ public class DemandeController {
             demandeMere.setDateSortie(dateSortie + "T00:00");
             demandeMere.setPriorite(DemandeMere.PrioriteDemande.valueOf(priorite.trim()));
             demandeMere.setTypeDemande(type);
+            // Prix proposés en ariary (derniers prix d'achat) : la demande naît en ariary
+            demandeMere.appliquerDevise(deviseService.getDeviseReference(), LocalDateTime.now());
             demandeMere.setMotifEvoque(motif);
             demandeMere.setDemandeur(utilisateur);
             demandeMere.setDescription(description);
@@ -842,6 +877,7 @@ public class DemandeController {
         // Model (IMPORTANT : toujours envoyer les booléens)
         model.addAttribute("demande", demande);
         model.addAttribute("lignes", lignes);
+        model.addAttribute("devises", deviseService.getAllDevises());
 
         model.addAttribute("canDecisionN1", canDecisionN1);
         model.addAttribute("canDecisionMG", canDecisionMG);

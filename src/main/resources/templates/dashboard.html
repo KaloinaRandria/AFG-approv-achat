@@ -8,176 +8,367 @@
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
     <style>
-        .btn-xs {
-            padding: 0.2rem 0.5rem;
-            font-size: 0.75rem;
+        /* ================================================================
+           Tableau de bord — jetons de design
+           ================================================================ */
+        .db {
+            --db-plane:    #f4f6fa;
+            --db-surface:  #ffffff;
+            --db-line:     #e6e9f0;
+            --db-line-2:   #f0f2f6;
+            --db-ink:      #0f1b3d;
+            --db-ink-2:    #535d75;
+            --db-muted:    #8a92a6;
+            --db-brand:    #001051;
+            --db-accent:   #2a5bd7;
+            --db-accent-w: #eaf0fd;
+            --db-good:     #0f8a3c;
+            --db-good-w:   #e6f6ec;
+            --db-bad:      #d03b3b;
+            --db-bad-w:    #fdecec;
+            --db-warn:     #b26b00;
+            --db-warn-w:   #fff4e0;
+            --db-radius:   14px;
+            --db-shadow:   0 1px 2px rgba(16, 24, 40, .04), 0 1px 3px rgba(16, 24, 40, .06);
+            --db-shadow-h: 0 8px 24px rgba(16, 24, 40, .10);
+            color: var(--db-ink);
         }
+        .main-content { background: #f4f6fa !important; }
 
-        /* À traiter */
-        .action-tuile {
-            display: flex; align-items: center; gap: .75rem; height: 100%;
-            padding: .75rem 1rem; border: 1px solid #e3e8f0; border-left: 4px solid #0d6efd;
-            border-radius: .5rem; background: #fff; color: inherit; text-decoration: none;
-            transition: box-shadow .15s, transform .15s;
-        }
-        .action-tuile:hover { box-shadow: 0 .25rem .75rem rgba(0, 16, 81, .12); transform: translateY(-1px); color: inherit; }
-        .action-tuile.urgent { border-left-color: #dc3545; }
-        .action-icone {
-            flex: 0 0 2.5rem; height: 2.5rem; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            background: #e7f0ff; color: #0d6efd;
-        }
-        .action-tuile.urgent .action-icone { background: #fdecee; color: #dc3545; }
-        .action-texte { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-        .action-titre { font-weight: 600; color: #001051; }
-        .action-detail, .action-age { font-size: .8rem; color: #6c757d; }
-        .action-tuile.urgent .action-age { color: #dc3545; font-weight: 600; }
-        .action-nombre { font-size: 1.6rem; font-weight: 700; color: #001051; }
+        /* ── En-tête ─────────────────────────────────────────────────── */
+        .db-head { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-end; margin-bottom: 1.25rem; }
+        .db-eyebrow { font-size: .78rem; font-weight: 600; color: var(--db-muted); text-transform: uppercase; letter-spacing: .08em; }
+        .db-title { font-size: 1.75rem; font-weight: 800; letter-spacing: -.02em; color: var(--db-brand); margin: .1rem 0 .15rem; }
+        .db-subtitle { color: var(--db-ink-2); font-size: .92rem; }
+        .db-subtitle strong { color: var(--db-ink); font-weight: 600; }
 
-        /* Indicateurs d'achats */
-        .kpi-tuile {
-            display: block; height: 100%; padding: 1rem; border-radius: .5rem; background: #fff;
-            border: 1px solid #e3e8f0; color: inherit; text-decoration: none;
+        /* ── Barre de filtres ────────────────────────────────────────── */
+        .db-toolbar {
+            display: flex; flex-wrap: wrap; align-items: center; gap: .75rem;
+            background: var(--db-surface); border: 1px solid var(--db-line); border-radius: var(--db-radius);
+            padding: .6rem .75rem; box-shadow: var(--db-shadow); margin-bottom: 1.75rem;
         }
-        a.kpi-tuile:hover { box-shadow: 0 .25rem .75rem rgba(0, 16, 81, .12); color: inherit; }
-        .kpi-tuile.alerte { border-left: 4px solid #dc3545; }
-        .kpi-libelle { font-size: .8rem; color: #6c757d; text-transform: uppercase; letter-spacing: .02em; }
-        .kpi-valeur { font-size: 1.6rem; font-weight: 700; color: #001051; margin: .25rem 0; }
-        .kpi-valeur small { font-size: .8rem; font-weight: 500; color: #6c757d; }
-        .kpi-sous { font-size: .8rem; color: #6c757d; }
+        .db-seg { display: inline-flex; flex-wrap: wrap; gap: 2px; background: var(--db-plane); border-radius: 10px; padding: 3px; }
+        .db-seg button {
+            border: 0; background: transparent; color: var(--db-ink-2); font-size: .8rem; font-weight: 600;
+            padding: .35rem .7rem; border-radius: 8px; transition: background .15s, color .15s; white-space: nowrap;
+        }
+        .db-seg button:hover { color: var(--db-ink); background: rgba(255,255,255,.6); }
+        .db-seg button.active { background: var(--db-surface); color: var(--db-brand); box-shadow: 0 1px 3px rgba(16,24,40,.12); }
+        .db-range { display: flex; align-items: center; gap: .4rem; margin-left: auto; flex-wrap: wrap; }
+        .db-range .form-control { width: 150px; font-size: .82rem; border-color: var(--db-line); border-radius: 8px; color: var(--db-ink); }
+        .db-range .sep { color: var(--db-muted); font-size: .8rem; }
+        .db-btn {
+            display: inline-flex; align-items: center; gap: .4rem; border-radius: 8px; font-size: .8rem; font-weight: 600;
+            padding: .4rem .8rem; border: 1px solid transparent; text-decoration: none; transition: all .15s; line-height: 1.2;
+        }
+        .db-btn-primary { background: var(--db-brand); color: #fff; }
+        .db-btn-primary:hover { background: #0a1f7a; color: #fff; }
+        .db-btn-ghost { background: transparent; color: var(--db-ink-2); border-color: var(--db-line); }
+        .db-btn-ghost:hover { background: var(--db-plane); color: var(--db-ink); }
 
-        tr.ligne-cliquable { cursor: pointer; }
+        /* ── Sections ────────────────────────────────────────────────── */
+        .db-section { margin-bottom: 2rem; }
+        .db-section-title {
+            display: flex; align-items: center; gap: .6rem; font-size: .78rem; font-weight: 700; color: var(--db-muted);
+            text-transform: uppercase; letter-spacing: .08em; margin-bottom: .85rem;
+        }
+        .db-section-title::after { content: ""; flex: 1; height: 1px; background: var(--db-line); }
+
+        /* ── Cartes ──────────────────────────────────────────────────── */
+        .db-card {
+            background: var(--db-surface); border: 1px solid var(--db-line); border-radius: var(--db-radius);
+            box-shadow: var(--db-shadow); height: 100%; display: flex; flex-direction: column; min-width: 0;
+        }
+        .db-card-head {
+            display: flex; justify-content: space-between; align-items: flex-start; gap: .75rem;
+            padding: 1rem 1.25rem .25rem;
+        }
+        .db-card-title { font-size: .95rem; font-weight: 700; color: var(--db-ink); margin: 0; }
+        .db-card-sub { font-size: .78rem; color: var(--db-muted); margin-top: .1rem; }
+        .db-card-body { padding: .75rem 1.25rem 1.1rem; flex: 1 1 auto; }
+        .db-card-body.flush { padding: .5rem 0 .25rem; }
+        .db-hint { font-size: .72rem; color: var(--db-muted); white-space: nowrap; }
+        .db-empty { color: var(--db-muted); font-size: .88rem; padding: .5rem 0; display: flex; align-items: center; gap: .5rem; }
+        .db-link { font-size: .8rem; font-weight: 600; color: var(--db-accent); text-decoration: none; white-space: nowrap; }
+        .db-link:hover { text-decoration: underline; }
+
+        /* ── Tuiles « À traiter » ────────────────────────────────────── */
+        .db-action {
+            display: flex; align-items: center; gap: .85rem; height: 100%;
+            padding: .85rem 1rem; border: 1px solid var(--db-line); border-radius: 12px;
+            background: var(--db-surface); color: inherit; text-decoration: none; position: relative;
+            transition: box-shadow .15s, transform .15s, border-color .15s;
+        }
+        .db-action:hover { box-shadow: var(--db-shadow-h); transform: translateY(-2px); border-color: #d5dbe8; color: inherit; }
+        .db-action-icon {
+            flex: 0 0 2.6rem; height: 2.6rem; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            background: var(--db-accent-w); color: var(--db-accent); font-size: 1rem;
+        }
+        .db-action.urgent .db-action-icon { background: var(--db-bad-w); color: var(--db-bad); }
+        .db-action-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+        .db-action-title { font-weight: 700; font-size: .9rem; color: var(--db-ink); }
+        .db-action-detail { font-size: .78rem; color: var(--db-ink-2); }
+        .db-action-age { font-size: .74rem; color: var(--db-muted); margin-top: .15rem; }
+        .db-action.urgent .db-action-age { color: var(--db-bad); font-weight: 600; }
+        .db-action-count { font-size: 1.65rem; font-weight: 800; color: var(--db-brand); font-variant-numeric: tabular-nums; }
+        .db-action.urgent .db-action-count { color: var(--db-bad); }
+
+        /* ── KPI principaux ──────────────────────────────────────────── */
+        .db-kpi { padding: 1.1rem 1.25rem 0; overflow: hidden; }
+        .db-kpi-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: .9rem; }
+        .db-kpi-icon {
+            width: 2.4rem; height: 2.4rem; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem;
+        }
+        .tone-blue  .db-kpi-icon { background: #eaf1fc; color: #2a78d6; }
+        .tone-red   .db-kpi-icon { background: var(--db-bad-w); color: var(--db-bad); }
+        .tone-green .db-kpi-icon { background: var(--db-good-w); color: var(--db-good); }
+        .db-kpi-label { font-size: .82rem; font-weight: 600; color: var(--db-ink-2); }
+        .db-kpi-value { font-size: 2.3rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; color: var(--db-ink); font-variant-numeric: tabular-nums; }
+        .db-kpi-foot { font-size: .75rem; color: var(--db-muted); }
+        .db-spark { height: 56px; margin: .25rem -1.25rem 0; }
+
+        .db-trend {
+            display: inline-flex; align-items: center; gap: .25rem; font-size: .75rem; font-weight: 700;
+            padding: .2rem .5rem; border-radius: 999px; background: var(--db-plane); color: var(--db-ink-2);
+            font-variant-numeric: tabular-nums;
+        }
+        .db-trend.good { background: var(--db-good-w); color: var(--db-good); }
+        .db-trend.bad  { background: var(--db-bad-w);  color: var(--db-bad); }
+
+        /* ── KPI achats (compacts) ───────────────────────────────────── */
+        .db-mini { display: block; padding: 1rem 1.15rem; color: inherit; text-decoration: none; position: relative; transition: box-shadow .15s, transform .15s; }
+        a.db-mini:hover { box-shadow: var(--db-shadow-h); transform: translateY(-2px); color: inherit; }
+        a.db-mini::after {
+            content: "\f061"; font-family: "Font Awesome 5 Free"; font-weight: 900; font-size: .7rem;
+            position: absolute; top: 1rem; right: 1rem; color: var(--db-muted); transition: transform .15s, color .15s;
+        }
+        a.db-mini:hover::after { transform: translateX(3px); color: var(--db-accent); }
+        .db-mini-label { font-size: .78rem; font-weight: 600; color: var(--db-ink-2); display: flex; align-items: center; gap: .45rem; padding-right: 1rem; }
+        .db-mini-label i { color: var(--db-muted); width: 1rem; text-align: center; }
+        .db-mini-value { font-size: 1.55rem; font-weight: 800; letter-spacing: -.02em; color: var(--db-ink); margin: .35rem 0 .15rem; font-variant-numeric: tabular-nums; line-height: 1.15; }
+        .db-mini-value small { font-size: .78rem; font-weight: 600; color: var(--db-muted); letter-spacing: 0; }
+        .db-mini-value.secondary { font-size: 1.05rem; margin-top: 0; }
+        .db-mini-sub { font-size: .75rem; color: var(--db-muted); }
+        .db-mini.alerte { border-color: #f3c4c4; background: linear-gradient(180deg, #fff 0%, #fff8f8 100%); }
+        .db-mini.alerte .db-mini-value { color: var(--db-bad); }
+        .db-mini.alerte .db-mini-label i { color: var(--db-bad); }
+        .db-meter { height: 6px; background: var(--db-line-2); border-radius: 999px; overflow: hidden; margin: .5rem 0 .4rem; }
+        .db-meter > span { display: block; height: 100%; border-radius: 999px; background: #2a78d6; }
+
+        /* ── SLA ─────────────────────────────────────────────────────── */
+        .db-sla { padding: 1rem 1.1rem; border: 1px solid var(--db-line); border-radius: 12px; height: 100%; background: #fcfcfd; }
+        .db-sla-head { display: flex; justify-content: space-between; align-items: center; }
+        .db-prio { display: inline-flex; align-items: center; gap: .4rem; font-size: .78rem; font-weight: 700; color: var(--db-ink); }
+        .db-prio::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--dot); }
+        .db-sla-value { font-size: 1.9rem; font-weight: 800; letter-spacing: -.02em; color: var(--db-ink); margin: .5rem 0 .1rem; font-variant-numeric: tabular-nums; }
+        .db-sla-value small { font-size: .85rem; font-weight: 600; color: var(--db-muted); }
+        .db-sla-target { font-size: .75rem; color: var(--db-muted); }
+        .db-bullet { position: relative; height: 8px; background: var(--db-line-2); border-radius: 999px; margin: .85rem 0 .3rem; }
+        .db-bullet > .fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 999px; background: var(--db-good); transition: width .6s cubic-bezier(.2,.8,.2,1); }
+        .db-bullet > .fill.over { background: var(--db-bad); }
+        .db-bullet > .target { position: absolute; left: 50%; top: -4px; bottom: -4px; width: 2px; background: var(--db-ink); border-radius: 2px; }
+        .db-bullet-scale { display: flex; justify-content: space-between; font-size: .68rem; color: var(--db-muted); }
+        .db-status { display: none; align-items: center; gap: .3rem; font-size: .72rem; font-weight: 700; padding: .15rem .5rem; border-radius: 999px; }
+        .db-status.ok   { display: inline-flex; background: var(--db-good-w); color: var(--db-good); }
+        .db-status.over { display: inline-flex; background: var(--db-bad-w);  color: var(--db-bad); }
+
+        /* ── Étapes ──────────────────────────────────────────────────── */
+        .db-step { margin-bottom: .85rem; }
+        .db-step:last-child { margin-bottom: 0; }
+        .db-step-row { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; font-size: .84rem; margin-bottom: .35rem; }
+        .db-step-name { font-weight: 600; color: var(--db-ink); }
+        .db-step-val { font-weight: 800; color: var(--db-ink); font-variant-numeric: tabular-nums; }
+        .db-step-n { color: var(--db-muted); font-size: .75rem; margin-left: .3rem; }
+        .db-step-bar { height: 8px; background: var(--db-line-2); border-radius: 999px; overflow: hidden; }
+        .db-step-bar > span { display: block; height: 100%; border-radius: 999px; background: #2a78d6; }
+        .db-step.slow .db-step-bar > span { background: var(--db-bad); }
+        .db-tag { display: inline-block; font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: .1rem .4rem; border-radius: 4px; margin-left: .35rem; background: var(--db-bad-w); color: var(--db-bad); vertical-align: 1px; }
+
+        /* ── Tableaux ────────────────────────────────────────────────── */
+        .db-table { width: 100%; font-size: .85rem; border-collapse: collapse; }
+        .db-table th { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--db-muted); padding: .5rem 1.25rem; border-bottom: 1px solid var(--db-line); }
+        .db-table td { padding: .65rem 1.25rem; border-bottom: 1px solid var(--db-line-2); vertical-align: middle; }
+        .db-table tr:last-child td { border-bottom: 0; }
+        .db-table tbody tr.ligne-cliquable { cursor: pointer; transition: background .12s; }
+        .db-table tbody tr.ligne-cliquable:hover { background: #f8f9fc; }
+        .db-table a { color: var(--db-brand); font-weight: 700; text-decoration: none; }
+        .db-table a:hover { text-decoration: underline; }
+        .db-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .db-rank { display: inline-flex; width: 1.5rem; height: 1.5rem; border-radius: 6px; align-items: center; justify-content: center; font-size: .72rem; font-weight: 800; background: var(--db-plane); color: var(--db-ink-2); margin-right: .6rem; }
+        tr:first-child .db-rank { background: #fff4d6; color: #9a6700; }
+        .db-table .badge { font-weight: 600; font-size: .72rem; padding: .35em .6em; border-radius: 6px; }
+
+        .db-refus { padding: .8rem 1.25rem; border-bottom: 1px solid var(--db-line-2); }
+        .db-refus:last-child { border-bottom: 0; }
+        .db-refus a { font-weight: 700; color: var(--db-brand); text-decoration: none; }
+        .db-refus-motif { font-size: .8rem; color: var(--db-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .db-refus-by { font-size: .78rem; color: var(--db-ink-2); margin-top: .3rem; }
+        .db-refus-quote { display: block; margin-top: .3rem; padding: .35rem .6rem; border-left: 3px solid #f3c4c4; background: #fff8f8; border-radius: 0 6px 6px 0; font-size: .78rem; color: var(--db-ink-2); font-style: italic; }
+
+        /* ── Graphiques ──────────────────────────────────────────────── */
+        .db-chart { width: 100%; height: 280px; }
+        .db-chart.tall { height: 300px; }
+
+        @media (max-width: 768px) {
+            .db-range { margin-left: 0; }
+            .db-range .form-control { width: 135px; }
+            .db-title { font-size: 1.45rem; }
+        }
     </style>
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
 <div class="main-content">
-    <section>
+    <section class="db">
         <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
 
-        <!-- En-tête avec icônes en dégradé bleu -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="fw-bold text-gradient-blue">
-                <i class="fas fa-chart-line me-2"></i>Tableau de bord
-            </h1>
+        <!-- ===== EN-TÊTE ===== -->
+        <header class="db-head">
+            <div>
+                <div class="db-eyebrow">Approvisionnement &amp; achats</div>
+                <h1 class="db-title">
+                    Bonjour<th:block th:if="${currentUser != null and currentUser.prenom != null}">, <span th:text="${currentUser.prenom}"></span></th:block>
+                </h1>
+                <div class="db-subtitle">
+                    Activité du <strong th:text="${#temporals.format(dateFrom, 'dd MMM yyyy')}"></strong>
+                    au <strong th:text="${#temporals.format(dateTo, 'dd MMM yyyy')}"></strong>
+                </div>
+            </div>
+            <a th:href="@{/demande/add}" class="db-btn db-btn-primary">
+                <i class="fas fa-plus"></i>Nouvelle demande
+            </a>
+        </header>
+
+        <!-- ===== FILTRE PÉRIODE ===== -->
+        <form id="filterForm" th:action="@{/dashboard}" method="get" class="db-toolbar">
+            <div class="db-seg" role="group" aria-label="Raccourcis de période">
+                <button type="button" data-preset="7days">7 jours</button>
+                <button type="button" data-preset="thisMonth">Ce mois</button>
+                <button type="button" data-preset="lastMonth">Mois dernier</button>
+                <button type="button" data-preset="thisQuarter">Trimestre</button>
+                <button type="button" data-preset="thisYear">Année</button>
+            </div>
+            <div class="db-range">
+                <input type="date" id="dateFromInput" name="dateFrom" class="form-control form-control-sm"
+                       aria-label="Date de début" th:value="${dateFrom}">
+                <span class="sep">→</span>
+                <input type="date" id="dateToInput" name="dateTo" class="form-control form-control-sm"
+                       aria-label="Date de fin" th:value="${dateTo}">
+                <button type="submit" class="db-btn db-btn-primary"><i class="fas fa-filter"></i>Appliquer</button>
+                <a th:href="@{/dashboard}" class="db-btn db-btn-ghost" title="Réinitialiser"><i class="fas fa-undo"></i></a>
+            </div>
+        </form>
+
+        <!-- ===== À TRAITER ===== -->
+        <div class="db-section">
+            <div class="db-section-title">
+                <span><i class="fas fa-inbox me-1"></i>À traiter</span>
+            </div>
+            <div th:if="${#lists.isEmpty(actions)}" class="db-card">
+                <div class="db-card-body">
+                    <div class="db-empty"><i class="fas fa-check-circle" style="color:#0f8a3c"></i>Tout est à jour, rien à traiter pour le moment.</div>
+                </div>
+            </div>
+            <th:block th:unless="${#lists.isEmpty(actions)}">
+                <div class="row g-3">
+                    <div class="col-xxl-3 col-xl-4 col-md-6" th:each="a : ${actions}">
+                        <a th:href="@{${a.url}}" class="db-action" th:classappend="${a.urgent} ? 'urgent'">
+                            <span class="db-action-icon"><i class="fas" th:classappend="${a.icone}"></i></span>
+                            <span class="db-action-text">
+                                <span class="db-action-title" th:text="${a.titre}"></span>
+                                <span class="db-action-detail" th:text="${a.detail}"></span>
+                                <span class="db-action-age" th:if="${a.joursAttente != null}">
+                                    <i class="far fa-clock me-1"></i><span th:text="${a.joursAttente == 0 ? 'Plus ancien : aujourd’hui'
+                                              : 'Plus ancien : il y a ' + a.joursAttente + ' j'}"></span>
+                                </span>
+                            </span>
+                            <span class="db-action-count" th:text="${a.nombre}"></span>
+                        </a>
+                    </div>
+                </div>
+                <div class="db-hint mt-2">
+                    <i class="fas fa-circle me-1" style="color:#d03b3b; font-size:7px; vertical-align:2px;"></i>
+                    En rouge : en attente depuis plus de <span th:text="${joursRetard}"></span> jours ou en retard
+                </div>
+            </th:block>
         </div>
 
-        <div class="container-fluid py-4">
-            <!-- ===== FILTRE DATE & RACCOURCIS TEMPORELS ===== -->
-            <form id="filterForm" th:action="@{/dashboard}" method="get" class="mb-4">
-                <div class="chart-card shadow-sm border-0">
-                    <div class="card-body py-3">
-                        <div class="row g-2 align-items-end">
-
-                            <div class="col-auto">
-                                <label class="form-label fw-semibold mb-1" style="color:#001051; font-size:13px;">
-                                    <i class="fas fa-calendar-alt me-1"></i>Date début
-                                </label>
-                                <input type="date" id="dateFromInput" name="dateFrom" class="form-control form-control-sm"
-                                       th:value="${dateFrom}">
-                            </div>
-
-                            <div class="col-auto">
-                                <label class="form-label fw-semibold mb-1" style="color:#001051; font-size:13px;">
-                                    <i class="fas fa-calendar-alt me-1"></i>Date fin
-                                </label>
-                                <input type="date" id="dateToInput" name="dateTo" class="form-control form-control-sm"
-                                       th:value="${dateTo}">
-                            </div>
-
-                            <div class="col-auto">
-                                <button type="submit" class="btn btn-sm btn-gradient-blue">
-                                    <i class="fas fa-filter me-1"></i>Filtrer
-                                </button>
-                            </div>
-
-                            <div class="col-auto">
-                                <a th:href="@{/dashboard}" class="btn btn-sm btn-outline-gradient-blue">
-                                    <i class="fas fa-times me-1"></i>Réinitialiser
-                                </a>
-                            </div>
-
+        <!-- ===== VUE D'ENSEMBLE : 3 KPI ===== -->
+        <div class="db-section">
+            <div class="db-section-title"><span>Vue d'ensemble des demandes</span></div>
+            <div class="row g-3">
+                <div class="col-xl-4 col-md-6">
+                    <div class="db-card db-kpi tone-blue">
+                        <div class="db-kpi-top">
+                            <span class="db-kpi-icon"><i class="fas fa-hourglass-half"></i></span>
+                            <span class="db-trend" id="badgeTrendEnCours" data-good="neutral"
+                                  th:attr="data-trend=${trendEnCours}"></span>
                         </div>
-
-                        <!-- Presets de date rapides -->
-                        <div class="row mt-2 pt-2 border-top g-1 align-items-center">
-                            <div class="col-auto me-2">
-                                <span class="text-muted small fw-semibold"><i class="fas fa-bolt me-1"></i>Raccourcis :</span>
-                            </div>
-                            <div class="col-auto d-flex flex-wrap gap-1">
-                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill" onclick="applyDatePreset('today')">Aujourd'hui</button>
-                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill" onclick="applyDatePreset('7days')">7 derniers jours</button>
-                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill" onclick="applyDatePreset('thisMonth')">Ce mois-ci</button>
-                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill" onclick="applyDatePreset('lastMonth')">Mois dernier</button>
-                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill" onclick="applyDatePreset('thisQuarter')">Ce trimestre</button>
-                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill" onclick="applyDatePreset('thisYear')">Année en cours</button>
-                            </div>
-                        </div>
-
+                        <div class="db-kpi-label">En cours de traitement</div>
+                        <div class="db-kpi-value" id="valEnCours" th:text="${enCours}">0</div>
+                        <div class="db-kpi-foot">En attente de validation · vs mois précédent</div>
+                        <div class="db-spark" id="sparkEnCours"></div>
                     </div>
                 </div>
-            </form>
-
-
-            <!-- ===== À TRAITER : ce qui attend une action de l'utilisateur, selon ses rôles ===== -->
-            <div class="chart-card shadow-sm border-0 mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-tasks me-2"></i>À traiter</span>
-                    <span class="text-muted small" th:unless="${#lists.isEmpty(actions)}">
-                        <i class="fas fa-circle text-danger me-1" style="font-size:8px;"></i>
-                        en attente depuis plus de <span th:text="${joursRetard}"></span> jours ou en retard
-                    </span>
-                </div>
-                <div class="card-body">
-                    <div th:if="${#lists.isEmpty(actions)}" class="text-muted py-2">
-                        <i class="fas fa-check-circle text-success me-2"></i>Rien à traiter pour le moment.
-                    </div>
-                    <div class="row g-2" th:unless="${#lists.isEmpty(actions)}">
-                        <div class="col-xxl-3 col-xl-4 col-md-6" th:each="a : ${actions}">
-                            <a th:href="@{${a.url}}" class="action-tuile" th:classappend="${a.urgent} ? 'urgent'">
-                                <span class="action-icone"><i class="fas" th:classappend="${a.icone}"></i></span>
-                                <span class="action-texte">
-                                    <span class="action-titre" th:text="${a.titre}"></span>
-                                    <span class="action-detail" th:text="${a.detail}"></span>
-                                    <span class="action-age" th:if="${a.joursAttente != null}"
-                                          th:text="${a.joursAttente == 0 ? 'Le plus ancien : aujourd’hui'
-                                                    : 'Le plus ancien : il y a ' + a.joursAttente + ' j'}"></span>
-                                </span>
-                                <span class="action-nombre" th:text="${a.nombre}"></span>
-                            </a>
+                <div class="col-xl-4 col-md-6">
+                    <div class="db-card db-kpi tone-red">
+                        <div class="db-kpi-top">
+                            <span class="db-kpi-icon"><i class="fas fa-times"></i></span>
+                            <span class="db-trend" id="badgeTrendRefusees" data-good="down"
+                                  th:attr="data-trend=${trendRefusees}"></span>
                         </div>
+                        <div class="db-kpi-label">Demandes refusées</div>
+                        <div class="db-kpi-value" id="valRefusees" th:text="${refusees}">0</div>
+                        <div class="db-kpi-foot">Sur la période · vs mois précédent</div>
+                        <div class="db-spark" id="sparkRefusees"></div>
+                    </div>
+                </div>
+                <div class="col-xl-4 col-md-12">
+                    <div class="db-card db-kpi tone-green">
+                        <div class="db-kpi-top">
+                            <span class="db-kpi-icon"><i class="fas fa-check"></i></span>
+                            <span class="db-trend" id="badgeTrendTerminees" data-good="up"
+                                  th:attr="data-trend=${trendTerminees}"></span>
+                        </div>
+                        <div class="db-kpi-label">Demandes terminées</div>
+                        <div class="db-kpi-value" id="valTerminees" th:text="${terminees}">0</div>
+                        <div class="db-kpi-foot">Validées · vs mois précédent</div>
+                        <div class="db-spark" id="sparkTerminees"></div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- ===== MES DEMANDES ===== -->
-            <div class="row g-3 mb-3">
+        <!-- ===== MES DEMANDES ===== -->
+        <div class="db-section">
+            <div class="db-section-title"><span>Mes demandes</span></div>
+            <div class="row g-3">
                 <div th:class="${#lists.isEmpty(mesRefus) ? 'col-12' : 'col-xl-7'}">
-                    <div class="chart-card shadow-sm border-0 h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-user me-2"></i>Mes dernières demandes</span>
-                            <span class="d-flex gap-2">
-                                <a th:href="@{/demande/add}" class="btn btn-xs btn-gradient-blue">
-                                    <i class="fas fa-plus me-1"></i>Nouvelle demande
-                                </a>
-                                <a th:href="@{/demande/list(scope='ME')}" class="btn btn-xs btn-outline-secondary">Toutes</a>
-                            </span>
-                        </div>
-                        <div class="card-body p-0">
-                            <div th:if="${#lists.isEmpty(mesDemandes)}" class="text-muted p-3">
-                                Vous n'avez encore fait aucune demande.
+                    <div class="db-card">
+                        <div class="db-card-head">
+                            <div>
+                                <h2 class="db-card-title">Mes dernières demandes</h2>
+                                <div class="db-card-sub">Cliquer sur une ligne pour ouvrir la fiche</div>
                             </div>
-                            <table class="table table-hover table-sm align-middle mb-0" th:unless="${#lists.isEmpty(mesDemandes)}">
+                            <a th:href="@{/demande/list(scope='ME')}" class="db-link">Tout voir <i class="fas fa-arrow-right ms-1"></i></a>
+                        </div>
+                        <div class="db-card-body flush">
+                            <div th:if="${#lists.isEmpty(mesDemandes)}" class="db-empty px-4 py-3">
+                                <i class="far fa-folder-open"></i>Vous n'avez encore fait aucune demande.
+                            </div>
+                            <table class="db-table" th:unless="${#lists.isEmpty(mesDemandes)}">
+                                <thead>
+                                <tr><th>N°</th><th>Date</th><th>Motif</th><th class="num">Étape</th></tr>
+                                </thead>
                                 <tbody>
                                 <tr th:each="d : ${mesDemandes}" class="ligne-cliquable"
                                     th:attr="data-href=@{/demande/fiche/{id}(id=${d.id})}">
-                                    <td class="ps-3 fw-semibold text-nowrap">
-                                        <a th:href="@{/demande/fiche/{id}(id=${d.id})}" th:text="${d.id}"></a>
-                                    </td>
-                                    <td class="text-muted small text-nowrap"
+                                    <td class="text-nowrap"><a th:href="@{/demande/fiche/{id}(id=${d.id})}" th:text="${d.id}"></a></td>
+                                    <td class="text-nowrap" style="color:#8a92a6"
                                         th:text="${d.date != null ? #temporals.format(d.date, 'dd/MM/yyyy') : ''}"></td>
-                                    <td class="text-truncate" style="max-width: 280px;" th:text="${d.motif}"></td>
-                                    <td class="pe-3 text-end"><span class="badge" th:classappend="${d.badge}" th:text="${d.etape}"></span></td>
+                                    <td class="text-truncate" style="max-width: 320px;" th:text="${d.motif}"></td>
+                                    <td class="num"><span class="badge" th:classappend="${d.badge}" th:text="${d.etape}"></span></td>
                                 </tr>
                                 </tbody>
                             </table>
@@ -185,348 +376,279 @@
                     </div>
                 </div>
                 <div class="col-xl-5" th:unless="${#lists.isEmpty(mesRefus)}">
-                    <div class="chart-card shadow-sm border-0 h-100">
-                        <div class="card-header">
-                            <i class="fas fa-times-circle text-danger me-2"></i>Mes demandes refusées (30 derniers jours)
+                    <div class="db-card">
+                        <div class="db-card-head">
+                            <div>
+                                <h2 class="db-card-title">Refus récents</h2>
+                                <div class="db-card-sub">30 derniers jours</div>
+                            </div>
                         </div>
-                        <div class="card-body p-0">
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item" th:each="r : ${mesRefus}">
-                                    <div class="d-flex justify-content-between">
-                                        <a class="fw-semibold" th:href="@{/demande/fiche/{id}(id=${r.demandeId})}" th:text="${r.demandeId}"></a>
-                                        <small class="text-muted" th:text="${#temporals.format(r.date, 'dd/MM/yyyy')}"></small>
-                                    </div>
-                                    <div class="small text-muted text-truncate" th:text="${r.motif}"></div>
-                                    <div class="small mt-1">
-                                        Refusée par <strong th:text="${r.par}"></strong>
-                                        (<span th:text="${r.etape}"></span>)
-                                        <span th:if="${r.commentaire != null and !#strings.isEmpty(r.commentaire)}">
-                                            : « <span th:text="${r.commentaire}"></span> »
-                                        </span>
-                                    </div>
-                                </li>
-                            </ul>
+                        <div class="db-card-body flush">
+                            <div class="db-refus" th:each="r : ${mesRefus}">
+                                <div class="d-flex justify-content-between align-items-baseline">
+                                    <a th:href="@{/demande/fiche/{id}(id=${r.demandeId})}" th:text="${r.demandeId}"></a>
+                                    <small style="color:#8a92a6" th:text="${#temporals.format(r.date, 'dd/MM/yyyy')}"></small>
+                                </div>
+                                <div class="db-refus-motif" th:text="${r.motif}"></div>
+                                <div class="db-refus-by">
+                                    Refusée par <strong th:text="${r.par}"></strong> · <span th:text="${r.etape}"></span>
+                                    <span class="db-refus-quote" th:if="${r.commentaire != null and !#strings.isEmpty(r.commentaire)}"
+                                          th:text="${'« ' + r.commentaire + ' »'}"></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- ===== 3 CARTES PRINCIPALES AVEC TENDANCES MO/MO ===== -->
+        <!-- ===== PERFORMANCE : SLA ===== -->
+        <div class="db-section">
+            <div class="db-section-title"><span>Délais d'approbation</span></div>
+            <div class="db-card">
+                <div class="db-card-head flex-wrap">
+                    <div>
+                        <h2 class="db-card-title">Délai moyen d'approbation par priorité</h2>
+                        <div class="db-card-sub">Le trait noir marque l'objectif ; la barre devient rouge au-delà</div>
+                    </div>
+                    <div class="db-seg" role="group" aria-label="Périmètre du SLA">
+                        <button type="button" id="btnSlaPersonal" onclick="switchSlaMode('personal')"><i class="fas fa-user me-1"></i>Mon SLA</button>
+                        <button type="button" id="btnSlaGlobal" onclick="switchSlaMode('global')"><i class="fas fa-globe me-1"></i>Global</button>
+                    </div>
+                </div>
+                <div class="db-card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="db-sla">
+                                <div class="db-sla-head">
+                                    <span class="db-prio" style="--dot:#d03b3b">P0 · Urgent</span>
+                                    <span id="badgeSlaP0" class="db-status"></span>
+                                </div>
+                                <div class="db-sla-value" id="valSlaP0">—</div>
+                                <div class="db-sla-target">Objectif : 1 jour</div>
+                                <div class="db-bullet"><span class="fill" id="barSlaP0"></span><span class="target"></span></div>
+                                <div class="db-bullet-scale"><span>0</span><span>1 j</span><span>2 j</span></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="db-sla">
+                                <div class="db-sla-head">
+                                    <span class="db-prio" style="--dot:#ec835a">P1 · Normal</span>
+                                    <span id="badgeSlaP1" class="db-status"></span>
+                                </div>
+                                <div class="db-sla-value" id="valSlaP1">—</div>
+                                <div class="db-sla-target">Objectif : 2 jours</div>
+                                <div class="db-bullet"><span class="fill" id="barSlaP1"></span><span class="target"></span></div>
+                                <div class="db-bullet-scale"><span>0</span><span>2 j</span><span>4 j</span></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="db-sla">
+                                <div class="db-sla-head">
+                                    <span class="db-prio" style="--dot:#8a92a6">P2 · Faible</span>
+                                    <span id="badgeSlaP2" class="db-status"></span>
+                                </div>
+                                <div class="db-sla-value" id="valSlaP2">—</div>
+                                <div class="db-sla-target">Objectif : 7 jours</div>
+                                <div class="db-bullet"><span class="fill" id="barSlaP2"></span><span class="target"></span></div>
+                                <div class="db-bullet-scale"><span>0</span><span>7 j</span><span>14 j</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== ACHATS (encadrement) ===== -->
+        <div class="db-section" th:if="${indicateurs != null}">
+            <div class="db-section-title"><span>Achats &amp; logistique</span></div>
             <div class="row g-3 mb-3">
-
-                <!-- En cours de traitement — bleu -->
-                <div class="col-xl-4 col-md-6">
-                    <div class="stat-card grad-blue">
-                        <div class="card-body">
-                            <i class="fas fa-spinner card-icon"></i>
-                            <div class="stat-label">En cours de traitement</div>
-                            <div class="stat-value" id="valEnCours" th:text="${enCours}">0</div>
-                            <div class="stat-sub d-flex justify-content-between align-items-center">
-                                <span><i class="fas fa-clock me-1"></i>En attente de validation</span>
-                                <span class="badge rounded-pill bg-white text-dark shadow-sm fw-bold ms-1" id="badgeTrendEnCours"
-                                      th:text="${trendEnCours != null ? (trendEnCours >= 0 ? '+' + trendEnCours + '%' : trendEnCours + '%') : '0%'}">+0%</span>
-                            </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="db-card db-mini">
+                        <div class="db-mini-label"><i class="fas fa-file-invoice-dollar"></i>Achats engagés (BC validés)</div>
+                        <!-- Une ligne par devise : les montants de devises différentes ne s'additionnent pas -->
+                        <div class="db-mini-value" th:if="${#lists.isEmpty(indicateurs.montants)}">0 <small>MGA TTC</small></div>
+                        <div class="db-mini-value" th:each="m, it : ${indicateurs.montants}" th:classappend="${!it.first} ? 'secondary'">
+                            <span th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).nombre(m.montantTtc, m.devise)}"></span>
+                            <small th:text="${m.devise + ' TTC'}">MGA TTC</small>
+                        </div>
+                        <div class="db-mini-sub">
+                            <span th:text="${indicateurs.nombreBc}"></span> bon(s)
+                            <th:block th:each="m : ${indicateurs.montants}">
+                                · moy. <span th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(m.montantMoyen(), m.devise)}"></span>
+                            </th:block>
                         </div>
                     </div>
                 </div>
-
-                <!-- Refusées — rouge -->
-                <div class="col-xl-4 col-md-6">
-                    <div class="stat-card grad-red">
-                        <div class="card-body">
-                            <i class="fas fa-times-circle card-icon"></i>
-                            <div class="stat-label">Demandes refusées</div>
-                            <div class="stat-value" id="valRefusees" th:text="${refusees}">0</div>
-                            <div class="stat-sub d-flex justify-content-between align-items-center">
-                                <span><i class="fas fa-ban me-1"></i>Total refusées</span>
-                                <span class="badge rounded-pill bg-white text-dark shadow-sm fw-bold ms-1" id="badgeTrendRefusees"
-                                      th:text="${trendRefusees != null ? (trendRefusees >= 0 ? '+' + trendRefusees + '%' : trendRefusees + '%') : '0%'}">+0%</span>
-                            </div>
+                <div class="col-xl-3 col-md-6">
+                    <a class="db-card db-mini" th:href="@{/bon-commande/list(aRecevoir=true)}">
+                        <div class="db-mini-label"><i class="fas fa-truck-loading"></i>Taux de réception</div>
+                        <div class="db-mini-value">
+                            <span th:text="${indicateurs.tauxReception != null ? indicateurs.tauxReception + ' %' : '—'}"></span>
                         </div>
-                    </div>
+                        <div class="db-meter"><span th:style="'width:' + ${indicateurs.tauxReception != null ? indicateurs.tauxReception : 0} + '%'"></span></div>
+                        <div class="db-mini-sub">
+                            <span th:text="${indicateurs.bcRecus}"></span> / <span th:text="${indicateurs.bcValides}"></span> BC entièrement reçus
+                        </div>
+                    </a>
                 </div>
-
-                <!-- Terminées — vert -->
-                <div class="col-xl-4 col-md-6">
-                    <div class="stat-card grad-green">
-                        <div class="card-body">
-                            <i class="fas fa-check-circle card-icon"></i>
-                            <div class="stat-label">Demandes terminées</div>
-                            <div class="stat-value" id="valTerminees" th:text="${terminees}">0</div>
-                            <div class="stat-sub d-flex justify-content-between align-items-center">
-                                <span><i class="fas fa-check me-1"></i>Total validées</span>
-                                <span class="badge rounded-pill bg-white text-dark shadow-sm fw-bold ms-1" id="badgeTrendTerminees"
-                                      th:text="${trendTerminees != null ? (trendTerminees >= 0 ? '+' + trendTerminees + '%' : trendTerminees + '%') : '0%'}">+0%</span>
-                            </div>
-                        </div>
-                    </div>
+                <div class="col-xl-3 col-md-6">
+                    <a class="db-card db-mini" th:classappend="${indicateurs.bcEnRetard > 0} ? 'alerte'"
+                       th:href="@{/bon-commande/list(aRecevoir=true)}">
+                        <div class="db-mini-label"><i class="fas fa-shipping-fast"></i>Livraisons en retard</div>
+                        <div class="db-mini-value"><span th:text="${indicateurs.bcEnRetard}"></span> <small>BC</small></div>
+                        <div class="db-mini-sub">Date de livraison prévue dépassée</div>
+                    </a>
                 </div>
-
-            </div>
-
-            <!-- ===== CARTE DÉLAIS MOYENS D'APPROBATION (SLA) AVEC BASCULE PERSONNEL / GLOBAL ===== -->
-            <div class="row g-3 mb-3">
-                <div class="col-xl-12">
-                    <div class="chart-card shadow-sm border-0">
-                        <div class="card-header bg-transparent d-flex flex-wrap justify-content-between align-items-center py-3">
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="fw-bold me-2" style="color:#001051;">
-                                    <i class="fas fa-stopwatch text-primary me-2"></i>SLA – Délais Moyens d'Approbation
-                                </span>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <button type="button" id="btnSlaPersonal" class="btn btn-gradient-blue" onclick="switchSlaMode('personal')">
-                                        <i class="fas fa-user-check me-1"></i>Mon SLA
-                                    </button>
-                                    <button type="button" id="btnSlaGlobal" class="btn btn-outline-gradient-blue" onclick="switchSlaMode('global')">
-                                        <i class="fas fa-globe me-1"></i>SLA Global
-                                    </button>
-                                </div>
-                            </div>
-                            <span class="badge bg-light text-secondary border fw-normal">Objectifs : P0 = 1j | P1 = 2j | P2 = 7j</span>
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <!-- P0 -->
-                                <div class="col-md-4">
-                                    <div class="p-3 rounded border bg-light h-100">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="badge bg-danger">P0 — Urgent</span>
-                                            <span class="text-muted small">Cible: 1 jour</span>
-                                        </div>
-                                        <div class="d-flex align-items-baseline my-2">
-                                            <span class="h3 fw-bold mb-0 me-2" id="valSlaP0">N/A</span>
-                                            <span id="badgeSlaP0" class="badge" style="display:none;">Respecté</span>
-                                        </div>
-                                        <div class="progress" style="height: 6px;">
-                                            <div id="barSlaP0" class="progress-bar bg-danger" role="progressbar" style="width: 0%;"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- P1 -->
-                                <div class="col-md-4">
-                                    <div class="p-3 rounded border bg-light h-100">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="badge bg-warning text-dark">P1 — Normal</span>
-                                            <span class="text-muted small">Cible: 2 jours</span>
-                                        </div>
-                                        <div class="d-flex align-items-baseline my-2">
-                                            <span class="h3 fw-bold mb-0 me-2" id="valSlaP1">N/A</span>
-                                            <span id="badgeSlaP1" class="badge" style="display:none;">Respecté</span>
-                                        </div>
-                                        <div class="progress" style="height: 6px;">
-                                            <div id="barSlaP1" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- P2 -->
-                                <div class="col-md-4">
-                                    <div class="p-3 rounded border bg-light h-100">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="badge bg-info text-dark">P2 — Faible</span>
-                                            <span class="text-muted small">Cible: 7 jours</span>
-                                        </div>
-                                        <div class="d-flex align-items-baseline my-2">
-                                            <span class="h3 fw-bold mb-0 me-2" id="valSlaP2">N/A</span>
-                                            <span id="badgeSlaP2" class="badge" style="display:none;">Respecté</span>
-                                        </div>
-                                        <div class="progress" style="height: 6px;">
-                                            <div id="barSlaP2" class="progress-bar bg-info" role="progressbar" style="width: 0%;"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="col-xl-3 col-md-6">
+                    <a class="db-card db-mini" th:classappend="${indicateurs.alertesStock > 0} ? 'alerte'"
+                       th:href="@{/stock/etat-stock(etat='ALERTE')}">
+                        <div class="db-mini-label"><i class="fas fa-boxes"></i>Alertes de stock</div>
+                        <div class="db-mini-value"><span th:text="${indicateurs.alertesStock}"></span> <small>article(s)</small></div>
+                        <div class="db-mini-sub">En rupture ou sous le seuil</div>
+                    </a>
                 </div>
             </div>
 
-            <!-- ===== ACHATS ET DÉLAIS (encadrement), sur la période choisie ===== -->
-            <th:block th:if="${indicateurs != null}">
-                <div class="row g-3 mb-3">
-                    <div class="col-xl-3 col-md-6">
-                        <div class="kpi-tuile">
-                            <div class="kpi-libelle"><i class="fas fa-file-invoice-dollar me-1"></i>Achats engagés (BC validés)</div>
-                            <div class="kpi-valeur">
-                                <span th:text="${#numbers.formatDecimal(indicateurs.montantTtc, 1, 'WHITESPACE', 0, 'COMMA')}"></span>
-                                <small>MGA TTC</small>
-                            </div>
-                            <div class="kpi-sous">
-                                <span th:text="${indicateurs.nombreBc}"></span> bon(s) — moyenne
-                                <span th:text="${#numbers.formatDecimal(indicateurs.montantMoyen, 1, 'WHITESPACE', 0, 'COMMA')}"></span> MGA
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-3 col-md-6">
-                        <a class="kpi-tuile" th:href="@{/bon-commande/list(aRecevoir=true)}">
-                            <div class="kpi-libelle"><i class="fas fa-truck me-1"></i>Réception des BC de la période</div>
-                            <div class="kpi-valeur">
-                                <span th:text="${indicateurs.tauxReception != null ? indicateurs.tauxReception + ' %' : '—'}"></span>
-                                <small>reçus</small>
-                            </div>
-                            <div class="kpi-sous">
-                                <span th:text="${indicateurs.bcRecus}"></span> / <span th:text="${indicateurs.bcValides}"></span> bon(s) entièrement reçus
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-xl-3 col-md-6">
-                        <a class="kpi-tuile" th:classappend="${indicateurs.bcEnRetard > 0} ? 'alerte'"
-                           th:href="@{/bon-commande/list(aRecevoir=true)}">
-                            <div class="kpi-libelle"><i class="fas fa-hourglass-end me-1"></i>Livraisons en retard</div>
-                            <div class="kpi-valeur"><span th:text="${indicateurs.bcEnRetard}"></span> <small>BC</small></div>
-                            <div class="kpi-sous">Date de livraison prévue dépassée (à ce jour)</div>
-                        </a>
-                    </div>
-                    <div class="col-xl-3 col-md-6">
-                        <a class="kpi-tuile" th:classappend="${indicateurs.alertesStock > 0} ? 'alerte'"
-                           th:href="@{/stock/etat-stock(etat='ALERTE')}">
-                            <div class="kpi-libelle"><i class="fas fa-boxes me-1"></i>Articles en alerte de stock</div>
-                            <div class="kpi-valeur"><span th:text="${indicateurs.alertesStock}"></span> <small>article(s)</small></div>
-                            <div class="kpi-sous">En rupture ou sous le seuil (à ce jour)</div>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="row g-3 mb-3">
-                    <!-- Délais par étape -->
-                    <div class="col-xl-7">
-                        <div class="chart-card shadow-sm border-0 h-100">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <span><i class="fas fa-route me-2"></i>Temps moyen passé à chaque étape</span>
-                                <span class="text-muted small">Demandes émises sur la période</span>
-                            </div>
-                            <div class="card-body">
-                                <div th:if="${#lists.isEmpty(indicateurs.delais)}" class="text-muted">
-                                    Aucune étape franchie sur la période.
-                                </div>
-                                <div th:each="d : ${indicateurs.delais}" class="mb-2">
-                                    <div class="d-flex justify-content-between small mb-1">
-                                        <span>
-                                            <span class="fw-semibold" th:text="${d.etape}"></span>
-                                            <span class="badge bg-danger ms-1" th:if="${d.plusLente() and #lists.size(indicateurs.delais) > 1}">plus lente</span>
-                                        </span>
-                                        <span>
-                                            <strong th:text="${d.joursMoyens + ' j'}"></strong>
-                                            <span class="text-muted" th:text="'(' + ${d.nombre} + ' demande(s))'"></span>
-                                        </span>
-                                    </div>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar" th:classappend="${d.plusLente() ? 'bg-danger' : 'bg-primary'}"
-                                             role="progressbar" th:style="'width: ' + ${d.largeur} + '%'"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Top fournisseurs -->
-                    <div class="col-xl-5">
-                        <div class="chart-card shadow-sm border-0 h-100">
-                            <div class="card-header">
-                                <i class="fas fa-trophy me-2"></i>Principaux fournisseurs (BC validés)
-                            </div>
-                            <div class="card-body p-0">
-                                <div th:if="${#lists.isEmpty(indicateurs.topFournisseurs)}" class="text-muted p-3">
-                                    Aucun bon de commande validé sur la période.
-                                </div>
-                                <table class="table table-sm align-middle mb-0" th:unless="${#lists.isEmpty(indicateurs.topFournisseurs)}">
-                                    <thead>
-                                    <tr class="small text-muted">
-                                        <th class="ps-3">Fournisseur</th>
-                                        <th class="text-center">BC</th>
-                                        <th class="text-end pe-3">Montant TTC (MGA)</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    <tr th:each="f : ${indicateurs.topFournisseurs}">
-                                        <td class="ps-3">
-                                            <a th:href="@{/bon-commande/list(fournisseur=${f.nom}, statut='VALIDE')}" th:text="${f.nom}"></a>
-                                        </td>
-                                        <td class="text-center" th:text="${f.nombreBons}"></td>
-                                        <td class="text-end pe-3 fw-semibold"
-                                            th:text="${#numbers.formatDecimal(f.montant, 1, 'WHITESPACE', 0, 'COMMA')}"></td>
-                                    </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </th:block>
-
-            <!-- ===== GRAPHIQUES ===== -->
             <div class="row g-3">
+                <div class="col-xl-7">
+                    <div class="db-card">
+                        <div class="db-card-head">
+                            <div>
+                                <h2 class="db-card-title">Temps moyen par étape</h2>
+                                <div class="db-card-sub">Demandes émises sur la période</div>
+                            </div>
+                        </div>
+                        <div class="db-card-body">
+                            <div th:if="${#lists.isEmpty(indicateurs.delais)}" class="db-empty">
+                                <i class="far fa-clock"></i>Aucune étape franchie sur la période.
+                            </div>
+                            <div th:each="d : ${indicateurs.delais}" class="db-step"
+                                 th:classappend="${d.plusLente() and #lists.size(indicateurs.delais) > 1} ? 'slow'">
+                                <div class="db-step-row">
+                                    <span>
+                                        <span class="db-step-name" th:text="${d.etape}"></span>
+                                        <span class="db-tag" th:if="${d.plusLente() and #lists.size(indicateurs.delais) > 1}">Goulot</span>
+                                    </span>
+                                    <span class="text-nowrap">
+                                        <span class="db-step-val" th:text="${d.joursMoyens + ' j'}"></span>
+                                        <span class="db-step-n" th:text="${d.nombre} + ' dem.'"></span>
+                                    </span>
+                                </div>
+                                <div class="db-step-bar"><span th:style="'width: ' + ${d.largeur} + '%'"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-5">
+                    <div class="db-card">
+                        <div class="db-card-head">
+                            <div>
+                                <h2 class="db-card-title">Principaux fournisseurs</h2>
+                                <div class="db-card-sub">Par montant de BC validés</div>
+                            </div>
+                        </div>
+                        <div class="db-card-body flush">
+                            <div th:if="${#lists.isEmpty(indicateurs.topFournisseurs)}" class="db-empty px-4 py-3">
+                                <i class="far fa-handshake"></i>Aucun bon de commande validé sur la période.
+                            </div>
+                            <table class="db-table" th:unless="${#lists.isEmpty(indicateurs.topFournisseurs)}">
+                                <thead>
+                                <tr><th>Fournisseur</th><th class="num">BC</th><th class="num">Montant TTC</th></tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="f, it : ${indicateurs.topFournisseurs}">
+                                    <td>
+                                        <span class="db-rank" th:text="${it.count}"></span>
+                                        <a th:href="@{/bon-commande/list(fournisseur=${f.nom}, statut='VALIDE')}" th:text="${f.nom}"></a>
+                                    </td>
+                                    <td class="num" th:text="${f.nombreBons}"></td>
+                                    <td class="num fw-bold text-nowrap"
+                                        th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(f.montant, f.devise)}"></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                <!-- Répartition statuts (Donut) -->
+        <!-- ===== ANALYSE DES DEMANDES (graphiques) ===== -->
+        <div class="db-section">
+            <div class="db-section-title"><span>Analyse des demandes</span></div>
+            <div class="row g-3">
+                <div class="col-xl-8">
+                    <div class="db-card">
+                        <div class="db-card-head">
+                            <div>
+                                <h2 class="db-card-title">Évolution mensuelle</h2>
+                                <div class="db-card-sub">Demandes par mois et par statut</div>
+                            </div>
+                        </div>
+                        <div class="db-card-body"><div id="demandesParMoisChart" class="db-chart"></div></div>
+                    </div>
+                </div>
                 <div class="col-xl-4 col-md-6">
-                    <div class="chart-card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-chart-pie me-2"></i>Répartition des statuts</span>
-                            <span class="text-muted small" style="font-size: 11px;"><i class="fas fa-mouse-pointer me-1"></i>Cliquer pour consulter</span>
+                    <div class="db-card">
+                        <div class="db-card-head">
+                            <div>
+                                <h2 class="db-card-title">Répartition des statuts</h2>
+                                <div class="db-card-sub">Sur la période</div>
+                            </div>
+                            <span class="db-hint"><i class="fas fa-mouse-pointer me-1"></i>Cliquable</span>
                         </div>
-                        <div class="card-body d-flex justify-content-center">
-                            <div id="statutDonutChart" style="height:260px; width:100%;"></div>
-                        </div>
+                        <div class="db-card-body"><div id="statutDonutChart" class="db-chart"></div></div>
                     </div>
                 </div>
 
-                <!-- Évolution mensuelle (Bar) -->
-                <div class="col-xl-8 col-md-6">
-                    <div class="chart-card">
-                        <div class="card-header">
-                            <i class="fas fa-chart-bar me-2"></i>Évolution mensuelle des demandes
+                <div class="col-xl-4 col-md-6">
+                    <div class="db-card">
+                        <div class="db-card-head">
+                            <div>
+                                <h2 class="db-card-title">Nature de dépense</h2>
+                                <div class="db-card-sub">OPEX / CAPEX</div>
+                            </div>
+                            <span class="db-hint"><i class="fas fa-mouse-pointer me-1"></i>Cliquable</span>
                         </div>
-                        <div class="card-body">
-                            <div id="demandesParMoisChart" style="height:260px;"></div>
+                        <div class="db-card-body"><div id="natureChart" class="db-chart"></div></div>
+                    </div>
+                </div>
+                <div class="col-xl-4 col-md-6">
+                    <div class="db-card">
+                        <div class="db-card-head">
+                            <div>
+                                <h2 class="db-card-title">Par priorité</h2>
+                                <div class="db-card-sub">Nombre de demandes</div>
+                            </div>
+                            <span class="db-hint"><i class="fas fa-mouse-pointer me-1"></i>Cliquable</span>
                         </div>
+                        <div class="db-card-body"><div id="prioriteChart" class="db-chart"></div></div>
+                    </div>
+                </div>
+                <div class="col-xl-4 col-md-12">
+                    <div class="db-card">
+                        <div class="db-card-head">
+                            <div>
+                                <h2 class="db-card-title">En attente par niveau</h2>
+                                <div class="db-card-sub">Circuit de validation</div>
+                            </div>
+                            <span class="db-hint"><i class="fas fa-mouse-pointer me-1"></i>Cliquable</span>
+                        </div>
+                        <div class="db-card-body"><div id="niveauxChart" class="db-chart"></div></div>
                     </div>
                 </div>
 
-                <!-- Demandes en attente par niveau -->
-                <div class="col-xl-12">
-                    <div class="chart-card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-sitemap me-2"></i>Demandes en attente par niveau de validation</span>
-                            <span class="text-muted small" style="font-size: 11px;"><i class="fas fa-mouse-pointer me-1"></i>Cliquer pour filtrer</span>
+                <div class="col-12">
+                    <div class="db-card">
+                        <div class="db-card-head">
+                            <div>
+                                <h2 class="db-card-title">Demandes par service</h2>
+                                <div class="db-card-sub">Classées par volume</div>
+                            </div>
+                            <span class="db-hint"><i class="fas fa-mouse-pointer me-1"></i>Cliquable</span>
                         </div>
-                        <div class="card-body">
-                            <div id="niveauxChart" style="height:280px;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Nature OPEX / CAPEX (Donut) -->
-                <div class="col-xl-6 col-md-6">
-                    <div class="chart-card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-layer-group me-2"></i>Répartition par nature (OPEX / CAPEX)</span>
-                            <span class="text-muted small" style="font-size: 11px;"><i class="fas fa-mouse-pointer me-1"></i>Cliquer pour filtrer</span>
-                        </div>
-                        <div class="card-body d-flex justify-content-center">
-                            <div id="natureChart" style="height:260px; width:100%;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Priorité (Bar) -->
-                <div class="col-xl-6 col-md-6">
-                    <div class="chart-card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-flag me-2"></i>Demandes par priorité</span>
-                            <span class="text-muted small" style="font-size: 11px;"><i class="fas fa-mouse-pointer me-1"></i>Cliquer pour filtrer</span>
-                        </div>
-                        <div class="card-body">
-                            <div id="prioriteChart" style="height:260px;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-12">
-                    <div class="chart-card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-building me-2"></i>Demandes par service/département</span>
-                            <span class="text-muted small" style="font-size: 11px;"><i class="fas fa-mouse-pointer me-1"></i>Cliquer pour filtrer</span>
-                        </div>
-                        <div class="card-body">
-                            <div id="servicesChart" style="height:280px;"></div>
-                        </div>
+                        <div class="db-card-body"><div id="servicesChart" class="db-chart"></div></div>
                     </div>
                 </div>
             </div>
@@ -535,407 +657,314 @@
         <!-- ===== Injection Thymeleaf → variables JS ===== -->
         <script th:inline="javascript">
             /*<![CDATA[*/
-
-            // ── Compteurs 3 cartes
-            let enCours   = /*[[${enCours}]]*/ 0;
-            let refusees  = /*[[${refusees}]]*/ 0;
-            let terminees = /*[[${terminees}]]*/ 0;
-
-            // ── Données mensuelles
-            let moisData = /*[[${moisData}]]*/ [];
-
-            // ── Nature
-            let opex  = /*[[${opex}]]*/ 0;
-            let capex = /*[[${capex}]]*/ 0;
-
-            // ── Priorité
-            let p0 = /*[[${p0}]]*/ 0;
-            let p1 = /*[[${p1}]]*/ 0;
-            let p2 = /*[[${p2}]]*/ 0;
-
-            let attenteN1    = /*[[${attenteN1}]]*/ 0;
-            let attenteN2    = /*[[${attenteN2}]]*/ 0;
-            let attenteN3    = /*[[${attenteN3}]]*/ 0;
-            let attenteN4    = /*[[${attenteN4}]]*/ 0;
-            let attenteSG    = /*[[${attenteSG}]]*/ 0;
-            let attenteCodep = /*[[${attenteCodep}]]*/ 0;
-
-            let demandesParService = /*[[${demandesParService}]]*/ [];
-
-            // SLAs
-            let slaGlobalP0 = /*[[${slaP0}]]*/ null;
-            let slaGlobalP1 = /*[[${slaP1}]]*/ null;
-            let slaGlobalP2 = /*[[${slaP2}]]*/ null;
-
-            let monSlaP0 = /*[[${monSlaP0}]]*/ null;
-            let monSlaP1 = /*[[${monSlaP1}]]*/ null;
-            let monSlaP2 = /*[[${monSlaP2}]]*/ null;
-
+            const enCours   = /*[[${enCours}]]*/ 0;
+            const refusees  = /*[[${refusees}]]*/ 0;
+            const terminees = /*[[${terminees}]]*/ 0;
+            const moisData  = /*[[${moisData}]]*/ [];
+            const opex  = /*[[${opex}]]*/ 0;
+            const capex = /*[[${capex}]]*/ 0;
+            const p0 = /*[[${p0}]]*/ 0;
+            const p1 = /*[[${p1}]]*/ 0;
+            const p2 = /*[[${p2}]]*/ 0;
+            const attenteN1    = /*[[${attenteN1}]]*/ 0;
+            const attenteN2    = /*[[${attenteN2}]]*/ 0;
+            const attenteN3    = /*[[${attenteN3}]]*/ 0;
+            const attenteN4    = /*[[${attenteN4}]]*/ 0;
+            const attenteSG    = /*[[${attenteSG}]]*/ 0;
+            const attenteCodep = /*[[${attenteCodep}]]*/ 0;
+            const demandesParService = /*[[${demandesParService}]]*/ [];
+            // Une valeur par ligne : un crochet ouvrant suivi d'une barre est lu par Thymeleaf comme une balise fermante
+            const slaP0    = /*[[${slaP0}]]*/ null;
+            const slaP1    = /*[[${slaP1}]]*/ null;
+            const slaP2    = /*[[${slaP2}]]*/ null;
+            const monSlaP0 = /*[[${monSlaP0}]]*/ null;
+            const monSlaP1 = /*[[${monSlaP1}]]*/ null;
+            const monSlaP2 = /*[[${monSlaP2}]]*/ null;
+            const slaGlobal = [slaP0, slaP1, slaP2];
+            const slaPerso  = [monSlaP0, monSlaP1, monSlaP2];
             const listUrl = /*[[@{/demande/list}]]*/ '/demande/list';
-
             /*]]>*/
         </script>
 
-        <!-- ECharts -->
-        <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
         <script>
-            // Mode SLA initial
-            let currentSlaMode = (monSlaP0 != null || monSlaP1 != null || monSlaP2 != null) ? 'personal' : 'global';
-
-            // Palette charte
-            const BLEU_FONCE  = '#000A31';
-            const BLEU_VIF    = '#00129f';
-            const BLEU_CLAIR  = '#667097';
-            const VERT        = '#28a745';
-            const ROUGE       = '#dc2626';
-            const ORANGE      = '#fd7e14';
-            const VIOLET_SOFT  = '#6d28d9';
-
-            // Initialisation des graphiques ECharts
-            const chartStatut   = echarts.init(document.getElementById('statutDonutChart'));
-            const chartMois     = echarts.init(document.getElementById('demandesParMoisChart'));
-            const chartNature   = echarts.init(document.getElementById('natureChart'));
-            const chartPriorite = echarts.init(document.getElementById('prioriteChart'));
-            const chartNiveaux  = echarts.init(document.getElementById('niveauxChart'));
-            const chartServices = echarts.init(document.getElementById('servicesChart'));
-
-            // Curseur pointeur
-            [chartStatut, chartMois, chartNature, chartPriorite, chartNiveaux, chartServices].forEach(c => {
-                c.getZr().on('mousemove', function () {
-                    c.getZr().setCursorStyle('pointer');
-                });
-            });
-
-            // Init SLA View
-            switchSlaMode(currentSlaMode);
-
-            // ── 1. Donut – Répartition des statuts
-            chartStatut.setOption({
-                animation: true,
-                animationDuration: 1000,
-                animationEasing: 'cubicOut',
-                tooltip: { trigger: 'item', formatter: '{b} : {c} ({d}%)' },
-                legend: { bottom: 0, itemWidth: 12 },
-                series: [{
-                    type: 'pie',
-                    radius: ['50%', '75%'],
-                    center: ['50%', '45%'],
-                    data: [
-                        { value: enCours,   name: 'En cours',  itemStyle: { color: BLEU_VIF } },
-                        { value: refusees,  name: 'Refusées',  itemStyle: { color: ROUGE } },
-                        { value: terminees, name: 'Terminées', itemStyle: { color: VERT } }
-                    ],
-                    label: { show: false },
-                    emphasis: { scale: true, scaleSize: 10 }
-                }]
-            });
-
-            chartStatut.on('click', function(params) {
-                if (params.name === 'Refusées') window.location.href = listUrl + '?statut=-1';
-                else if (params.name === 'Terminées') window.location.href = listUrl + '?statut=15';
-                else window.location.href = listUrl;
-            });
-
-            // ── 2. Bar groupé – Évolution mensuelle
-            function getMoisLabels(data) {
-                return (data || []).map(d => {
-                    const [y, m] = d.mois.split('-');
-                    return new Date(y, m - 1).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
-                });
-            }
-
-            chartMois.setOption({
-                animation: true,
-                animationDuration: 1000,
-                animationEasing: 'cubicOut',
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                legend: { top: 0, itemWidth: 12 },
-                grid: { left: '3%', right: '3%', bottom: '10%', containLabel: true },
-                xAxis: { type: 'category', data: getMoisLabels(moisData), axisLabel: { rotate: 30, fontSize: 11 } },
-                yAxis: { type: 'value', minInterval: 1 },
-                series: [
-                    { name: 'En cours', type: 'bar', data: moisData.map(d => d.enCours), itemStyle: { color: BLEU_VIF, borderRadius: [4, 4, 0, 0] } },
-                    { name: 'Refusées', type: 'bar', data: moisData.map(d => d.refusees), itemStyle: { color: ROUGE, borderRadius: [4, 4, 0, 0] } },
-                    { name: 'Terminées', type: 'bar', data: moisData.map(d => d.terminees), itemStyle: { color: VERT, borderRadius: [4, 4, 0, 0] } }
-                ]
-            });
-
-            // ── 3. Donut – OPEX / CAPEX
-            chartNature.setOption({
-                animation: true,
-                animationDuration: 1200,
-                tooltip: { trigger: 'item', formatter: '{b} : {c} ({d}%)' },
-                legend: { bottom: 0, itemWidth: 12 },
-                series: [{
-                    type: 'pie',
-                    radius: ['45%', '70%'],
-                    center: ['50%', '45%'],
-                    data: [
-                        { value: opex,  name: 'OPEX',  itemStyle: { color: BLEU_FONCE } },
-                        { value: capex, name: 'CAPEX', itemStyle: { color: BLEU_CLAIR } }
-                    ],
-                    label: { show: false }
-                }]
-            });
-
-            chartNature.on('click', function(params) {
-                window.location.href = listUrl + '?type=' + params.name;
-            });
-
-            // ── 4. Bar – Priorité
-            chartPriorite.setOption({
-                animation: true,
-                animationDuration: 1000,
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                grid: { left: '3%', right: '3%', bottom: '5%', containLabel: true },
-                xAxis: { type: 'category', data: ['P0 — Urgent', 'P1 — Normal', 'P2 — Faible'] },
-                yAxis: { type: 'value', minInterval: 1 },
-                series: [{
-                    type: 'bar',
-                    data: [
-                        { value: p0, itemStyle: { color: ROUGE,      borderRadius: [4, 4, 0, 0] } },
-                        { value: p1, itemStyle: { color: ORANGE,     borderRadius: [4, 4, 0, 0] } },
-                        { value: p2, itemStyle: { color: BLEU_CLAIR, borderRadius: [4, 4, 0, 0] } }
-                    ],
-                    label: { show: true, position: 'top', fontSize: 12, fontWeight: 'bold' }
-                }]
-            });
-
-            chartPriorite.on('click', function(params) {
-                const prio = params.name.split(' ')[0];
-                window.location.href = listUrl + '?priorite=' + prio;
-            });
-
-            // ── 5. Bar horizontal – Demandes en attente par niveau
-            chartNiveaux.setOption({
-                animation: true,
-                animationDuration: 1000,
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: params => `${params[0].name} : <b>${params[0].value}</b> demande(s)` },
-                grid: { left: '3%', right: '8%', bottom: '5%', containLabel: true },
-                xAxis: { type: 'value', minInterval: 1, axisLabel: { fontSize: 11 } },
-                yAxis: { type: 'category', data: ['N+1 (Manager)', 'Moyens Généraux', 'Contrôleur de gestion', 'DFC', 'SG', 'Comité de dépenses'], axisLabel: { fontSize: 12 } },
-                series: [{
-                    type: 'bar',
-                    data: [
-                        { value: attenteN1,    itemStyle: { color: BLEU_VIF,   borderRadius: [0, 4, 4, 0] } },
-                        { value: attenteN2,    itemStyle: { color: BLEU_CLAIR, borderRadius: [0, 4, 4, 0] } },
-                        { value: attenteN3,    itemStyle: { color: VIOLET_SOFT,borderRadius: [0, 4, 4, 0] } },
-                        { value: attenteN4,    itemStyle: { color: VERT,       borderRadius: [0, 4, 4, 0] } },
-                        { value: attenteSG,    itemStyle: { color: BLEU_FONCE, borderRadius: [0, 4, 4, 0] } },
-                        { value: attenteCodep, itemStyle: { color: ORANGE,     borderRadius: [0, 4, 4, 0] } }
-                    ],
-                    label: { show: true, position: 'right', fontSize: 12, fontWeight: 'bold' },
-                    barMaxWidth: 40
-                }]
-            });
-
-            chartNiveaux.on('click', function(params) {
-                const levelMap = {
-                    'N+1 (Manager)': 1,
-                    'Moyens Généraux': 11,
-                    'Contrôleur de gestion': 12,
-                    'DFC': 13,
-                    'SG': 14,
-                    'Comité de dépenses': 20
+            (function () {
+                // ── Palette (validée daltonisme) et encre
+                const C = {
+                    ink: '#0f1b3d', ink2: '#535d75', muted: '#8a92a6', grid: '#eef0f5', axis: '#d5d9e3', surface: '#ffffff',
+                    blue: '#2a78d6', blueLight: '#86b6ef', violet: '#6250d6', navy: '#001051',
+                    good: '#0ca30c', critical: '#d03b3b', serious: '#ec835a'
                 };
-                const st = levelMap[params.name];
-                if (st) window.location.href = listUrl + '?statut=' + st;
-            });
+                const FONT = "Figtree, 'Segoe UI', sans-serif";
+                const fmt = n => new Intl.NumberFormat('fr-FR').format(n || 0);
 
-            // ── 6. Bar horizontal – Demandes par service
-            chartServices.setOption({
-                animation: true,
-                animationDuration: 1000,
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: params => `${params[0].name} : <b>${params[0].value}</b> demande(s)` },
-                grid: { left: '3%', right: '8%', bottom: '5%', containLabel: true },
-                xAxis: { type: 'value', minInterval: 1, axisLabel: { fontSize: 11 } },
-                yAxis: { type: 'category', data: demandesParService.map(d => d.acronymeService ?? 'N/A'), axisLabel: { fontSize: 12 }, inverse: true },
-                series: [{
-                    type: 'bar',
-                    data: demandesParService.map(d => ({ value: d.nbDemande, itemStyle: { color: BLEU_VIF, borderRadius: [0, 4, 4, 0] } })),
-                    label: { show: true, position: 'right', fontSize: 12, fontWeight: 'bold' },
-                    barMaxWidth: 40
-                }]
-            });
-
-            chartServices.on('click', function(params) {
-                window.location.href = listUrl + '?demandeur=' + encodeURIComponent(params.name);
-            });
-
-            // ── Bascule SLA Personnel / Global
-            function switchSlaMode(mode) {
-                currentSlaMode = mode;
-                const btnPersonal = document.getElementById('btnSlaPersonal');
-                const btnGlobal   = document.getElementById('btnSlaGlobal');
-
-                if (mode === 'personal') {
-                    btnPersonal.className = 'btn btn-primary';
-                    btnGlobal.className   = 'btn btn-outline-primary';
-
-                    updateSlaItem('valSlaP0', 'badgeSlaP0', 'barSlaP0', monSlaP0, 1.0);
-                    updateSlaItem('valSlaP1', 'badgeSlaP1', 'barSlaP1', monSlaP1, 2.0);
-                    updateSlaItem('valSlaP2', 'badgeSlaP2', 'barSlaP2', monSlaP2, 7.0);
-                } else {
-                    btnGlobal.className   = 'btn btn-primary';
-                    btnPersonal.className = 'btn btn-outline-primary';
-
-                    updateSlaItem('valSlaP0', 'badgeSlaP0', 'barSlaP0', slaGlobalP0, 1.0);
-                    updateSlaItem('valSlaP1', 'badgeSlaP1', 'barSlaP1', slaGlobalP1, 2.0);
-                    updateSlaItem('valSlaP2', 'badgeSlaP2', 'barSlaP2', slaGlobalP2, 7.0);
-                }
-            }
-
-            // ── Fonctions AJAX & Presets de date
-            function applyDatePreset(preset) {
-                const today = new Date();
-                let fromDate, toDate;
-
-                if (preset === 'today') {
-                    fromDate = today;
-                    toDate = today;
-                } else if (preset === '7days') {
-                    fromDate = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
-                    toDate = today;
-                } else if (preset === 'thisMonth') {
-                    fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
-                    toDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                } else if (preset === 'lastMonth') {
-                    fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                    toDate = new Date(today.getFullYear(), today.getMonth(), 0);
-                } else if (preset === 'thisQuarter') {
-                    const q = Math.floor(today.getMonth() / 3);
-                    fromDate = new Date(today.getFullYear(), q * 3, 1);
-                    toDate = new Date(today.getFullYear(), (q + 1) * 3, 0);
-                } else if (preset === 'thisYear') {
-                    fromDate = new Date(today.getFullYear(), 0, 1);
-                    toDate = new Date(today.getFullYear(), 11, 31);
-                }
-
-                const formatDate = d => {
-                    const year = d.getFullYear();
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.getDate()).padStart(2, '0');
-                    return `${year}-${month}-${day}`;
+                const TOOLTIP = {
+                    backgroundColor: '#fff', borderColor: '#e6e9f0', borderWidth: 1, padding: [8, 12],
+                    textStyle: { color: C.ink, fontFamily: FONT, fontSize: 12 },
+                    extraCssText: 'border-radius:10px; box-shadow:0 8px 24px rgba(16,24,40,.12);'
+                };
+                const VALUE_AXIS = {
+                    type: 'value', minInterval: 1,
+                    axisLabel: { color: C.muted, fontSize: 11 },
+                    splitLine: { lineStyle: { color: C.grid } },
+                    axisLine: { show: false }, axisTick: { show: false }
+                };
+                const CAT_AXIS = {
+                    type: 'category',
+                    axisLabel: { color: C.ink2, fontSize: 11.5 },
+                    axisLine: { lineStyle: { color: C.axis } }, axisTick: { show: false }
                 };
 
-                document.getElementById('dateFromInput').value = formatDate(fromDate);
-                document.getElementById('dateToInput').value = formatDate(toDate);
-
-                refreshDashboardAsync();
-            }
-
-            function refreshDashboardAsync() {
-                const dateFrom = document.getElementById('dateFromInput').value;
-                const dateTo   = document.getElementById('dateToInput').value;
-
-                let url = '/api/dashboard/stats';
-                const params = [];
-                if (dateFrom) params.push('dateFrom=' + encodeURIComponent(dateFrom));
-                if (dateTo)   params.push('dateTo='   + encodeURIComponent(dateTo));
-                if (params.length > 0) url += '?' + params.join('&');
-
-                fetch(url)
-                    .then(response => response.json())
-                    .then(data => {
-                        // Cartes principales
-                        document.getElementById('valEnCours').innerText = data.enCours;
-                        document.getElementById('valRefusees').innerText = data.refusees;
-                        document.getElementById('valTerminees').innerText = data.terminees;
-
-                        // Tendances Mo/Mo
-                        const formatTrend = t => t != null ? (t >= 0 ? '+' + t + '%' : t + '%') : '0%';
-                        document.getElementById('badgeTrendEnCours').innerText   = formatTrend(data.trendEnCours);
-                        document.getElementById('badgeTrendRefusees').innerText  = formatTrend(data.trendRefusees);
-                        document.getElementById('badgeTrendTerminees').innerText = formatTrend(data.trendTerminees);
-
-                        // Update SLAs Data
-                        slaGlobalP0 = data.slaP0;
-                        slaGlobalP1 = data.slaP1;
-                        slaGlobalP2 = data.slaP2;
-
-                        monSlaP0 = data.monSlaP0;
-                        monSlaP1 = data.monSlaP1;
-                        monSlaP2 = data.monSlaP2;
-
-                        switchSlaMode(currentSlaMode);
-
-                        // ECharts update
-                        chartStatut.setOption({
-                            series: [{ data: [
-                                { value: data.enCours,   name: 'En cours',  itemStyle: { color: BLEU_VIF } },
-                                { value: data.refusees,  name: 'Refusées',  itemStyle: { color: ROUGE } },
-                                { value: data.terminees, name: 'Terminées', itemStyle: { color: VERT } }
-                            ]}]
-                        });
-
-                        chartNature.setOption({
-                            series: [{ data: [
-                                { value: data.opex,  name: 'OPEX',  itemStyle: { color: BLEU_FONCE } },
-                                { value: data.capex, name: 'CAPEX', itemStyle: { color: BLEU_CLAIR } }
-                            ]}]
-                        });
-
-                        chartPriorite.setOption({
-                            series: [{ data: [
-                                { value: data.p0, itemStyle: { color: ROUGE,      borderRadius: [4, 4, 0, 0] } },
-                                { value: data.p1, itemStyle: { color: ORANGE,     borderRadius: [4, 4, 0, 0] } },
-                                { value: data.p2, itemStyle: { color: BLEU_CLAIR, borderRadius: [4, 4, 0, 0] } }
-                            ]}]
-                        });
-
-                        chartNiveaux.setOption({
-                            series: [{ data: [
-                                { value: data.attenteN1,    itemStyle: { color: BLEU_VIF,   borderRadius: [0, 4, 4, 0] } },
-                                { value: data.attenteN2,    itemStyle: { color: BLEU_CLAIR, borderRadius: [0, 4, 4, 0] } },
-                                { value: data.attenteN3,    itemStyle: { color: VIOLET_SOFT,borderRadius: [0, 4, 4, 0] } },
-                                { value: data.attenteN4,    itemStyle: { color: VERT,       borderRadius: [0, 4, 4, 0] } },
-                                { value: data.attenteSG,    itemStyle: { color: BLEU_FONCE, borderRadius: [0, 4, 4, 0] } },
-                                { value: data.attenteCodep, itemStyle: { color: ORANGE,     borderRadius: [0, 4, 4, 0] } }
-                            ]}]
-                        });
-
-                        chartMois.setOption({
-                            xAxis: { data: getMoisLabels(data.moisData) },
-                            series: [
-                                { data: (data.moisData || []).map(d => d.enCours) },
-                                { data: (data.moisData || []).map(d => d.refusees) },
-                                { data: (data.moisData || []).map(d => d.terminees) }
-                            ]
-                        });
-
-                        if (data.demandesParService) {
-                            chartServices.setOption({
-                                yAxis: { data: data.demandesParService.map(d => d.acronymeService ?? 'N/A') },
-                                series: [{ data: data.demandesParService.map(d => ({ value: d.nbDemande, itemStyle: { color: BLEU_VIF, borderRadius: [0, 4, 4, 0] } })) }]
-                            });
-                        }
-                    })
-                    .catch(err => console.error("Erreur actualisation dashboard: ", err));
-            }
-
-            function updateSlaItem(valId, badgeId, barId, val, target) {
-                const valElem   = document.getElementById(valId);
-                const badgeElem = document.getElementById(badgeId);
-                const barElem   = document.getElementById(barId);
-
-                if (val != null) {
-                    valElem.innerText = val + ' j';
-                    if (val <= target) {
-                        badgeElem.className = 'badge bg-success';
-                        badgeElem.innerText = 'Respecté';
-                    } else {
-                        badgeElem.className = 'badge bg-warning text-dark';
-                        badgeElem.innerText = 'Dépassement';
+                const charts = [];
+                function make(id, option, onClick) {
+                    const el = document.getElementById(id);
+                    if (!el) return null;
+                    const ch = echarts.init(el, null, { renderer: 'svg' });
+                    ch.setOption(Object.assign({
+                        textStyle: { fontFamily: FONT },
+                        animationDuration: 700, animationEasing: 'cubicOut',
+                        tooltip: TOOLTIP
+                    }, option));
+                    if (onClick) {
+                        ch.on('click', onClick);
+                        ch.on('mouseover', () => el.style.cursor = 'pointer');
+                        ch.on('mouseout',  () => el.style.cursor = 'default');
                     }
-                    badgeElem.style.display = 'inline-block';
-                    const pct = Math.min(100, Math.round((val / target) * 100));
-                    barElem.style.width = pct + '%';
-                } else {
-                    valElem.innerText = 'N/A';
-                    badgeElem.style.display = 'none';
-                    barElem.style.width = '0%';
+                    charts.push(ch);
+                    return ch;
                 }
-            }
+                function empty(text) {
+                    return { title: { text: text || 'Aucune donnée sur la période', left: 'center', top: 'middle',
+                        textStyle: { color: C.muted, fontSize: 13, fontWeight: 500, fontFamily: FONT } } };
+                }
+                const isEmpty = arr => arr.every(v => !v);
+
+                // ── Tendances (pastilles) : la couleur dépend du sens souhaitable
+                document.querySelectorAll('.db-trend').forEach(el => {
+                    const raw = el.getAttribute('data-trend');
+                    const t = raw === null || raw === '' ? null : Number(raw);
+                    if (t === null || isNaN(t)) { el.style.display = 'none'; return; }
+                    const arrow = t > 0 ? 'fa-arrow-up' : t < 0 ? 'fa-arrow-down' : 'fa-minus';
+                    el.innerHTML = '<i class="fas ' + arrow + '" style="font-size:.65rem"></i>' + (t > 0 ? '+' : '') + t + ' %';
+                    const good = el.getAttribute('data-good');
+                    if (t !== 0 && good !== 'neutral') {
+                        el.classList.add((good === 'up') === (t > 0) ? 'good' : 'bad');
+                    }
+                    el.title = 'Évolution par rapport au mois précédent';
+                });
+
+                // ── Libellés des mois
+                const mois = moisData || [];
+                const moisLabels = mois.map(d => {
+                    const [y, m] = d.mois.split('-');
+                    return new Date(y, m - 1).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+                });
+
+                // ── Mini-courbes dans les KPI
+                function spark(id, values, color) {
+                    if (!values.length) return;
+                    make(id, {
+                        grid: { left: 0, right: 0, top: 6, bottom: 0 },
+                        xAxis: { type: 'category', show: false, boundaryGap: false, data: moisLabels },
+                        yAxis: { type: 'value', show: false, min: 0 },
+                        tooltip: Object.assign({}, TOOLTIP, { trigger: 'axis', axisPointer: { type: 'line', lineStyle: { color: C.axis } },
+                            formatter: p => p[0].name + ' : <b>' + fmt(p[0].value) + '</b>' }),
+                        series: [{
+                            type: 'line', data: values, smooth: 0.35, symbol: 'circle', symbolSize: 6, showSymbol: false,
+                            lineStyle: { width: 2, color: color }, itemStyle: { color: color },
+                            areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: color + '33' }, { offset: 1, color: color + '00' }]) }
+                        }]
+                    });
+                }
+                spark('sparkEnCours',   mois.map(d => d.enCours),   C.blue);
+                spark('sparkRefusees',  mois.map(d => d.refusees),  C.critical);
+                spark('sparkTerminees', mois.map(d => d.terminees), C.good);
+
+                // ── 1. Évolution mensuelle (barres empilées)
+                const stackSerie = (name, key, color, top) => ({
+                    name, type: 'bar', stack: 'total', barMaxWidth: 34, data: mois.map(d => d[key]),
+                    itemStyle: { color, borderColor: C.surface, borderWidth: 1, borderRadius: top ? [4, 4, 0, 0] : 0 },
+                    emphasis: { focus: 'series' }
+                });
+                make('demandesParMoisChart', mois.length ? {
+                    legend: { top: 0, right: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: C.ink2 } },
+                    grid: { left: 8, right: 8, top: 40, bottom: 4, containLabel: true },
+                    tooltip: Object.assign({}, TOOLTIP, {
+                        trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(42,120,214,.06)' } },
+                        formatter: ps => {
+                            const tot = ps.reduce((s, p) => s + (p.value || 0), 0);
+                            return '<div style="font-weight:700;margin-bottom:4px">' + ps[0].name + '</div>'
+                                + ps.slice().reverse().map(p => p.marker + p.seriesName + ' <b style="float:right;margin-left:16px">' + fmt(p.value) + '</b>').join('<br>')
+                                + '<div style="border-top:1px solid #eef0f5;margin-top:6px;padding-top:4px">Total <b style="float:right">' + fmt(tot) + '</b></div>';
+                        }
+                    }),
+                    xAxis: Object.assign({}, CAT_AXIS, { data: moisLabels }),
+                    yAxis: VALUE_AXIS,
+                    series: [
+                        stackSerie('Terminées', 'terminees', C.good),
+                        stackSerie('Refusées', 'refusees', C.critical),
+                        stackSerie('En cours', 'enCours', C.blue, true)
+                    ]
+                } : empty());
+
+                // ── Donut avec total au centre
+                function donut(id, data, label, onClick) {
+                    const total = data.reduce((s, d) => s + (d.value || 0), 0);
+                    if (!total) return make(id, empty());
+                    return make(id, {
+                        legend: { bottom: 0, icon: 'circle', itemWidth: 8, itemHeight: 8, itemGap: 16,
+                            textStyle: { color: C.ink2 },
+                            formatter: name => {
+                                const d = data.find(x => x.name === name);
+                                return name + '  ' + Math.round((d.value || 0) * 100 / total) + ' %';
+                            } },
+                        tooltip: Object.assign({}, TOOLTIP, { trigger: 'item',
+                            formatter: p => p.marker + p.name + ' : <b>' + fmt(p.value) + '</b> (' + p.percent + ' %)' }),
+                        title: { text: fmt(total), subtext: label, left: 'center', top: '34%',
+                            textStyle: { fontSize: 26, fontWeight: 800, color: C.ink, fontFamily: FONT },
+                            subtextStyle: { fontSize: 12, color: C.muted, fontFamily: FONT }, itemGap: 2 },
+                        series: [{
+                            type: 'pie', radius: ['58%', '78%'], center: ['50%', '44%'], data,
+                            padAngle: 2, itemStyle: { borderRadius: 6 },
+                            label: { show: false }, labelLine: { show: false },
+                            emphasis: { scale: true, scaleSize: 5 }
+                        }]
+                    }, onClick);
+                }
+
+                // ── 2. Statuts
+                donut('statutDonutChart', [
+                    { value: enCours,   name: 'En cours',  itemStyle: { color: C.blue } },
+                    { value: refusees,  name: 'Refusées',  itemStyle: { color: C.critical } },
+                    { value: terminees, name: 'Terminées', itemStyle: { color: C.good } }
+                ], 'demandes', p => {
+                    if (p.name === 'Refusées') window.location.href = listUrl + '?statut=-1';
+                    else if (p.name === 'Terminées') window.location.href = listUrl + '?statut=15';
+                    else window.location.href = listUrl;
+                });
+
+                // ── 3. OPEX / CAPEX
+                donut('natureChart', [
+                    { value: opex,  name: 'OPEX',  itemStyle: { color: C.blue } },
+                    { value: capex, name: 'CAPEX', itemStyle: { color: C.violet } }
+                ], 'demandes', p => window.location.href = listUrl + '?type=' + p.name);
+
+                // ── Barres horizontales (une seule série, une seule teinte)
+                function hbar(id, labels, values, onClick, color) {
+                    if (isEmpty(values)) return make(id, empty());
+                    const max = Math.max.apply(null, values);
+                    return make(id, {
+                        grid: { left: 4, right: 36, top: 4, bottom: 4, containLabel: true },
+                        tooltip: Object.assign({}, TOOLTIP, { trigger: 'item',
+                            formatter: p => p.name + ' : <b>' + fmt(p.value) + '</b> demande(s)' }),
+                        xAxis: Object.assign({}, VALUE_AXIS, { axisLabel: { show: false }, splitLine: { show: false } }),
+                        yAxis: Object.assign({}, CAT_AXIS, { data: labels, inverse: true, axisLine: { show: false } }),
+                        series: [{
+                            type: 'bar', barMaxWidth: 18, barMinHeight: 2,
+                            showBackground: true, backgroundStyle: { color: '#f3f5f9', borderRadius: 4 },
+                            data: values.map(v => ({ value: v, itemStyle: {
+                                color: v === max && v > 0 ? (color || C.blue) : (color ? color + 'b3' : C.blueLight), borderRadius: 4 } })),
+                            label: { show: true, position: 'right', color: C.ink, fontWeight: 700, fontSize: 12, formatter: p => fmt(p.value) }
+                        }]
+                    }, onClick);
+                }
+
+                // ── 4. Priorité
+                const prioLabels = ['P0 · Urgent', 'P1 · Normal', 'P2 · Faible'];
+                if (isEmpty([p0, p1, p2])) make('prioriteChart', empty());
+                else make('prioriteChart', {
+                    grid: { left: 8, right: 8, top: 24, bottom: 4, containLabel: true },
+                    tooltip: Object.assign({}, TOOLTIP, { trigger: 'item', formatter: p => p.name + ' : <b>' + fmt(p.value) + '</b> demande(s)' }),
+                    xAxis: Object.assign({}, CAT_AXIS, { data: prioLabels }),
+                    yAxis: VALUE_AXIS,
+                    series: [{
+                        type: 'bar', barMaxWidth: 48,
+                        data: [
+                            { value: p0, itemStyle: { color: C.critical, borderRadius: [6, 6, 0, 0] } },
+                            { value: p1, itemStyle: { color: C.serious,  borderRadius: [6, 6, 0, 0] } },
+                            { value: p2, itemStyle: { color: C.blueLight, borderRadius: [6, 6, 0, 0] } }
+                        ],
+                        label: { show: true, position: 'top', color: C.ink, fontWeight: 700, fontSize: 12 }
+                    }]
+                }, p => window.location.href = listUrl + '?priorite=' + p.name.split(' ')[0]);
+
+                // ── 5. En attente par niveau
+                const niveaux = [
+                    { label: 'N+1 (Manager)',         statut: 1,  v: attenteN1 },
+                    { label: 'Moyens Généraux',       statut: 11, v: attenteN2 },
+                    { label: 'Contrôleur de gestion', statut: 12, v: attenteN3 },
+                    { label: 'DFC',                   statut: 13, v: attenteN4 },
+                    { label: 'SG',                    statut: 14, v: attenteSG },
+                    { label: 'Comité de dépenses',    statut: 20, v: attenteCodep }
+                ];
+                hbar('niveauxChart', niveaux.map(n => n.label), niveaux.map(n => n.v), p => {
+                    const n = niveaux.find(x => x.label === p.name);
+                    if (n) window.location.href = listUrl + '?statut=' + n.statut;
+                });
+
+                // ── 6. Par service (hauteur adaptée au nombre de services)
+                const services = (demandesParService || []).slice().sort((a, b) => (b.nbDemande || 0) - (a.nbDemande || 0));
+                const servEl = document.getElementById('servicesChart');
+                servEl.style.height = Math.max(220, services.length * 34 + 20) + 'px';
+                hbar('servicesChart', services.map(d => d.acronymeService ?? 'N/A'), services.map(d => d.nbDemande),
+                    p => window.location.href = listUrl + '?demandeur=' + encodeURIComponent(p.name), C.navy);
+
+                // ── Redimensionnement
+                let t;
+                window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => charts.forEach(c => c.resize()), 120); });
+
+                // ── SLA : bascule personnel / global
+                const TARGETS = [1, 2, 7];
+                window.switchSlaMode = function (mode) {
+                    document.getElementById('btnSlaPersonal').classList.toggle('active', mode === 'personal');
+                    document.getElementById('btnSlaGlobal').classList.toggle('active', mode === 'global');
+                    const vals = mode === 'personal' ? slaPerso : slaGlobal;
+                    vals.forEach((v, i) => updateSla(i, v, TARGETS[i]));
+                };
+                function updateSla(i, val, target) {
+                    const valEl = document.getElementById('valSlaP' + i);
+                    const badge = document.getElementById('badgeSlaP' + i);
+                    const bar   = document.getElementById('barSlaP' + i);
+                    if (val == null) {
+                        valEl.innerHTML = '—';
+                        badge.className = 'db-status';
+                        bar.style.width = '0';
+                        return;
+                    }
+                    const ok = val <= target;
+                    valEl.innerHTML = String(val).replace('.', ',') + ' <small>j</small>';
+                    badge.className = 'db-status ' + (ok ? 'ok' : 'over');
+                    badge.innerHTML = ok ? '<i class="fas fa-check"></i>Respecté' : '<i class="fas fa-exclamation"></i>Dépassé';
+                    bar.className = 'fill' + (ok ? '' : ' over');
+                    bar.style.width = Math.min(100, (val / (2 * target)) * 100) + '%';
+                }
+                switchSlaMode(slaPerso.some(v => v != null) ? 'personal' : 'global');
+
+                // ── Raccourcis de période : remplissent les dates et rechargent la page
+                const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                function presetRange(preset) {
+                    const today = new Date(), y = today.getFullYear(), m = today.getMonth();
+                    switch (preset) {
+                        case '7days':       return [new Date(y, m, today.getDate() - 6), today];
+                        case 'thisMonth':   return [new Date(y, m, 1), new Date(y, m + 1, 0)];
+                        case 'lastMonth':   return [new Date(y, m - 1, 1), new Date(y, m, 0)];
+                        case 'thisQuarter': { const q = Math.floor(m / 3); return [new Date(y, q * 3, 1), new Date(y, q * 3 + 3, 0)]; }
+                        case 'thisYear':    return [new Date(y, 0, 1), new Date(y, 11, 31)];
+                    }
+                }
+                const fromIn = document.getElementById('dateFromInput');
+                const toIn   = document.getElementById('dateToInput');
+                document.querySelectorAll('[data-preset]').forEach(btn => {
+                    const r = presetRange(btn.dataset.preset);
+                    if (iso(r[0]) === fromIn.value && iso(r[1]) === toIn.value) btn.classList.add('active');
+                    btn.addEventListener('click', () => {
+                        fromIn.value = iso(r[0]);
+                        toIn.value = iso(r[1]);
+                        document.getElementById('filterForm').submit();
+                    });
+                });
+            })();
         </script>
     </section>
 </div>

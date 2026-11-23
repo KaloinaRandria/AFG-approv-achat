@@ -70,10 +70,7 @@ public class ReceptionBonCommandeController {
         }
         Map<String, String> valeurs = new HashMap<>();
         valeurs.put("dateReception", LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES).toString());
-        Arrays.stream(deviseService.getAllDevises())
-                .filter(d -> "MGA".equalsIgnoreCase(d.getAcronyme()))
-                .findFirst()
-                .ifPresent(d -> valeurs.put("devise", String.valueOf(d.getId())));
+        // La devise n'est plus saisie : c'est celle du bon de commande
         return afficher(bc, valeurs, model, session);
     }
 

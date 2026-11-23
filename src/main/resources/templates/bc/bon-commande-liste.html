@@ -135,7 +135,7 @@
                             <td th:text="${bc.description != null and !#strings.isEmpty(bc.description) ? #strings.abbreviate(bc.description, 50) : '—'}"></td>
                             <td th:text="${bc.fournisseur != null ? bc.fournisseur.nom : '—'}"></td>
                             <td class="text-end"
-                                th:text="${bc.montantTTC > 0 ? #numbers.formatDecimal(bc.montantTTC, 1, 'WHITESPACE', 2, 'COMMA') : '—'}"></td>
+                                th:text="${bc.montantTTC > 0 ? T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(bc.montantTTC, bc.codeDevise) : '—'}"></td>
                             <td>
                                 <span class="badge"
                                       th:classappend="${bc.statut?.name() == 'VALIDE'} ? 'bg-success' :

@@ -259,9 +259,9 @@ public class EmailSenderService {
             props.put("transmetteur",     transmetteur);
             props.put("destinataire",     destinataire);
             props.put("dateTransmission", dateTransmission);
-            props.put("montant",          demande.getTotalEstime() != null
-                                              ? demande.getTotalEstime()
-                                              : demande.getTotalPrix());
+            props.put("montant",          afg.achat.afgApprovAchat.service.util.FormatNumber.montant(
+                    demande.getTotalEstime() != null ? demande.getTotalEstime() : demande.getTotalPrix(),
+                    demande.getCodeDevise()));
             props.put("commentaire",      commentaire);
             props.put("lienFiche",        baseUrl + "/demande/fiche/" + demande.getId());
 
@@ -305,9 +305,9 @@ public class EmailSenderService {
             props.put("payeur",       payeur);
             props.put("destinataire", destinataire);
             props.put("datePaiement", datePaiement);
-            props.put("montant",      demande.getTotalEstime() != null
-                                          ? demande.getTotalEstime()
-                                          : demande.getTotalPrix());
+            props.put("montant",      afg.achat.afgApprovAchat.service.util.FormatNumber.montant(
+                    demande.getTotalEstime() != null ? demande.getTotalEstime() : demande.getTotalPrix(),
+                    demande.getCodeDevise()));
             props.put("commentaire",  commentaire);
             props.put("lienFiche",    baseUrl + "/demande/fiche/" + demande.getId());
 

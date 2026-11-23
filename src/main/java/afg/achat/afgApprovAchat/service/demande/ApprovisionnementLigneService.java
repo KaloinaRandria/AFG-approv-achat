@@ -39,7 +39,7 @@ public class ApprovisionnementLigneService {
      * Partie : la ligne garde la quantité à acheter et une ligne STOCK est créée pour le reste.
      * Totalité : la ligne passe en STOCK.
      *
-     * @param prixRepli prix à utiliser si le prix FIFO ne peut pas être calculé
+     * @param prixRepli prix en ariary à utiliser si le prix FIFO ne peut pas être calculé
      * @return la ligne servie depuis le stock
      */
     public DemandeFille scinder(int ligneId, double qteStock, double prixRepli) {
@@ -61,12 +61,14 @@ public class ApprovisionnementLigneService {
                     + " disponible(s), une fois déduit le stock réservé par les autres demandes.");
         }
 
-        double prix;
+        // Prix FIFO en ariary, exprimé dans la devise de la demande
+        double prixAriary;
         try {
-            prix = lotStockService.getPrixFifo(codeArticle, qteStock);
+            prixAriary = lotStockService.getPrixFifo(codeArticle, qteStock);
         } catch (RuntimeException e) {
-            prix = prixRepli;
+            prixAriary = prixRepli;
         }
+        double prix = ligne.getDemandeMere().depuisAriary(prixAriary);
 
         DemandeFille ligneStock;
         if (Math.abs(qteTotale - qteStock) <= TOLERANCE) {

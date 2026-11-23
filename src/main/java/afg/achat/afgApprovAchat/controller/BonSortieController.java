@@ -42,6 +42,21 @@ public class BonSortieController {
     private final BonSortieFilleRepo bsFilleRepo;
     private final WorkflowService workflowService;
     private final UtilisateurService utilisateurService;
+    private final afg.achat.afgApprovAchat.service.SortieAFaireService sortieAFaireService;
+
+    // ── Bons de sortie à faire ──────────────────────────────────────────────
+    /**
+     * Demandes de matériel validées dont des articles restent à sortir : celles dont le stock est
+     * disponible (prêtes) d'abord, puis celles qui attendent une livraison.
+     */
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
+    @GetMapping("/a-faire")
+    public String aFaire(Model model) {
+        List<afg.achat.afgApprovAchat.service.SortieAFaireService.DemandeASortir> demandes = sortieAFaireService.demandes();
+        model.addAttribute("pretes", demandes.stream().filter(d -> d.prete()).toList());
+        model.addAttribute("enAttente", demandes.stream().filter(d -> !d.prete()).toList());
+        return "bonSortie/bs-a-faire";
+    }
 
     // ── Créer un BS depuis la fiche demande ─────────────────────────────────
     // Même condition que l'affichage du bouton sur la fiche (canCreateBS : rôle MG)

@@ -4,6 +4,8 @@ import afg.achat.afgApprovAchat.model.fournisseur.AdresseFournisseur;
 import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.fournisseur.ResponsableFournisseur;
+import afg.achat.afgApprovAchat.model.util.Devise;
+import afg.achat.afgApprovAchat.model.util.DocumentEnDevise;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.persistence.*;
@@ -27,7 +29,7 @@ import java.util.List;
         sequenceName = "s_bc_mere",
         allocationSize = 1
 )
-public class BonCommandeMere {
+public class BonCommandeMere implements DocumentEnDevise {
     @Id @Column(name = "id_bc_mere")
     String id;
     @Column(unique = true)
@@ -66,6 +68,15 @@ public class BonCommandeMere {
     @Enumerated(EnumType.STRING)
     @Column(name = "statut")
     StatutBonCommande statut;
+
+    // ── Devise : prix et montants du bon sont dans cette devise (ariary par défaut) ──
+    @ManyToOne @JoinColumn(name = "id_devise", referencedColumnName = "id_devise")
+    Devise devise;
+    /** Cours de la devise en ariary, recopié à chaque enregistrement du brouillon puis figé. */
+    @Column(name = "taux_change")
+    Double tauxChange;
+    @Column(name = "date_taux")
+    LocalDateTime dateTaux;
 
     // ── Informations du bon de commande imprimé ─────────────────────────────
 

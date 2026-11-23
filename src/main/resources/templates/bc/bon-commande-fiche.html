@@ -274,8 +274,8 @@
                     <th class="col-article" style="width:14%">Article / demande</th>
                     <th style="width:7%">Qté</th>
                     <th style="width:8%">Unité</th>
-                    <th class="bc-montant" style="width:17%">PU HT en MGA</th>
-                    <th class="bc-montant" style="width:20%">Montant HT en MGA</th>
+                    <th class="bc-montant" style="width:17%">PU HT en <span th:text="${bonCommandeMere.codeDevise}">MGA</span></th>
+                    <th class="bc-montant" style="width:20%">Montant HT en <span th:text="${bonCommandeMere.codeDevise}">MGA</span></th>
                 </tr>
                 </thead>
                 <tbody>
@@ -332,7 +332,14 @@
                     </tr>
                     <tr>
                         <td class="fw-bold">Montant TTC</td>
-                        <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(montantTTC, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                        <td class="text-end fw-bold" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(montantTTC, bonCommandeMere.codeDevise)}"></td>
+                    </tr>
+                    <!-- Devise étrangère : cours copié sur le bon (sert à valoriser le stock en ariary) -->
+                    <tr th:if="${bonCommandeMere.deviseEtrangere}">
+                        <td class="small text-muted" colspan="2"
+                            th:text="'Cours : 1 ' + ${bonCommandeMere.codeDevise} + ' = '
+                                     + ${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(bonCommandeMere.tauxEffectif, 'MGA')}
+                                     + (${bonCommandeMere.dateTaux != null} ? ' (' + ${#temporals.format(bonCommandeMere.dateTaux, 'dd/MM/yyyy')} + ')' : '')"></td>
                     </tr>
                 </table>
             </div>

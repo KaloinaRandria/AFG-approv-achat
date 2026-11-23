@@ -302,8 +302,8 @@
                                         <th>Désignation fournisseur</th>
                                         <th>QTE</th>
                                         <th>Unité</th>
-                                        <th>Prix unitaire HT en MGA</th>
-                                        <th>Montant HT en MGA</th>
+                                        <th>Prix unitaire HT en <span th:text="${bonCommandeMere.demandeMere != null ? bonCommandeMere.demandeMere.codeDevise : bonCommandeMere.codeDevise}">MGA</span></th>
+                                        <th>Montant HT en <span th:text="${bonCommandeMere.demandeMere != null ? bonCommandeMere.demandeMere.codeDevise : bonCommandeMere.codeDevise}">MGA</span></th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -362,7 +362,7 @@
                                     <tr>
                                         <th class="text-end bg-light" style="width: 55%">Montant HT</th>
                                         <td class="text-end fw-bold">
-                                            <span id="displayMontantHT">0,00</span> MGA
+                                            <span id="displayMontantHT">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.demandeMere != null ? bonCommandeMere.demandeMere.codeDevise : bonCommandeMere.codeDevise}">MGA</span>
                                             <input type="hidden" name="montantHT" id="montantHTInput"
                                                    th:value="${bonCommandeMere.montantHT}">
                                         </td>
@@ -382,14 +382,14 @@
                                                    th:value="${bonCommandeMere.remise > 0 ? bonCommandeMere.remise : ''}">
                                             <span class="text-muted small">%</span>
                                         </th>
-                                        <td class="text-end text-danger" id="displayRemise">— MGA</td>
+                                        <td class="text-end text-danger" id="displayRemise">—</td>
                                     </tr>
 
                                     <!-- Montant HT après remise (affiché seulement si remise > 0) -->
                                     <tr id="rowMontantHTRemise" style="display: none;">
                                         <th class="text-end bg-light">Montant HT remisé</th>
                                         <td class="text-end fw-semibold">
-                                            <span id="displayMontantHTRemise">0,00</span> MGA
+                                            <span id="displayMontantHTRemise">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.demandeMere != null ? bonCommandeMere.demandeMere.codeDevise : bonCommandeMere.codeDevise}">MGA</span>
                                         </td>
                                     </tr>
 
@@ -407,14 +407,14 @@
                                                    th:value="${bonCommandeMere.tauxTVA > 0 ? bonCommandeMere.tauxTVA : ''}">
                                             <span class="text-muted small">%</span>
                                         </th>
-                                        <td class="text-end" id="displayTVA">0,00 MGA</td>
+                                        <td class="text-end" id="displayTVA">0,00</td>
                                     </tr>
 
                                     <!-- Montant TTC (calculé automatiquement) -->
                                     <tr class="table-primary">
                                         <th class="text-end">Montant TTC</th>
                                         <td class="text-end fw-bold fs-5">
-                                            <span id="displayMontantTTC">0,00</span> MGA
+                                            <span id="displayMontantTTC">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.demandeMere != null ? bonCommandeMere.demandeMere.codeDevise : bonCommandeMere.codeDevise}">MGA</span>
                                             <input type="hidden" name="montantTTC" id="montantTTCInput"
                                                    th:value="${bonCommandeMere.montantTTC}">
                                         </td>
@@ -460,6 +460,8 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+    // Devise du bon : celle de la demande dont il reprend les prix
+    const CODE_DEVISE = /*[[${bonCommandeMere.demandeMere != null ? bonCommandeMere.demandeMere.codeDevise : bonCommandeMere.codeDevise}]]*/ 'MGA';
     document.addEventListener("DOMContentLoaded", function () {
         const form = document.getElementById("formSauvegarderBC");
         const inputPhone = document.getElementById("nouveauResponsableContact");
@@ -768,10 +770,10 @@
         const displayRemise = document.getElementById('displayRemise');
 
         if (tauxRemise > 0) {
-            displayRemise.textContent = '− ' + formatMGA(montantRemise) + ' MGA';
+            displayRemise.textContent = '− ' + formatMGA(montantRemise) + ' ' + CODE_DEVISE;
             rowMontantHTRemise.style.display = '';
         } else {
-            displayRemise.textContent = '— MGA';
+            displayRemise.textContent = '—';
             rowMontantHTRemise.style.display = 'none';
         }
 
@@ -782,7 +784,7 @@
         // 4. TVA calculée sur le montant HT (après remise)
         const tauxTVA = parseFloat(document.getElementById('tauxTVA').value) || 0;
         const montantTVA = montantHTRemise * (tauxTVA / 100);
-        document.getElementById('displayTVA').textContent = formatMGA(montantTVA) + ' MGA';
+        document.getElementById('displayTVA').textContent = formatMGA(montantTVA) + ' ' + CODE_DEVISE;
 
         // 5. Montant TTC
         const montantTTC = montantHTRemise + montantTVA;

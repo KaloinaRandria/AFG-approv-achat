@@ -1,6 +1,8 @@
 package afg.achat.afgApprovAchat.model.demande;
 
 import afg.achat.afgApprovAchat.model.CentreBudgetaire;
+import afg.achat.afgApprovAchat.model.util.Devise;
+import afg.achat.afgApprovAchat.model.util.DocumentEnDevise;
 import afg.achat.afgApprovAchat.model.util.ModeTraitement;
 import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.util.TypeDemande;
@@ -25,7 +27,7 @@ import java.time.LocalDateTime;
         sequenceName = "demande_mere_id_demande_mere_seq",
         allocationSize = 1
 )
-public class DemandeMere {
+public class DemandeMere implements DocumentEnDevise {
     @Id
     @Column(name = "id_demande_mere")
     String id;
@@ -78,6 +80,15 @@ public class DemandeMere {
 
     @ManyToOne @JoinColumn(name = "id_mode_traitement", referencedColumnName = "id_mode_traitement")
     ModeTraitement modeTraitement;
+
+    // ── Devise (choisie par les Moyens Généraux à leur étape ; ariary par défaut) ──
+    @ManyToOne @JoinColumn(name = "id_devise", referencedColumnName = "id_devise")
+    Devise devise;
+    /** Cours de la devise en ariary quand elle a été choisie ; figé après l'étape M.G. */
+    @Column(name = "taux_change")
+    Double tauxChange;
+    @Column(name = "date_taux")
+    LocalDateTime dateTaux;
 
     /**
      * Suivi opérationnel après la validation finale. Il ne fait pas partie du

@@ -150,6 +150,26 @@ public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
                                    @Param("exclues") Collection<Integer> exclues);
 
     /**
+     * Lignes encore à sortir du stock : lignes non refusées des demandes de matériel validées et
+     * non soldées, dont la quantité dépasse les sorties confirmées. Les anciennes demandes (type
+     * STANDARD ou sans type) ne sont pas reprises. Triées par demande (la plus ancienne d'abord).
+     */
+    @Query("""
+    SELECT df FROM DemandeFille df JOIN df.demandeMere dm
+    WHERE dm.statut = :valide
+      AND dm.typeDemande = afg.achat.afgApprovAchat.model.util.TypeDemande.FOURNITURE
+      AND (dm.etatLivraison IS NULL
+           OR dm.etatLivraison <> afg.achat.afgApprovAchat.model.demande.DemandeMere.EtatLivraison.SOLDEE)
+      AND df.statut <> :refuse
+      AND df.quantite
+          - COALESCE((SELECT SUM(bs.quantiteSortie) FROM BonSortieFille bs
+                      WHERE bs.demandeFille = df AND bs.bonSortieMere.statut = 'CONFIRME'), 0)
+          > 0.0001
+    ORDER BY dm.dateDemande ASC, dm.id ASC, df.id ASC
+""")
+    List<DemandeFille> lignesASortir(@Param("valide") int valide, @Param("refuse") int refuse);
+
+    /**
      * Calcule la quantité totale réservée en stock pour un article dans une demande spécifique
      * @param demandeId L'ID de la demande mère
      * @param codeArticle Le code article
