@@ -2082,6 +2082,64 @@
         </div>
     </div>
 </div>
+<style>
+    /* ── Modal de scission : le stock disponible est l'information principale ── */
+    #scinderModal .modal-dialog { max-width: 620px; }
+    .sc-article {
+        display: flex; align-items: center; gap: .75rem; padding: .75rem .9rem; margin-bottom: 1rem;
+        background: #f6f7fa; border: 1px solid var(--ui-line-2); border-radius: 10px; font-size: .9rem;
+    }
+    .sc-article-icon {
+        flex: 0 0 2.2rem; height: 2.2rem; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+        background: #e8ebf6; color: #001051;
+    }
+    .sc-article-code { display: block; font-size: .72rem; font-weight: 700; color: var(--ui-muted); letter-spacing: .03em; }
+    .sc-article-des { font-weight: 700; color: var(--ui-ink); }
+
+    .sc-tiles { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: .6rem; margin-bottom: .9rem; }
+    .sc-tile { border: 1px solid var(--ui-line); border-radius: 12px; padding: .7rem .85rem; background: #fff; }
+    .sc-tile-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ui-muted); display: flex; align-items: center; gap: .35rem; }
+    .sc-tile-value { font-size: 1.35rem; font-weight: 800; color: var(--ui-ink); line-height: 1.2; margin-top: .25rem; font-variant-numeric: tabular-nums; }
+    .sc-tile-sub { font-size: .72rem; color: var(--ui-muted); }
+    /* Tuile principale : vert du stock, ou rouge / orange quand il n'y a rien à prendre */
+    .sc-tile-stock { background: #e9f6ec; border-color: #b7e1c1; }
+    .sc-tile-stock .sc-tile-label, .sc-tile-stock .sc-tile-sub { color: #1e7e34; }
+    .sc-tile-stock .sc-tile-value { font-size: 2rem; color: #1e7e34; }
+    .sc-tile-stock.vide { background: #fdecec; border-color: #f3c4c4; }
+    .sc-tile-stock.vide .sc-tile-label, .sc-tile-stock.vide .sc-tile-sub, .sc-tile-stock.vide .sc-tile-value { color: #b42318; }
+    .sc-tile-stock.reserve { background: #fff4e0; border-color: #f5d08a; }
+    .sc-tile-stock.reserve .sc-tile-label, .sc-tile-stock.reserve .sc-tile-sub, .sc-tile-stock.reserve .sc-tile-value { color: #9a5b00; }
+
+    .sc-coverage { margin-bottom: 1.1rem; }
+    .sc-coverage-label { font-size: .82rem; color: var(--ui-ink-2); }
+    .sc-coverage-pct { font-size: .85rem; font-weight: 800; color: #1e7e34; }
+    .sc-bar { height: 8px; background: var(--ui-line-2); border-radius: 999px; overflow: hidden; }
+    .sc-bar > span { display: block; height: 100%; width: 0; background: #28a745; border-radius: 999px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
+
+    .sc-input { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    .sc-result { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-bottom: .9rem; }
+    .sc-part { border: 1px solid var(--ui-line); border-radius: 12px; padding: .7rem .85rem; }
+    .sc-part-stock { border-color: #b7e1c1; background: #fbfefc; }
+    .sc-part-achat { border-color: #cdd3ea; background: #fbfcff; }
+    .sc-part-qte { font-size: 1.3rem; font-weight: 800; color: var(--ui-ink); margin: .35rem 0 .15rem; font-variant-numeric: tabular-nums; }
+    .sc-part-line { font-size: .78rem; color: var(--ui-ink-2); font-variant-numeric: tabular-nums; }
+    .sc-result.sans-achat { grid-template-columns: 1fr; }
+
+    .sc-prix { font-size: .75rem; color: var(--ui-ink-2); display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
+    .sc-prix-input {
+        border: 0; background: transparent; font-weight: 700; color: var(--ui-ink); width: 8rem; padding: 0;
+        font-variant-numeric: tabular-nums; -moz-appearance: textfield;
+    }
+    .sc-prix-input::-webkit-inner-spin-button, .sc-prix-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .sc-prix-input:focus { outline: none; box-shadow: none; }
+
+    @media (max-width: 576px) {
+        .sc-tiles { grid-template-columns: 1fr 1fr; }
+        .sc-tile-stock { grid-column: 1 / -1; }
+        .sc-result { grid-template-columns: 1fr; }
+    }
+</style>
 <div class="modal fade" id="scinderModal" tabindex="-1"
      aria-hidden="true"
      data-bs-backdrop="static"
@@ -2097,73 +2155,84 @@
             </div>
 
             <div class="modal-body">
-                <div class="alert alert-info mb-3" id="scinderInfo"></div>
+                <!-- Article concerné -->
+                <div class="sc-article" id="scinderInfo"></div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">
-                        Quantité disponible en stock
-                        <span class="text-danger">*</span>
-                    </label>
-                    <div class="input-group">
-                        <input type="number"
-                               id="scinderQteStock"
-                               class="form-control"
-                               min="0.01" step="0.01"
-                               placeholder="Ex: 5"/>
-                        <span class="input-group-text" id="scinderStockDispo"></span>
+                <!-- Stock : l'information principale du modal -->
+                <div class="sc-tiles">
+                    <div class="sc-tile sc-tile-stock" id="scinderTileStock">
+                        <div class="sc-tile-label"><i class="fas fa-warehouse"></i>Stock disponible</div>
+                        <div class="sc-tile-value" id="scinderStockDispo">
+                            <span class="spinner-border spinner-border-sm"></span>
+                        </div>
+                        <div class="sc-tile-sub">libre pour cette demande</div>
                     </div>
-                    <div class="form-text text-muted">
-                        <i class="fas fa-warehouse me-1"></i>
-                        Le reste sera automatiquement mis en ligne achat.
+                    <div class="sc-tile">
+                        <div class="sc-tile-label"><i class="fas fa-box-open"></i>Demandé</div>
+                        <div class="sc-tile-value" id="scinderQteDemandee">—</div>
+                        <div class="sc-tile-sub">quantité de la ligne</div>
+                    </div>
+                    <div class="sc-tile">
+                        <div class="sc-tile-label"><i class="fas fa-lock"></i>Déjà réservé</div>
+                        <div class="sc-tile-value" id="scinderQteReservee">—</div>
+                        <div class="sc-tile-sub">par d'autres demandes</div>
+                    </div>
+                </div>
+
+                <!-- Couverture de la demande par le stock -->
+                <div class="sc-coverage">
+                    <div class="d-flex justify-content-between align-items-baseline mb-1">
+                        <span class="sc-coverage-label" id="scinderCouvertureTexte">Calcul de la couverture…</span>
+                        <span class="sc-coverage-pct" id="scinderCouverturePct"></span>
+                    </div>
+                    <div class="sc-bar"><span id="scinderCouvertureBar"></span></div>
+                </div>
+
+                <!-- Saisie -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-end mb-1">
+                        <label class="form-label fw-bold mb-0" for="scinderQteStock">
+                            Quantité à servir depuis le stock <span class="text-danger">*</span>
+                        </label>
+                        <button type="button" class="btn btn-sm btn-outline-success" id="scinderToutPrendre" disabled>
+                            <i class="fas fa-check-double me-1"></i>Tout le disponible
+                        </button>
+                    </div>
+                    <input type="number"
+                           id="scinderQteStock"
+                           class="form-control form-control-lg sc-input"
+                           min="0.01" step="0.01"
+                           placeholder="Ex : 5"/>
+                    <div class="form-text">
+                        <i class="fas fa-shopping-cart me-1"></i>
+                        Le reste devient automatiquement une ligne achat.
                     </div>
                     <div id="scinderQteError"
                          class="invalid-feedback d-block"
                          style="display:none !important"></div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">
-                        Prix stock en MGA (FIFO, converti dans la devise de la demande)
-                    </label>
-                    <div class="input-group">
-                        <input type="number"
-                               id="scinderPrixStock"
-                               class="form-control"
-                               readonly/>
-                        <span class="input-group-text">Ar</span>
+                <!-- Résultat de la scission -->
+                <div class="sc-result">
+                    <div class="sc-part sc-part-stock">
+                        <div class="sc-part-head"><span class="ui-type ui-type-stock"><i class="fas fa-warehouse"></i>Ligne stock</span></div>
+                        <div class="sc-part-qte" id="scinderResQteStock">—</div>
+                        <div class="sc-part-line">PU <span id="scinderResPrixStock">—</span></div>
+                        <div class="sc-part-line">Montant <strong id="scinderResMontantStock">—</strong></div>
                     </div>
-                    <small class="text-muted">
-                        <i class="fas fa-magic me-1"></i>
-                        Pré-rempli automatiquement depuis le dernier bon de livraison.
-                    </small>
+                    <div class="sc-part sc-part-achat" id="scinderPartAchat">
+                        <div class="sc-part-head"><span class="ui-type ui-type-achat"><i class="fas fa-shopping-cart"></i>Ligne achat</span></div>
+                        <div class="sc-part-qte" id="scinderResQteAchat">—</div>
+                        <div class="sc-part-line text-muted">Prix proforma à saisir ensuite</div>
+                    </div>
                 </div>
 
-                <!-- Résumé -->
-                <div class="table-responsive mt-3">
-                    <table class="table table-sm table-bordered">
-                        <thead class="table-light">
-                        <tr>
-                            <th>Type</th>
-                            <th class="text-end">Quantité</th>
-                            <th class="text-end">Prix</th>
-                            <th class="text-end">Montant</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr class="table-success">
-                            <td><span class="badge bg-success">Stock</span></td>
-                            <td class="text-end" id="scinderResQteStock">—</td>
-                            <td class="text-end" id="scinderResPrixStock">—</td>
-                            <td class="text-end fw-semibold" id="scinderResMontantStock">—</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge bg-primary">Achat</span></td>
-                            <td class="text-end" id="scinderResQteAchat">—</td>
-                            <td class="text-end text-muted">Prix proforma</td>
-                            <td class="text-end text-muted">à saisir après</td>
-                        </tr>
-                        </tbody>
-                    </table>
+                <!-- Prix du stock (lecture seule) -->
+                <div class="sc-prix">
+                    <i class="fas fa-tag"></i>
+                    Prix unitaire stock (FIFO, en MGA converti dans la devise de la demande) :
+                    <input type="number" id="scinderPrixStock" class="sc-prix-input" readonly tabindex="-1"/>
+                    <span class="text-muted">— pré-rempli depuis le dernier bon de livraison</span>
                 </div>
             </div>
 
@@ -2237,70 +2306,125 @@
         let currentLigneId   = null;
         let currentQteTotale = 0;
         let currentPrixStock = 0;
+        let currentStockDispo = null;   // null tant que le stock n'est pas chargé
+
+        const $ = id => document.getElementById(id);
+        const qte = n => new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 2}).format(n);
+        const prix = n => new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(n);
+        const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
+            ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 
         // Ouvrir le modal au clic sur "Scinder"
         document.querySelectorAll('.btn-scinder').forEach(btn => {
             btn.addEventListener('click', function () {
                 currentLigneId    = this.dataset.id;
                 currentQteTotale  = parseFloat(this.dataset.qte);
+                currentStockDispo = null;
                 const code        = this.dataset.code;
                 const designation = this.dataset.designation;
 
                 // Reset
-                document.getElementById('scinderQteStock').value = '';
-                document.getElementById('scinderPrixStock').value = '';
-                const errEl = document.getElementById('scinderQteError');
+                $('scinderQteStock').value = '';
+                $('scinderPrixStock').value = '';
+                const errEl = $('scinderQteError');
                 errEl.style.display = 'none';
                 errEl.textContent   = '';
 
-                document.getElementById('scinderInfo').innerHTML =
-                    `<i class="fas fa-info-circle me-1"></i>
-                 <strong>${designation}</strong> — Quantité totale : <strong>${currentQteTotale}</strong>`;
+                // Article : data-designation vaut « CODE - Désignation »
+                const sep = designation.indexOf(' - ');
+                const codeArt = sep > 0 ? designation.slice(0, sep) : code;
+                const libelle = sep > 0 ? designation.slice(sep + 3) : designation;
+                $('scinderInfo').innerHTML =
+                    `<span class="sc-article-icon"><i class="fas fa-box"></i></span>
+                     <span><span class="sc-article-code">${esc(codeArt)}</span>
+                           <span class="sc-article-des">${esc(libelle)}</span></span>`;
+
+                $('scinderQteDemandee').textContent = qte(currentQteTotale);
+                $('scinderQteReservee').textContent = '—';
+                $('scinderStockDispo').innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                $('scinderTileStock').classList.remove('vide', 'reserve');
+                $('scinderToutPrendre').disabled = true;
+                $('btnConfirmScinder').disabled = true;
+                afficherCouverture();
 
                 // Charger stock + dernier prix
-                // Dans le modal scinder
                 fetch(`${CONTEXT_PATH}demande/stock/disponible/${code}?demandeId=${demandeId}`)
                     .then(r => r.json())
                     .then(data => {
                         currentPrixStock = data.dernierPrix ?? 0;
-                        document.getElementById('scinderPrixStock').value = currentPrixStock;
+                        $('scinderPrixStock').value = currentPrixStock;
 
-                        const stockDispo = data.stockDisponible ?? 0;
-                        document.getElementById('scinderStockDispo').textContent = `Dispo: ${stockDispo}`;
-                        document.getElementById('scinderQteStock').max =
-                            Math.min(stockDispo, currentQteTotale);
+                        currentStockDispo = data.stockDisponible ?? 0;
+                        const reserve = data.quantiteReservee ?? 0;
+                        $('scinderStockDispo').textContent = qte(currentStockDispo);
+                        $('scinderQteReservee').textContent = qte(reserve);
+                        $('scinderQteStock').max = Math.min(currentStockDispo, currentQteTotale);
 
+                        // Rien à prendre : tuile rouge (ou orange si tout est réservé ailleurs)
+                        if (currentStockDispo <= 0) {
+                            $('scinderTileStock').classList.add(reserve > 0 ? 'reserve' : 'vide');
+                        } else {
+                            $('scinderToutPrendre').disabled = false;
+                            $('btnConfirmScinder').disabled = false;
+                        }
+                        afficherCouverture();
                         recalculerResume();
                     })
                     .catch(() => {
-                        document.getElementById('scinderStockDispo').textContent = 'Erreur chargement';
+                        $('scinderStockDispo').textContent = 'Erreur';
+                        $('scinderTileStock').classList.add('vide');
+                        $('scinderCouvertureTexte').textContent = 'Le stock n\'a pas pu être chargé.';
                     });
             });
         });
 
+        // Part de la quantité demandée que le stock peut couvrir
+        function afficherCouverture() {
+            const texte = $('scinderCouvertureTexte');
+            const pctEl = $('scinderCouverturePct');
+            const bar   = $('scinderCouvertureBar');
+            if (currentStockDispo === null) {
+                texte.textContent = 'Calcul de la couverture…';
+                pctEl.textContent = '';
+                bar.style.width = '0';
+                return;
+            }
+            const couvrable = Math.min(currentStockDispo, currentQteTotale);
+            const pct = currentQteTotale > 0 ? Math.round(couvrable * 100 / currentQteTotale) : 0;
+            bar.style.width = pct + '%';
+            pctEl.textContent = pct + ' %';
+            if (currentStockDispo <= 0) {
+                texte.textContent = 'Aucun stock disponible : la ligne reste à l\'achat.';
+            } else if (pct >= 100) {
+                texte.textContent = 'Le stock couvre toute la demande.';
+            } else {
+                texte.textContent = `Le stock peut couvrir ${qte(couvrable)} sur ${qte(currentQteTotale)}.`;
+            }
+        }
+
+        // « Tout le disponible » : le maximum servable depuis le stock
+        $('scinderToutPrendre')?.addEventListener('click', function () {
+            if (currentStockDispo === null) return;
+            $('scinderQteStock').value = Math.min(currentStockDispo, currentQteTotale);
+            recalculerResume();
+        });
+
         // Recalcul résumé en temps réel
-        document.getElementById('scinderQteStock')
-            ?.addEventListener('input', recalculerResume);
+        $('scinderQteStock')?.addEventListener('input', recalculerResume);
 
         function recalculerResume() {
-            const qteStock  = parseFloat(document.getElementById('scinderQteStock').value) || 0;
+            const qteStock  = parseFloat($('scinderQteStock').value) || 0;
             const qteAchat  = Math.max(0, currentQteTotale - qteStock);
             const prixStock = currentPrixStock;
 
-            document.getElementById('scinderResQteStock').textContent =
-                qteStock.toFixed(2);
-            document.getElementById('scinderResQteAchat').textContent =
-                qteAchat.toFixed(2);
-            document.getElementById('scinderResPrixStock').textContent =
-                new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 2}).format(prixStock);
-            document.getElementById('scinderResMontantStock').textContent =
-                new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 2}).format(qteStock * prixStock);
+            $('scinderResQteStock').textContent = qte(qteStock);
+            $('scinderResQteAchat').textContent = qte(qteAchat);
+            $('scinderResPrixStock').textContent = prix(prixStock);
+            $('scinderResMontantStock').textContent = prix(qteStock * prixStock);
 
-            //AJOUTER : masquer la ligne ACHAT si tout est couvert par le stock
-            const ligneAchat = document.getElementById('scinderResQteAchat')?.closest('tr');
-            if (ligneAchat) {
-                ligneAchat.style.display = qteAchat <= 0 ? 'none' : '';
-            }
+            // Masquer la ligne ACHAT si tout est couvert par le stock
+            $('scinderPartAchat').style.display = qteAchat <= 0 ? 'none' : '';
+            $('scinderPartAchat').parentElement.classList.toggle('sans-achat', qteAchat <= 0);
         }
 
         // Confirmer la scission
@@ -2317,6 +2441,11 @@
                 }
                 if (qteStock > currentQteTotale) {
                     errEl.textContent   = `La quantité stock (${qteStock}) ne peut pas dépasser la quantité totale (${currentQteTotale}).`;
+                    errEl.style.display = 'block';
+                    return;
+                }
+                if (currentStockDispo !== null && qteStock > currentStockDispo) {
+                    errEl.textContent   = `La quantité stock (${qteStock}) dépasse le stock disponible (${currentStockDispo}).`;
                     errEl.style.display = 'block';
                     return;
                 }
