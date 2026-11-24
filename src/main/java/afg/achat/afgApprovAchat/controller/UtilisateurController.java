@@ -1,12 +1,15 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.DTO.UtilisateurRequestDTO;
+import afg.achat.afgApprovAchat.model.utilisateur.DemandeCompte;
 import afg.achat.afgApprovAchat.model.utilisateur.Role;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.utilisateur.PdpRepo;
 import afg.achat.afgApprovAchat.repository.utilisateur.PosteRepo;
 import afg.achat.afgApprovAchat.repository.util.RoleRepo;
 import afg.achat.afgApprovAchat.repository.util.ServiceRepo;
+import afg.achat.afgApprovAchat.service.securite.Habilitations;
+import afg.achat.afgApprovAchat.service.utilisateur.DemandeCompteService;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,82 +25,92 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+/**
+ * Gestion des utilisateurs, en maker / checker (domaine {@link Habilitations#IT}) :
+ * <ul>
+ *   <li>IT_MAKER saisit une création, une modification ou une (dés)activation : elle part en validation ;</li>
+ *   <li>IT_CHECKER, une autre personne, la valide (elle est alors appliquée) ou la rejette avec un motif ;</li>
+ *   <li>IT consulte ; ADMIN applique directement et peut aussi valider.</li>
+ * </ul>
+ * Le rôle ADMIN, et les comptes qui le portent, restent gérés par les seuls administrateurs.
+ */
 @Controller
 @RequestMapping("/user")
-@PreAuthorize("hasAnyRole('ADMIN','IT')")
+@PreAuthorize("hasAnyRole('ADMIN','IT','IT_MAKER','IT_CHECKER')")
 public class UtilisateurController {
 
-    /** Rôle réservé : seul un administrateur l'attribue, le retire, ou gère un compte qui le porte. */
-    private static final String ROLE_ADMIN = "ADMIN";
+    private static final String SAISIE = "T(afg.achat.afgApprovAchat.service.securite.Habilitations).peutCreer(authentication, 'IT')";
+    private static final String VALIDATION = "T(afg.achat.afgApprovAchat.service.securite.Habilitations).peutValider(authentication, 'IT')";
 
-    @Autowired private UtilisateurService utilisateurService;
-    @Autowired private RoleRepo           roleRepo;
-    @Autowired private PosteRepo          posteRepo;
-    @Autowired private ServiceRepo        serviceRepo;
-    @Autowired private PdpRepo            pdpRepo;
+    @Autowired private UtilisateurService   utilisateurService;
+    @Autowired private DemandeCompteService demandeCompteService;
+    @Autowired private RoleRepo             roleRepo;
+    @Autowired private PosteRepo            posteRepo;
+    @Autowired private ServiceRepo          serviceRepo;
+    @Autowired private PdpRepo              pdpRepo;
 
     // -------------------------------------------------------
     // Utilitaires
     // -------------------------------------------------------
 
-    /** Listes de choix communes à la saisie et à la modification. */
+    private static Authentication auth() {
+        return SecurityContextHolder.getContext().getAuthentication();
+    }
+
+    private Utilisateur connecte() {
+        Utilisateur principal = (Utilisateur) auth().getPrincipal();
+        return utilisateurService.getUtilisateurByMail(principal.getMail());
+    }
+
+    /** Listes de choix et droits communs aux écrans. */
     private void populateChoix(Model model) {
+        Authentication auth = auth();
         List<Role> roles = roleRepo.findAll(Sort.by("role"));
-        boolean admin = connecteEstAdmin();
+        boolean admin = Habilitations.estAdmin(auth);
         model.addAttribute("roles",    roles);   // filtres de la liste : tous les rôles
-        // Formulaires : le rôle ADMIN n'est proposé qu'aux administrateurs (IT ne peut pas l'attribuer)
+        // Formulaires : le rôle ADMIN n'est proposé qu'aux administrateurs
         model.addAttribute("rolesAttribuables", admin ? roles
-                : roles.stream().filter(r -> !estRoleAdmin(r)).toList());
+                : roles.stream().filter(r -> !Habilitations.estRoleAdmin(r)).toList());
         model.addAttribute("connecteEstAdmin", admin);
+        model.addAttribute("peutSaisir", Habilitations.peutCreer(auth, Habilitations.IT));
+        model.addAttribute("peutValider", Habilitations.peutValider(auth, Habilitations.IT));
+        // Saisie d'un maker : soumise à validation ; administrateur : appliquée directement
+        model.addAttribute("avecValidation", !admin);
+        model.addAttribute("nbDemandesEnAttente", demandeCompteService.nombreEnAttente());
         model.addAttribute("postes",   posteRepo.findAll(Sort.by("poste")));
         model.addAttribute("services", serviceRepo.findAll(Sort.by("libelle")));
         // Seuls les comptes actifs peuvent devenir supérieur ou validateur
         model.addAttribute("utilisateursActifs", utilisateurService.getUtilisateursActifs());
     }
 
-    // ── Garde-fous du rôle ADMIN (gestion ouverte au rôle IT) ──
-
-    private static boolean connecteEstAdmin() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> ("ROLE_" + ROLE_ADMIN).equals(a.getAuthority()));
-    }
-
-    private static boolean estRoleAdmin(Role r) {
-        return r != null && r.getRole() != null
-                && (ROLE_ADMIN.equalsIgnoreCase(r.getRole().trim()) || ("ROLE_" + ROLE_ADMIN).equalsIgnoreCase(r.getRole().trim()));
-    }
-
-    private static boolean estCompteAdmin(Utilisateur u) {
-        return u != null && u.getRoles() != null && u.getRoles().stream().anyMatch(UtilisateurController::estRoleAdmin);
-    }
-
     /** Vrai si la liste de rôles demandée contient le rôle ADMIN. */
-    private boolean contientRoleAdmin(java.util.Collection<Integer> roleIds) {
+    private boolean contientRoleAdmin(Collection<Integer> roleIds) {
         if (roleIds == null || roleIds.isEmpty()) return false;
-        return roleRepo.findAllById(roleIds).stream().anyMatch(UtilisateurController::estRoleAdmin);
+        return roleRepo.findAllById(roleIds).stream().anyMatch(Habilitations::estRoleAdmin);
     }
 
     /**
-     * Un non-administrateur (IT) ne peut ni attribuer le rôle ADMIN, ni modifier ou
+     * Un non-administrateur ne peut ni attribuer le rôle ADMIN, ni modifier ou
      * (dés)activer un compte administrateur. Renvoie le motif du refus, ou {@code null}.
      */
-    private String refusHorsAdmin(Utilisateur cible, java.util.Collection<Integer> roleIdsDemandes) {
-        if (connecteEstAdmin()) return null;
-        if (estCompteAdmin(cible)) {
+    private String refusHorsAdmin(Utilisateur cible, Collection<Integer> roleIdsDemandes) {
+        if (Habilitations.estAdmin(auth())) return null;
+        if (Habilitations.estCompteAdmin(cible)) {
             return "Seul un administrateur peut modifier un compte administrateur.";
         }
         if (contientRoleAdmin(roleIdsDemandes)) {
             return "Seul un administrateur peut attribuer le rôle ADMIN.";
         }
         return null;
+    }
+
+    /** Une demande attend déjà pour ce compte : rien d'autre ne s'applique tant qu'elle n'est pas traitée. */
+    private String refusDemandeEnAttente(int id) {
+        return demandeCompteService.ciblesEnAttente().contains(id)
+                ? "Une demande attend déjà une validation pour ce compte : elle doit être validée, rejetée ou annulée d'abord."
+                : null;
     }
 
     private static String libelle(Utilisateur u) {
@@ -112,10 +125,16 @@ public class UtilisateurController {
         return "redirect:" + (sur ? returnUrl : "/user/list");
     }
 
+    private static String messageSoumis(String quoi) {
+        return quoi + " envoyée pour validation : elle sera appliquée après l'accord d'un valideur ("
+                + Habilitations.roleChecker(Habilitations.IT) + ").";
+    }
+
     // -------------------------------------------------------
     // Création
     // -------------------------------------------------------
 
+    @PreAuthorize(SAISIE)
     @GetMapping("/add")
     public String addUserPage(Model model) {
         populateChoix(model);
@@ -145,6 +164,7 @@ public class UtilisateurController {
         return rep;
     }
 
+    @PreAuthorize(SAISIE)
     @PostMapping("/save")
     public String insertUser(
             @RequestParam("nom")    String nom,
@@ -185,8 +205,13 @@ public class UtilisateurController {
             return "redirect:/user/add";
         }
 
+        boolean direct = Habilitations.estAdmin(auth());
         try {
-            utilisateurService.insererUtilisateur(dto);
+            if (direct) {
+                utilisateurService.insererUtilisateur(dto);
+            } else {
+                demandeCompteService.soumettreCreation(dto, connecte());
+            }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("ko", e instanceof IllegalArgumentException
                     ? e.getMessage() : "Erreur inattendue : " + e.getMessage());
@@ -195,10 +220,14 @@ public class UtilisateurController {
             return "redirect:/user/add";
         }
 
-        redirectAttributes.addFlashAttribute("ok",
-                "Utilisateur '" + dto.getPrenom() + " " + dto.getNom() + "' créé avec succès.");
+        redirectAttributes.addFlashAttribute("ok", direct
+                ? "Utilisateur '" + dto.getPrenom() + " " + dto.getNom() + "' créé avec succès."
+                : messageSoumis("Création du compte de " + dto.getPrenom() + " " + dto.getNom()));
         if ("nouveau".equals(ensuite)) {
             return "redirect:/user/add";
+        }
+        if (!direct) {
+            return "redirect:/user/demandes";
         }
         // Sinon : la liste affiche directement le compte créé
         redirectAttributes.addAttribute("q", dto.getMail());
@@ -239,6 +268,7 @@ public class UtilisateurController {
 
         model.addAttribute("utilisateurs", pageResult.getContent());
         model.addAttribute("utilisateurPage", pageResult);
+        model.addAttribute("ciblesEnAttente", demandeCompteService.ciblesEnAttente());
 
         model.addAttribute("q", q);
         model.addAttribute("serviceId", serviceId);
@@ -302,9 +332,10 @@ public class UtilisateurController {
     }
 
     /**
-     * Met à jour un utilisateur : informations, rôles, supérieur et validateurs.
-     * Revient sur la liste avec les mêmes filtres et la même page.
+     * Modifie un utilisateur (informations, rôles, supérieur, validateurs) : directement pour
+     * un administrateur, sinon par une demande à valider. Revient sur la liste (mêmes filtres et page).
      */
+    @PreAuthorize(SAISIE)
     @PostMapping("/modifier")
     public String updateUser(
             @RequestParam("id") int id,
@@ -328,9 +359,9 @@ public class UtilisateurController {
         }
 
         UtilisateurRequestDTO dto = new UtilisateurRequestDTO();
-        dto.setNom(nom);
-        dto.setPrenom(prenom);
-        dto.setMail(mail);
+        dto.setNom(nom == null ? null : nom.trim());
+        dto.setPrenom(prenom == null ? null : prenom.trim());
+        dto.setMail(mail == null ? null : mail.trim());
         dto.setContact(contact);
         dto.setPosteId(posteId);
         dto.setServiceId(serviceId);
@@ -340,17 +371,24 @@ public class UtilisateurController {
         // Le formulaire envoie toujours la liste complète : vide = aucun validateur
         dto.setValidateurIds(validateurIdsList != null ? new HashSet<>(validateurIdsList) : new HashSet<>());
 
-        String refus = refusHorsAdmin(existant, dto.getRoleIds());
+        String refus = Optional.ofNullable(refusHorsAdmin(existant, dto.getRoleIds()))
+                .orElse(refusDemandeEnAttente(id));
         if (refus != null) {
             redirectAttributes.addFlashAttribute("ko", refus);
             return retourListe(returnUrl);
         }
 
         try {
-            utilisateurService.modifierUtilisateur(id, dto);
-            redirectAttributes.addFlashAttribute("ok",
-                    "Utilisateur '" + prenom + " " + nom + "' modifié avec succès.");
-        } catch (IllegalArgumentException e) {
+            if (Habilitations.estAdmin(auth())) {
+                utilisateurService.modifierUtilisateur(id, dto);
+                redirectAttributes.addFlashAttribute("ok",
+                        "Utilisateur '" + dto.getPrenom() + " " + dto.getNom() + "' modifié avec succès.");
+            } else {
+                demandeCompteService.soumettreModification(id, dto, connecte());
+                redirectAttributes.addFlashAttribute("ok",
+                        messageSoumis("Modification du compte de " + existant.getPrenom() + " " + existant.getNom()));
+            }
+        } catch (IllegalArgumentException | EntityNotFoundException e) {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("ko", "Erreur inattendue : " + e.getMessage());
@@ -363,31 +401,109 @@ public class UtilisateurController {
     // -------------------------------------------------------
 
     /**
-     * Désactive (collaborateur parti) ou réactive un compte.
-     * Un compte inactif ne peut plus se connecter ni recevoir de tâches ; son historique reste.
+     * Désactive (collaborateur parti) ou réactive un compte : directement pour un administrateur,
+     * sinon par une demande à valider. Un compte inactif ne peut plus se connecter ; son historique reste.
      */
+    @PreAuthorize(SAISIE)
     @PostMapping("/{id}/statut")
     public String changerStatut(@PathVariable int id,
                                 @RequestParam boolean actif,
                                 @RequestParam(value = "returnUrl", required = false) String returnUrl,
                                 RedirectAttributes redirectAttributes) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Utilisateur principal = (Utilisateur) auth.getPrincipal();
-        Utilisateur auteur = utilisateurService.getUtilisateurByMail(principal.getMail());
+        Utilisateur auteur = connecte();
 
-        String refus = refusHorsAdmin(utilisateurService.getUtilisateurById(id), null);
+        String refus = Optional.ofNullable(refusHorsAdmin(utilisateurService.getUtilisateurById(id), null))
+                .orElse(refusDemandeEnAttente(id));
         if (refus != null) {
             redirectAttributes.addFlashAttribute("ko", refus);
             return retourListe(returnUrl);
         }
 
         try {
-            Utilisateur u = utilisateurService.changerStatut(id, actif, auteur != null ? auteur.getId() : -1);
-            redirectAttributes.addFlashAttribute("ok", "Compte de " + u.getPrenom() + " " + u.getNom()
-                    + (actif ? " réactivé." : " désactivé : il ne peut plus se connecter."));
+            if (Habilitations.estAdmin(auth())) {
+                Utilisateur u = utilisateurService.changerStatut(id, actif, auteur != null ? auteur.getId() : -1);
+                redirectAttributes.addFlashAttribute("ok", "Compte de " + u.getPrenom() + " " + u.getNom()
+                        + (actif ? " réactivé." : " désactivé : il ne peut plus se connecter."));
+            } else {
+                DemandeCompte d = demandeCompteService.soumettreStatut(id, actif, auteur);
+                redirectAttributes.addFlashAttribute("ok", messageSoumis(
+                        (actif ? "Réactivation" : "Désactivation") + " du compte " + d.getLibelleCible()));
+            }
         } catch (EntityNotFoundException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
         }
         return retourListe(returnUrl);
+    }
+
+    // -------------------------------------------------------
+    // Demandes de compte (maker / checker)
+    // -------------------------------------------------------
+
+    /** Demandes en attente (avec ce qui change) et dernières décisions. */
+    @GetMapping("/demandes")
+    public String demandes(Model model) {
+        Authentication auth = auth();
+        Utilisateur courant = connecte();
+        List<DemandeCompte> enAttente = demandeCompteService.enAttente();
+
+        Map<Integer, List<DemandeCompteService.Changement>> changements = new HashMap<>();
+        Map<Integer, Boolean> decidables = new HashMap<>();
+        Map<Integer, Boolean> annulables = new HashMap<>();
+        for (DemandeCompte d : enAttente) {
+            changements.put(d.getId(), demandeCompteService.changements(d));
+            decidables.put(d.getId(), demandeCompteService.peutDecider(d, courant, auth));
+            annulables.put(d.getId(), d.getDemandeur() != null && d.getDemandeur().getId() == courant.getId());
+        }
+
+        model.addAttribute("enAttente", enAttente);
+        model.addAttribute("changements", changements);
+        model.addAttribute("decidables", decidables);
+        model.addAttribute("annulables", annulables);
+        model.addAttribute("historique", demandeCompteService.historique());
+        model.addAttribute("roleMaker", Habilitations.roleMaker(Habilitations.IT));
+        model.addAttribute("roleChecker", Habilitations.roleChecker(Habilitations.IT));
+        populateChoix(model);
+        return "utilisateur/demandes-compte";
+    }
+
+    @PreAuthorize(VALIDATION)
+    @PostMapping("/demandes/{id}/valider")
+    public String validerDemande(@PathVariable int id, RedirectAttributes redirectAttributes) {
+        try {
+            DemandeCompte d = demandeCompteService.valider(id, connecte(), auth());
+            redirectAttributes.addFlashAttribute("ok", d.getType().getLibelle() + " du compte "
+                    + d.getLibelleCible() + " validée et appliquée.");
+        } catch (IllegalArgumentException | EntityNotFoundException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+        }
+        return "redirect:/user/demandes";
+    }
+
+    @PreAuthorize(VALIDATION)
+    @PostMapping("/demandes/{id}/rejeter")
+    public String rejeterDemande(@PathVariable int id,
+                                 @RequestParam(value = "motif", required = false) String motif,
+                                 RedirectAttributes redirectAttributes) {
+        try {
+            DemandeCompte d = demandeCompteService.rejeter(id, connecte(), auth(), motif);
+            redirectAttributes.addFlashAttribute("ok", d.getType().getLibelle() + " du compte "
+                    + d.getLibelleCible() + " rejetée.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+        }
+        return "redirect:/user/demandes";
+    }
+
+    @PreAuthorize(SAISIE)
+    @PostMapping("/demandes/{id}/annuler")
+    public String annulerDemande(@PathVariable int id, RedirectAttributes redirectAttributes) {
+        try {
+            DemandeCompte d = demandeCompteService.annuler(id, connecte());
+            redirectAttributes.addFlashAttribute("ok", "Demande annulée : " + d.getType().getLibelle().toLowerCase()
+                    + " du compte " + d.getLibelleCible() + ".");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+        }
+        return "redirect:/user/demandes";
     }
 }

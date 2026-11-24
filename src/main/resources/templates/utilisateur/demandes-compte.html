@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Demandes de compte</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <meta name="context-path" th:content="@{/}" />
+    <style>
+        .dc-carte { border: 1px solid var(--ui-line, #e6e9f0); border-radius: 12px; background: #fff; }
+        .dc-carte + .dc-carte { margin-top: 12px; }
+        .dc-type { font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+        .dc-avant { color: #b42318; text-decoration: line-through; }
+        .dc-apres { color: #067647; font-weight: 600; }
+        .dc-vide { color: var(--ui-muted, #8a92a6); font-style: italic; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <!-- En-tête -->
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+            <div>
+                <h1 class="fw-bold text-gradient-blue mb-1">
+                    <i class="fas fa-user-check me-2 icon-gradient-blue"></i> Demandes de compte
+                </h1>
+                <div class="text-muted small">
+                    Maker / checker : <strong th:text="${roleMaker}">IT_MAKER</strong> soumet les créations,
+                    modifications et (dés)activations de comptes ; <strong th:text="${roleChecker}">IT_CHECKER</strong>,
+                    une autre personne, les valide ou les rejette.
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a th:if="${peutSaisir}" th:href="@{/user/add}" class="btn btn-gradient-green">
+                    <i class="fas fa-user-plus me-1"></i> Nouvel utilisateur
+                </a>
+                <a th:href="@{/user/list}" class="btn btn-outline-secondary">
+                    <i class="fas fa-users me-1"></i> Utilisateurs
+                </a>
+            </div>
+        </div>
+
+        <!-- ── En attente ── -->
+        <div class="card shadow-lg border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="fas fa-hourglass-half text-warning me-2"></i> En attente de validation
+                    <span class="badge bg-warning text-dark ms-1" th:text="${#lists.size(enAttente)}">0</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div th:if="${#lists.isEmpty(enAttente)}" class="text-muted">
+                    <i class="fas fa-check-circle text-success me-1"></i> Aucune demande en attente.
+                </div>
+
+                <div class="dc-carte p-3" th:each="d : ${enAttente}">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                        <div>
+                            <span class="dc-type badge"
+                                  th:classappend="${d.type.name() == 'CREATION' ? 'bg-success'
+                                                 : (d.type.name() == 'DESACTIVATION' ? 'bg-danger'
+                                                 : (d.type.name() == 'ACTIVATION' ? 'bg-info text-dark' : 'bg-primary'))}"
+                                  th:text="${d.type.libelle}">Création</span>
+                            <span class="fw-semibold ms-1" th:text="${d.libelleCible}">Prénom Nom (mail)</span>
+                            <div class="small text-muted mt-1">
+                                Demandée par <strong th:text="${d.demandeur.prenom + ' ' + d.demandeur.nom}"></strong>
+                                le <span th:text="${#temporals.format(d.dateDemande, 'dd/MM/yyyy à HH:mm')}"></span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <th:block th:if="${decidables[d.id]}">
+                                <form method="post" th:action="@{/user/demandes/{id}/valider(id=${d.id})}"
+                                      th:attr="data-confirmer=${'Valider : ' + d.type.libelle.toLowerCase() + ' du compte ?'}"
+                                      data-confirmer-texte="La demande sera appliquée immédiatement au compte."
+                                      data-confirmer-bouton="Valider"
+                                      data-confirmer-type="question"
+                                      data-chargement="Validation…">
+                                    <button type="submit" class="btn btn-sm btn-gradient-green">
+                                        <i class="fas fa-check me-1"></i> Valider
+                                    </button>
+                                </form>
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        data-bs-toggle="modal" data-bs-target="#rejetModal"
+                                        th:data-id="${d.id}" th:data-libelle="${d.type.libelle + ' — ' + d.libelleCible}">
+                                    <i class="fas fa-times me-1"></i> Rejeter
+                                </button>
+                            </th:block>
+                            <span th:if="${!decidables[d.id] and annulables[d.id]}" class="small text-muted align-self-center">
+                                <i class="fas fa-user-clock me-1"></i>Votre demande : à valider par une autre personne
+                            </span>
+                            <form th:if="${annulables[d.id]}" method="post"
+                                  th:action="@{/user/demandes/{id}/annuler(id=${d.id})}"
+                                  data-confirmer="Annuler votre demande ?"
+                                  data-confirmer-texte="Elle sera retirée de la liste des demandes à valider ; rien ne sera appliqué."
+                                  data-confirmer-bouton="Annuler la demande"
+                                  data-confirmer-type="warning">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-undo me-1"></i> Annuler
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Ce qui change -->
+                    <table class="table table-sm align-middle mb-0" th:if="${!#lists.isEmpty(changements[d.id])}">
+                        <thead class="table-light small">
+                        <tr>
+                            <th style="width: 22%">Champ</th>
+                            <th th:if="${d.type.name() != 'CREATION'}" style="width: 39%">Actuel</th>
+                            <th th:text="${d.type.name() == 'CREATION' ? 'Valeur' : 'Demandé'}">Demandé</th>
+                        </tr>
+                        </thead>
+                        <tbody class="small">
+                        <tr th:each="c : ${changements[d.id]}">
+                            <td class="text-muted" th:text="${c.libelle}"></td>
+                            <td th:if="${d.type.name() != 'CREATION'}">
+                                <span th:if="${c.avant != null}" class="dc-avant" th:text="${c.avant}"></span>
+                                <span th:if="${c.avant == null}" class="dc-vide">vide</span>
+                            </td>
+                            <td>
+                                <span th:if="${c.apres != null}" th:classappend="${d.type.name() == 'CREATION' ? '' : 'dc-apres'}"
+                                      th:text="${c.apres}"></span>
+                                <span th:if="${c.apres == null}" class="dc-vide">vide</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Historique ── -->
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="fas fa-history me-2 text-muted"></i> Dernières décisions</h5>
+            </div>
+            <div class="card-body p-0">
+                <div th:if="${#lists.isEmpty(historique)}" class="text-muted p-3">Aucune décision pour l'instant.</div>
+                <div class="table-responsive" th:unless="${#lists.isEmpty(historique)}">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light small">
+                        <tr>
+                            <th>Demande</th>
+                            <th>Compte</th>
+                            <th>Demandée par</th>
+                            <th>Décision</th>
+                            <th>Par</th>
+                            <th>Le</th>
+                        </tr>
+                        </thead>
+                        <tbody class="small">
+                        <tr th:each="d : ${historique}">
+                            <td th:text="${d.type.libelle}"></td>
+                            <td th:text="${d.libelleCible}"></td>
+                            <td th:text="${d.demandeur.prenom + ' ' + d.demandeur.nom}"></td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${d.statut.name() == 'VALIDEE' ? 'bg-success'
+                                                     : (d.statut.name() == 'REJETEE' ? 'bg-danger' : 'bg-secondary')}"
+                                      th:text="${d.statut.libelle}"></span>
+                                <div class="text-muted" th:if="${d.motifRejet != null}" th:text="${'Motif : ' + d.motifRejet}"></div>
+                            </td>
+                            <td th:text="${d.decideur != null ? d.decideur.prenom + ' ' + d.decideur.nom : '—'}"></td>
+                            <td th:text="${d.dateDecision != null ? #temporals.format(d.dateDecision, 'dd/MM/yyyy HH:mm') : '—'}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Rejet : motif obligatoire -->
+<div class="modal fade" id="rejetModal" tabindex="-1" aria-labelledby="rejetModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" id="rejetForm" data-chargement="Rejet…">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rejetModalLabel"><i class="fas fa-times-circle text-danger me-2"></i>Rejeter la demande</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="fw-semibold mb-2" id="rejetLibelle"></p>
+                    <label for="rejetMotif" class="form-label">Motif du rejet <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="rejetMotif" name="motif" rows="3" required
+                              placeholder="Expliquez au demandeur ce qui doit être corrigé"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-times me-1"></i> Rejeter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    (() => {
+        const base = /*[[@{/user/demandes/}]]*/ '/user/demandes/';
+        const modal = document.getElementById('rejetModal');
+        modal.addEventListener('show.bs.modal', e => {
+            const b = e.relatedTarget;
+            document.getElementById('rejetForm').action = base + b.dataset.id + '/rejeter';
+            document.getElementById('rejetLibelle').textContent = b.dataset.libelle || '';
+            document.getElementById('rejetMotif').value = '';
+        });
+        modal.addEventListener('shown.bs.modal', () => document.getElementById('rejetMotif').focus());
+    })();
+    /*]]>*/
+</script>
+</body>
+</html>

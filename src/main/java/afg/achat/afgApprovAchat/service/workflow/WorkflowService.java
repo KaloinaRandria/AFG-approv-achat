@@ -77,7 +77,8 @@ public class WorkflowService {
 
     /** Transmission des paiements directs validés à la finance : validateur des Moyens Généraux. */
     public static boolean peutTransmettreFinance(Authentication auth) {
-        return hasRole(auth, "ROLE_MG_VALIDATOR") || hasRole(auth, "ROLE_ADMIN");
+        return afg.achat.afgApprovAchat.service.securite.Habilitations.peutValider(auth,
+                afg.achat.afgApprovAchat.service.securite.Habilitations.MG);
     }
 
     // ── Droits ───────────────────────────────────────────────────────────────

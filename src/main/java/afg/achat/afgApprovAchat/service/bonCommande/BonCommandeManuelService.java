@@ -37,8 +37,8 @@ import java.util.Map;
 /**
  * Bon de commande créé manuellement (sans demande d'achat) et son circuit de validation.
  *
- * <p>Circuit : un créateur (rôle MG_CREATOR ou Moyens Généraux) saisit le bon en brouillon et le soumet ;
- * les Moyens Généraux (rôle MG_VALIDATOR) le valident, puis le S.G. (rôle SG) donne la
+ * <p>Circuit : un créateur (rôle MG_MAKER ou Moyens Généraux) saisit le bon en brouillon et le soumet ;
+ * les Moyens Généraux (rôle MG_CHECKER) le valident, puis le S.G. (rôle SG) donne la
  * validation finale. Un rejet, à l'une ou l'autre étape, renvoie le bon en brouillon
  * avec son motif. L'administrateur peut agir à chaque étape.</p>
  *
@@ -49,7 +49,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BonCommandeManuelService {
 
-    public static final String ROLE_CREATEUR = "ROLE_MG_CREATOR";
+    public static final String ROLE_CREATEUR = "ROLE_MG_MAKER";
     private static final String ROLE_ADMIN = "ROLE_ADMIN";
 
     private final BonCommandeMereRepo bonCommandeMereRepo;
@@ -64,11 +64,10 @@ public class BonCommandeManuelService {
 
     // ── Droits ───────────────────────────────────────────────────────────────
 
-    /** Créer un bon manuel : rôle MG_CREATOR, Moyens Généraux ou administrateur. */
+    /** Créer un bon manuel : rôle MG_MAKER, Moyens Généraux ou administrateur. */
     public static boolean peutCreer(Authentication auth) {
-        return WorkflowService.hasRole(auth, ROLE_CREATEUR)
-                || WorkflowService.hasRole(auth, "ROLE_MOYENS_GENERAUX")
-                || WorkflowService.hasRole(auth, ROLE_ADMIN);
+        return afg.achat.afgApprovAchat.service.securite.Habilitations.peutCreer(auth,
+                afg.achat.afgApprovAchat.service.securite.Habilitations.MG, "MOYENS_GENERAUX");
     }
 
     /** Modifier avec le formulaire du bon manuel : un bon manuel encore en brouillon, par un créateur. */

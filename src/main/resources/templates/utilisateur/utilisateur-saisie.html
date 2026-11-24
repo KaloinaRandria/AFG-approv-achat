@@ -154,11 +154,17 @@
                 <!-- Actions -->
                 <div class="card-footer bg-white border-0 d-flex justify-content-end gap-2 pb-3">
                     <a th:href="@{/user/list}" class="btn btn-outline-secondary">Annuler</a>
+                    <span class="text-muted small me-auto align-self-center" th:if="${avecValidation}">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Le compte sera créé après validation par une autre personne.
+                    </span>
                     <button type="submit" class="btn btn-outline-success" name="ensuite" value="nouveau">
-                        <i class="fas fa-plus me-1"></i> Créer et saisir un autre
+                        <i class="fas fa-plus me-1"></i>
+                        <span th:text="${avecValidation ? 'Soumettre et saisir un autre' : 'Créer et saisir un autre'}">Créer et saisir un autre</span>
                     </button>
                     <button type="submit" class="btn btn-gradient-green px-4" name="ensuite" value="liste">
-                        <i class="fas fa-save me-1"></i> Créer l'utilisateur
+                        <i class="fas me-1" th:classappend="${avecValidation ? 'fa-paper-plane' : 'fa-save'}"></i>
+                        <span th:text="${avecValidation ? 'Soumettre pour validation' : 'Créer l''utilisateur'}">Créer l'utilisateur</span>
                     </button>
                 </div>
             </div>

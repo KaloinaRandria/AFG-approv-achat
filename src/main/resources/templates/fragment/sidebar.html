@@ -121,9 +121,9 @@
             </div>
         </div>
 
-        <!-- Bon de commande : consultation, création manuelle (MG_CREATOR, Moyens Généraux) et validation (MG_VALIDATOR, SG) -->
+        <!-- Bon de commande : consultation, création manuelle (MG_MAKER, Moyens Généraux) et validation (MG_CHECKER, SG) -->
         <div class="accordion-item bg-transparent border-0"
-             sec:authorize="hasAnyRole('ADMIN','MG_CREATOR','MG_VALIDATOR','SG')">
+             sec:authorize="hasAnyRole('ADMIN','MG_MAKER','MG_CHECKER','SG')">
             <h2 class="accordion-header">
                 <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
                         type="button"
@@ -148,14 +148,14 @@
                                 Liste
                             </a>
                         </li>
-                        <li sec:authorize="hasAnyRole('ADMIN','MG_CREATOR','MOYENS_GENERAUX')">
+                        <li sec:authorize="hasAnyRole('ADMIN','MG_MAKER','MOYENS_GENERAUX')">
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/bon-commande/lignes-a-acheter}"
                                th:classappend="${currentUri == '/bon-commande/lignes-a-acheter' ? 'active' : ''}">
                                 Lignes à acheter
                             </a>
                         </li>
-                        <li sec:authorize="hasAnyRole('ADMIN','MG_CREATOR','MOYENS_GENERAUX')">
+                        <li sec:authorize="hasAnyRole('ADMIN','MG_MAKER','MOYENS_GENERAUX')">
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/bon-commande/manuel/nouveau}"
                                th:classappend="${currentUri == '/bon-commande/manuel/nouveau' ? 'active' : ''}">
@@ -169,7 +169,7 @@
 
         <!-- Paiements directs : MG (consultation), validateur MG (transmission), finance (paiement) -->
         <div class="accordion-item bg-transparent border-0"
-             sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_VALIDATOR','FINANCE','FINANCE_CONSULT')">
+             sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_CHECKER','FINANCE','FINANCE_CONSULT')">
             <a class="nav-link text-white d-flex align-items-center sidebar-link"
                style="padding: 1rem 1.25rem;"
                th:href="@{/demande/paiements-directs}"
@@ -456,8 +456,8 @@
             </div>
         </div>
 
-        <!-- GESTION UTILISATEURS (administrateur et informatique) -->
-        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','IT')">
+        <!-- GESTION UTILISATEURS : IT consulte, IT_MAKER soumet, IT_CHECKER valide (maker / checker) -->
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','IT','IT_MAKER','IT_CHECKER')">
             <h2 class="accordion-header">
                 <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
                         type="button"
@@ -476,7 +476,7 @@
                  th:classappend="${currentUri.contains('/user') ? 'show' : ''}">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
-                        <li>
+                        <li sec:authorize="hasAnyRole('ADMIN','IT_MAKER')">
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/user/add}"
                                th:classappend="${currentUri == '/user/add' ? 'active' : ''}">
@@ -488,6 +488,13 @@
                                th:href="@{/user/list}"
                                th:classappend="${currentUri == '/user/list' ? 'active' : ''}">
                                 <i class="fas fa-list me-2"></i> Liste des utilisateurs
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/user/demandes}"
+                               th:classappend="${currentUri == '/user/demandes' ? 'active' : ''}">
+                                <i class="fas fa-user-check me-2"></i> Demandes de compte
                             </a>
                         </li>
                     </ul>
