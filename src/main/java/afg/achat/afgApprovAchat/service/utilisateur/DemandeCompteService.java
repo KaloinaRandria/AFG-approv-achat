@@ -13,12 +13,18 @@ import afg.achat.afgApprovAchat.repository.utilisateur.PosteRepo;
 import afg.achat.afgApprovAchat.service.securite.Habilitations;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import afg.achat.afgApprovAchat.email.EmailSenderService;
+import afg.achat.afgApprovAchat.email.Mail;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,6 +36,7 @@ import java.util.stream.Collectors;
  * peut aussi la rejeter avec un motif ; le créateur peut annuler sa demande tant qu'elle attend.
  * Un compte n'a qu'une demande en attente à la fois. L'administrateur applique directement.</p>
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DemandeCompteService {
@@ -40,9 +47,15 @@ public class DemandeCompteService {
     private final PosteRepo posteRepo;
     private final ServiceRepo serviceRepo;
     private final ObjectMapper objectMapper;
+    private final EmailSenderService emailSenderService;
 
     /** Une différence entre l'état actuel du compte et la demande (écran de validation). */
-    public record Changement(String libelle, String avant, String apres) {}
+    public record Changement(String libelle, String avant, String apres) {
+        // Accesseurs de type « getter » pour les gabarits (c.libelle, c.avant, c.apres)
+        public String getLibelle() { return libelle; }
+        public String getAvant()   { return avant; }
+        public String getApres()   { return apres; }
+    }
 
     // ── Lecture ──────────────────────────────────────────────────────────────
 
@@ -88,7 +101,7 @@ public class DemandeCompteService {
         DemandeCompte d = nouvelle(TypeDemande.CREATION, null, demandeur);
         d.setLibelleCible(dto.getPrenom() + " " + dto.getNom() + " (" + dto.getMail() + ")");
         d.setDonnees(ecrire(dto));
-        return demandeCompteRepo.save(d);
+        return notifierCheckers(demandeCompteRepo.save(d));
     }
 
     @Transactional
@@ -104,7 +117,7 @@ public class DemandeCompteService {
         if (changements(d).isEmpty()) {
             throw new IllegalArgumentException("Aucune modification par rapport au compte actuel.");
         }
-        return demandeCompteRepo.save(d);
+        return notifierCheckers(demandeCompteRepo.save(d));
     }
 
     @Transactional
@@ -116,7 +129,7 @@ public class DemandeCompteService {
         if (!actif && cible.getId() == demandeur.getId()) {
             throw new IllegalArgumentException("Vous ne pouvez pas demander la désactivation de votre propre compte.");
         }
-        return demandeCompteRepo.save(nouvelle(actif ? TypeDemande.ACTIVATION : TypeDemande.DESACTIVATION, cible, demandeur));
+        return notifierCheckers(demandeCompteRepo.save(nouvelle(actif ? TypeDemande.ACTIVATION : TypeDemande.DESACTIVATION, cible, demandeur)));
     }
 
     // ── Décision (valideur) ──────────────────────────────────────────────────
@@ -136,7 +149,7 @@ public class DemandeCompteService {
             case ACTIVATION -> utilisateurService.changerStatut(d.getCible().getId(), true, valideur.getId());
             case DESACTIVATION -> utilisateurService.changerStatut(d.getCible().getId(), false, valideur.getId());
         }
-        return decider(d, Statut.VALIDEE, valideur, null);
+        return notifierMaker(decider(d, Statut.VALIDEE, valideur, null));
     }
 
     @Transactional
@@ -146,7 +159,7 @@ public class DemandeCompteService {
         if (motif == null || motif.isBlank()) {
             throw new IllegalArgumentException("Le motif du rejet est obligatoire.");
         }
-        return decider(d, Statut.REJETEE, valideur, motif.trim());
+        return notifierMaker(decider(d, Statut.REJETEE, valideur, motif.trim()));
     }
 
     /** Le créateur retire sa demande tant qu'elle attend. */
@@ -210,6 +223,93 @@ public class DemandeCompteService {
         UtilisateurRequestDTO x = lireDonnees(d);
         return x != null && x.getRoleIds() != null && !x.getRoleIds().isEmpty()
                 && roleRepo.findAllById(x.getRoleIds()).stream().anyMatch(Habilitations::estRoleAdmin);
+    }
+
+    // ── Notifications (envoyées après le commit : un échec d'envoi ne remet rien en cause) ──
+
+    private static final DateTimeFormatter FORMAT_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy à HH:mm");
+
+    /**
+     * Prévient les checkers qu'une demande attend : IT_CHECKER, ou les seuls administrateurs si
+     * elle touche au rôle ADMIN (eux seuls peuvent la traiter). Jamais l'auteur de la demande.
+     */
+    private DemandeCompte notifierCheckers(DemandeCompte d) {
+        String role = toucheAuRoleAdmin(d) ? Habilitations.ADMIN : Habilitations.roleChecker(Habilitations.IT);
+        Map<String, Utilisateur> destinataires = new LinkedHashMap<>();
+        for (Utilisateur u : utilisateurService.getUtilisateursByRole(role)) {
+            if (u.getMail() == null || u.getMail().isBlank()) continue;
+            if (d.getDemandeur() != null && u.getId() == d.getDemandeur().getId()) continue;
+            destinataires.putIfAbsent(u.getMail().trim().toLowerCase(), u);
+        }
+        if (destinataires.isEmpty()) {
+            log.warn("Demande de compte {} : aucun destinataire ({}) à prévenir.", d.getId(), role);
+            return d;
+        }
+
+        // Calculés maintenant, dans la transaction (le compte n'est pas encore modifié)
+        List<Changement> changements = changements(d);
+        String sujet = "[AFG Bank - Achat] - Demande de compte à valider : "
+                + d.getType().getLibelle() + " — " + d.getLibelleCible();
+        List<Mail> mails = new ArrayList<>();
+        for (Utilisateur dest : destinataires.values()) {
+            Map<String, Object> props = new HashMap<>();
+            props.put("destinataire", dest);
+            props.put("maker", d.getDemandeur());
+            props.put("type", d.getType().getLibelle());
+            props.put("compte", d.getLibelleCible());
+            props.put("creation", d.getType() == TypeDemande.CREATION);
+            props.put("changements", changements);
+            props.put("dateDemande", d.getDateDemande().format(FORMAT_DATE));
+            props.put("lienDemandes", emailSenderService.lien("/user/demandes"));
+            mails.add(new Mail("compteDemandeSoumise", dest.getMail(), sujet, props));
+        }
+        apresCommit(() -> mails.forEach(emailSenderService::sendEmail));
+        return d;
+    }
+
+    /** Prévient le maker de la décision (validation ou rejet, avec le motif). */
+    private DemandeCompte notifierMaker(DemandeCompte d) {
+        Utilisateur maker = d.getDemandeur();
+        if (maker == null || maker.getMail() == null || maker.getMail().isBlank()) return d;
+        boolean validee = d.getStatut() == Statut.VALIDEE;
+
+        Map<String, Object> props = new HashMap<>();
+        props.put("maker", maker);
+        props.put("checker", d.getDecideur());
+        props.put("validee", validee);
+        props.put("type", d.getType().getLibelle());
+        props.put("compte", d.getLibelleCible());
+        props.put("motif", d.getMotifRejet());
+        props.put("dateDemande", d.getDateDemande().format(FORMAT_DATE));
+        props.put("dateDecision", d.getDateDecision().format(FORMAT_DATE));
+        props.put("lienDemandes", emailSenderService.lien("/user/demandes"));
+        Mail mail = new Mail("compteDemandeDecision", maker.getMail(),
+                "[AFG Bank - Achat] - Demande de compte " + (validee ? "validée" : "rejetée")
+                        + " : " + d.getType().getLibelle() + " — " + d.getLibelleCible(),
+                props);
+        apresCommit(() -> emailSenderService.sendEmail(mail));
+        return d;
+    }
+
+    /** Exécute l'action après le commit de la transaction courante (ou tout de suite s'il n'y en a pas). */
+    private static void apresCommit(Runnable action) {
+        Runnable sansEchec = () -> {
+            try {
+                action.run();
+            } catch (Exception e) {
+                log.error("Échec de l'envoi des notifications de demande de compte", e);
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    sansEchec.run();
+                }
+            });
+        } else {
+            sansEchec.run();
+        }
     }
 
     private void exigerDroitDeDecision(DemandeCompte d, Utilisateur valideur, Authentication auth) {

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8" /></head>
+<body style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #0f1b3d;">
+<div class="container">
+    <p>Bonjour <span th:text="${destinataire.prenom + ' ' + destinataire.nom}"></span>,</p>
+    <p>
+        <span th:text="${maker.prenom + ' ' + maker.nom}"></span> a soumis le
+        <span th:text="${dateDemande}"></span> une demande de compte qui attend votre validation :
+    </p>
+    <p>
+        <strong th:text="${type}">Création</strong> —
+        <span th:text="${compte}">Prénom Nom (mail)</span>
+    </p>
+
+    <table th:if="${changements != null and !changements.isEmpty()}"
+           cellpadding="6" cellspacing="0"
+           style="border-collapse: collapse; border: 1px solid #d5dae3; font-size: 13px;">
+        <thead>
+        <tr style="background: #f1f3f7;">
+            <th align="left" style="border-bottom: 1px solid #d5dae3;">Champ</th>
+            <th align="left" style="border-bottom: 1px solid #d5dae3;" th:if="${!creation}">Actuel</th>
+            <th align="left" style="border-bottom: 1px solid #d5dae3;" th:text="${creation ? 'Valeur' : 'Demandé'}">Demandé</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="c : ${changements}">
+            <td style="border-bottom: 1px solid #eef0f4; color: #535d75;" th:text="${c.libelle}"></td>
+            <td style="border-bottom: 1px solid #eef0f4; color: #b42318;" th:if="${!creation}"
+                th:text="${c.avant != null ? c.avant : '—'}"></td>
+            <td style="border-bottom: 1px solid #eef0f4; font-weight: bold;"
+                th:text="${c.apres != null ? c.apres : '—'}"></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <p>
+        Rien n'est appliqué au compte tant que la demande n'est pas validée.<br/>
+        <a th:href="${lienDemandes}">Ouvrir les demandes de compte pour valider ou rejeter</a>
+    </p>
+    <br/>
+    <p>Cordialement,</p>
+    <p><img src="cid:signature-image" /></p>
+</div>
+</body>
+</html>

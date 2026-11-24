@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8" /></head>
+<body style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #0f1b3d;">
+<div class="container">
+    <p>Bonjour <span th:text="${maker.prenom + ' ' + maker.nom}"></span>,</p>
+
+    <p th:if="${validee}">
+        Votre demande de compte du <span th:text="${dateDemande}"></span> a été
+        <strong style="color: #067647;">validée</strong> par
+        <span th:text="${checker.prenom + ' ' + checker.nom}"></span> le <span th:text="${dateDecision}"></span> :
+        elle est maintenant appliquée.
+    </p>
+    <p th:unless="${validee}">
+        Votre demande de compte du <span th:text="${dateDemande}"></span> a été
+        <strong style="color: #b42318;">rejetée</strong> par
+        <span th:text="${checker.prenom + ' ' + checker.nom}"></span> le <span th:text="${dateDecision}"></span>.
+        Elle n'a pas été appliquée.
+    </p>
+
+    <p>
+        <strong th:text="${type}">Création</strong> —
+        <span th:text="${compte}">Prénom Nom (mail)</span>
+    </p>
+
+    <p th:if="${!validee and motif != null}">
+        <strong>Motif du rejet :</strong> <em th:text="${motif}"></em>
+    </p>
+
+    <p>
+        <a th:href="${lienDemandes}">Ouvrir les demandes de compte</a>
+    </p>
+    <br/>
+    <p>Cordialement,</p>
+    <p><img src="cid:signature-image" /></p>
+</div>
+</body>
+</html>

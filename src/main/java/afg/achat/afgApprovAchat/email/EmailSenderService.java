@@ -47,6 +47,11 @@ public class EmailSenderService {
         return baseUrl + "/demande/fiche/" + demandeId;
     }
 
+    /** Lien absolu vers une page de l'application (chemin commençant par « / »), pour les mails. */
+    public String lien(String chemin) {
+        return baseUrl + chemin;
+    }
+
     /**
      * Interrupteur d'envoi des mails. {@code true} par défaut (production) ;
      * le profil {@code dev} le met à {@code false} : les mails sont alors seulement tracés dans les logs.
