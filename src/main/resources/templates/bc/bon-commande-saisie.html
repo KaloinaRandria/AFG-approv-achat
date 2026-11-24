@@ -16,7 +16,17 @@
         <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
 
         <div class="container mt-3">
-            <form th:action="@{/bon-commande/sauvegarder}" method="post" id="formSauvegarderBC">
+            <!-- Motif du dernier rejet : à corriger avant de soumettre à nouveau -->
+            <div class="alert alert-warning"
+                 th:if="${bonCommandeMere.motifRejet != null and !#strings.isEmpty(bonCommandeMere.motifRejet)}">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Rejeté<span th:if="${bonCommandeMere.rejetePar != null}"
+                                    th:text="' par ' + ${bonCommandeMere.rejetePar.prenom} + ' ' + ${bonCommandeMere.rejetePar.nom}"></span> :</strong>
+                <span th:text="${bonCommandeMere.motifRejet}"></span>
+            </div>
+
+            <form th:action="@{/bon-commande/sauvegarder}" method="post" id="formSauvegarderBC"
+                  data-chargement="Enregistrement en cours…">
                 <div class="card">
                     <div class="card-header">
                         <h2>BON DE COMMANDE</h2>
@@ -25,7 +35,7 @@
                         <!-- Champ caché pour l'ID du BC -->
                         <input type="hidden" name="idBcMere" th:value="${bonCommandeMere.id}">
                         <!-- Champ caché pour la demande mère -->
-                        <input type="hidden" name="demandeMereI" th:value="${demandeMereId}">
+                        <!-- Les quantités et les prix viennent de la demande : seules les désignations fournisseur se saisissent -->
 
                         <div class="row mb-3">
                             <div class="col-md-4">
@@ -36,7 +46,7 @@
                             <div class="col-md-6">
                                 <label for="service" class="form-label"><strong>Service</strong></label>
                                 <input type="text" class="form-control" id="service" name="service"
-                                       th:value="${bcContacts.getFirst().utilisateur.service.libelle}" disabled>
+                                       th:value="${bonCommandeMere.createur != null and bonCommandeMere.createur.service != null ? bonCommandeMere.createur.service.libelle : ''}" disabled>
                             </div>
                             <div class="col-md-2">
                                 <label for="statut" class="form-label"><strong>Statut</strong></label>
@@ -233,10 +243,10 @@
                                            class="form-control"
                                            id="demandeMereIdDisplay"
                                            disabled
-                                           th:value="${demandeMereId}">
+                                           th:value="${bonCommandeMere.demandeMere.id}">
 
                                     <a class="btn btn-outline-gradient-blue"
-                                       th:href="@{/demande/fiche/{id}(id=${demandeMereId})}">
+                                       th:href="@{/demande/fiche/{id}(id=${bonCommandeMere.demandeMere.id})}">
                                         <i class="bi bi-box-arrow-up-right"></i>
                                         Consulter
                                     </a>
@@ -252,7 +262,8 @@
                         <div class="row mb-4">
                             <div class="col-12">
                                 <label class="form-label">
-                                    <strong>Contacts</strong>
+                                    <strong>Personne de contact AFG Bank</strong>
+                                    <span class="text-muted small fw-normal">(créateur du bon, imprimé sur le bon)</span>
                                 </label>
 
                                 <div class="table-responsive">
@@ -266,10 +277,10 @@
                                         </thead>
 
                                         <tbody>
-                                        <tr th:each="contact : ${bcContacts}">
-                                            <td th:text="${contact.utilisateur.nom +' '+ contact.utilisateur.prenom}"></td>
-                                            <td th:text="${contact.utilisateur.mail}"></td>
-                                            <td th:text="${contact.utilisateur.contact}"></td>
+                                        <tr th:if="${bonCommandeMere.createur != null}">
+                                            <td th:text="${bonCommandeMere.createur.nom + ' ' + bonCommandeMere.createur.prenom}"></td>
+                                            <td th:text="${bonCommandeMere.createur.mail}"></td>
+                                            <td th:text="${bonCommandeMere.createur.contact}"></td>
                                         </tr>
                                         </tbody>
                                     </table>
@@ -291,8 +302,8 @@
                                         <th>Désignation fournisseur</th>
                                         <th>QTE</th>
                                         <th>Unité</th>
-                                        <th>Prix unitaire HT en MGA</th>
-                                        <th>Montant HT en MGA</th>
+                                        <th>Prix unitaire HT en <span th:text="${bonCommandeMere.demandeMere != null ? bonCommandeMere.demandeMere.codeDevise : bonCommandeMere.codeDevise}">MGA</span></th>
+                                        <th>Montant HT en <span th:text="${bonCommandeMere.demandeMere != null ? bonCommandeMere.demandeMere.codeDevise : bonCommandeMere.codeDevise}">MGA</span></th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -306,12 +317,9 @@
                                         <td th:text="${bcf.article != null ? bcf.article.codeArticle : ''}"></td>
                                         <td th:text="${bcf.article != null ? bcf.article.designation : ''}"></td>
                                         <td>
-                                            <input type="hidden" th:name="'lignes[' + ${stat.index} + '].demandeFilleId'"
-                                                   th:value="${bcf.demandeFille.id}">
-                                            <input type="hidden" th:name="'lignes[' + ${stat.index} + '].articleId'"
-                                                   th:value="${bcf.article != null ? bcf.article.id : ''}">
                                             <textarea class="form-control form-control-sm" aria-label="Désignation fournisseur"
-                                                      th:name="'lignes[' + ${stat.index} + '].designationFournisseur'"
+                                                      maxlength="255"
+                                                      th:name="'designation_' + ${bcf.id}"
                                                       th:text="${bcf.designationFournisseur}"></textarea>
                                         </td>
                                         <td>
@@ -319,7 +327,7 @@
                                             <input type="hidden" th:name="'lignes[' + ${stat.index} + '].quantiteCommandee'"
                                                    th:value="${bcf.quantiteCommandee}">
                                         </td>
-                                        <td th:text="${bcf.article.getUdm().getDescription()}"></td>
+                                        <td th:text="${bcf.uniteAffichee}"></td>
                                         <td>
                                             <span th:text="${#numbers.formatDecimal(bcf.prixUnitaireHT, 1, 'DEFAULT', 2, 'DEFAULT')}"></span>
                                             <input type="hidden" th:name="'lignes[' + ${stat.index} + '].prixUnitaireHT'"
@@ -334,7 +342,8 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <small class="text-muted">Les lignes de commande sont créées à partir des demandes liées.</small>
+                            <small class="text-muted">Les lignes, quantités et prix viennent de la demande
+                                (lignes refusées et lignes servies depuis le stock exclues).</small>
                         </div>
 
                         <hr>
@@ -353,7 +362,7 @@
                                     <tr>
                                         <th class="text-end bg-light" style="width: 55%">Montant HT</th>
                                         <td class="text-end fw-bold">
-                                            <span id="displayMontantHT">0,00</span> MGA
+                                            <span id="displayMontantHT">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.demandeMere != null ? bonCommandeMere.demandeMere.codeDevise : bonCommandeMere.codeDevise}">MGA</span>
                                             <input type="hidden" name="montantHT" id="montantHTInput"
                                                    th:value="${bonCommandeMere.montantHT}">
                                         </td>
@@ -373,14 +382,14 @@
                                                    th:value="${bonCommandeMere.remise > 0 ? bonCommandeMere.remise : ''}">
                                             <span class="text-muted small">%</span>
                                         </th>
-                                        <td class="text-end text-danger" id="displayRemise">— MGA</td>
+                                        <td class="text-end text-danger" id="displayRemise">—</td>
                                     </tr>
 
                                     <!-- Montant HT après remise (affiché seulement si remise > 0) -->
                                     <tr id="rowMontantHTRemise" style="display: none;">
                                         <th class="text-end bg-light">Montant HT remisé</th>
                                         <td class="text-end fw-semibold">
-                                            <span id="displayMontantHTRemise">0,00</span> MGA
+                                            <span id="displayMontantHTRemise">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.demandeMere != null ? bonCommandeMere.demandeMere.codeDevise : bonCommandeMere.codeDevise}">MGA</span>
                                         </td>
                                     </tr>
 
@@ -398,14 +407,14 @@
                                                    th:value="${bonCommandeMere.tauxTVA > 0 ? bonCommandeMere.tauxTVA : ''}">
                                             <span class="text-muted small">%</span>
                                         </th>
-                                        <td class="text-end" id="displayTVA">0,00 MGA</td>
+                                        <td class="text-end" id="displayTVA">0,00</td>
                                     </tr>
 
                                     <!-- Montant TTC (calculé automatiquement) -->
                                     <tr class="table-primary">
                                         <th class="text-end">Montant TTC</th>
                                         <td class="text-end fw-bold fs-5">
-                                            <span id="displayMontantTTC">0,00</span> MGA
+                                            <span id="displayMontantTTC">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.demandeMere != null ? bonCommandeMere.demandeMere.codeDevise : bonCommandeMere.codeDevise}">MGA</span>
                                             <input type="hidden" name="montantTTC" id="montantTTCInput"
                                                    th:value="${bonCommandeMere.montantTTC}">
                                         </td>
@@ -419,22 +428,40 @@
 
                     </div>
 
-                    <div class="card-footer text-end">
-                        <a href="/bon-commande/list" class="btn btn-secondary me-2">
-                            <i class="fas fa-times me-1"></i> Retour
-                        </a>
-                        <button type="submit" class="btn btn-gradient-green">
-                            <i class="fas fa-save me-1"></i> Sauvegarder le bon de commande
-                        </button>
+                    <div class="card-footer d-flex justify-content-between flex-wrap gap-2">
+                        <div>
+                            <!-- Bouton du formulaire d'annulation ci-dessous (les formulaires ne s'imbriquent pas) -->
+                            <button type="submit" form="formAnnulerBC" class="btn btn-outline-danger" th:if="${peutSoumettre}">
+                                <i class="fas fa-ban me-1"></i> Annuler le bon
+                            </button>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a th:href="@{/bon-commande/list}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i> Retour
+                            </a>
+                            <button type="submit" name="action" value="enregistrer" class="btn btn-outline-primary">
+                                <i class="fas fa-save me-1"></i> Enregistrer le brouillon
+                            </button>
+                            <!-- Enregistre la saisie puis soumet à la validation des Moyens Généraux -->
+                            <button type="submit" name="action" value="soumettre" class="btn btn-gradient-green"
+                                    th:if="${peutSoumettre}">
+                                <i class="fas fa-paper-plane me-1"></i> Enregistrer et soumettre à validation
+                            </button>
+                        </div>
                     </div>
                 </div>
             </form>
+            <form id="formAnnulerBC" method="post" th:if="${peutSoumettre}" data-chargement="Annulation en cours…"
+                  th:action="@{/bon-commande/manuel/{id}/annuler(id=${bonCommandeMere.id})}"
+                  onsubmit="return confirm('Annuler définitivement ce bon de commande ?');"></form>
         </div>
     </section>
 </div>
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+    // Devise du bon : celle de la demande dont il reprend les prix
+    const CODE_DEVISE = /*[[${bonCommandeMere.demandeMere != null ? bonCommandeMere.demandeMere.codeDevise : bonCommandeMere.codeDevise}]]*/ 'MGA';
     document.addEventListener("DOMContentLoaded", function () {
         const form = document.getElementById("formSauvegarderBC");
         const inputPhone = document.getElementById("nouveauResponsableContact");
@@ -743,10 +770,10 @@
         const displayRemise = document.getElementById('displayRemise');
 
         if (tauxRemise > 0) {
-            displayRemise.textContent = '− ' + formatMGA(montantRemise) + ' MGA';
+            displayRemise.textContent = '− ' + formatMGA(montantRemise) + ' ' + CODE_DEVISE;
             rowMontantHTRemise.style.display = '';
         } else {
-            displayRemise.textContent = '— MGA';
+            displayRemise.textContent = '—';
             rowMontantHTRemise.style.display = 'none';
         }
 
@@ -757,7 +784,7 @@
         // 4. TVA calculée sur le montant HT (après remise)
         const tauxTVA = parseFloat(document.getElementById('tauxTVA').value) || 0;
         const montantTVA = montantHTRemise * (tauxTVA / 100);
-        document.getElementById('displayTVA').textContent = formatMGA(montantTVA) + ' MGA';
+        document.getElementById('displayTVA').textContent = formatMGA(montantTVA) + ' ' + CODE_DEVISE;
 
         // 5. Montant TTC
         const montantTTC = montantHTRemise + montantTVA;

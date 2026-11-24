@@ -14,6 +14,146 @@
 <div class="main-content">
     <section>
         <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-file-invoice icon-gradient-blue"></i> Bons de commande
+            </h1>
+            <a th:if="${peutCreer}" th:href="@{/bon-commande/manuel/nouveau}" class="btn btn-gradient-green">
+                <i class="fas fa-plus-circle me-1"></i> Nouveau bon de commande
+            </a>
+        </div>
+
+        <!-- Recherche multicritère -->
+        <div class="card shadow-lg border-0 mb-3">
+            <div class="card-body">
+                <form method="get" th:action="@{/bon-commande/list}" class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fNumero">N° bon</label>
+                        <input class="form-control" type="text" id="fNumero" name="numero" th:value="${numero}"
+                               placeholder="Numéro…">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fFournisseur">Fournisseur</label>
+                        <input class="form-control" type="text" id="fFournisseur" name="fournisseur" th:value="${fournisseur}"
+                               placeholder="Nom…">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fObjet">Objet</label>
+                        <input class="form-control" type="text" id="fObjet" name="objet" th:value="${objet}"
+                               placeholder="Objet du bon…">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fDemande">Demande</label>
+                        <input class="form-control" type="text" id="fDemande" name="demande" th:value="${demande}"
+                               placeholder="DM…">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fArticle">Article</label>
+                        <input class="form-control" type="text" id="fArticle" name="article" th:value="${article}"
+                               placeholder="Code ou désignation">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fStatut">Statut</label>
+                        <select class="form-select" id="fStatut" name="statut">
+                            <option value="" th:selected="${statut == ''}">Tous</option>
+                            <option th:each="s : ${statuts}"
+                                    th:value="${s.name()}"
+                                    th:text="${s.name() == 'BROUILLON' ? 'Brouillon'
+                                             : (s.name() == 'EN_ATTENTE_VALIDATION' ? 'En attente de validation'
+                                             : (s.name() == 'VALIDE' ? 'Validé' : 'Annulé'))}"
+                                    th:selected="${statut == s.name()}">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fDu">Créé du</label>
+                        <input class="form-control" type="date" id="fDu" name="dateFrom" th:value="${dateFrom}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="fAu">au</label>
+                        <input class="form-control" type="date" id="fAu" name="dateTo" th:value="${dateTo}">
+                    </div>
+                    <!-- Seulement pour les validateurs (MG_VALIDATOR, SG, admin) ; remplace le filtre de statut -->
+                    <div class="col-md-3 d-flex align-items-end" th:if="${peutValiderUneEtape}">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="fAValider" name="aValider" value="true"
+                                   th:checked="${aValider}">
+                            <label class="form-check-label" for="fAValider">
+                                <i class="fas fa-bell me-1 text-primary"></i>À valider par moi seulement
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end" th:if="${peutReceptionner}">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="fARecevoir" name="aRecevoir" value="true"
+                                   th:checked="${aRecevoir}">
+                            <label class="form-check-label" for="fARecevoir">
+                                <i class="fas fa-truck-loading me-1 text-primary"></i>À réceptionner seulement
+                            </label>
+                        </div>
+                    </div>
+                    <div th:replace="~{fragment/pagination :: taille(${size})}"></div>
+                    <div class="col-md-10 d-flex gap-2 align-items-end">
+                        <button class="btn btn-gradient-blue" type="submit">
+                            <i class="fas fa-filter me-1"></i>Filtrer
+                        </button>
+                        <a class="btn btn-outline-secondary" th:href="@{/bon-commande/list}">Réinitialiser</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-lg border-0">
+            <div class="card-body">
+                <div class="text-muted small mb-2"
+                     th:text="${bons.totalElements} + ' bon(s) de commande'"></div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>Numéro</th>
+                            <th>Date</th>
+                            <th>Objet</th>
+                            <th>Fournisseur</th>
+                            <th class="text-end">Montant TTC</th>
+                            <th>Statut</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${bons.totalElements == 0}">
+                            <td colspan="6" class="text-center text-muted py-4">Aucun bon de commande.</td>
+                        </tr>
+                        <tr th:each="bc : ${bons.content}">
+                            <td>
+                                <a class="fw-semibold text-decoration-none"
+                                   th:href="@{/bon-commande/{id}(id=${bc.id})}"
+                                   th:text="${bc.numero != null and !#strings.isEmpty(bc.numero) ? bc.numero : bc.id}"></a>
+                            </td>
+                            <td th:text="${bc.dateCreation != null ? #temporals.format(bc.dateCreation, 'dd/MM/yyyy') : '—'}"></td>
+                            <td th:text="${bc.description != null and !#strings.isEmpty(bc.description) ? #strings.abbreviate(bc.description, 50) : '—'}"></td>
+                            <td th:text="${bc.fournisseur != null ? bc.fournisseur.nom : '—'}"></td>
+                            <td class="text-end"
+                                th:text="${bc.montantTTC > 0 ? T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(bc.montantTTC, bc.codeDevise) : '—'}"></td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${bc.statut?.name() == 'VALIDE'} ? 'bg-success' :
+                                                      (${bc.statut?.name() == 'ANNULE'} ? 'bg-danger' :
+                                                      (${bc.statut?.name() == 'EN_ATTENTE_VALIDATION'} ? 'bg-warning text-dark' : 'bg-secondary'))"
+                                      th:text="${bc.libelleStatut}"></span>
+                                <span class="badge bg-primary ms-1" th:if="${idsAValider.contains(bc.id)}">
+                                    <i class="fas fa-bell me-1"></i>À valider
+                                </span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div th:replace="~{fragment/pagination :: pagination(${bons}, ${urlPagination})}"></div>
+            </div>
+        </div>
     </section>
 </div>
 </body>

@@ -236,4 +236,33 @@ public interface DemandeMereRepo
     ORDER BY 1, 2
     """, nativeQuery = true)
     List<Object[]> countByMoisAndStatut(@Param("ids") List<String> ids);
+
+    // ── Tableau de bord : éléments à traiter ────────────────────────────────
+
+    /** Par statut : [statut, nombre, date de la plus ancienne demande]. */
+    @Query("""
+        SELECT d.statut, COUNT(d), MIN(d.dateDemande) FROM DemandeMere d
+        WHERE d.statut IN :statuts
+        GROUP BY d.statut
+        """)
+    List<Object[]> compterParStatut(@Param("statuts") java.util.Collection<Integer> statuts);
+
+    /** Demandes d'un statut émises par certains demandeurs : [nombre, plus ancienne date]. */
+    @Query("""
+        SELECT COUNT(d), MIN(d.dateDemande) FROM DemandeMere d
+        WHERE d.statut = :statut AND d.demandeur.id IN :demandeurIds
+        """)
+    List<Object[]> compterStatutPourDemandeurs(@Param("statut") int statut,
+                                               @Param("demandeurIds") java.util.Collection<Integer> demandeurIds);
+
+    /** Paiements directs validés à un stade donné : [nombre, plus ancienne date de référence]. */
+    @Query("""
+        SELECT COUNT(d), MIN(COALESCE(d.dateTransmissionFinance, d.dateDemande)) FROM DemandeMere d
+        WHERE d.statut = :statut AND d.statutTransmissionFinance = :transmission
+        """)
+    List<Object[]> compterPaiementsDirects(@Param("statut") int statut,
+                                           @Param("transmission") DemandeMere.StatutTransmissionFinance transmission);
+
+    /** Dernières demandes d'un demandeur (bloc « Mes demandes »). */
+    List<DemandeMere> findTop5ByDemandeurIdOrderByDateDemandeDesc(int demandeurId);
 }

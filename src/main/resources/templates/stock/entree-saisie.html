@@ -14,6 +14,9 @@
     <section>
         <h1 class="mb-3">Simulation d'entrée en stock</h1>
 
+        <!-- Affichage du message d'erreur -->
+        <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
         <form th:action="@{/stock/save-entree}" method="post">
             <!-- ID de l'article caché -->
             <input type="hidden" name="codeArticle" th:value="${article.getCodeArticle()}">
@@ -26,7 +29,14 @@
 
             <div class="mb-3">
                 <label>Quantité</label>
-                <input type="number" class="form-control" name="quantite" min="1" required>
+                <input type="number" class="form-control" name="quantite" th:value="${quantiteEntree}" min="1" required>
+            </div>
+
+            <div class="mb-3">
+                <label>Prix unitaire du lot</label>
+                <input type="number" class="form-control" name="prixUnitaire" th:value="${prixUnitaire}"
+                       min="0" step="0.01">
+                <small class="text-muted">Valorise le lot en stock (FIFO). Par défaut : dernier prix d'achat connu.</small>
             </div>
 
             <button type="submit" class="btn btn-primary">Valider</button>

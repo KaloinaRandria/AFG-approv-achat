@@ -14,7 +14,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ArticleRepo extends JpaRepository<Article,Integer> {
+public interface ArticleRepo extends JpaRepository<Article,Integer>,
+        org.springframework.data.jpa.repository.JpaSpecificationExecutor<Article> {
     @Query("SELECT a FROM Article a WHERE a.codeArticle = :codeArticle")
     Optional<Article> findArticleByCodeArticle(String codeArticle);
 

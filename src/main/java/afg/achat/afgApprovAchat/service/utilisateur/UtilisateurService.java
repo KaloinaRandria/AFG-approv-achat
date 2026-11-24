@@ -240,124 +240,70 @@ public class UtilisateurService {
         utilisateur.setRoles(roles);
         utilisateur.setSuperieurHierarchique(superieur);
 
+        // Validateurs : la liste reçue remplace la liste actuelle (null = inchangée)
+        if (dto.getValidateurIds() != null) {
+            Set<Utilisateur> validateurs = new HashSet<>();
+            for (Integer valId : dto.getValidateurIds()) {
+                if (valId == id) {
+                    throw new IllegalArgumentException("Un utilisateur ne peut pas être son propre validateur.");
+                }
+                validateurs.add(utilisateurRepo.findById(valId)
+                        .orElseThrow(() -> new IllegalArgumentException("Validateur introuvable : " + valId)));
+            }
+            utilisateur.getValidateurs().clear();
+            utilisateur.getValidateurs().addAll(validateurs);
+        }
+
         return utilisateurRepo.save(utilisateur);
     }
 
+    /** Tri autorisé sur la liste (champ affiché -> propriété). */
+    private static final java.util.Map<String, String> TRIS = java.util.Map.of(
+            "nom",    "nom",
+            "prenom", "prenom",
+            "mail",   "mail");
+
     /**
-     * PAGINATION - Recherche les utilisateurs avec filtres avancés
-     * Utilise les Specifications pour une approche scalable
+     * Liste paginée des utilisateurs.
      *
-     * @param nom         Filtre sur le nom (optionnel)
-     * @param prenom      Filtre sur le prénom (optionnel)
-     * @param mail        Filtre sur l'email (optionnel)
-     * @param service     Filtre sur le service (optionnel)
-     * @param page        Numéro de page (0-indexed)
-     * @param size        Taille de la page
-     * @param sortBy      Champ de tri (ex: "nom", "mail", etc.)
-     * @param direction   Direction du tri ("ASC" ou "DESC")
-     * @return Page d'utilisateurs
+     * @param recherche texte cherché dans le nom, le prénom et l'email
+     * @param serviceId service (null = tous)
+     * @param roleId    rôle (null = tous)
+     * @param actif     statut (null = tous)
      */
     @Transactional(readOnly = true)
-    public Page<Utilisateur> rechercherUtilisateurs(
-            String nom,
-            String prenom,
-            String mail,
-            String service,
-            int page,
-            int size,
-            String sortBy,
-            String direction) {
-
-        // Validations des paramètres
-        if (page < 0) page = 0;
-        if (size <= 0 || size > 100) size = 10; // Limite max de 100 pour éviter les abus
-        if (sortBy == null || sortBy.isEmpty()) sortBy = "nom";
-
-        // Créer la pagination avec tri
-        Sort.Direction sortDirection = "DESC".equalsIgnoreCase(direction)
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
-
-        // Construire la spécification de recherche
-        Specification<Utilisateur> spec = UtilisateurSpecification.filterBy(nom, prenom, mail, service);
-
-        // Exécuter la recherche
-        return utilisateurRepo.findAll(spec, pageable);
-    }
-
-    /**
-     * Recherche textuelle simple sur nom, prénom ou email
-     */
-    @Transactional(readOnly = true)
-    public Page<Utilisateur> searchUtilisateurs(String searchTerm, int page, int size) {
+    public Page<Utilisateur> rechercherUtilisateurs(String recherche, Integer serviceId, Integer roleId,
+                                                    Boolean actif, int page, int size,
+                                                    String tri, String direction) {
         if (page < 0) page = 0;
         if (size <= 0 || size > 100) size = 10;
+        String propriete = TRIS.getOrDefault(tri == null ? "" : tri, "nom");
+        Sort.Direction sens = "DESC".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Sort sort = Sort.by(sens, propriete);
+        if (!"prenom".equals(propriete)) sort = sort.and(Sort.by(Sort.Direction.ASC, "prenom"));
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "nom"));
-        Specification<Utilisateur> spec = UtilisateurSpecification.searchTerm(searchTerm);
-        return utilisateurRepo.findAll(spec, pageable);
+        return utilisateurRepo.findAll(
+                UtilisateurSpecification.rechercher(recherche, serviceId, roleId, actif),
+                PageRequest.of(page, size, sort));
     }
 
-    /**
-     * Récupère tous les utilisateurs paginés (sans filtre)
-     */
+    /** Comptes actifs, triés par nom puis prénom (listes de choix). */
     @Transactional(readOnly = true)
-    public Page<Utilisateur> getAllUtilisateurs(int page, int size) {
-        if (page < 0) page = 0;
-        if (size <= 0 || size > 100) size = 10;
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "nom"));
-        return utilisateurRepo.findAll(pageable);
+    public List<Utilisateur> getUtilisateursActifs() {
+        return utilisateurRepo.findByActifTrueOrderByNomAscPrenomAsc();
     }
 
     /**
-     * Ajoute un validateur à un utilisateur.
+     * Active ou désactive un compte. Un administrateur ne peut pas désactiver son propre compte.
      */
     @Transactional
-    public Utilisateur ajouterValidateur(int utilisateurId, int validateurId) {
-        if (utilisateurId == validateurId) {
-            throw new IllegalArgumentException("Un utilisateur ne peut pas être son propre validateur.");
+    public Utilisateur changerStatut(int id, boolean actif, int idAuteur) {
+        Utilisateur utilisateur = utilisateurRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur introuvable : id=" + id));
+        if (!actif && id == idAuteur) {
+            throw new IllegalArgumentException("Vous ne pouvez pas désactiver votre propre compte.");
         }
-
-        Utilisateur utilisateur = utilisateurRepo.findById(utilisateurId)
-                .orElseThrow(() -> new EntityNotFoundException("Utilisateur introuvable : id=" + utilisateurId));
-
-        Utilisateur validateur = utilisateurRepo.findById(validateurId)
-                .orElseThrow(() -> new EntityNotFoundException("Validateur introuvable : id=" + validateurId));
-
-        utilisateur.getValidateurs().add(validateur);
+        utilisateur.setActif(actif);
         return utilisateurRepo.save(utilisateur);
-    }
-
-    /**
-     * Retire un validateur d'un utilisateur.
-     */
-    @Transactional
-    public Utilisateur retirerValidateur(int utilisateurId, int validateurId) {
-        Utilisateur utilisateur = utilisateurRepo.findById(utilisateurId)
-                .orElseThrow(() -> new EntityNotFoundException("Utilisateur introuvable : id=" + utilisateurId));
-
-        Utilisateur validateur = utilisateurRepo.findById(validateurId)
-                .orElseThrow(() -> new EntityNotFoundException("Validateur introuvable : id=" + validateurId));
-
-        boolean removed = utilisateur.getValidateurs().remove(validateur);
-        if (!removed) {
-            throw new IllegalStateException(
-                    "Le validateur id=" + validateurId + " n'est pas assigné à l'utilisateur id=" + utilisateurId);
-        }
-
-        return utilisateurRepo.save(utilisateur);
-    }
-
-    /**
-     * Retourne les validateurs d'un utilisateur.
-     */
-    @Transactional(readOnly = true)
-    public Set<Utilisateur> getValidateurs(int utilisateurId) {
-        Utilisateur utilisateur = utilisateurRepo.findById(utilisateurId)
-                .orElseThrow(() -> new EntityNotFoundException("Utilisateur introuvable : id=" + utilisateurId));
-        return utilisateur.getValidateurs();
     }
 }
