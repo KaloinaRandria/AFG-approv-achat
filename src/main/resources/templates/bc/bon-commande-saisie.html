@@ -453,7 +453,7 @@
             </form>
             <form id="formAnnulerBC" method="post" th:if="${peutSoumettre}" data-chargement="Annulation en cours…"
                   th:action="@{/bon-commande/manuel/{id}/annuler(id=${bonCommandeMere.id})}"
-                  onsubmit="return confirm('Annuler définitivement ce bon de commande ?');"></form>
+                  data-confirmer="Annuler ce bon de commande ?" data-confirmer-texte="L'annulation est définitive." data-confirmer-bouton="Annuler le bon" data-confirmer-type="danger"></form>
         </div>
     </section>
 </div>

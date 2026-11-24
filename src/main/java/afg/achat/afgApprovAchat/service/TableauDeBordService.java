@@ -205,7 +205,8 @@ public class TableauDeBordService {
                 .map(d -> {
                     EtapeWorkflow e = EtapeWorkflow.fromStatut(d.getStatut());
                     String badge = e == EtapeWorkflow.VALIDE ? "bg-success"
-                            : e == EtapeWorkflow.REFUSE ? "bg-danger" : "bg-warning text-dark";
+                            : e == EtapeWorkflow.REFUSE ? "bg-danger"
+                            : e == EtapeWorkflow.BROUILLON ? "bg-secondary" : "bg-warning text-dark";
                     String libelle = e == null ? "—"
                             : e == EtapeWorkflow.VALIDE ? "Validée"
                             : e == EtapeWorkflow.REFUSE ? "Refusée" : e.getLibelleAttente();

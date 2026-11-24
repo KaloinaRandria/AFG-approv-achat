@@ -31,8 +31,11 @@ import java.util.Map;
 
 @Controller
 @RequestMapping("/user")
-@PreAuthorize("hasAnyRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','IT')")
 public class UtilisateurController {
+
+    /** Rôle réservé : seul un administrateur l'attribue, le retire, ou gère un compte qui le porte. */
+    private static final String ROLE_ADMIN = "ADMIN";
 
     @Autowired private UtilisateurService utilisateurService;
     @Autowired private RoleRepo           roleRepo;
@@ -46,11 +49,55 @@ public class UtilisateurController {
 
     /** Listes de choix communes à la saisie et à la modification. */
     private void populateChoix(Model model) {
-        model.addAttribute("roles",    roleRepo.findAll(Sort.by("role")));
+        List<Role> roles = roleRepo.findAll(Sort.by("role"));
+        boolean admin = connecteEstAdmin();
+        model.addAttribute("roles",    roles);   // filtres de la liste : tous les rôles
+        // Formulaires : le rôle ADMIN n'est proposé qu'aux administrateurs (IT ne peut pas l'attribuer)
+        model.addAttribute("rolesAttribuables", admin ? roles
+                : roles.stream().filter(r -> !estRoleAdmin(r)).toList());
+        model.addAttribute("connecteEstAdmin", admin);
         model.addAttribute("postes",   posteRepo.findAll(Sort.by("poste")));
         model.addAttribute("services", serviceRepo.findAll(Sort.by("libelle")));
         // Seuls les comptes actifs peuvent devenir supérieur ou validateur
         model.addAttribute("utilisateursActifs", utilisateurService.getUtilisateursActifs());
+    }
+
+    // ── Garde-fous du rôle ADMIN (gestion ouverte au rôle IT) ──
+
+    private static boolean connecteEstAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> ("ROLE_" + ROLE_ADMIN).equals(a.getAuthority()));
+    }
+
+    private static boolean estRoleAdmin(Role r) {
+        return r != null && r.getRole() != null
+                && (ROLE_ADMIN.equalsIgnoreCase(r.getRole().trim()) || ("ROLE_" + ROLE_ADMIN).equalsIgnoreCase(r.getRole().trim()));
+    }
+
+    private static boolean estCompteAdmin(Utilisateur u) {
+        return u != null && u.getRoles() != null && u.getRoles().stream().anyMatch(UtilisateurController::estRoleAdmin);
+    }
+
+    /** Vrai si la liste de rôles demandée contient le rôle ADMIN. */
+    private boolean contientRoleAdmin(java.util.Collection<Integer> roleIds) {
+        if (roleIds == null || roleIds.isEmpty()) return false;
+        return roleRepo.findAllById(roleIds).stream().anyMatch(UtilisateurController::estRoleAdmin);
+    }
+
+    /**
+     * Un non-administrateur (IT) ne peut ni attribuer le rôle ADMIN, ni modifier ou
+     * (dés)activer un compte administrateur. Renvoie le motif du refus, ou {@code null}.
+     */
+    private String refusHorsAdmin(Utilisateur cible, java.util.Collection<Integer> roleIdsDemandes) {
+        if (connecteEstAdmin()) return null;
+        if (estCompteAdmin(cible)) {
+            return "Seul un administrateur peut modifier un compte administrateur.";
+        }
+        if (contientRoleAdmin(roleIdsDemandes)) {
+            return "Seul un administrateur peut attribuer le rôle ADMIN.";
+        }
+        return null;
     }
 
     private static String libelle(Utilisateur u) {
@@ -130,6 +177,13 @@ public class UtilisateurController {
         dto.setSuperieurHierarchiqueId(superieurHierarchiqueId);
         dto.setRoleIds(roleIdsList != null ? new HashSet<>(roleIdsList) : new HashSet<>());
         dto.setValidateurIds(validateurIdsList != null ? new HashSet<>(validateurIdsList) : null);
+
+        String refus = refusHorsAdmin(null, dto.getRoleIds());
+        if (refus != null) {
+            redirectAttributes.addFlashAttribute("ko", refus);
+            redirectAttributes.addFlashAttribute("utilisateur", dto);
+            return "redirect:/user/add";
+        }
 
         try {
             utilisateurService.insererUtilisateur(dto);
@@ -286,6 +340,12 @@ public class UtilisateurController {
         // Le formulaire envoie toujours la liste complète : vide = aucun validateur
         dto.setValidateurIds(validateurIdsList != null ? new HashSet<>(validateurIdsList) : new HashSet<>());
 
+        String refus = refusHorsAdmin(existant, dto.getRoleIds());
+        if (refus != null) {
+            redirectAttributes.addFlashAttribute("ko", refus);
+            return retourListe(returnUrl);
+        }
+
         try {
             utilisateurService.modifierUtilisateur(id, dto);
             redirectAttributes.addFlashAttribute("ok",
@@ -314,6 +374,12 @@ public class UtilisateurController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
         Utilisateur auteur = utilisateurService.getUtilisateurByMail(principal.getMail());
+
+        String refus = refusHorsAdmin(utilisateurService.getUtilisateurById(id), null);
+        if (refus != null) {
+            redirectAttributes.addFlashAttribute("ko", refus);
+            return retourListe(returnUrl);
+        }
 
         try {
             Utilisateur u = utilisateurService.changerStatut(id, actif, auteur != null ? auteur.getId() : -1);

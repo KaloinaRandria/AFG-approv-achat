@@ -127,6 +127,7 @@ public class ApiController {
 
         //Statut (libellé)
         Map<Integer, String> statutLabels = Map.of(
+                StatutDemande.BROUILLON, "BROUILLON",
                 StatutDemande.CREE, "CREE",
                 StatutDemande.VALIDATION_N1, "EN_VALIDATION",
                 StatutDemande.VALIDATION_N2, "EN_VALIDATION",

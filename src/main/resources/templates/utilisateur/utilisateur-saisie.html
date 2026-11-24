@@ -126,7 +126,7 @@
                                 <label for="roles" class="form-label fw-bold required-field">Rôles</label>
                                 <select class="select2" id="roles" name="roles" multiple required
                                         data-placeholder="Choisir un ou plusieurs rôles...">
-                                    <option th:each="r : ${roles}" th:value="${r.id}" th:text="${r.role}"
+                                    <option th:each="r : ${rolesAttribuables}" th:value="${r.id}" th:text="${r.role}"
                                             th:selected="${utilisateur.roleIds != null and utilisateur.roleIds.contains(r.id)}"></option>
                                 </select>
                                 <div class="small text-danger mt-1 d-none" id="rolesErreur">

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Directions et postes</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <meta name="context-path" th:content="@{/}" />
+</head>
+<body>
+
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+
+<div class="main-content">
+    <div class="container-fluid py-4"></div>
+    <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-sitemap me-3 icon-gradient-blue"></i> Directions et postes
+            </h1>
+        </div>
+
+        <!-- Onglets -->
+        <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" th:classappend="${onglet == 'directions'} ? 'active'"
+                   th:href="@{/organisation(onglet='directions')}">
+                    <i class="fas fa-building me-1"></i> Directions
+                    <span class="badge bg-light text-dark border ms-1" th:text="${#lists.size(directions)}">0</span>
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" th:classappend="${onglet == 'postes'} ? 'active'"
+                   th:href="@{/organisation(onglet='postes')}">
+                    <i class="fas fa-id-badge me-1"></i> Postes
+                    <span class="badge bg-light text-dark border ms-1" th:text="${#lists.size(postes)}">0</span>
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" th:classappend="${onglet == 'coherence'} ? 'active'"
+                   th:href="@{/organisation(onglet='coherence')}">
+                    <i class="fas fa-exclamation-triangle me-1"></i> Incohérences
+                    <span class="badge ms-1" th:classappend="${#lists.isEmpty(incoherents)} ? 'bg-light text-dark border' : 'bg-danger'"
+                          th:text="${#lists.size(incoherents)}">0</span>
+                </a>
+            </li>
+        </ul>
+
+        <!-- ===================== INCOHÉRENCES ===================== -->
+        <div th:if="${onglet == 'coherence'}">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Utilisateurs dont la direction ne correspond pas à celle de leur poste
+                        (par exemple un Agent Comptable classé en Direction Ressources Humaines alors que le poste
+                        relève de la Direction Finance). Seuls les postes rattachés à une direction sont contrôlés.
+                        Si c'est le poste qui est mal rattaché, corrigez-le dans l'onglet Postes.
+                    </p>
+
+                    <div th:if="${#lists.isEmpty(incoherents)}" class="text-center py-4 text-success">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <div>Aucune incohérence : chaque utilisateur est dans la direction de son poste.</div>
+                    </div>
+
+                    <form th:unless="${#lists.isEmpty(incoherents)}" id="formAligner"
+                          th:action="@{/organisation/utilisateurs/aligner}" method="post">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2" sec:authorize="hasRole('ADMIN')">
+                            <span class="me-auto small text-muted">
+                                <strong id="nbUtilisateursCoches">0</strong> utilisateur(s) sélectionné(s)
+                            </span>
+                            <button type="submit" class="btn btn-sm btn-warning" id="btnAligner" disabled>
+                                <i class="fas fa-exchange-alt me-1"></i>Placer dans la direction de leur poste
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover align-middle mb-0" id="tableIncoherents">
+                                <thead>
+                                <tr>
+                                    <th style="width:5%" class="text-center" sec:authorize="hasRole('ADMIN')">
+                                        <input type="checkbox" class="form-check-input" id="tousUtilisateurs"
+                                               title="Tout sélectionner">
+                                    </th>
+                                    <th><i class="fas fa-user me-2 icon-gradient-light-blue"></i>Utilisateur</th>
+                                    <th><i class="fas fa-id-badge me-2 icon-gradient-light-blue"></i>Poste</th>
+                                    <th><i class="fas fa-building me-2 icon-gradient-light-blue"></i>Direction actuelle</th>
+                                    <th><i class="fas fa-arrow-right me-2 icon-gradient-light-blue"></i>Direction du poste</th>
+                                    <th class="text-center" style="width:8%" sec:authorize="hasRole('ADMIN')">Fiche</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="u : ${incoherents}">
+                                    <td class="text-center" sec:authorize="hasRole('ADMIN')">
+                                        <input type="checkbox" class="form-check-input choix-utilisateur"
+                                               name="utilisateurs" th:value="${u.id}">
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold" th:text="${u.nom + ' ' + u.prenom}">RAKOTO Jean</div>
+                                        <div class="small text-muted" th:text="${u.mail}">jean@afgbank.mg</div>
+                                    </td>
+                                    <td th:text="${#strings.trim(u.poste.poste)}">Agent Comptable</td>
+                                    <td>
+                                        <span th:if="${u.service != null}" class="badge bg-danger"
+                                              th:text="${u.service.acronyme}" th:title="${u.service.libelle}">DRH</span>
+                                        <span th:unless="${u.service != null}" class="text-muted small fst-italic">Aucune</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success"
+                                              th:text="${u.poste.direction.acronyme}" th:title="${u.poste.direction.libelle}">DFIN</span>
+                                    </td>
+                                    <td class="text-center" sec:authorize="hasRole('ADMIN')">
+                                        <a class="btn btn-sm btn-outline-primary" th:href="@{/user/list(q=${u.mail})}"
+                                           title="Ouvrir dans la gestion des utilisateurs">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== DIRECTIONS ===================== -->
+        <div class="row g-4" th:if="${onglet == 'directions'}">
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="input-group mb-3">
+                            <span class="input-group-text bg-light"><i class="fas fa-search icon-gradient-blue"></i></span>
+                            <input type="search" class="form-control filtre-liste" data-table="tableDirections"
+                                   placeholder="Filtrer les directions…" autocomplete="off">
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover align-middle mb-0" id="tableDirections">
+                                <thead>
+                                <tr>
+                                    <th><i class="fas fa-building me-2 icon-gradient-light-blue"></i>Direction</th>
+                                    <th style="width:16%"><i class="fas fa-font me-2 icon-gradient-light-blue"></i>Acronyme</th>
+                                    <th class="text-end" style="width:11%"><i class="fas fa-id-badge me-2 icon-gradient-light-blue"></i>Postes</th>
+                                    <th class="text-end" style="width:14%"><i class="fas fa-users me-2 icon-gradient-light-blue"></i>Utilisateurs</th>
+                                    <th class="text-center" style="width:14%"><i class="fas fa-cog me-2 icon-gradient-light-blue"></i>Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="d : ${directions}"
+                                    th:with="nb=${nbParDirection[d.id] != null ? nbParDirection[d.id] : 0},
+                                             nbPostes=${nbPostesParDirection[d.id] != null ? nbPostesParDirection[d.id] : 0}">
+                                    <td class="fw-semibold texte-filtre" th:text="${d.libelle}">Direction Finance</td>
+                                    <td><span class="badge bg-gradient-blue texte-filtre" th:text="${d.acronyme}">DFIN</span></td>
+                                    <td class="text-end">
+                                        <a th:if="${nbPostes > 0}" th:href="@{/organisation(onglet='postes', direction=${d.id})}"
+                                           th:text="${nbPostes}" title="Voir les postes de cette direction">0</a>
+                                        <span th:unless="${nbPostes > 0}" class="text-muted">0</span>
+                                    </td>
+                                    <td class="text-end" th:text="${nb}">0</td>
+                                    <td class="text-center text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal" data-bs-target="#modalDirection"
+                                                th:data-id="${d.id}" th:data-libelle="${d.libelle}" th:data-acronyme="${d.acronyme}"
+                                                title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <form th:if="${nb == 0 and nbPostes == 0}" th:action="@{/organisation/directions/{id}/supprimer(id=${d.id})}"
+                                              method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"
+                                                    th:data-confirm="'Supprimer la direction « ' + ${d.libelle} + ' » ?'"
+                                                    data-confirm-texte="Cette suppression est définitive." data-confirm-bouton="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                        <button th:unless="${nb == 0 and nbPostes == 0}" type="button" class="btn btn-sm btn-outline-secondary" disabled
+                                                title="Direction attribuée à des utilisateurs ou à des postes : suppression impossible">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card shadow">
+                    <div class="card-header btn-gradient-green text-white">
+                        <h5 class="mb-0">Ajouter une direction</h5>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/organisation/directions/ajouter}" method="post">
+                            <label for="dirLibelle" class="form-label required-field">Libellé</label>
+                            <input type="text" class="form-control mb-3" id="dirLibelle" name="libelle" maxlength="255" required
+                                   placeholder="Ex. Direction des Opérations">
+                            <label for="dirAcronyme" class="form-label required-field">Acronyme</label>
+                            <input type="text" class="form-control" id="dirAcronyme" name="acronyme" maxlength="20" required
+                                   placeholder="Ex. DO" oninput="this.value = this.value.toUpperCase()">
+                            <div class="form-text">Libellé et acronyme doivent être uniques.</div>
+                            <button type="submit" class="btn btn-gradient-green px-4 mt-3">
+                                <i class="fas fa-plus-circle me-2"></i>Ajouter la direction
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== POSTES ===================== -->
+        <div class="row g-4" th:if="${onglet == 'postes'}">
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-7">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="fas fa-search icon-gradient-blue"></i></span>
+                                    <input type="search" class="form-control filtre-liste" data-table="tablePostes"
+                                           placeholder="Filtrer les postes…" autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <!-- Filtre par direction : « Non rattachés » pour faire le tri des postes orphelins -->
+                                <select class="form-select" id="filtreDirection" aria-label="Filtrer par direction">
+                                    <option value="">Toutes les directions</option>
+                                    <option value="aucune">— Non rattachés —</option>
+                                    <option th:each="d : ${directions}" th:value="${d.id}"
+                                            th:selected="${directionFiltre != null and directionFiltre == d.id}"
+                                            th:text="${d.acronyme + ' — ' + d.libelle}"></option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Rattachement groupé : apparaît dès qu'un poste est coché -->
+                        <form id="formRattachement" th:action="@{/organisation/postes/rattacher}" method="post"
+                              class="alert alert-warning d-none py-2 mb-3">
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="me-auto">
+                                    <i class="fas fa-check-square me-1"></i>
+                                    <strong id="nbPostesCoches">0</strong> poste(s) sélectionné(s)
+                                </span>
+                                <select class="form-select form-select-sm w-auto" name="direction" id="directionRattachement"
+                                        aria-label="Direction de rattachement">
+                                    <option value="" selected>Rattacher à…</option>
+                                    <option value="aucune">— Aucune (détacher) —</option>
+                                    <option th:each="d : ${directions}" th:value="${d.id}"
+                                            th:text="${d.acronyme + ' — ' + d.libelle}"></option>
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-warning" id="btnRattacher" disabled>
+                                    <i class="fas fa-link me-1"></i>Appliquer
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnViderPostes">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <!-- Rempli par le script : un champ caché par poste coché -->
+                            <div id="postesCoches"></div>
+                        </form>
+
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover align-middle mb-0" id="tablePostes">
+                                <thead>
+                                <tr>
+                                    <th style="width:5%" class="text-center">
+                                        <input type="checkbox" class="form-check-input" id="tousPostes"
+                                               title="Sélectionner les postes affichés">
+                                    </th>
+                                    <th><i class="fas fa-id-badge me-2 icon-gradient-light-blue"></i>Poste</th>
+                                    <th style="width:22%"><i class="fas fa-building me-2 icon-gradient-light-blue"></i>Direction</th>
+                                    <th class="text-end" style="width:12%"><i class="fas fa-users me-2 icon-gradient-light-blue"></i>Utilisateurs</th>
+                                    <th class="text-center" style="width:12%"><i class="fas fa-cog me-2 icon-gradient-light-blue"></i>Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="p : ${postes}" th:with="nb=${nbParPoste[p.id] != null ? nbParPoste[p.id] : 0}"
+                                    th:attr="data-direction=${p.direction != null ? p.direction.id : 'aucune'}">
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input choix-poste" th:value="${p.id}"
+                                               th:attr="aria-label='Sélectionner ' + ${#strings.trim(p.poste)}">
+                                    </td>
+                                    <td class="fw-semibold texte-filtre" th:text="${#strings.trim(p.poste)}">Comptable</td>
+                                    <td>
+                                        <span th:if="${p.direction != null}" class="badge bg-gradient-blue texte-filtre"
+                                              th:text="${p.direction.acronyme}" th:title="${p.direction.libelle}">DFIN</span>
+                                        <span th:unless="${p.direction != null}" class="text-muted small fst-italic">Non rattaché</span>
+                                    </td>
+                                    <td class="text-end" th:text="${nb}">0</td>
+                                    <td class="text-center text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal" data-bs-target="#modalPoste"
+                                                th:data-id="${p.id}" th:data-libelle="${#strings.trim(p.poste)}"
+                                                th:data-direction="${p.direction != null ? p.direction.id : ''}"
+                                                title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <form th:if="${nb == 0}" th:action="@{/organisation/postes/{id}/supprimer(id=${p.id})}"
+                                              method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"
+                                                    th:data-confirm="'Supprimer le poste « ' + ${#strings.trim(p.poste)} + ' » ?'"
+                                                    data-confirm-texte="Cette suppression est définitive." data-confirm-bouton="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                        <button th:unless="${nb == 0}" type="button" class="btn btn-sm btn-outline-secondary" disabled
+                                                title="Poste attribué à des utilisateurs : suppression impossible">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card shadow">
+                    <div class="card-header btn-gradient-green text-white">
+                        <h5 class="mb-0">Ajouter un poste</h5>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/organisation/postes/ajouter}" method="post">
+                            <label for="posteLibelle" class="form-label required-field">Libellé</label>
+                            <input type="text" class="form-control mb-3" id="posteLibelle" name="libelle" maxlength="255" required
+                                   placeholder="Ex. Chargé d'Affaires PME">
+                            <label for="posteDirection" class="form-label">Direction</label>
+                            <select class="form-select" id="posteDirection" name="direction">
+                                <option value="">— Non rattaché —</option>
+                                <option th:each="d : ${directions}" th:value="${d.id}"
+                                        th:text="${d.acronyme + ' — ' + d.libelle}"></option>
+                            </select>
+                            <div class="form-text">Refusé si un poste du même nom existe déjà (accents et majuscules ignorés).</div>
+                            <button type="submit" class="btn btn-gradient-green px-4 mt-3">
+                                <i class="fas fa-plus-circle me-2"></i>Ajouter le poste
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card shadow mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Rattacher des postes</h5>
+                    </div>
+                    <div class="card-body text-muted small">
+                        <ol class="mb-0 ps-3">
+                            <li>Filtrez, par exemple sur « Non rattachés » ou sur un mot du poste.</li>
+                            <li>Cochez les postes (la case d'en-tête coche ceux qui sont affichés).</li>
+                            <li>Choisissez la direction dans la barre jaune, puis <strong>Appliquer</strong>.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-muted small mt-3">
+            <i class="fas fa-info-circle me-1"></i>
+            Les directions et postes sont attribués aux utilisateurs depuis la gestion des utilisateurs.
+            Un élément attribué à au moins un utilisateur ne peut pas être supprimé.
+        </div>
+    </section>
+</div>
+
+<!-- Modal direction -->
+<div class="modal fade" id="modalDirection" tabindex="-1" aria-labelledby="modalDirectionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <!-- th:action ajoute le jeton CSRF ; l'adresse est complétée à l'ouverture -->
+            <form method="post" th:action="@{/organisation/directions/0/modifier}"
+                  th:attr="data-action-base=@{/organisation/directions/}" data-action-fin="/modifier">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalDirectionLabel"><i class="fas fa-edit me-2"></i>Modifier la direction</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="editDirLibelle" class="form-label required-field">Libellé</label>
+                    <input type="text" class="form-control mb-3" id="editDirLibelle" name="libelle" maxlength="255" required data-champ="libelle">
+                    <label for="editDirAcronyme" class="form-label required-field">Acronyme</label>
+                    <input type="text" class="form-control" id="editDirAcronyme" name="acronyme" maxlength="20" required data-champ="acronyme"
+                           oninput="this.value = this.value.toUpperCase()">
+                    <div class="form-text">Les utilisateurs de cette direction voient le nouveau libellé.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-gradient-blue"><i class="fas fa-save me-1"></i>Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal poste -->
+<div class="modal fade" id="modalPoste" tabindex="-1" aria-labelledby="modalPosteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" th:action="@{/organisation/postes/0/modifier}"
+                  th:attr="data-action-base=@{/organisation/postes/}" data-action-fin="/modifier">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalPosteLabel"><i class="fas fa-edit me-2"></i>Modifier le poste</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="editPosteLibelle" class="form-label required-field">Libellé</label>
+                    <input type="text" class="form-control mb-3" id="editPosteLibelle" name="libelle" maxlength="255" required data-champ="libelle">
+                    <label for="editPosteDirection" class="form-label">Direction</label>
+                    <select class="form-select" id="editPosteDirection" name="direction" data-champ="direction">
+                        <option value="">— Non rattaché —</option>
+                        <option th:each="d : ${directions}" th:value="${d.id}"
+                                th:text="${d.acronyme + ' — ' + d.libelle}"></option>
+                    </select>
+                    <div class="form-text">Les utilisateurs de ce poste voient le nouveau libellé.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-gradient-blue"><i class="fas fa-save me-1"></i>Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const escapeHtml = s => String(s).replace(/[&<>"']/g, c =>
+            ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"}[c]));
+        const sansAccent = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+        // Modales de modification : adresse et champs remplis depuis le bouton
+        ["modalDirection", "modalPoste"].forEach(id => {
+            const modal = document.getElementById(id);
+            const form = modal.querySelector("form");
+            modal.addEventListener("show.bs.modal", e => {
+                const b = e.relatedTarget;
+                form.action = form.dataset.actionBase + b.dataset.id + form.dataset.actionFin;
+                form.querySelectorAll("[data-champ]").forEach(i => i.value = b.dataset[i.dataset.champ] || "");
+            });
+            modal.addEventListener("shown.bs.modal", () => form.querySelector("[data-champ]").select());
+        });
+
+        // Confirmation avant suppression : boutons data-confirm, gérés par le modèle commun (load_script)
+
+        // Filtres : texte (accents et majuscules ignorés) et, pour les postes, direction
+        const filtreDirection = document.getElementById("filtreDirection");
+        function appliquerFiltres(table) {
+            const f = document.querySelector(`.filtre-liste[data-table="${table}"]`);
+            const q = f ? sansAccent(f.value.trim()) : "";
+            const dir = table === "tablePostes" && filtreDirection ? filtreDirection.value : "";
+            document.querySelectorAll("#" + table + " tbody tr").forEach(tr => {
+                const texte = [...tr.querySelectorAll(".texte-filtre")].map(e => e.textContent).join(" ");
+                const okTexte = !q || sansAccent(texte).includes(q);
+                const okDir = !dir || tr.dataset.direction === dir;
+                tr.style.display = okTexte && okDir ? "" : "none";
+            });
+            if (table === "tablePostes") majPostes();
+        }
+        document.querySelectorAll(".filtre-liste").forEach(f =>
+            f.addEventListener("input", () => appliquerFiltres(f.dataset.table)));
+        filtreDirection?.addEventListener("change", () => appliquerFiltres("tablePostes"));
+
+        // Rattachement groupé des postes cochés
+        const casesPostes = [...document.querySelectorAll(".choix-poste")];
+        const tousPostes = document.getElementById("tousPostes");
+        const formRattachement = document.getElementById("formRattachement");
+        const selectRattachement = document.getElementById("directionRattachement");
+        const btnRattacher = document.getElementById("btnRattacher");
+        const visible = c => c.closest("tr").style.display !== "none";
+
+        function majPostes() {
+            if (!formRattachement) return;
+            const coches = casesPostes.filter(c => c.checked);
+            formRattachement.classList.toggle("d-none", coches.length === 0);
+            document.getElementById("nbPostesCoches").textContent = coches.length;
+            document.getElementById("postesCoches").innerHTML =
+                coches.map(c => `<input type="hidden" name="postes" value="${Number(c.value)}">`).join("");
+            btnRattacher.disabled = coches.length === 0 || !selectRattachement.value;
+            casesPostes.forEach(c => c.closest("tr").classList.toggle("table-warning", c.checked));
+            const vis = casesPostes.filter(visible);
+            tousPostes.checked = vis.length > 0 && vis.every(c => c.checked);
+            tousPostes.indeterminate = !tousPostes.checked && vis.some(c => c.checked);
+        }
+        casesPostes.forEach(c => c.addEventListener("change", majPostes));
+        tousPostes?.addEventListener("change", () => {
+            casesPostes.filter(visible).forEach(c => c.checked = tousPostes.checked);
+            majPostes();
+        });
+        selectRattachement?.addEventListener("change", majPostes);
+        document.getElementById("btnViderPostes")?.addEventListener("click", () => {
+            casesPostes.forEach(c => c.checked = false);
+            majPostes();
+        });
+        formRattachement?.addEventListener("submit", e => {
+            if (!selectRattachement.value) { e.preventDefault(); return; }
+            const coches = casesPostes.filter(c => c.checked);
+            const n = coches.length;
+            const choix = selectRattachement.options[selectRattachement.selectedIndex].text;
+            const detacher = selectRattachement.value === "aucune";
+            // Aperçu des postes concernés (5 premiers)
+            const noms = coches.slice(0, 5)
+                .map(c => escapeHtml(c.closest("tr").querySelector(".texte-filtre")?.textContent.trim() || ""))
+                .filter(Boolean);
+            const liste = noms.length
+                ? `<ul class="text-start small mt-2 mb-0">${noms.map(x => `<li>${x}</li>`).join("")}`
+                  + (n > noms.length ? `<li class="text-muted">… et ${n - noms.length} autre(s)</li>` : "") + `</ul>`
+                : "";
+            confirmerEnvoi(e, {
+                titre: detacher ? `Détacher ${n} poste(s) ?` : `Rattacher ${n} poste(s) ?`,
+                texte: (detacher
+                        ? "Les postes sélectionnés ne seront plus rattachés à aucune direction."
+                        : `Les postes sélectionnés seront rattachés à <strong>${escapeHtml(choix)}</strong>.`) + liste,
+                bouton: detacher ? "Détacher" : "Rattacher",
+                type: detacher ? "warning" : "question"
+            });
+        });
+
+        // Incohérences : alignement des utilisateurs cochés sur la direction de leur poste
+        const casesUtil = [...document.querySelectorAll(".choix-utilisateur")];
+        const tousUtil = document.getElementById("tousUtilisateurs");
+        const btnAligner = document.getElementById("btnAligner");
+        function majUtilisateurs() {
+            const n = casesUtil.filter(c => c.checked).length;
+            document.getElementById("nbUtilisateursCoches").textContent = n;
+            btnAligner.disabled = n === 0;
+            casesUtil.forEach(c => c.closest("tr").classList.toggle("table-warning", c.checked));
+            tousUtil.checked = n > 0 && n === casesUtil.length;
+            tousUtil.indeterminate = n > 0 && n < casesUtil.length;
+        }
+        if (btnAligner && tousUtil) {
+            casesUtil.forEach(c => c.addEventListener("change", majUtilisateurs));
+            tousUtil.addEventListener("change", () => { casesUtil.forEach(c => c.checked = tousUtil.checked); majUtilisateurs(); });
+            document.getElementById("formAligner").addEventListener("submit", e => {
+                const n = casesUtil.filter(c => c.checked).length;
+                if (!n) { e.preventDefault(); return; }
+                confirmerEnvoi(e, {
+                    titre: `Aligner ${n} utilisateur(s) ?`,
+                    texte: "Chaque utilisateur sélectionné sera placé dans la direction de son poste.",
+                    bouton: "Aligner",
+                    type: "question"
+                });
+            });
+        }
+
+        // Arrivée depuis l'onglet Directions (lien « Postes ») : filtre déjà choisi
+        if (filtreDirection && filtreDirection.value) appliquerFiltres("tablePostes");
+    });
+</script>
+</body>
+</html>

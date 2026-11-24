@@ -69,7 +69,9 @@
                                     <button type="submit"
                                             th:class="${c.estActive()} ? 'btn btn-sm btn-outline-secondary' : 'btn btn-sm btn-outline-success'"
                                             th:title="${c.estActive()} ? 'Désactiver : ne plus proposer à la saisie' : 'Réactiver'"
-                                            th:data-confirm="${c.estActive()} ? 'Désactiver « ' + ${c.libelle} + ' » ? Elle ne sera plus proposée à la saisie ; les demandes existantes la conservent.' : null">
+                                            th:data-confirm="${c.estActive()} ? 'Désactiver « ' + ${c.libelle} + ' » ?' : null"
+                                            data-confirm-texte="Elle ne sera plus proposée à la saisie ; les demandes existantes la conservent."
+                                            data-confirm-bouton="Désactiver" data-confirm-type="warning">
                                         <i th:class="${c.estActive()} ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
                                     </button>
                                 </form>
@@ -203,12 +205,7 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        // Confirmation avant de désactiver une catégorie
-        document.querySelectorAll("button[data-confirm]").forEach(b => {
-            b.addEventListener("click", e => {
-                if (!confirm(b.dataset.confirm)) e.preventDefault();
-            });
-        });
+        // Confirmation avant de désactiver une catégorie : bouton data-confirm (modèle commun, load_script)
 
         const modal = document.getElementById("editCategorieModal");
         const form = document.getElementById("editCategorieForm");

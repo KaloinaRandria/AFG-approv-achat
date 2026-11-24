@@ -169,6 +169,18 @@
                                                : '-'}">-</div>
                             </div>
 
+                            <!-- Devise des prix : celle de la demande (prix repris de ses lignes) -->
+                            <div>
+                                <strong>Devise :</strong>
+                                <div>
+                                    <span class="badge bg-light text-dark border" th:text="${bs.demandeMere.codeDevise}">MGA</span>
+                                    <small class="text-muted" th:if="${bs.demandeMere.deviseEtrangere}">
+                                        1 <span th:text="${bs.demandeMere.codeDevise}"></span> =
+                                        <span th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(bs.demandeMere.tauxEffectif, 'MGA')}"></span>
+                                    </small>
+                                </div>
+                            </div>
+
                         </div>
 
                         <!-- ANNULATION -->
@@ -209,8 +221,8 @@
                                     <th class="text-end" style="width:15%">QTÉ DEMANDÉE</th>
                                     <th class="text-end" style="width:15%">QTÉ SORTIE</th>
                                     <th class="text-end" style="width:10%">UDM</th>
-                                    <th class="text-end" style="width:15%">PRIX UNITAIRE</th>
-                                    <th class="text-end" style="width:15%">MONTANT</th>
+                                    <th class="text-end" style="width:15%">PRIX UNITAIRE (<span th:text="${bs.demandeMere.codeDevise}">MGA</span>)</th>
+                                    <th class="text-end" style="width:15%">MONTANT (<span th:text="${bs.demandeMere.codeDevise}">MGA</span>)</th>
                                 </tr>
                                 </thead>
 
@@ -263,8 +275,15 @@
                                     <td colspan="5" class="text-end ui-total-label">Total</td>
                                     <td class="text-end ui-total"
                                         th:text="${totalBs != null and totalBs > 0
-                                                   ? #numbers.formatDecimal(totalBs, 1, 'DEFAULT', 2, 'DEFAULT')
+                                                   ? T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(totalBs, bs.demandeMere.codeDevise)
                                                    : '—'}">
+                                    </td>
+                                </tr>
+                                <!-- Devise étrangère : contre-valeur en ariary au cours de la demande -->
+                                <tr th:if="${bs.demandeMere.deviseEtrangere and totalBs != null and totalBs > 0}">
+                                    <td colspan="5" class="text-end text-muted small">Contre-valeur</td>
+                                    <td class="text-end text-muted small"
+                                        th:text="${'≈ ' + T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(bs.demandeMere.enAriary(totalBs), 'MGA')}">
                                     </td>
                                 </tr>
                                 </tfoot>

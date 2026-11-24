@@ -107,7 +107,8 @@
                             <td th:text="${bs.creePar != null ? bs.creePar.nom + ' ' + bs.creePar.prenom : '—'}"></td>
                             <td class="text-center" th:text="${t != null ? #numbers.formatInteger(t[0], 1) : 0}"></td>
                             <td class="text-end"
-                                th:text="${t != null ? #numbers.formatDecimal(t[1], 1, 'WHITESPACE', 2, 'COMMA') : '0,00'}"></td>
+                                th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(t != null ? t[1] : 0.0,
+                                          bs.demandeMere != null ? bs.demandeMere.codeDevise : 'MGA')}"></td>
                             <td>
                                 <span class="badge"
                                       th:classappend="${bs.statut?.name() == 'CONFIRME'} ? 'bg-success' : 'bg-danger'"

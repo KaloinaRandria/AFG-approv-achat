@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Pièces jointes déjà enregistrées sur un brouillon : cocher pour les retirer à l'enregistrement.
+     Variables : demande (brouillon, ou null pour une nouvelle demande), piecesJointesExistantes. -->
+<div th:fragment="piecesExistantes"
+     th:if="${demande != null and piecesJointesExistantes != null and !piecesJointesExistantes.isEmpty()}"
+     class="mt-3">
+    <div class="small fw-semibold text-muted mb-1">
+        <i class="fas fa-paperclip me-1"></i> Pièces déjà jointes (cochez celles à retirer)
+    </div>
+    <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex align-items-center gap-2" th:each="pj : ${piecesJointesExistantes}">
+            <i class="fas"
+               th:classappend="${#strings.startsWith(pj.contentType, 'image/') ? 'fa-file-image text-primary' : 'fa-file-pdf text-danger'}"></i>
+            <a class="flex-grow-1" target="_blank"
+               th:href="@{/demande/files/{id}/{filename}(id=${demande.id}, filename=${pj.storedName})}"
+               th:text="${pj.originalName}">fichier.pdf</a>
+            <div class="form-check mb-0">
+                <input class="form-check-input" type="checkbox" name="pjASupprimer"
+                       th:id="${'pjSuppr' + pj.id}" th:value="${pj.id}">
+                <label class="form-check-label small text-danger" th:for="${'pjSuppr' + pj.id}">Retirer</label>
+            </div>
+        </li>
+    </ul>
+</div>
+
+<!-- Récapitulatif de soumission (modal d'aperçu) : demandeur, destinataire, circuit de validation.
+     Variables : demandeurCourant, superieurDemandeur, circuitValidation, demande. -->
+<div th:fragment="recapCircuit" class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="border rounded-3 p-3 h-100 bg-light">
+            <div class="small text-muted fw-semibold mb-2"><i class="fas fa-user me-1"></i> Demandeur</div>
+            <div class="fw-semibold" th:text="${demandeurCourant.nom + ' ' + demandeurCourant.prenom}">Nom Prénom</div>
+            <small class="text-muted"
+                   th:text="${(demandeurCourant.poste != null ? demandeurCourant.poste.poste : '')
+                            + (demandeurCourant.service != null ? ' - ' + demandeurCourant.service.acronyme : '')}"></small>
+            <div class="small mt-2">
+                <span class="text-muted">Référence :</span>
+                <strong th:text="${demande != null ? demande.id : 'attribuée à l''enregistrement'}">-</strong>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="border rounded-3 p-3 h-100 bg-light">
+            <div class="small text-muted fw-semibold mb-2"><i class="fas fa-user-check me-1"></i> Première validation</div>
+            <div th:if="${superieurDemandeur != null}">
+                <div class="fw-semibold" th:text="${superieurDemandeur.nom + ' ' + superieurDemandeur.prenom}">N+1</div>
+                <small class="text-muted">Votre N+1 recevra la demande par mail dès la soumission.</small>
+            </div>
+            <div th:if="${superieurDemandeur == null}" class="text-danger small">
+                <i class="fas fa-exclamation-triangle me-1"></i>
+                Aucun N+1 n'est renseigné sur votre profil : contactez l'administrateur.
+            </div>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="small text-muted fw-semibold mb-2"><i class="fas fa-route me-1"></i> Circuit de validation</div>
+        <div class="d-flex flex-wrap align-items-center gap-1">
+            <th:block th:each="etape, it : ${circuitValidation}">
+                <span class="badge rounded-pill border"
+                      th:classappend="${it.first ? 'bg-primary text-white' : 'bg-light text-dark'}"
+                      th:text="${etape}">Étape</span>
+                <i class="fas fa-chevron-right text-muted small" th:unless="${it.last}"></i>
+            </th:block>
+        </div>
+    </div>
+</div>
+
+<!-- Pièces jointes du récapitulatif : nouvelles, conservées et retirées (rempli par recapPiecesJointes()) -->
+<th:block th:fragment="recapPiecesJointes">
+    <ul id="pvPiecesJointes" class="list-group list-group-flush small"></ul>
+    <script>
+        // Liste les fichiers choisis (#piecesJointes) et les pièces d'un brouillon (cases « Retirer »)
+        window.recapPiecesJointes = function () {
+            const ul = document.getElementById("pvPiecesJointes");
+            if (!ul) return;
+            ul.innerHTML = "";
+            const ajouter = (icone, nom, badge, classeBadge, barre) => {
+                const li = document.createElement("li");
+                li.className = "list-group-item d-flex align-items-center gap-2 px-0";
+                const i = document.createElement("i");
+                i.className = "fas " + icone;
+                const span = document.createElement("span");
+                span.className = "flex-grow-1" + (barre ? " text-decoration-line-through text-muted" : "");
+                span.textContent = nom;
+                const b = document.createElement("span");
+                b.className = "badge " + classeBadge;
+                b.textContent = badge;
+                li.append(i, span, b);
+                ul.appendChild(li);
+            };
+            document.querySelectorAll('input[name="pjASupprimer"]').forEach(cb => {
+                const nom = cb.closest("li")?.querySelector("a")?.textContent || "Pièce jointe";
+                if (cb.checked) ajouter("fa-paperclip text-muted", nom, "Retirée", "bg-danger-subtle text-danger", true);
+                else ajouter("fa-paperclip text-secondary", nom, "Déjà jointe", "bg-light text-dark border", false);
+            });
+            const input = document.getElementById("piecesJointes");
+            Array.from(input?.files || []).forEach(f => {
+                const kb = (f.size / 1024).toFixed(1);
+                ajouter(f.type === "application/pdf" ? "fa-file-pdf text-danger" : "fa-file-image text-primary",
+                        f.name + " (" + kb + " KB)", "Nouvelle", "bg-success-subtle text-success", false);
+            });
+            if (!ul.children.length) {
+                const li = document.createElement("li");
+                li.className = "list-group-item text-muted px-0";
+                li.textContent = "Aucune pièce jointe";
+                ul.appendChild(li);
+            }
+        };
+    </script>
+</th:block>
+
+<!-- Champs cachés communs : identifiant du brouillon modifié et action demandée (brouillon / soumettre) -->
+<th:block th:fragment="champsBrouillon">
+    <input type="hidden" name="id" th:value="${demande != null ? demande.id : ''}">
+    <input type="hidden" name="action" id="actionDemande" value="brouillon">
+</th:block>
+
+</body>
+</html>

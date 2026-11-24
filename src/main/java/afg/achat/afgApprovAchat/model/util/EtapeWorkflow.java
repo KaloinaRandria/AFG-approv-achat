@@ -21,7 +21,9 @@ import java.util.Map;
 public enum EtapeWorkflow {
 
     //              statut                        en attente                         validateur à cette étape   rôle requis        préfixe PJ        badge liste         badge fiche      icône
-    CREE          (StatutDemande.CREE,           "En attente N+1",                 "N+1",                     null,              "PJ_N1",          "badge-grey",       "badge-wait",    "fa-user-clock"),
+    // Brouillon : avant le circuit. Seul le demandeur la voit, la modifie et la soumet (→ CREE).
+    BROUILLON     (StatutDemande.BROUILLON,      "Brouillon",                      null,                      null,              null,             "badge-grey",       "badge-wait",    "fa-pencil-alt"),
+    CREE         (StatutDemande.CREE,           "En attente N+1",                 "N+1",                     null,              "PJ_N1",          "badge-grey",       "badge-wait",    "fa-user-clock"),
     VALIDATION_N1 (StatutDemande.VALIDATION_N1,  "En attente M.G.",                "Moyens Généraux",         "MOYENS_GENERAUX", "PJ_MG",          "badge-blue",       "badge-info",    "fa-clipboard-check"),
     VALIDATION_N2 (StatutDemande.VALIDATION_N2,  "En attente Contrôle de gestion", "Contrôleur de gestion",   "CONTROLEUR",      "PJ_CONTROLEUR",  "badge-light-blue", "badge-purple",  "fa-coins"),
     VALIDATION_N3 (StatutDemande.VALIDATION_N3,  "En attente D.F.C.",              "D.F.C.",                  "DFC",             "PJ_DFC",         "badge-purple",     "badge-warning", "fa-gavel"),
@@ -66,6 +68,7 @@ public enum EtapeWorkflow {
     /** Étape atteinte quand la demande est approuvée à cette étape ; {@code null} si terminale. */
     public EtapeWorkflow suivante() {
         return switch (this) {
+            case BROUILLON      -> CREE;            // soumission par le demandeur, pas une validation
             case CREE           -> VALIDATION_N1;
             case VALIDATION_N1  -> VALIDATION_N2;   // l'envoi au CODEP est une action distincte
             case DECISION_CODEP -> VALIDATION_N2;
@@ -137,6 +140,7 @@ public enum EtapeWorkflow {
     public static Map<Integer, String> libellesEtapeFranchie(boolean viaCodep, TypeDemande type) {
         String dernierValidateur = TypeDemande.ouStandard(type).getDerniereValidation().libelleValidateur;
         Map<Integer, String> m = new LinkedHashMap<>();
+        m.put(StatutDemande.BROUILLON,      "Brouillon");
         m.put(StatutDemande.CREE,           "Création");
         m.put(StatutDemande.VALIDATION_N1,  "N+1");
         m.put(StatutDemande.VALIDATION_N2,  "Moyens Généraux");
@@ -198,6 +202,7 @@ public enum EtapeWorkflow {
     /** Position (1-based) du statut dans le circuit du type donné ; -1 si refusée, 1 si inconnu. */
     public static int numeroDansCircuit(int statut, boolean viaCodep, TypeDemande type) {
         if (statut == StatutDemande.REFUSE) return -1;
+        if (statut == StatutDemande.BROUILLON) return 0;   // pas encore soumise
         int index = Arrays.stream(values()).anyMatch(e -> e.statut == statut)
                 ? circuit(viaCodep, type).indexOf(fromStatut(statut))
                 : -1;

@@ -2,7 +2,11 @@ package afg.achat.afgApprovAchat.model.util;
 
 public final class StatutDemande {
 
-    // ----- Etat initial -----
+    // ----- Brouillon : enregistrée par le demandeur, modifiable, pas encore soumise -----
+    // (les requêtes de statistiques l'écartent avec la valeur littérale 2)
+    public static final int BROUILLON = 2;
+
+    // ----- Etat initial : soumise, en attente du N+1 -----
     public static final int CREE = 1;
 
     // ----- Workflow normal -----
@@ -22,6 +26,7 @@ public final class StatutDemande {
 
     public static String getLibelle(int statut) {
         return switch (statut) {
+            case BROUILLON     -> "Brouillon";
             case CREE          -> "Validation N+1";
             case VALIDATION_N1 -> "Validation Moyens Généraux";
             case VALIDATION_N2 -> "Validation Contrôleur";
