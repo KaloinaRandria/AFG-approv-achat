@@ -27,40 +27,169 @@ body {
     overflow-x: hidden;
 }
 
-/* Sidebar fixe à gauche, sous les modales */
+/* ── Sidebar ──────────────────────────────────────────────────────────────────
+   Ordinateur : 270px, repliable en barre d'icônes (bouton en haut du menu, choix mémorisé) ;
+   repliée, elle se déplie au survol par-dessus le contenu.
+   Mobile (≤ 768px) : menu coulissant, ouvert par le bouton ☰ (fixe en haut à gauche). */
+:root {
+    --sidebar-largeur: 270px;
+    --sidebar-reduite: 72px;
+}
+
 #sidebar {
     position: fixed !important;
     top: 0;
     left: 0;
-    width: 250px;
+    width: var(--sidebar-largeur);
     height: 100vh;
     z-index: 1000 !important;
+    overflow-x: hidden;
+    transition: width .2s ease, transform .25s ease, box-shadow .2s ease;
 }
 
 /* Contenu principal décalé de la largeur de la sidebar */
 .main-content {
-    margin-left: 250px !important;
+    margin-left: var(--sidebar-largeur) !important;
     padding: 25px;
     min-height: 100vh;
     background: #f8f9fa;
     position: relative;
     z-index: 1 !important;
-    transition: margin 0.3s ease;
+    transition: margin-left .2s ease;
+}
+
+/* En-tête du menu : logo + bouton replier / fermer */
+.sidebar-entete {
+    position: relative;
+}
+.sidebar-bascule {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .08);
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s, transform .2s;
+}
+.sidebar-bascule:hover { background: rgba(255, 255, 255, .18); color: #fff; }
+
+/* Bouton ☰ et voile : mobile seulement (créés par le script du menu) */
+.sidebar-burger,
+.sidebar-voile { display: none; }
+
+@media (min-width: 769px) {
+    html.sidebar-reduit .main-content { margin-left: var(--sidebar-reduite) !important; }
+    html.sidebar-reduit .sidebar-bascule { transform: rotate(180deg); }
+
+    /* Repliée : icônes seules (le texte des liens passe à 0, les icônes gardent leur taille) */
+    html.sidebar-reduit #sidebar:not(:hover) { width: var(--sidebar-reduite); }
+    html.sidebar-reduit #sidebar:not(:hover) .sidebar-link,
+    html.sidebar-reduit #sidebar:not(:hover) .sidebar-button {
+        font-size: 0;
+        justify-content: center;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    html.sidebar-reduit #sidebar:not(:hover) .sidebar-link > i,
+    html.sidebar-reduit #sidebar:not(:hover) .sidebar-button > i {
+        font-size: 1.1rem;
+        margin-right: 0 !important;
+    }
+    html.sidebar-reduit #sidebar:not(:hover) .px-3,
+    html.sidebar-reduit #sidebar:not(:hover) .px-2 { padding-left: .4rem !important; padding-right: .4rem !important; }
+    html.sidebar-reduit #sidebar:not(:hover) .accordion-button::after,
+    html.sidebar-reduit #sidebar:not(:hover) .accordion-collapse,
+    html.sidebar-reduit #sidebar:not(:hover) .sidebar-titre,
+    html.sidebar-reduit #sidebar:not(:hover) .sidebar-utilisateur-nom,
+    html.sidebar-reduit #sidebar:not(:hover) .dropdown-toggle::after { display: none !important; }
+    html.sidebar-reduit #sidebar:not(:hover) .sidebar-logo { padding-top: .5rem !important; padding-bottom: .75rem !important; }
+    html.sidebar-reduit #sidebar:not(:hover) .sidebar-logo img { height: auto; max-width: 48px; }
+    html.sidebar-reduit #sidebar:not(:hover) { scrollbar-width: thin; }
+    html.sidebar-reduit #sidebar:not(:hover) .sidebar-bascule { position: static; margin: 0 auto 10px; }
+    html.sidebar-reduit #sidebar:not(:hover) .sidebar-entete { display: flex; flex-direction: column-reverse; }
+    html.sidebar-reduit #sidebar:not(:hover) .dropdown > a { justify-content: center; }
+    html.sidebar-reduit #sidebar:not(:hover) .dropdown > a img { margin-right: 0 !important; }
+
+    /* Dépliée au survol : par-dessus le contenu */
+    html.sidebar-reduit #sidebar:hover { box-shadow: 6px 0 24px rgba(10, 26, 68, .35); }
 }
 
 @media (max-width: 768px) {
     #sidebar {
-        position: relative !important;
-        width: 100%;
-        height: auto;
+        width: min(var(--sidebar-largeur), 85vw);
+        transform: translateX(-100%);
+        z-index: 1035 !important;
+    }
+    html.sidebar-ouvert #sidebar {
+        transform: none;
+        box-shadow: 6px 0 24px rgba(10, 26, 68, .35);
     }
 
-    .main-content {
+    html .main-content {
         margin-left: 0 !important;
+        padding-top: 64px !important;
     }
+
+    .sidebar-burger {
+        display: flex;
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 1030;
+        width: 42px;
+        height: 42px;
+        border: 0;
+        border-radius: 10px;
+        background: #0A1A44;
+        color: #fff;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(10, 26, 68, .3);
+    }
+    .sidebar-voile {
+        position: fixed;
+        inset: 0;
+        z-index: 1032;
+        background: rgba(10, 26, 68, .45);
+    }
+    html.sidebar-ouvert .sidebar-voile { display: block; }
 }
 
 /* Entrées actives du menu */
+/* Sous-menu regroupé (Demande d'achat) : titres de groupe, liens pleine largeur */
+.sidebar-sous-menu {
+    padding: .25rem .5rem .6rem 1rem;
+}
+.sidebar-sous-menu .sidebar-groupe {
+    margin: .7rem 0 .2rem;
+    padding: 0 .6rem;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #93a4c3;
+}
+.sidebar-sous-menu .sidebar-groupe:first-child { margin-top: .25rem; }
+.sidebar-sous-menu .sidebar-sub {
+    padding: .42rem .6rem;
+    margin-left: .35rem;
+    border-left: 2px solid rgba(255, 255, 255, .12);
+    border-radius: 0 6px 6px 0;
+    font-size: .9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sidebar-sous-menu .sidebar-sub:hover {
+    background: rgba(255, 255, 255, .08);
+}
+
 .sidebar-sub.active,
 .sidebar-link.active {
     background: linear-gradient(90deg, #2563eb, #3b82f6, #60a5fa) !important;
@@ -370,8 +499,17 @@ input:disabled {
     width: 100% !important;
 }
 
-.input-group .select2-container {
+/* Dans un input-group : le champ partage la ligne avec l'icône (une largeur de 100%
+   le ferait passer à la ligne), et se raccorde à elle sans coins arrondis de ce côté */
+.input-group > .select2-container {
     flex: 1 1 auto !important;
+    width: 1% !important;
+    min-width: 0;
+}
+/* (le <select> d'origine, masqué, reste entre l'icône et le champ Select2) */
+.input-group > .input-group-text ~ .select2-container .select2-selection {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
 }
 
 .select2-selection--single {
@@ -1157,6 +1295,8 @@ table.dataTable tbody tr:hover {
    le document en page 2 : sidebar et barres d'actions sont retirées du flux. */
 @media print {
     #sidebar,
+    .sidebar-burger,
+    .sidebar-voile,
     .no-print,
     .page-actions {
         display: none !important;
