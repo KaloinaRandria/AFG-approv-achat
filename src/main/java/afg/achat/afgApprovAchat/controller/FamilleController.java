@@ -24,6 +24,7 @@ public class FamilleController {
     public String page(Model model) {
         model.addAttribute("familles", familleService.getFamillesTriees());
         model.addAttribute("nbArticles", familleService.nombreArticlesParFamille());
+        model.addAttribute("doublons", familleService.doublonsProbables());
         return "famille/famille-liste";
     }
 

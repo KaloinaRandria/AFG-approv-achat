@@ -40,6 +40,30 @@
                                   th:text="${#lists.size(familles) + ' famille(s)'}">0</span>
                         </div>
 
+                        <!-- Doublons probables : libellés identiques aux accents, pluriels, petits mots ou à une faute près -->
+                        <div class="alert alert-info py-2 mb-3" th:if="${doublons != null && !#lists.isEmpty(doublons)}">
+                            <div class="fw-semibold mb-2">
+                                <i class="fas fa-clone me-1"></i>
+                                <span th:text="${#lists.size(doublons)}">2</span> doublon(s) probable(s)
+                            </div>
+                            <ul class="list-unstyled mb-0">
+                                <li th:each="g : ${doublons}"
+                                    class="d-flex flex-wrap align-items-center justify-content-between gap-2 py-1 border-top">
+                                    <span>
+                                        <th:block th:each="f, it : ${g}">
+                                            <strong th:text="${f.description}">Entretien véhicule</strong>
+                                            <span class="text-muted small"
+                                                  th:text="'(' + (${nbArticles[f.id] != null ? nbArticles[f.id] : 0}) + ')'">(13)</span><span th:unless="${it.last}"> · </span>
+                                        </th:block>
+                                    </span>
+                                    <button type="button" class="btn btn-sm btn-outline-warning btn-doublon"
+                                            th:data-ids="${#strings.listJoin(g.![id], ',')}">
+                                        <i class="fas fa-compress-alt me-1"></i>Fusionner
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+
                         <!-- Barre de sélection : apparaît dès qu'une famille est cochée -->
                         <div id="barreSelection"
                              class="alert alert-warning d-none d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
@@ -297,6 +321,21 @@
             window.bootstrap.Modal.getOrCreateInstance(modalFusion).show();
         });
         choix.addEventListener("change", majResume);
+
+        // Doublon probable : sélectionne exactement ce groupe et ouvre la fusion
+        document.querySelectorAll(".btn-doublon").forEach(b => {
+            b.addEventListener("click", () => {
+                const ids = b.dataset.ids.split(",");
+                const filtreSaisi = document.getElementById("filtreFamille");
+                if (filtreSaisi && filtreSaisi.value) {
+                    filtreSaisi.value = "";
+                    filtreSaisi.dispatchEvent(new Event("input"));
+                }
+                cases.forEach(c => c.checked = ids.includes(c.value));
+                majSelection();
+                btnFusionner.click();
+            });
+        });
 
         formFusion.addEventListener("submit", e => {
             if (!formFusion.querySelector('input[name="cible"]:checked')
