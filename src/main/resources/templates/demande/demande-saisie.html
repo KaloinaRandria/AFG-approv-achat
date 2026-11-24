@@ -17,7 +17,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="fw-bold text-gradient-blue">
                 <i class="fas fa-plus-circle me-3 icon-gradient-blue"></i>
-                <span>Nouvelle demande de matériel</span>
+                <span th:text="${demande != null ? 'Modifier le brouillon n° ' + demande.id : 'Nouvelle demande de matériel'}">Nouvelle demande de matériel</span>
             </h1>
             <div>
                 <a class="btn btn-gradient-blue me-2" th:href="@{/demande/list(typeDemande=${typeDemande.name()})}">
@@ -46,6 +46,7 @@
                             <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations générales
                         </h6>
                         <input type="hidden" name="submissionToken" th:value="${submissionToken}" />
+                        <th:block th:replace="~{fragment/demande_brouillon :: champsBrouillon}"></th:block>
 
                         <div class="row">
 
@@ -62,6 +63,7 @@
                                            class="form-control"
                                            id="dateSortie"
                                            name="dateSortie"
+                                           th:value="${demande != null and demande.dateSortie != null ? #temporals.format(demande.dateSortie, 'yyyy-MM-dd') : ''}"
                                            required>
                                 </div>
                                 <div class="form-text text-muted mt-1">
@@ -79,6 +81,7 @@
                                         <option value="">-- Choisir --</option>
                                         <option th:each="p : ${priorites}"
                                                 th:value="${p.name()}"
+                                                th:selected="${demande != null and demande.priorite == p}"
                                                 th:text="${p.name()}">
                                         </option>
                                     </select>
@@ -122,6 +125,7 @@
                                            class="form-control"
                                            id="motif"
                                            name="motif"
+                                           th:value="${demande != null ? demande.motifEvoque : ''}"
                                            required
                                     >
                                 </div>
@@ -140,7 +144,8 @@
                                               id="description"
                                               name="description"
                                               rows="3"
-                                              placeholder="Ajoutez une description ou des informations complémentaires"></textarea>
+                                              placeholder="Ajoutez une description ou des informations complémentaires"
+                                              th:text="${demande != null ? demande.description : ''}"></textarea>
                                 </div>
                                 <div class="form-text text-muted mt-1">
                                     <i class="fas fa-info-circle me-1"></i> Informations complémentaires sur la demande de materiel
@@ -191,6 +196,9 @@
                                 <!-- Liste des fichiers sélectionnés -->
                                 <ul id="fileList" class="list-group list-group-flush mt-3"></ul>
 
+                                <!-- Brouillon : pièces déjà enregistrées -->
+                                <div th:replace="~{fragment/demande_brouillon :: piecesExistantes}"></div>
+
                             </div>
 
                             <div class="modal fade" id="previewFileModal" tabindex="-1" aria-hidden="true">
@@ -232,7 +240,43 @@
                                 </tr>
                                 </thead>
                                 <tbody id="demandeFilleBody">
-                                <tr>
+                                <!-- Brouillon : lignes déjà enregistrées -->
+                                <tr th:each="l : ${lignesBrouillon}">
+                                    <td style="position: relative;">
+                                        <input type="text"
+                                               class="form-control article-input"
+                                               placeholder="Code ou désignation"
+                                               autocomplete="off"
+                                               th:value="${l.article.codeArticle + ' - ' + l.article.designation}"
+                                               th:attr="data-libelle-choisi=${l.article.codeArticle + ' - ' + l.article.designation}"
+                                               required>
+                                        <input type="hidden"
+                                               name="articleCodes[]"
+                                               th:value="${l.article.codeArticle}">
+                                        <div class="autocomplete-list list-group position-absolute w-100"></div>
+                                    </td>
+                                    <td>
+                                        <input type="text"
+                                               class="form-control quantite-input text-end"
+                                               inputmode="decimal"
+                                               autocomplete="off"
+                                               th:value="${l.quantite % 1 == 0 ? #numbers.formatInteger(l.quantite, 1, 'WHITESPACE') : #strings.replace('' + l.quantite, '.', ',')}"
+                                               required>
+                                        <input type="hidden"
+                                               name="quantite[]"
+                                               th:value="${l.quantite}">
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <span class="udm-label"
+                                              th:text="${l.article.udm != null ? l.article.udm.acronyme : '—'}">—</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-outline-danger btn-sm btn-remove">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr th:if="${lignesBrouillon == null or lignesBrouillon.isEmpty()}">
                                     <td style="position: relative;">
                                         <input type="text"
                                                class="form-control article-input"
@@ -285,9 +329,18 @@
     <!--        </button>-->
     <!--    </div>-->
 
-    <div class="d-flex justify-content-end gap-2 mt-4 px-4">
+    <div class="d-flex justify-content-end align-items-center flex-wrap gap-2 mt-4 px-4">
+        <span class="text-muted small me-auto">
+            <i class="fas fa-info-circle me-1"></i>
+            En brouillon, la demande reste modifiable et n'est visible que par vous. Elle part en validation une fois soumise.
+        </span>
+        <a th:if="${demande != null}" class="btn btn-outline-secondary"
+           th:href="@{/demande/fiche/{id}(id=${demande.id})}">Annuler</a>
+        <button type="button" id="btnBrouillonDemande" class="btn btn-outline-gradient-blue px-4">
+            <i class="fas fa-save me-2"></i> Enregistrer le brouillon
+        </button>
         <button type="button" id="btnPreviewDemande" class="btn btn-gradient-green px-4">
-            <i class="fas fa-eye me-2"></i> Aperçu & confirmer
+            <i class="fas fa-eye me-2"></i> Aperçu & soumettre
         </button>
     </div>
 
@@ -306,15 +359,21 @@
 
             <div class="modal-header btn-gradient-blue">
                 <h5 class="modal-title" id="previewDemandeModalLabel">
-                    <i class="fas fa-eye me-2 icon-gradient-blue"></i>Aperçu avant soumission
+                    <i class="fas fa-clipboard-check me-2"></i>Récapitulatif avant soumission
                 </h5>
             </div>
 
             <div class="modal-body">
 
+                <!-- Demandeur, destinataire et circuit -->
+                <div th:replace="~{fragment/demande_brouillon :: recapCircuit}"></div>
+
                 <!-- Infos générales -->
+                <h6 class="fw-bold text-gradient-blue mb-2">
+                    <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations générales
+                </h6>
                 <div class="table-responsive mb-3">
-                    <table class="table table-borderless align-middle mb-0">
+                    <table class="table table-sm table-borderless align-middle mb-0">
                         <tbody>
                         <tr>
                             <th class="text-muted w-25">
@@ -322,58 +381,64 @@
                             </th>
                             <td id="pvDateDemande" class="fw-semibold"></td>
                         </tr>
-
                         <tr>
                             <th class="text-muted">
                                 <i class="fas fa-bolt me-2 icon-gradient-blue"></i>Priorité
                             </th>
-                            <td id="pvPriorite"></td>
+                            <td><span id="pvPriorite" class="badge"></span></td>
                         </tr>
-
                         <tr>
                             <th class="text-muted">
                                 <i class="fas fa-route me-2 icon-gradient-blue"></i>Type de demande
                             </th>
                             <td id="pvTypeDemande"></td>
                         </tr>
-
                         <tr>
                             <th class="text-muted">
                                 <i class="fas fa-tag me-2 icon-gradient-blue"></i>Motif évoqué
                             </th>
-                            <td id="pvMotif"></td>
+                            <td id="pvMotif" class="fw-semibold"></td>
                         </tr>
-
                         <tr>
                             <th class="text-muted">
                                 <i class="fas fa-align-left me-2 icon-gradient-blue"></i>Description
                             </th>
-                            <td id="pvDescription"></td>
+                            <td id="pvDescription" style="white-space: pre-wrap;"></td>
                         </tr>
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Détails -->
-                <h6 class="fw-bold text-gradient-blue mt-3 mb-2">
-                    <i class="fas fa-list me-2 icon-gradient-blue"></i> Détails de la demande
+                <h6 class="fw-bold text-gradient-blue mt-3 mb-2 d-flex align-items-center">
+                    <i class="fas fa-list me-2 icon-gradient-blue"></i> Articles demandés
+                    <span class="badge bg-primary ms-2" id="pvNbArticles">0</span>
                 </h6>
-
                 <div class="table-responsive">
-                    <table class="table table-bordered align-middle">
+                    <table class="table table-sm table-bordered align-middle">
                         <thead class="table-light">
                         <tr>
-                            <th style="width: 70%">Article</th>
-                            <th style="width: 30%" class="text-end">Quantité</th>
+                            <th style="width: 5%" class="text-center">#</th>
+                            <th style="width: 20%">Code</th>
+                            <th style="width: 45%">Désignation</th>
+                            <th style="width: 18%" class="text-end">Quantité</th>
+                            <th style="width: 12%" class="text-center">UDM</th>
                         </tr>
                         </thead>
                         <tbody id="pvDemandeDetailsBody"></tbody>
                     </table>
                 </div>
 
+                <!-- Pièces jointes -->
+                <h6 class="fw-bold text-gradient-blue mt-3 mb-2">
+                    <i class="fas fa-paperclip me-2 icon-gradient-blue"></i> Pièces jointes
+                </h6>
+                <th:block th:replace="~{fragment/demande_brouillon :: recapPiecesJointes}"></th:block>
+
                 <div class="alert alert-info mt-3 mb-0">
                     <i class="fas fa-info-circle me-2"></i>
-                    Vérifiez les informations avant l’envoi de la demande.
+                    Une fois soumise, la demande part en validation chez votre N+1 et n'est plus modifiable.
+                    Pour la garder modifiable, choisissez plutôt « Enregistrer le brouillon ».
                 </div>
             </div>
 
@@ -386,7 +451,7 @@
                         class="btn btn-gradient-green"
                         form="demandeForm"
                         id="btnSubmitDemande">
-                    <i class="fas fa-save me-1"></i>Confirmer et soumettre
+                    <i class="fas fa-paper-plane me-1"></i>Confirmer et soumettre
                 </button>
             </div>
 
@@ -410,6 +475,9 @@
             return;
         }
 
+        // Enregistrement puis soumission (lancement du circuit de validation)
+        document.getElementById('actionDemande').value = 'soumettre';
+
         // Désactiver le bouton immédiatement
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Envoi en cours...';
@@ -418,7 +486,7 @@
         // (évite de bloquer l'utilisateur en cas de timeout réseau)
         setTimeout(() => {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save me-1"></i>Confirmer et soumettre';
+            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Confirmer et soumettre';
         }, 15000);
 
         form.submit();
@@ -816,7 +884,11 @@
                 }
 
                 // Infos générales
-                $("#pvPriorite").textContent = $("#priorite option:checked")?.textContent || "---";
+                const prio = $("#priorite")?.value || "";
+                const pvPrio = $("#pvPriorite");
+                pvPrio.textContent = prio || "---";
+                // P0 = la plus urgente
+                pvPrio.className = "badge " + ({ P0: "bg-danger", P1: "bg-warning text-dark", P2: "bg-secondary" }[prio] || "bg-light text-dark");
                 $("#pvTypeDemande").textContent = $("#typeDemande")?.value || "---";
                 $("#pvMotif").textContent = $("#motif")?.value || "-";
 
@@ -828,21 +900,54 @@
                 // Détails
                 if (pvBody) {
                     pvBody.innerHTML = "";
-                    $$("tr", body).forEach(row => {
-                        const articleVisible = $(".article-input", row)?.value || "-";
+                    const lignes = $$("tr", body);
+                    lignes.forEach((row, idx) => {
+                        const code = $('input[name="articleCodes[]"]', row)?.value || "-";
+                        const libelle = $(".article-input", row)?.value || "";
+                        // Libellé affiché : « CODE - Désignation »
+                        const designation = libelle.startsWith(code + " - ") ? libelle.slice(code.length + 3) : libelle;
                         const qtyVisible = $(".quantite-input", row)?.value || "-";
+                        const udm = $(".udm-label", row)?.textContent?.trim() || "—";
 
                         const tr = document.createElement("tr");
                         tr.innerHTML = `
-            <td>${escapeHtml(articleVisible)}</td>
+            <td class="text-center text-muted">${idx + 1}</td>
+            <td class="fw-semibold">${escapeHtml(code)}</td>
+            <td>${escapeHtml(designation || "-")}</td>
             <td class="text-end fw-semibold">${escapeHtml(qtyVisible)}</td>
+            <td class="text-center">${escapeHtml(udm)}</td>
           `;
                         pvBody.appendChild(tr);
                     });
+                    const nb = $("#pvNbArticles");
+                    if (nb) nb.textContent = lignes.length;
                 }
+
+                // Pièces jointes : nouvelles, déjà jointes, retirées
+                if (window.recapPiecesJointes) window.recapPiecesJointes();
 
                 // Ouvrir modal
                 window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            });
+        }
+
+        // =========================
+        // 6 bis) Enregistrer en brouillon (sans soumettre)
+        // =========================
+        const btnBrouillon = $("#btnBrouillonDemande");
+        if (btnBrouillon) {
+            btnBrouillon.addEventListener("click", () => {
+                const generalOk = form.checkValidity();
+                const detailsOk = validateDetailsRows();
+                if (!generalOk || !detailsOk) {
+                    form.classList.add("was-validated");
+                    form.reportValidity();
+                    return;
+                }
+                $("#actionDemande").value = "brouillon";
+                btnBrouillon.disabled = true;
+                btnBrouillon.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enregistrement...';
+                form.submit();
             });
         }
 

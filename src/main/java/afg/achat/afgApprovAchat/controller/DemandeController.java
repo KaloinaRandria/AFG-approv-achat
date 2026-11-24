@@ -114,6 +114,8 @@ public class DemandeController {
 
     private final DemandeAutreService demandeAutreService;
 
+    private final DemandeBrouillonService demandeBrouillonService;
+
     /**
      * Les Moyens Généraux, à leur étape, choisissent la devise des prix proforma.
      * Les prix des lignes à acheter sont à ressaisir ; les lignes stock sont converties.
@@ -162,7 +164,30 @@ public class DemandeController {
         if (typeDemande == null || !typeDemande.isCreable()) {
             typeDemande = TypeDemande.FOURNITURE;
         }
+        return formulaireSaisie(typeDemande, null, model, session);
+    }
+
+    /** Le créateur reprend son brouillon dans le formulaire de saisie. */
+    @GetMapping("/{id}/modifier")
+    public String modifierBrouillon(@PathVariable("id") String id, Model model, HttpSession session,
+                                    RedirectAttributes redirectAttributes) {
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            redirectAttributes.addFlashAttribute("ko", "Demande introuvable : " + id);
+            return "redirect:/demande/list";
+        }
+        Utilisateur current = utilisateurCourant(SecurityContextHolder.getContext().getAuthentication());
+        if (!DemandeBrouillonService.peutModifier(demande, current)) {
+            redirectAttributes.addFlashAttribute("ko", "Seul le créateur d'une demande en brouillon peut la modifier.");
+            return "redirect:/demande/fiche/" + id;
+        }
+        return formulaireSaisie(demande.getTypeDemandeEffectif(), demande, model, session);
+    }
+
+    /** Formulaire de saisie d'une nouvelle demande, ou d'un brouillon à modifier ({@code demande} non nul). */
+    private String formulaireSaisie(TypeDemande typeDemande, DemandeMere demande, Model model, HttpSession session) {
         model.addAttribute("typeDemande", typeDemande);
+        model.addAttribute("demande", demande);
 
         // Token anti double-soumission
         String token = UUID.randomUUID().toString();
@@ -171,42 +196,63 @@ public class DemandeController {
 
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("ligneBudgetaires", centreBudgetaireService.getAllCentreBudgetaires());
+        // Récapitulatif de soumission : demandeur, N+1 qui recevra la demande, circuit de validation
+        Utilisateur demandeurCourant = utilisateurCourant(SecurityContextHolder.getContext().getAuthentication());
+        model.addAttribute("demandeurCourant", demandeurCourant);
+        model.addAttribute("superieurDemandeur", demandeurCourant.getSuperieurHierarchique());
+        model.addAttribute("circuitValidation", EtapeWorkflow.libellesCircuit(false, typeDemande));
+        model.addAttribute("piecesJointesExistantes", demande == null
+                ? List.of() : demandePieceJointeService.listByDemandeId(demande.getId()));
 
         if (typeDemande.isDepenseAutre()) {
             model.addAttribute("categories", demandeAutreService.getCategoriesActives());
             model.addAttribute("devises", deviseService.getAllDevises());
             model.addAttribute("deviseReference", deviseService.getDeviseReference());
+            model.addAttribute("detailAutre", demande == null ? null : demandeAutreService.getDetail(demande).orElse(null));
             return "demande/demande-autre-saisie";
         }
+        List<DemandeFille> lignes = demande == null ? List.of() : demandeFilleService.getDemandeFilleByDemandeMere(demande);
+        model.addAttribute("lignesBrouillon", lignes);
         return "demande/demande-saisie";
     }
+
+    /** Vrai si le formulaire demande la soumission (sinon : enregistrement en brouillon). */
+    private static boolean demandeSoumission(String action) {
+        return "soumettre".equalsIgnoreCase(action);
+    }
+
+    /** Jeton anti double-soumission : consommé au premier envoi. */
+    private static boolean consommerJeton(HttpSession session, String submissionToken) {
+        String sessionToken = (String) session.getAttribute("submissionToken");
+        if (sessionToken == null || !sessionToken.equals(submissionToken)) return false;
+        session.removeAttribute("submissionToken");
+        return true;
+    }
+
+    /**
+     * Demande de matériel : création ou modification du brouillon, puis soumission si demandée
+     * (bouton « Soumettre »). La demande reste modifiable par son créateur tant qu'elle n'est pas soumise.
+     */
     @PostMapping("/save")
-    public String insertDemande(@RequestParam(name = "dateSortie") String dateSortie,
-                                @RequestParam(name = "motif") String motif,
-                                @RequestParam(name = "description") String description,
-                                @RequestParam(name = "articleCodes[]") List<String> articleCodes,
-                                @RequestParam(name = "quantite[]") List<String> quantite,
-                                @RequestParam(name = "priorite") String priorite,
+    public String insertDemande(@RequestParam(name = "id", required = false) String id,
+                                @RequestParam(name = "action", required = false) String action,
+                                @RequestParam(name = "dateSortie", required = false) String dateSortie,
+                                @RequestParam(name = "motif", required = false) String motif,
+                                @RequestParam(name = "description", required = false) String description,
+                                @RequestParam(name = "articleCodes[]", required = false) List<String> articleCodes,
+                                @RequestParam(name = "quantite[]", required = false) List<String> quantite,
+                                @RequestParam(name = "priorite", required = false) String priorite,
                                 @RequestParam(name = "typeDemande", required = false) String typeDemande,
-                                @RequestParam(name = "piecesJointes") MultipartFile[] piecesJointes,
+                                @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
+                                @RequestParam(name = "pjASupprimer", required = false) List<Integer> pjASupprimer,
                                 @RequestParam(name = "submissionToken") String submissionToken,
                                 HttpSession session,
                                 RedirectAttributes redirectAttributes) {
-        // ── Vérification token anti double-soumission ────────────────────────────
-        String sessionToken = (String) session.getAttribute("submissionToken");
-
-        if (sessionToken == null || !sessionToken.equals(submissionToken)) {
+        if (!consommerJeton(session, submissionToken)) {
             redirectAttributes.addFlashAttribute("warningMessage",
-                    "Cette demande a déjà été soumise. Veuillez vérifier la liste des demandes.");
+                    "Cette demande a déjà été envoyée. Veuillez vérifier la liste des demandes.");
             return "redirect:/demande/list";
         }
-
-        // Consommer le token immédiatement — toute soumission suivante sera bloquée
-        session.removeAttribute("submissionToken");
-
-
-        Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
 
         TypeDemande type;
         try {
@@ -223,113 +269,36 @@ public class DemandeController {
             redirectAttributes.addFlashAttribute("ko", "Seule une demande de matériel peut être créée.");
             return "redirect:/demande/add";
         }
-        final String retourSaisie = "redirect:/demande/add";
+        final String retourSaisie = (id == null || id.isBlank())
+                ? "redirect:/demande/add"
+                : "redirect:/demande/" + id + "/modifier";
 
+        Utilisateur utilisateur = utilisateurCourant(SecurityContextHolder.getContext().getAuthentication());
+        DemandeMere demande;
         try {
-            if (dateSortie == null || dateSortie.isEmpty()) {
-                redirectAttributes.addFlashAttribute("ko", "La date prévue pour la livraison est obligatoire.");
-                return retourSaisie;
-            }
-            if (motif == null || motif.isEmpty()) {
-                redirectAttributes.addFlashAttribute("ko", "Le motif evoqué est obligatoire.");
-                return retourSaisie;
-            }
-
-            if (articleCodes == null || articleCodes.isEmpty()) {
-                redirectAttributes.addFlashAttribute("ko", "Impossible de valider la demande sans aucune ligne d’article.");
-                return retourSaisie;
-            }
-
-            double totalGeneral = 0.0;
-            List<DemandeFille> lignes = new ArrayList<>();
-
-// Boucle unique — calcul total + préparation des lignes
-            for (int i = 0; i < articleCodes.size(); i++) {
-                String code = articleCodes.get(i);
-                Article article = articleService.getArticleByCodeArticle(code)
-                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + code));
-
-                // Un article inactif ne peut plus être demandé
-                if (!article.estActif()) {
-                    throw new IllegalArgumentException("L'article " + code + " est inactif : il ne peut plus être demandé.");
-                }
-
-                double qte = MontantCalculator.parseDoubleSafe(quantite.get(i));
-                if (qte <= 0) continue;
-
-                // Prix issu de PrixArticle (dernier BL reçu pour cet article)
-                double prix = prixArticleService.getDernierPrixByArticle(code)
-                        .map(PrixArticle::getPrixUnitaire)
-                        .orElse(0.0);
-
-                totalGeneral += qte * prix;
-
-                DemandeFille demandeFille = new DemandeFille();
-                demandeFille.setArticle(article);
-                demandeFille.setQuantite(quantite.get(i));
-                demandeFille.setStatut(1);
-                demandeFille.setPrixUnitaire(prix); // snapshot issu de PrixArticle
-                lignes.add(demandeFille);
-            }
-
-            // Contrôles AVANT tout enregistrement : sinon une demande incomplète
-            // serait créée puis resoumise (doublon).
-            if (lignes.isEmpty()) {
-                redirectAttributes.addFlashAttribute("ko", "Impossible de valider la demande : aucune ligne n'a une quantité supérieure à 0.");
-                return retourSaisie;
-            }
-            try {
-                pieceJointeService.verifierFormats(piecesJointes);
-            } catch (WorkflowException e) {
-                redirectAttributes.addFlashAttribute("ko", e.getMessage());
-                return retourSaisie;
-            }
-
-            DemandeMere demandeMere = new DemandeMere();
-            demandeMere.setId(idGenerator);
-            demandeMere.setDateDemande(String.valueOf(LocalDateTime.now()));
-            demandeMere.setDateSortie(dateSortie + "T00:00");
-            demandeMere.setPriorite(DemandeMere.PrioriteDemande.valueOf(priorite.trim()));
-            demandeMere.setTypeDemande(type);
-            // Le type impose le mode de traitement (matériel → M.G. avec bon de commande)
-            demandeMere.setModeTraitement(modeTraitementService.getModeImpose(type));
-            // Prix proposés en ariary (derniers prix d'achat) : la demande naît en ariary
-            demandeMere.appliquerDevise(deviseService.getDeviseReference(), LocalDateTime.now());
-            demandeMere.setMotifEvoque(motif);
-            demandeMere.setDemandeur(utilisateur);
-            demandeMere.setDescription(description);
-            demandeMere.setStatut(1);
-            demandeMere.setTotalPrix(totalGeneral); //total basé sur PrixArticle
-            demandeMere.setTotalEstime(totalGeneral);
-            this.demandeMereService.saveDemandeMere(demandeMere);
-
-            // Save les lignes (après demandeMere pour que la FK soit valide)
-            for (DemandeFille ligne : lignes) {
-                ligne.setDemandeMere(demandeMere); //FK settée après persist
-                this.demandeFilleService.saveDemandeFille(ligne);
-            }
-            pieceJointeService.enregistrerPourDemande(piecesJointes, demandeMere, "");
-
-            notifierCreation(demandeMere, utilisateur);
-
-            redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
-            return "redirect:/demande/list?typeDemande=" + type.name();
-
-        } catch (IllegalArgumentException e) {
+            demande = demandeBrouillonService.enregistrerMateriel(id, utilisateur,
+                    new DemandeBrouillonService.SaisieMateriel(dateSortie, priorite, motif, description,
+                            articleCodes, quantite),
+                    piecesJointes, pjASupprimer);
+        } catch (IllegalArgumentException | WorkflowException e) {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
             return retourSaisie;
         } catch (Exception e) {
+            log.error("Échec de l'enregistrement d'une demande de matériel", e);
             redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement : " + e.getMessage());
             return retourSaisie;
         }
+        return apresEnregistrement(demande, utilisateur, action, redirectAttributes);
     }
 
     /**
      * Demande Autre : une seule dépense hors matériel (sponsoring, remboursement, indemnité de repas…),
-     * réglée en paiement direct. Circuit complet jusqu'au S.G.
+     * réglée en paiement direct. Circuit complet jusqu'au S.G. Brouillon puis soumission, comme le matériel.
      */
     @PostMapping("/autre/save")
-    public String insertDemandeAutre(@RequestParam(name = "categorie", required = false) String categorie,
+    public String insertDemandeAutre(@RequestParam(name = "id", required = false) String id,
+                                     @RequestParam(name = "action", required = false) String action,
+                                     @RequestParam(name = "categorie", required = false) String categorie,
                                      @RequestParam(name = "beneficiaire", required = false) String beneficiaire,
                                      @RequestParam(name = "quantite", required = false) String quantite,
                                      @RequestParam(name = "montantUnitaire", required = false) String montantUnitaire,
@@ -339,25 +308,26 @@ public class DemandeController {
                                      @RequestParam(name = "motif", required = false) String motif,
                                      @RequestParam(name = "description", required = false) String description,
                                      @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
+                                     @RequestParam(name = "pjASupprimer", required = false) List<Integer> pjASupprimer,
                                      @RequestParam(name = "submissionToken") String submissionToken,
                                      HttpSession session,
                                      RedirectAttributes redirectAttributes) {
-        String sessionToken = (String) session.getAttribute("submissionToken");
-        if (sessionToken == null || !sessionToken.equals(submissionToken)) {
+        if (!consommerJeton(session, submissionToken)) {
             redirectAttributes.addFlashAttribute("warningMessage",
-                    "Cette demande a déjà été soumise. Veuillez vérifier la liste des demandes.");
+                    "Cette demande a déjà été envoyée. Veuillez vérifier la liste des demandes.");
             return "redirect:/demande/list?typeDemande=" + TypeDemande.AUTRE.name();
         }
-        session.removeAttribute("submissionToken");
 
-        final String retourSaisie = "redirect:/demande/add?type=" + TypeDemande.AUTRE.name();
+        final String retourSaisie = (id == null || id.isBlank())
+                ? "redirect:/demande/add?type=" + TypeDemande.AUTRE.name()
+                : "redirect:/demande/" + id + "/modifier";
         Utilisateur utilisateur = utilisateurCourant(SecurityContextHolder.getContext().getAuthentication());
 
         DemandeMere demande;
         try {
-            demande = demandeAutreService.creer(utilisateur, new DemandeAutreService.NouvelleDemandeAutre(
+            demande = demandeAutreService.enregistrer(id, utilisateur, new DemandeAutreService.NouvelleDemandeAutre(
                     categorie, beneficiaire, quantite, montantUnitaire, devise,
-                    datePaiement, priorite, motif, description), piecesJointes);
+                    datePaiement, priorite, motif, description), piecesJointes, pjASupprimer);
         } catch (IllegalArgumentException | WorkflowException e) {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
             return retourSaisie;
@@ -366,16 +336,65 @@ public class DemandeController {
             redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement : " + e.getMessage());
             return retourSaisie;
         }
+        return apresEnregistrement(demande, utilisateur, action, redirectAttributes);
+    }
 
-        // Après le commit : un échec d'envoi ne remet pas la demande en cause
+    /**
+     * Après l'enregistrement du brouillon : soumission si demandée, sinon retour sur la fiche du brouillon.
+     * Le brouillon reste enregistré si la soumission est refusée.
+     */
+    private String apresEnregistrement(DemandeMere demande, Utilisateur utilisateur, String action,
+                                       RedirectAttributes redirectAttributes) {
+        if (!demandeSoumission(action)) {
+            redirectAttributes.addFlashAttribute("ok", "Demande n° " + demande.getId()
+                    + " enregistrée en brouillon. Vous pouvez encore la modifier ; soumettez-la pour lancer la validation.");
+            return "redirect:/demande/fiche/" + demande.getId();
+        }
+        return soumettreEtNotifier(demande.getId(), utilisateur, redirectAttributes);
+    }
+
+    /** Le créateur soumet son brouillon depuis la fiche. */
+    @PostMapping("/fiche/{id}/soumettre")
+    public String soumettreBrouillon(@PathVariable("id") String id, RedirectAttributes redirectAttributes) {
+        Utilisateur utilisateur = utilisateurCourant(SecurityContextHolder.getContext().getAuthentication());
+        return soumettreEtNotifier(id, utilisateur, redirectAttributes);
+    }
+
+    private String soumettreEtNotifier(String id, Utilisateur utilisateur, RedirectAttributes redirectAttributes) {
+        DemandeMere demande;
+        try {
+            demande = demandeBrouillonService.soumettre(id, utilisateur);
+        } catch (WorkflowException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+            return "redirect:/demande/fiche/" + id;
+        }
+        // Après le commit : un échec d'envoi ne remet pas la soumission en cause
         try {
             notifierCreation(demande, utilisateur);
         } catch (Exception e) {
-            log.error("Échec des notifications de création de la demande {}", demande.getId(), e);
+            log.error("Échec des notifications de soumission de la demande {}", demande.getId(), e);
         }
+        redirectAttributes.addFlashAttribute("ok", "Demande n° " + demande.getId()
+                + " soumise : elle est en attente de validation par votre N+1.");
+        return "redirect:/demande/list?typeDemande=" + demande.getTypeDemandeEffectif().name();
+    }
 
-        redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
-        return "redirect:/demande/list?typeDemande=" + TypeDemande.AUTRE.name();
+    /** Le créateur abandonne son brouillon. */
+    @PostMapping("/fiche/{id}/supprimer-brouillon")
+    public String supprimerBrouillon(@PathVariable("id") String id, RedirectAttributes redirectAttributes) {
+        Utilisateur utilisateur = utilisateurCourant(SecurityContextHolder.getContext().getAuthentication());
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        String liste = demande == null
+                ? "redirect:/demande/list"
+                : "redirect:/demande/list?typeDemande=" + demande.getTypeDemandeEffectif().name();
+        try {
+            demandeBrouillonService.supprimer(id, utilisateur);
+            redirectAttributes.addFlashAttribute("ok", "Brouillon n° " + id + " supprimé.");
+            return liste;
+        } catch (WorkflowException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+            return "redirect:/demande/fiche/" + id;
+        }
     }
 
     /** Mails de création : confirmation au demandeur, puis action requise pour le N+1 et les validateurs assignés. */
@@ -501,6 +520,7 @@ public class DemandeController {
                 .priorite(priorite)
                 .motif(motif)
                 .statut(statutFilter)
+                .brouillonsDe(current.getId())
                 .dateFrom(DemandeMereService.toFrom(dateFrom))
                 .dateTo(DemandeMereService.toTo(dateTo));
 
@@ -894,7 +914,13 @@ public class DemandeController {
         // Message spécifique pour les validateurs assignés
         String statutHint = null;
 
-        if (estValidateurAssigne && demande.getStatut() == StatutDemande.CREE) {
+        boolean peutModifierBrouillon = DemandeBrouillonService.peutModifier(demande, current);
+        model.addAttribute("estBrouillon", demande.estBrouillon());
+        model.addAttribute("peutModifierBrouillon", peutModifierBrouillon);
+
+        if (demande.estBrouillon()) {
+            statutHint = "Brouillon : la demande n'est visible que par vous. Modifiez-la si besoin, puis soumettez-la pour lancer la validation.";
+        } else if (estValidateurAssigne && demande.getStatut() == StatutDemande.CREE) {
             statutHint = "Vous êtes validateur assigné pour cette demande. Action requise.";
         } else if (isViewerNplus1OfDemandeur && demande.getStatut() == StatutDemande.VALIDATION_N1) {
             statutHint = "Vous avez validé — en attente de traitement par les Moyens Généraux.";
@@ -1013,35 +1039,11 @@ public class DemandeController {
 
         // ── Bon de sortie ────────────────────────────────────────────────────────
         // Seules les demandes de fourniture portent sur des articles en stock
-        boolean canCreateBS = demande.getStatut() == StatutDemande.VALIDE
-                && demande.getTypeDemandeEffectif().isArticlesEnStock()
-                && isMG
-                && demande.getEtatLivraison() != DemandeMere.EtatLivraison.SOLDEE;
+        // La saisie se fait sur sa propre page (/bon-sortie/nouveau) ; la fiche n'en garde que le lien
+        boolean canCreateBS = isMG && BonSortieService.peutCreerBonSortie(demande);
 
         model.addAttribute("canCreateBS", canCreateBS);
         model.addAttribute("bonsSortie", bonSortieService.getBonSortieByDemande(demande));
-
-        if (canCreateBS) {
-            // Même calcul que la sortie : lots FIFO moins le stock réservé par les autres demandes,
-            // réparti en priorité sur les lignes STOCK (leur réservation) avant les lignes ACHAT
-            List<DemandeFille> lignesActives = lignes.stream()
-                    .filter(df -> df.getStatut() != StatutDemande.REFUSE)
-                    .toList();
-            Map<Integer, Double> restants = new HashMap<>();
-            lignesActives.forEach(df -> restants.put(df.getId(), bonSortieService.getQuantiteRestante(df)));
-            Map<Integer, Double> stockParLigne = reservationStockService.repartirStockLibre(
-                    lignesActives, df -> restants.get(df.getId()));
-            List<LigneRestanteDTO> lignesRestantes = lignesActives.stream()
-                    .map(df -> {
-                        double restant = restants.get(df.getId());
-                        return new LigneRestanteDTO(df, df.getQuantite() - restant, restant,
-                                stockParLigne.getOrDefault(df.getId(), 0.0));
-                    })
-                    .filter(l -> l.getRestant() > 0)
-                    .toList();
-
-            model.addAttribute("lignesRestantes", lignesRestantes);
-        }
         // ── Fin Bon de sortie ────────────────────────────────────────────────────
 
 
@@ -1546,7 +1548,9 @@ public class DemandeController {
      * Moyens Généraux : à leur étape de validation, ou sur une demande validée.
      */
     @PostMapping("/ligne/{id}/remettre-achat")
-    public String remettreLigneEnAchat(@PathVariable int id, RedirectAttributes redirectAttributes) {
+    public String remettreLigneEnAchat(@PathVariable int id,
+                                       @RequestParam(name = "retour", required = false) String retour,
+                                       RedirectAttributes redirectAttributes) {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         DemandeFille ligne = demandeFilleService.getDemandeFilleById(id);
         if (ligne == null) {
@@ -1554,7 +1558,10 @@ public class DemandeController {
             return "redirect:/demande/list";
         }
         DemandeMere demande = ligne.getDemandeMere();
-        String fiche = "redirect:/demande/fiche/" + demande.getId();
+        // Depuis la saisie d'un bon de sortie, on y revient ; sinon, fiche de la demande
+        String fiche = "bon-sortie".equals(retour)
+                ? "redirect:/bon-sortie/nouveau?demande=" + demande.getId()
+                : "redirect:/demande/fiche/" + demande.getId();
 
         boolean etapeMG = workflowService.calculerDroits(demande, utilisateurCourant(auth), auth).mg();
         boolean mgSurDemandeValidee = demande.getStatut() == StatutDemande.VALIDE

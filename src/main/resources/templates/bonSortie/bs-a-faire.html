@@ -83,7 +83,7 @@
             <div class="small text-muted" th:text="${d.demande.motifEvoque}"></div>
         </div>
         <a class="btn btn-sm btn-gradient-green" th:if="${d.prete()}"
-           th:href="@{/demande/fiche/{id}(id=${d.demande.id})}">
+           th:href="@{/bon-sortie/nouveau(demande=${d.demande.id})}">
             <i class="fas fa-file-export me-1"></i> Faire le bon de sortie
         </a>
     </div>

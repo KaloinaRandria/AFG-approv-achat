@@ -143,7 +143,10 @@
                                 <span th:if="${u.actif}" class="badge bg-success">Actif</span>
                                 <span th:unless="${u.actif}" class="badge bg-secondary">Inactif</span>
                             </td>
-                            <td class="text-nowrap text-center">
+                            <td class="text-nowrap text-center"
+                                th:with="protege=${!connecteEstAdmin and u.roles != null and u.roles.?[role == 'ADMIN'].size() > 0}">
+                                <span th:if="${protege}" class="text-muted small" title="Compte administrateur : géré par un administrateur"><i class="fas fa-lock"></i></span>
+                                <th:block th:unless="${protege}">
                                 <button type="button" class="btn btn-sm btn-outline-primary"
                                         data-bs-toggle="modal" data-bs-target="#modifierModal"
                                         th:data-id="${u.id}" title="Modifier">
@@ -163,6 +166,7 @@
                                         title="Réactiver">
                                     <i class="fas fa-user-check"></i>
                                 </button>
+                                </th:block>
                             </td>
                         </tr>
 
@@ -262,7 +266,7 @@
                                 <label for="modalRoles" class="form-label required-field">Rôles</label>
                                 <select class="w-100" id="modalRoles" name="roles" multiple="multiple" required
                                         data-placeholder="Choisir un ou plusieurs rôles...">
-                                    <option th:each="r : ${roles}" th:value="${r.id}" th:text="${r.role}"></option>
+                                    <option th:each="r : ${rolesAttribuables}" th:value="${r.id}" th:text="${r.role}"></option>
                                 </select>
                             </div>
                             <div class="col-12">

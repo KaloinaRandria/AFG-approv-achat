@@ -110,6 +110,9 @@ public class WorkflowService {
 
     /** Droit de consulter une demande (fiche et pièces jointes). */
     public boolean aAccesDemande(DemandeMere demande, Utilisateur current, Authentication auth) {
+        // Brouillon : visible uniquement par son créateur tant qu'il ne l'a pas soumis
+        if (demande.estBrouillon()) return demande.estDemandeur(current);
+
         if (estBackoffice(auth)) return true;
 
         // Le validateur M.G. décide au CODEP : il ouvre les demandes qui l'attendent
@@ -352,6 +355,10 @@ public class WorkflowService {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private DroitsDecision exigerDroitDeDecision(DemandeMere demande, Utilisateur current, Authentication auth) {
+        // Aucune décision (même forcée par l'admin) sur un brouillon : il n'est pas encore soumis
+        if (demande.estBrouillon()) {
+            throw new WorkflowException("Cette demande est un brouillon : elle n'a pas encore été soumise.");
+        }
         DroitsDecision droits = calculerDroits(demande, current, auth);
         if (!droits.auMoinsUn() && !hasRole(auth, "ROLE_ADMIN")) {
             throw new WorkflowException("Cette demande ne peut pas être traitée par vous.");

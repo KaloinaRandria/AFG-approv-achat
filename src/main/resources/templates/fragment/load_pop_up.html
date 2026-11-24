@@ -1,33 +1,15 @@
+<!-- Messages de retour (flash « ok » / « ko ») : même modèle que toutes les alertes (afficherAlerte, load_script) -->
 <div th:fragment="pop_up">
     <div th:if="${ok}">
-
         <script th:inline="javascript">
-            let message = /*[[${ok}]]*/ "";
-            Swal.fire({
-                icon: 'success',
-                html: message,
-                showConfirmButton: true,
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                backdrop: true,
-                confirmButtonColor: '#28a745'
-            });
+            afficherAlerte(/*[[${ok}]]*/ "", "success", null, {html: true, bloquante: true});
         </script>
     </div>
 
-    <!-- Error -->
+    <!-- Erreur -->
     <div th:if="${ko}">
         <script th:inline="javascript">
-            let message = /*[[${ko}]]*/ "";
-            Swal.fire({
-                icon: 'error',
-                html: message,
-                showConfirmButton: true,
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                backdrop: true,
-                confirmButtonColor: '#d33'
-            });
+            afficherAlerte(/*[[${ko}]]*/ "", "error", null, {html: true, bloquante: true});
         </script>
     </div>
 </div>

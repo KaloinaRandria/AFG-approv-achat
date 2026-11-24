@@ -32,4 +32,25 @@ public interface UtilisateurRepo extends JpaRepository<Utilisateur, Integer>, Jp
 
     /** Comptes actifs, triés pour les listes de choix (supérieur, validateurs). */
     List<Utilisateur> findByActifTrueOrderByNomAscPrenomAsc();
+
+    /** Nombre d utilisateurs par poste : [id poste, nombre]. */
+    @Query("SELECT u.poste.id, COUNT(u) FROM Utilisateur u WHERE u.poste IS NOT NULL GROUP BY u.poste.id")
+    List<Object[]> compterParPoste();
+
+    /** Nombre d utilisateurs par direction (service) : [id service, nombre]. */
+    @Query("SELECT u.service.id, COUNT(u) FROM Utilisateur u WHERE u.service IS NOT NULL GROUP BY u.service.id")
+    List<Object[]> compterParService();
+
+    long countByPoste_Id(int idPoste);
+
+    long countByService_Id(int idService);
+
+    /** Utilisateurs dont la direction ne correspond pas à celle de leur poste (poste rattaché). */
+    @Query("""
+        SELECT u FROM Utilisateur u JOIN u.poste p
+        WHERE p.direction IS NOT NULL
+          AND (u.service IS NULL OR u.service <> p.direction)
+        ORDER BY u.nom, u.prenom
+        """)
+    List<Utilisateur> findIncoherentsPosteDirection();
 }

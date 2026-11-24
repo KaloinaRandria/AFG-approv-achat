@@ -2,6 +2,7 @@ package afg.achat.afgApprovAchat.repository.demande;
 
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.util.ModeTraitementEnum;
+import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.util.TypeDemande;
 import jakarta.persistence.criteria.*;
 import org.springframework.data.jpa.domain.Specification;
@@ -63,6 +64,14 @@ public final class DemandeMereSpec {
                 predicates.add(root.get("statut").in(c.statuts()));
             } else if (c.statut() != null) {
                 predicates.add(cb.equal(root.get("statut"), c.statut()));
+            }
+
+            // ── Brouillons : visibles uniquement par leur créateur ──────────
+            if (c.brouillonsDe() != null) {
+                predicates.add(cb.or(
+                        cb.notEqual(root.get("statut"), StatutDemande.BROUILLON),
+                        cb.equal(dmd.get("id"), c.brouillonsDe())
+                ));
             }
 
             // ── Mode Traitement : Paiement direct ───────────────────────────
@@ -129,7 +138,8 @@ public final class DemandeMereSpec {
             List<Integer>   roleStatuts,
             Integer         myStatut,
             List<Integer>   myVisibleIds,
-            TypeDemande     typeDemande
+            TypeDemande     typeDemande,
+            Integer         brouillonsDe
     ) {
         // Builder statique
         public static Builder builder() { return new Builder(); }
@@ -152,6 +162,7 @@ public final class DemandeMereSpec {
             private Integer       myStatut      = null;
             private List<Integer> myVisibleIds  = null;
             private TypeDemande   typeDemande   = null;
+            private Integer       brouillonsDe  = null;
 
             public Builder num(String v)              { num = v == null ? "" : v.trim(); return this; }
             public Builder demandeur(String v)        { demandeur = v == null ? "" : v.trim(); return this; }
@@ -178,11 +189,13 @@ public final class DemandeMereSpec {
             public Builder roleStatuts(List<Integer> v)   { roleStatuts = v; return this; }
             public Builder myStatut(Integer v)            { myStatut = v; return this; }
             public Builder myVisibleIds(List<Integer> v)  { myVisibleIds = v; return this; }
+            /** Les brouillons ne sont visibles que par leur créateur (cet utilisateur). */
+            public Builder brouillonsDe(Integer v)        { brouillonsDe = v; return this; }
 
             public SearchCriteria build() {
                 return new SearchCriteria(num, demandeur, type, priorite, motif,
                         statut, statuts, paiementDirectOnly, statutTransmissionFinance, statutsTransmissionFinance,
-                        dateFrom, dateTo, demandeurIds, roleStatuts, myStatut, myVisibleIds, typeDemande);
+                        dateFrom, dateTo, demandeurIds, roleStatuts, myStatut, myVisibleIds, typeDemande, brouillonsDe);
             }
         }
     }

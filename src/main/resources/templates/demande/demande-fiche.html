@@ -31,7 +31,35 @@
                     </h1>
                 </div>
 
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap">
+                    <!-- Brouillon : le créateur modifie, soumet ou supprime sa demande -->
+                    <th:block th:if="${peutModifierBrouillon}">
+                        <a class="btn btn-outline-gradient-blue" th:href="@{/demande/{id}/modifier(id=${demande.id})}">
+                            <i class="fas fa-pen me-1"></i> Modifier
+                        </a>
+                        <form method="post" class="d-inline"
+                              th:action="@{/demande/fiche/{id}/supprimer-brouillon(id=${demande.id})}"
+                              th:attr="data-confirmer='Supprimer le brouillon ' + ${demande.id} + ' ?'"
+                              data-confirmer-texte="Le brouillon, ses lignes et ses pièces jointes seront définitivement supprimés.<br><small class='text-muted'>Cette action est irréversible.</small>"
+                              data-confirmer-bouton="Supprimer"
+                              data-confirmer-type="danger"
+                              data-chargement="Suppression…">
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="fas fa-trash me-1"></i> Supprimer
+                            </button>
+                        </form>
+                        <form method="post" class="d-inline"
+                              th:action="@{/demande/fiche/{id}/soumettre(id=${demande.id})}"
+                              th:attr="data-confirmer='Soumettre la demande ' + ${demande.id} + ' ?'"
+                              data-confirmer-texte="La demande partira en validation chez votre <strong>N+1</strong>, qui sera prévenu par mail.<br><small class='text-muted'>Une fois soumise, elle ne sera plus modifiable.</small>"
+                              data-confirmer-bouton="Soumettre"
+                              data-confirmer-type="question"
+                              data-chargement="Soumission…">
+                            <button type="submit" class="btn btn-gradient-green">
+                                <i class="fas fa-paper-plane me-1"></i> Soumettre
+                            </button>
+                        </form>
+                    </th:block>
                     <a class="btn btn-outline-secondary" th:href="@{${returnUrl}}">
                         <i class="fas fa-arrow-left me-1"></i> Retour liste
                     </a>
@@ -102,9 +130,13 @@
                                     <i class="fas fa-times-circle me-1"></i> Demande refusée
                                 </span>
 
+                                <span class="badge bg-secondary" th:if="${estBrouillon}">
+                                    <i class="fas fa-pencil-alt me-1"></i> Brouillon — pas encore soumise
+                                </span>
+
                                 <!-- Étape en cours : on n'affiche que si currentStep est dans les bornes -->
                                 <span class="text-muted small"
-                                      th:if="${!isValidated and !isRefused and currentStep >= 0 and currentStep < steps.size()}">
+                                      th:if="${!estBrouillon and !isValidated and !isRefused and currentStep >= 0 and currentStep < steps.size()}">
                                     <i class="fas fa-info-circle me-1"></i>
                                     Étape en cours :
                                     <b th:text="${steps[currentStep]}"></b>
@@ -113,115 +145,176 @@
                             </div>
                         </div>
 
-                        <!-- INFOS -->
-                        <div class="bl-infos">
-                            <div>
-                                <strong>Demandeur :</strong>
-                                <div th:if="${demande.demandeur != null}">
+                        <!-- INFOS DE LA DEMANDE -->
+                        <div class="dm-infos"
+                             th:with="fmt=${T(afg.achat.afgApprovAchat.service.util.FormatNumber)},
+                                      jours=${demande.dateSortie != null
+                                              ? T(java.time.temporal.ChronoUnit).DAYS.between(T(java.time.LocalDate).now(), demande.dateSortie.toLocalDate())
+                                              : null},
+                                      enCours=${!isRefused
+                                               and demande.etatLivraison?.name() != 'SOLDEE'
+                                               and demande.statutTransmissionFinance?.name() != 'PAYEE'}">
 
-                                    <!-- Nom + prénom -->
-                                    <div class="fw-semibold"
-                                         th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom}">
-                                    </div>
-
-                                    <!-- Poste + Service -->
-                                    <small class="text-muted"
-                                           th:text="${
-                                           (demande.demandeur.poste != null ? demande.demandeur.poste.poste : '') +
-                                           (demande.demandeur.service != null ? ' - ' + demande.demandeur.service.acronyme : '')
-                                       }">
-                                    </small>
-
-                                </div>
-                            </div>
-
-                            <div>
-                                <strong>Date de la demande :</strong>
-                                <div th:text="${demande.dateDemande != null ? #temporals.format(demande.dateDemande,'dd/MM/yyyy HH:mm') : '-'}">-</div>
-                            </div>
-
-                            <div>
-                                <strong th:text="${estAutre ? 'Date souhaitée de paiement :' : 'Date prévue pour la livraison :'}">Date prévue pour la livraison :</strong>
-                                <div th:text="${demande.dateSortie != null ? #temporals.format(demande.dateSortie,'dd/MM/yyyy') : '-'}">-</div>
-                            </div>
-
-                            <div>
-                                <strong>Statut :</strong>
-
-                                <div>
-
-                                    <div class="mt-1">
-                                        <span class="badge-status"
-                                              th:classappend="${badgeClasses[demande.statut] ?: 'badge-info'}">
-
-                                            <i class="fas"
-                                               th:classappend="${badgeIcons[demande.statut] ?: 'fa-info-circle'}">
-                                            </i>
-
-                                            <span th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></span>
-                                        </span>
+                            <!-- Bandeau : demandeur et statut -->
+                            <div class="dm-hero">
+                                <div class="dm-person" th:if="${demande.demandeur != null}">
+                                    <div class="dm-avatar"
+                                         th:text="${(#strings.isEmpty(demande.demandeur.prenom) ? '' : #strings.toUpperCase(#strings.substring(demande.demandeur.prenom, 0, 1)))
+                                                  + (#strings.isEmpty(demande.demandeur.nom) ? '' : #strings.toUpperCase(#strings.substring(demande.demandeur.nom, 0, 1)))}">AB</div>
+                                    <div class="min-w-0">
+                                        <span class="dm-label">Demandeur</span>
+                                        <div class="dm-person-name"
+                                             th:text="${demande.demandeur.nom + ' ' + demande.demandeur.prenom}">Nom Prénom</div>
+                                        <div class="dm-person-meta"
+                                             th:text="${(demande.demandeur.poste != null ? demande.demandeur.poste.poste : '')
+                                                      + (demande.demandeur.service != null ? ' · ' + demande.demandeur.service.acronyme : '')}"></div>
                                     </div>
                                 </div>
-
-                                <!-- Message contextuel -->
-                                <div th:if="${statutHint != null}"
-                                     class="text-muted small mt-2">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    <span th:text="${statutHint}"></span>
+                                <div class="dm-status">
+                                    <span class="dm-label">Statut</span>
+                                    <span class="badge-status"
+                                          th:classappend="${badgeClasses[demande.statut] ?: 'badge-info'}">
+                                        <i class="fas" th:classappend="${badgeIcons[demande.statut] ?: 'fa-info-circle'}"></i>
+                                        <span th:text="${statutLabels[demande.statut] ?: 'INCONNU'}"></span>
+                                    </span>
+                                    <div class="dm-status-hint" th:if="${statutHint != null}">
+                                        <i class="fas fa-info-circle me-1"></i><span th:text="${statutHint}"></span>
+                                    </div>
                                 </div>
                             </div>
 
-
-                            <div>
-                                <strong>Type de demande :</strong>
-
-                                <!-- Lecture seule : détermine le circuit de validation -->
-                                <div th:text="${demande.typeDemandeEffectif.libelle}">-</div>
-                            </div>
-
-                            <div>
-                                <strong>Nature (OPEX/CAPEX) :</strong>
-
-                                <!-- Lecture seule -->
-                                <div th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">-</div>
-                            </div>
-
-                            <div>
-                                <strong>Ligne budgétaire :</strong>
-
-                                <!-- Lecture seule -->
-                                <div th:text="${demande.centreBudgetaire != null ? demande.centreBudgetaire.codeCentre +' - '+ demande.centreBudgetaire.description   : '-'}">-</div>
-                            </div>
-                            <div>
-                                <strong>Priorité:</strong>
-
-                                <!-- Lecture seule -->
-                                <div th:text="${demande.priorite != null ? demande.priorite : '-'}">-</div>
-                            </div>
-                            <div>
-                                <strong>Mode de traitement :</strong>
-
-                                <!-- Lecture seule -->
-                                <div th:text="${demande.modeTraitement != null ? demande.modeTraitement.libelle
-                                               : (modeTraitementImpose != null ? modeTraitementImpose.libelle : '-')}">-</div>
-                            </div>
-                            <div th:if="${demande.statutTransmissionFinance != null and demande.statutTransmissionFinance.name() != 'NON_CONCERNEE'}">
-                                <strong>Transmission finance :</strong>
-                                <div th:if="${demande.statutTransmissionFinance.name() == 'A_TRANSMETTRE'}" class="text-warning fw-semibold">
-                                    À transmettre par le validateur des Moyens Généraux
+                            <!-- Faits clés -->
+                            <div class="dm-facts">
+                                <div class="dm-fact">
+                                    <span class="dm-fact-icon"><i class="fas fa-calendar-day"></i></span>
+                                    <div>
+                                        <span class="dm-label" th:text="${estBrouillon ? 'Créée le' : 'Date de la demande'}">Date de la demande</span>
+                                        <div class="dm-value"
+                                             th:text="${demande.dateDemande != null ? #temporals.format(demande.dateDemande, 'dd/MM/yyyy') : '—'}"></div>
+                                        <div class="dm-sub"
+                                             th:if="${demande.dateDemande != null}"
+                                             th:text="${'à ' + #temporals.format(demande.dateDemande, 'HH:mm')}"></div>
+                                    </div>
                                 </div>
-                                <div th:if="${demande.statutTransmissionFinance.name() == 'TRANSMISE_FINANCE'}" class="text-primary fw-semibold">
-                                    Transmise à la finance
-                                    <span th:if="${demande.dateTransmissionFinance != null}" th:text="${' le ' + #temporals.format(demande.dateTransmissionFinance, 'dd/MM/yyyy HH:mm')}"></span>
-                                    <span th:if="${demande.transmisFinancePar != null}" th:text="${' par ' + demande.transmisFinancePar.nom + ' ' + demande.transmisFinancePar.prenom}"></span>
+
+                                <div class="dm-fact">
+                                    <span class="dm-fact-icon"><i class="fas" th:classappend="${estAutre ? 'fa-money-check-alt' : 'fa-truck'}"></i></span>
+                                    <div>
+                                        <span class="dm-label" th:text="${estAutre ? 'Paiement souhaité' : 'Livraison prévue'}">Livraison prévue</span>
+                                        <div class="dm-value"
+                                             th:text="${demande.dateSortie != null ? #temporals.format(demande.dateSortie, 'dd/MM/yyyy') : '—'}"></div>
+                                        <!-- Échéance, tant que la demande n'est ni refusée, ni soldée, ni payée -->
+                                        <div class="dm-sub" th:if="${jours != null and enCours}"
+                                             th:classappend="${jours < 0 ? 'dm-late' : (jours <= 3 ? 'dm-soon' : '')}"
+                                             th:text="${jours < 0 ? 'Dépassée de ' + (-jours) + ' j'
+                                                      : (jours == 0 ? 'Aujourd''hui'
+                                                      : (jours == 1 ? 'Demain' : 'Dans ' + jours + ' j'))}"></div>
+                                    </div>
                                 </div>
-                                <div th:if="${demande.statutTransmissionFinance.name() == 'PAYEE'}" class="text-success fw-semibold">
-                                    Payée
+
+                                <div class="dm-fact">
+                                    <span class="dm-fact-icon"><i class="fas fa-bolt"></i></span>
+                                    <div>
+                                        <span class="dm-label">Priorité</span>
+                                        <span th:if="${demande.priorite != null}"
+                                              class="dm-prio" th:classappend="${'dm-prio-' + demande.priorite.name()}"
+                                              th:text="${demande.priorite}">P1</span>
+                                        <span th:if="${demande.priorite == null}" class="dm-empty">Non renseignée</span>
+                                    </div>
+                                </div>
+
+                                <div class="dm-fact">
+                                    <span class="dm-fact-icon"><i class="fas" th:classappend="${estAutre ? 'fa-hand-holding-usd' : 'fa-boxes'}"></i></span>
+                                    <div>
+                                        <span class="dm-label">Type de demande</span>
+                                        <!-- Lecture seule : détermine le circuit de validation -->
+                                        <div class="dm-value" th:text="${demande.typeDemandeEffectif.libelle}">Matériel</div>
+                                    </div>
+                                </div>
+
+                                <div class="dm-fact" th:if="${canVoirPrix and demande.totalEstime != null and demande.totalEstime > 0}">
+                                    <span class="dm-fact-icon"><i class="fas fa-coins"></i></span>
+                                    <div>
+                                        <span class="dm-label" th:text="${estAutre ? 'Montant demandé' : 'Montant estimé'}">Montant estimé</span>
+                                        <div class="dm-value" th:text="${fmt.montant(demande.totalEstime, demande.codeDevise)}"></div>
+                                        <div class="dm-sub" th:if="${demande.deviseEtrangere}"
+                                             th:text="${'≈ ' + fmt.montant(demande.enAriary(demande.totalEstime), 'MGA')}"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Traitement et budget (renseignés au fil du circuit) -->
+                            <div class="dm-section">
+                                <div class="dm-section-head"><i class="fas fa-sliders-h me-2"></i>Traitement et budget</div>
+                                <div class="dm-grid">
+                                    <div th:with="mode=${demande.modeTraitement != null ? demande.modeTraitement.libelle
+                                                        : (modeTraitementImpose != null ? modeTraitementImpose.libelle : null)}">
+                                        <span class="dm-label">Mode de traitement</span>
+                                        <div class="dm-value">
+                                            <span th:if="${mode != null}" th:text="${mode}"></span>
+                                            <span th:if="${mode == null}" class="dm-empty">Choisi par les M.G.</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="dm-label">Nature</span>
+                                        <div class="dm-value">
+                                            <span th:if="${demande.natureDemande != null}" class="badge bg-light text-dark border"
+                                                  th:text="${demande.natureDemande}">OPEX</span>
+                                            <span th:if="${demande.natureDemande == null}" class="dm-empty">Choisie par les M.G.</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="dm-label">Ligne budgétaire</span>
+                                        <div class="dm-value">
+                                            <th:block th:if="${demande.centreBudgetaire != null}">
+                                                <span class="fw-bold" th:text="${demande.centreBudgetaire.codeCentre}"></span>
+                                                <span class="dm-sub d-block" th:text="${demande.centreBudgetaire.description}"></span>
+                                            </th:block>
+                                            <span th:if="${demande.centreBudgetaire == null}" class="dm-empty">Choisie par le contrôle de gestion</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="dm-label">Devise</span>
+                                        <div class="dm-value">
+                                            <span class="badge bg-light text-dark border" th:text="${demande.codeDevise}">MGA</span>
+                                            <span class="dm-sub" th:if="${demande.deviseEtrangere}"
+                                                  th:text="${'1 ' + demande.codeDevise + ' = ' + fmt.montant(demande.tauxEffectif, 'MGA')}"></span>
+                                        </div>
+                                    </div>
+                                    <div th:if="${demande.statutTransmissionFinance != null and demande.statutTransmissionFinance.name() != 'NON_CONCERNEE'}">
+                                        <span class="dm-label">Transmission finance</span>
+                                        <div th:switch="${demande.statutTransmissionFinance.name()}">
+                                            <span th:case="'A_TRANSMETTRE'" class="badge bg-warning text-dark">
+                                                <i class="fas fa-hourglass-half me-1"></i>À transmettre
+                                            </span>
+                                            <th:block th:case="'TRANSMISE_FINANCE'">
+                                                <span class="badge bg-primary"><i class="fas fa-paper-plane me-1"></i>Transmise</span>
+                                                <div class="dm-sub"
+                                                     th:text="${(demande.dateTransmissionFinance != null ? 'le ' + #temporals.format(demande.dateTransmissionFinance, 'dd/MM/yyyy HH:mm') : '')
+                                                              + (demande.transmisFinancePar != null ? ' par ' + demande.transmisFinancePar.nom + ' ' + demande.transmisFinancePar.prenom : '')}"></div>
+                                            </th:block>
+                                            <span th:case="'PAYEE'" class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Payée</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Motif et description -->
+                            <div class="dm-texts">
+                                <div class="dm-text dm-motif">
+                                    <span class="dm-label"><i class="fas fa-tag me-1"></i>Motif évoqué</span>
+                                    <p th:if="${demande.motifEvoque != null and !demande.motifEvoque.isBlank()}" th:text="${demande.motifEvoque}"></p>
+                                    <p th:unless="${demande.motifEvoque != null and !demande.motifEvoque.isBlank()}" class="dm-empty">Aucun motif</p>
+                                </div>
+                                <div class="dm-text">
+                                    <span class="dm-label"><i class="fas fa-align-left me-1"></i>Description</span>
+                                    <p th:if="${demande.description != null and !demande.description.isBlank()}" th:text="${demande.description}"></p>
+                                    <p th:unless="${demande.description != null and !demande.description.isBlank()}" class="dm-empty">Aucune description</p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- MOTIF & DESCRIPTION -->
+                        <!-- ACTIONS FINANCE (paiement direct) -->
                         <div class="px-3 pb-3" th:if="${canTransmitFinance}">
                             <div class="alert alert-warning mb-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
                                 <div><i class="fas fa-paper-plane me-2"></i>Ce paiement direct validé par le S.G. doit être transmis manuellement à la finance.</div>
@@ -237,32 +330,6 @@
                                 <button type="button" class="btn btn-sm btn-success text-nowrap" data-bs-toggle="modal" data-bs-target="#payFinanceModal">
                                     <i class="fas fa-check-circle me-1"></i> Marquer comme payée
                                 </button>
-                            </div>
-                        </div>
-                        <div class="px-3 pb-2">
-                            <div class="row g-3">
-
-                                <div class="col-md-6">
-                                    <div class="p-3 border rounded bg-light">
-                                        <div class="fw-bold mb-1">
-                                            Motif évoqué
-                                        </div>
-                                        <div th:text="${demande.motifEvoque != null && !demande.motifEvoque.isBlank() ? demande.motifEvoque : '-'}">
-                                            -
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <div class="p-3 border rounded bg-light">
-                                        <div class="fw-bold mb-1">
-                                            <i class="fas fa-align-left me-2"></i> Description
-                                        </div>
-                                        <div th:text="${demande.description != null && !demande.description.isBlank() ? demande.description : '-'}">
-                                            -
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                         <!-- PIECES JOINTES -->
@@ -675,7 +742,7 @@
                                         <!-- Devise des prix proforma : changer de devise vide les prix à acheter -->
                                         <form th:action="@{/demande/fiche/{id}/devise(id=${demande.id})}" method="post"
                                               class="d-flex align-items-center gap-2 mt-2 flex-wrap"
-                                              onsubmit="return confirm('Changer la devise de la demande ? Les prix proforma des articles à acheter seront à ressaisir dans la nouvelle devise ; les lignes servies depuis le stock seront converties.');">
+                                              data-confirmer="Changer la devise de la demande ?" data-confirmer-texte="Les prix proforma des articles à acheter seront à ressaisir dans la nouvelle devise ; les lignes servies depuis le stock seront converties." data-confirmer-bouton="Changer la devise" data-confirmer-type="warning">
                                             <label for="deviseDemande" class="small fw-semibold mb-0">Devise des prix :</label>
                                             <select id="deviseDemande" name="devise" class="form-select form-select-sm" style="width:auto;">
                                                 <option th:each="d : ${devises}" th:value="${d.id}"
@@ -847,7 +914,10 @@
                                             <form th:if="${l.typeApprovisionnement?.name() == 'STOCK'}"
                                                   th:action="@{/demande/ligne/{id}/remettre-achat(id=${l.id})}"
                                                   method="post" class="d-inline"
-                                                  onsubmit="return confirm('Remettre cette ligne à l\'achat ? Sa réservation de stock sera libérée.');">
+                                                  data-confirmer="Remettre cette ligne à l'achat ?"
+                                                  data-confirmer-texte="Sa réservation de stock sera libérée."
+                                                  data-confirmer-bouton="Remettre à l'achat"
+                                                  data-confirmer-type="warning">
                                                 <button type="submit" class="btn btn-sm btn-outline-primary"
                                                         title="Remettre à l'achat (libère la réservation de stock)">
                                                     <i class="fas fa-shopping-cart me-1"></i>Remettre à l'achat
@@ -1581,189 +1651,17 @@
                                     Aucun bon de sortie créé pour cette demande.
                                 </div>
 
-                                <!-- ── FORMULAIRE CREATION BS (MG seulement, si pas soldée) ── -->
-                                <div th:if="${canCreateBS}">
-                                    <hr class="my-3">
-                                    <div class="fw-bold mb-2">
-                                        <i class="fas fa-plus-circle me-2 text-success"></i>
-                                        Créer un nouveau bon de sortie
-                                    </div>
-
-                                    <div class="alert alert-info py-2 mb-3">
+                                <!-- ── Création d'un BS : page de saisie dédiée (MG seulement, si pas soldée) ── -->
+                                <div th:if="${canCreateBS}"
+                                     class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-top pt-3">
+                                    <span class="text-muted small">
                                         <i class="fas fa-info-circle me-1"></i>
-                                        Sélectionnez les articles disponibles en stock et saisissez
-                                        les quantités à sortir. Laissez <strong>0</strong> pour les
-                                        articles non encore disponibles.
-                                    </div>
-
-                                    <form th:action="@{/bon-sortie/creer/{id}(id=${demande.id})}"
-                                          method="post"
-                                          id="formCreerBs">
-
-                                        <div class="table-responsive mb-3">
-                                            <table class="table table-bordered align-middle">
-                                                <thead class="table-light">
-                                                <tr>
-                                                    <th style="width:30%">Article</th>
-                                                    <th class="text-end" style="width:12%">Qté demandée</th>
-                                                    <th class="text-end" style="width:12%">Déjà sorti</th>
-                                                    <th class="text-end" style="width:12%">Restant</th>
-                                                    <th class="text-end" style="width:12%">Prix unitaire (<span th:text="${demande.codeDevise}">MGA</span>)</th>
-                                                    <th class="text-center" style="width:14%">
-                                                        Stock disponible
-                                                        <i class="fas fa-info-circle text-muted ms-1"
-                                                           title="Stock global disponible pour cet article (toutes demandes confondues)">
-                                                        </i>
-                                                    </th>
-                                                    <th class="text-center" style="width:20%">Qté à sortir</th>
-                                                </tr>
-                                                </thead>
-                                                <tbody>
-                                                <tr th:each="ligne : ${lignesRestantes}">
-                                                    <td>
-                                                        <span th:text="${ligne.demandeFille.article.codeArticle
-                            + ' - '
-                            + ligne.demandeFille.article.designation}">
-            </span>
-                                                    </td>
-
-                                                    <!-- Qté demandée -->
-                                                    <td class="text-end"
-                                                        th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(ligne.demandeFille.quantite)}">
-                                                    </td>
-
-                                                    <!-- Déjà sorti -->
-                                                    <td class="text-end"
-                                                        th:text="${#numbers.formatDecimal(ligne.totalSorti, 1, 'DEFAULT', 2, 'DEFAULT')}">
-                                                    </td>
-
-                                                    <!-- Restant à sortir -->
-                                                    <td class="text-end fw-semibold text-success"
-                                                        th:text="${#numbers.formatDecimal(ligne.restant, 1, 'DEFAULT', 2, 'DEFAULT')}">
-                                                    </td>
-                                                    <td class="text-end">
-    <span th:if="${ligne.demandeFille.prixUnitaire != null and ligne.demandeFille.prixUnitaire > 0}"
-          class="fw-semibold"
-          th:text="${#numbers.formatDecimal(ligne.demandeFille.prixUnitaire, 1, 'DEFAULT', 2, 'DEFAULT')}">
-    </span>
-                                                        <span th:if="${ligne.demandeFille.prixUnitaire == null or ligne.demandeFille.prixUnitaire <= 0}"
-                                                              class="text-muted">—</span>
-                                                    </td>
-
-                                                    <!-- Stock disponible -->
-                                                    <td class="text-center">
-            <span th:if="${ligne.stockDisponible <= 0}"
-                  class="badge bg-danger">
-                <i class="fas fa-times-circle me-1"></i>
-                Indisponible
-            </span>
-
-                                                        <span th:if="${ligne.stockDisponible > 0 and ligne.stockDisponible < ligne.restant}"
-                                                              class="badge bg-warning text-dark">
-                <i class="fas fa-exclamation-triangle me-1"></i>
-                <span th:text="${#numbers.formatDecimal(ligne.stockDisponible, 1, 'DEFAULT', 2, 'DEFAULT')}"></span>
-                <span th:text="${ligne.demandeFille.article.udm != null ? ligne.demandeFille.article.udm.description : ''}"></span>
-            </span>
-
-                                                        <span th:if="${ligne.stockDisponible >= ligne.restant}"
-                                                              class="badge bg-success">
-                <i class="fas fa-check-circle me-1"></i>
-                <span th:text="${#numbers.formatDecimal(ligne.stockDisponible, 1, 'DEFAULT', 2, 'DEFAULT')}"></span>
-                <span th:text="${ligne.demandeFille.article.udm != null ? ligne.demandeFille.article.udm.description : ''}"></span>
-            </span>
-                                                    </td>
-
-                                                    <!-- Qté à sortir -->
-                                                    <td class="text-center">
-                                                        <!-- Nom lié à la ligne (qte_<id>) : la quantité reste attachée
-                                                             à sa ligne même si un champ désactivé n'est pas envoyé -->
-                                                        <input type="number"
-                                                               th:name="'qte_' + ${ligne.demandeFille.id}"
-                                                               class="form-control form-control-sm text-end bs-qte-input"
-                                                               min="0"
-                                                               step="1"
-                                                               value="0"
-                                                               th:max="${ligne.restant}"
-                                                               th:data-max="${ligne.restant}"
-                                                               th:data-stock="${ligne.stockDisponible}"
-                                                               th:data-article="${ligne.demandeFille.article.designation}"
-                                                               th:disabled="${ligne.stockDisponible <= 0}"/>
-
-                                                        <!-- Hint si stock insuffisant -->
-                                                        <small class="text-warning d-block mt-1"
-                                                               th:if="${ligne.stockDisponible > 0 and ligne.stockDisponible < ligne.restant}">
-                                                            Max sortable : <span th:text="${#numbers.formatDecimal(ligne.stockDisponible, 1, 'DEFAULT', 2, 'DEFAULT')}"></span>
-                                                        </small>
-                                                        <small class="text-danger d-block mt-1"
-                                                               th:if="${ligne.stockDisponible <= 0}">
-                                                            En attente de livraison
-                                                        </small>
-                                                    </td>
-                                                </tr>
-                                                <!-- Ligne STOCK dont le stock promis manque : la remettre à l'achat.
-                                                     Formulaire hors du formulaire du bon (pas de formulaires imbriqués). -->
-                                                <tr th:each="ligne : ${lignesRestantes}"
-                                                    th:if="${ligne.demandeFille.typeApprovisionnement?.name() == 'STOCK'
-                                                             and ligne.stockDisponible < ligne.restant}"
-                                                    class="table-warning">
-                                                    <td colspan="7" class="small">
-                                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                                        <span th:text="${ligne.demandeFille.article.codeArticle}"></span> :
-                                                        le stock promis ne couvre plus le restant.
-                                                        <button type="submit" class="btn btn-sm btn-outline-primary ms-2"
-                                                                th:form="'remettreAchat-' + ${ligne.demandeFille.id}">
-                                                            <i class="fas fa-shopping-cart me-1"></i>Remettre à l'achat
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">
-                                                Commentaire
-                                                <span class="text-muted fw-normal small">(optionnel)</span>
-                                            </label>
-                                            <textarea name="commentaire"
-                                                      class="form-control"
-                                                      rows="2"
-                                                      placeholder="Ex: Articles disponibles en stock central...">
-                                            </textarea>
-                                        </div>
-
-                                        <!-- Alerte validation JS -->
-                                        <div id="bsAlertAucunArticle"
-                                             class="alert alert-danger d-none mb-2">
-                                            <i class="fas fa-exclamation-triangle me-1"></i>
-                                            Veuillez saisir une quantité supérieure à 0 pour au moins un article.
-                                        </div>
-                                        <div id="bsAlertDepassement"
-                                             class="alert alert-danger d-none mb-2">
-                                            <i class="fas fa-exclamation-triangle me-1"></i>
-                                            <span id="bsAlertDepassementMsg"></span>
-                                        </div>
-
-                                        <div class="d-flex gap-2">
-                                            <button type="button"
-                                                    id="btnCreerBs"
-                                                    class="btn btn-gradient-green">
-                                                <i class="fas fa-file-export me-1"></i>
-                                                Créer et confirmer le bon de sortie
-                                            </button>
-                                        </div>
-
-                                    </form>
-
-                                    <!-- Formulaires « Remettre à l'achat » (boutons liés par l'attribut form) -->
-                                    <form th:each="ligne : ${lignesRestantes}"
-                                          th:if="${ligne.demandeFille.typeApprovisionnement?.name() == 'STOCK'
-                                                   and ligne.stockDisponible < ligne.restant}"
-                                          th:id="'remettreAchat-' + ${ligne.demandeFille.id}"
-                                          th:action="@{/demande/ligne/{id}/remettre-achat(id=${ligne.demandeFille.id})}"
-                                          method="post" class="d-none"
-                                          onsubmit="return confirm('Remettre cette ligne à l\'achat ? Sa réservation de stock sera libérée et le restant apparaîtra dans les lignes à acheter.');">
-                                    </form>
+                                        Des articles restent à sortir du stock pour cette demande.
+                                    </span>
+                                    <a class="btn btn-gradient-green"
+                                       th:href="@{/bon-sortie/nouveau(demande=${demande.id})}">
+                                        <i class="fas fa-file-export me-1"></i> Créer un bon de sortie
+                                    </a>
                                 </div>
 
                             </div>
@@ -2533,67 +2431,6 @@
 
     })();
 
-    // ===================== BON DE SORTIE =====================
-    (function () {
-        const btnCreerBs = document.getElementById('btnCreerBs');
-        if (!btnCreerBs) return;
-
-        btnCreerBs.addEventListener('click', function () {
-            const form        = document.getElementById('formCreerBs');
-            const inputs      = form.querySelectorAll('.bs-qte-input');
-            const alertAucun  = document.getElementById('bsAlertAucunArticle');
-            const alertDep    = document.getElementById('bsAlertDepassement');
-            const alertDepMsg = document.getElementById('bsAlertDepassementMsg');
-
-            alertAucun.classList.add('d-none');
-            alertDep.classList.add('d-none');
-            inputs.forEach(i => i.classList.remove('is-invalid'));
-
-            // Vérif 1 : au moins une quantité > 0
-            const atLeastOne = Array.from(inputs).some(i => parseFloat(i.value) > 0);
-            if (!atLeastOne) {
-                alertAucun.classList.remove('d-none');
-                return;
-            }
-
-            // Vérif 2 : dépassement restant ou stock
-            let hasDepassement = false;
-            let depassementMsg = '';
-            inputs.forEach(inp => {
-                if (inp.disabled) return;
-                const val     = parseFloat(inp.value) || 0;
-                const max     = parseFloat(inp.dataset.max);
-                const stock   = parseFloat(inp.dataset.stock);
-                const article = inp.dataset.article;
-
-                if (val > max) {
-                    inp.classList.add('is-invalid');
-                    hasDepassement = true;
-                    depassementMsg = `Quantité saisie (${val}) supérieure au restant (${max}) pour : ${article}`;
-                } else if (val > stock) {
-                    inp.classList.add('is-invalid');
-                    hasDepassement = true;
-                    depassementMsg = `Quantité saisie (${val}) supérieure au stock disponible (${stock}) pour : ${article}`;
-                }
-            });
-
-            if (hasDepassement) {
-                alertDepMsg.textContent = depassementMsg;
-                alertDep.classList.remove('d-none');
-                return;
-            }
-
-            // Bouton bloqué jusqu'au retour du serveur (pas de réactivation par minuterie, qui
-            // permettait un second envoi si le serveur était lent). Le retour arrière du
-            // navigateur le réactive (data-html-origine, voir fragment/load_script).
-            btnCreerBs.dataset.htmlOrigine = btnCreerBs.innerHTML;
-            btnCreerBs.disabled  = true;
-            btnCreerBs.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Création du bon de sortie…';
-
-            form.submit();
-        });
-    })();
-
     // ── Anti double-soumission décision principal ──────────────────────────────
     document.getElementById('btnConfirmDecision')?.addEventListener('click', function () {
         const commentaire = document.getElementById('commentaireInput').value.trim();
@@ -3120,13 +2957,13 @@
                     const stockData = await response.json();
 
                     if (newQte > stockData.stockDisponible) {
-                        alert(`Stock insuffisant ! Stock disponible : ${stockData.stockDisponible}`);
+                        afficherAlerte(`Stock disponible : ${stockData.stockDisponible}`, "warning", "Stock insuffisant");
                         input.classList.add("is-invalid");
                         return;
                     }
                 } catch (error) {
                     console.error("Erreur lors de la vérification du stock:", error);
-                    alert("Impossible de vérifier la disponibilité du stock");
+                    afficherAlerte("Impossible de vérifier la disponibilité du stock.");
                     return;
                 }
             }
@@ -3137,7 +2974,7 @@
             fetch(`${CONTEXT_PATH}demande/ligne/${ligneId}/quantite`, {method: "POST", body: formData})
                 .then(res => res.json())
                 .then(data => {
-                    if (data.error) { alert(data.error); return; }
+                    if (data.error) { afficherAlerte(data.error); return; }
                     const totalEl = getTotalEl();
                     if (totalEl && data.totalEstime !== undefined) {
                         totalEl.textContent = new Intl.NumberFormat('fr-FR', {
@@ -3146,7 +2983,7 @@
                     }
                     window.location.reload();
                 })
-                .catch(() => alert("Erreur lors de la mise à jour de la quantité."));
+                .catch(() => afficherAlerte("Erreur lors de la mise à jour de la quantité."));
         }
     });
 

@@ -17,7 +17,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="fw-bold text-gradient-blue">
                 <i class="fas fa-plus-circle me-3 icon-gradient-blue"></i>
-                <span>Nouvelle demande autre</span>
+                <span th:text="${demande != null ? 'Modifier le brouillon n° ' + demande.id : 'Nouvelle demande autre'}">Nouvelle demande autre</span>
             </h1>
             <div>
                 <a class="btn btn-gradient-blue me-2" th:href="@{/demande/list(typeDemande=${typeDemande.name()})}">
@@ -46,6 +46,7 @@
                       novalidate
                       enctype="multipart/form-data">
                     <input type="hidden" name="submissionToken" th:value="${submissionToken}" />
+                    <th:block th:replace="~{fragment/demande_brouillon :: champsBrouillon}"></th:block>
 
                     <!-- ===================== DÉPENSE ===================== -->
                     <div class="mb-4">
@@ -67,6 +68,7 @@
                                         <option value="">-- Choisir --</option>
                                         <option th:each="c : ${categories}"
                                                 th:value="${c.id}"
+                                                th:selected="${detailAutre != null and detailAutre.categorie != null and detailAutre.categorie.id == c.id}"
                                                 th:text="${c.libelle}"
                                                 th:attr="data-beneficiaire-obligatoire=${c.estBeneficiaireObligatoire()}"></option>
                                     </select>
@@ -78,16 +80,20 @@
                                 <div class="input-group">
                                     <span class="input-group-text bg-light"><i class="fas fa-user-tag icon-gradient-blue"></i></span>
                                     <input type="text" class="form-control" id="beneficiaire" name="beneficiaire"
-                                           maxlength="255" placeholder="Personne ou organisme à payer">
+                                           maxlength="255" placeholder="Personne ou organisme à payer"
+                                           th:value="${detailAutre != null ? detailAutre.beneficiaire : ''}">
                                 </div>
                             </div>
 
                             <div class="col-md-3 mb-3">
                                 <label for="quantiteAffichee" class="form-label fw-bold required-field">Quantité</label>
                                 <input type="text" class="form-control text-end montant-input" id="quantiteAffichee"
-                                       inputmode="decimal" autocomplete="off" value="1" required
+                                       inputmode="decimal" autocomplete="off" required
+                                       th:with="q=${detailAutre != null and detailAutre.quantite != null ? detailAutre.quantite : 1}"
+                                       th:value="${q % 1 == 0 ? #numbers.formatInteger(q, 1, 'WHITESPACE') : #numbers.formatDecimal(q, 1, 'WHITESPACE', 2, 'COMMA')}"
                                        data-cible="quantite">
-                                <input type="hidden" name="quantite" id="quantite" value="1">
+                                <input type="hidden" name="quantite" id="quantite"
+                                       th:value="${detailAutre != null and detailAutre.quantite != null ? detailAutre.quantite : 1}">
                                 <div class="form-text text-muted">Ex. nombre de repas ; 1 pour un montant forfaitaire.</div>
                             </div>
 
@@ -95,8 +101,11 @@
                                 <label for="montantUnitaireAffiche" class="form-label fw-bold required-field">Montant unitaire</label>
                                 <input type="text" class="form-control text-end montant-input" id="montantUnitaireAffiche"
                                        inputmode="decimal" autocomplete="off" required
+                                       th:with="pu=${detailAutre != null ? detailAutre.montantUnitaire : null}"
+                                       th:value="${pu == null ? '' : (pu % 1 == 0 ? #numbers.formatInteger(pu, 1, 'WHITESPACE') : #numbers.formatDecimal(pu, 1, 'WHITESPACE', 2, 'COMMA'))}"
                                        data-cible="montantUnitaire">
-                                <input type="hidden" name="montantUnitaire" id="montantUnitaire">
+                                <input type="hidden" name="montantUnitaire" id="montantUnitaire"
+                                       th:value="${detailAutre != null ? detailAutre.montantUnitaire : ''}">
                             </div>
 
                             <div class="col-md-3 mb-3">
@@ -104,7 +113,9 @@
                                 <select id="devise" name="devise" class="form-select" required>
                                     <option th:each="d : ${devises}"
                                             th:value="${d.id}"
-                                            th:selected="${deviseReference != null and d.id == deviseReference.id}"
+                                            th:selected="${demande != null and demande.devise != null
+                                                    ? d.id == demande.devise.id
+                                                    : (deviseReference != null and d.id == deviseReference.id)}"
                                             th:text="${d.acronyme + ' — ' + d.designation}"></option>
                                 </select>
                             </div>
@@ -127,7 +138,8 @@
                                 <label for="dateSortie" class="form-label fw-bold required-field">Date souhaitée de paiement</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light"><i class="fas fa-calendar-alt icon-gradient-blue"></i></span>
-                                    <input type="date" class="form-control" id="dateSortie" name="dateSortie" required>
+                                    <input type="date" class="form-control" id="dateSortie" name="dateSortie" required
+                                           th:value="${demande != null and demande.dateSortie != null ? #temporals.format(demande.dateSortie, 'yyyy-MM-dd') : ''}">
                                 </div>
                             </div>
 
@@ -137,7 +149,8 @@
                                     <span class="input-group-text bg-light"><i class="fas fa-bolt icon-gradient-blue"></i></span>
                                     <select id="priorite" name="priorite" class="form-select" required>
                                         <option value="">-- Choisir --</option>
-                                        <option th:each="p : ${priorites}" th:value="${p.name()}" th:text="${p.name()}"></option>
+                                        <option th:each="p : ${priorites}" th:value="${p.name()}" th:text="${p.name()}"
+                                                th:selected="${demande != null and demande.priorite == p}"></option>
                                     </select>
                                 </div>
                             </div>
@@ -147,6 +160,7 @@
                                 <div class="input-group">
                                     <span class="input-group-text bg-light"><i class="fas fa-tag icon-gradient-blue"></i></span>
                                     <input type="text" class="form-control" id="motif" name="motif" required
+                                           th:value="${demande != null ? demande.motifEvoque : ''}"
                                            placeholder="Ex. Sponsoring du tournoi inter-entreprises 2026">
                                 </div>
                             </div>
@@ -156,7 +170,8 @@
                                 <div class="input-group">
                                     <span class="input-group-text bg-light"><i class="fas fa-align-left icon-gradient-blue"></i></span>
                                     <textarea class="form-control" id="description" name="description" rows="3"
-                                              placeholder="Informations complémentaires (période, référence de la facture, coordonnées de paiement…)"></textarea>
+                                              placeholder="Informations complémentaires (période, référence de la facture, coordonnées de paiement…)"
+                                              th:text="${demande != null ? demande.description : ''}"></textarea>
                                 </div>
                             </div>
 
@@ -181,6 +196,9 @@
                                     <i class="fas fa-exclamation-triangle me-1"></i><span id="fileTypeAlertMsg"></span>
                                 </div>
                                 <ul id="fileList" class="list-group list-group-flush mt-3"></ul>
+
+                                <!-- Brouillon : pièces déjà enregistrées -->
+                                <div th:replace="~{fragment/demande_brouillon :: piecesExistantes}"></div>
                             </div>
                         </div>
                     </div>
@@ -189,9 +207,18 @@
         </div>
     </section>
 
-    <div class="d-flex justify-content-end gap-2 mt-4 px-4">
+    <div class="d-flex justify-content-end align-items-center flex-wrap gap-2 mt-4 px-4">
+        <span class="text-muted small me-auto">
+            <i class="fas fa-info-circle me-1"></i>
+            En brouillon, la demande reste modifiable et n'est visible que par vous. Elle part en validation une fois soumise.
+        </span>
+        <a th:if="${demande != null}" class="btn btn-outline-secondary"
+           th:href="@{/demande/fiche/{id}(id=${demande.id})}">Annuler</a>
+        <button type="button" id="btnBrouillonDemande" class="btn btn-outline-gradient-blue px-4">
+            <i class="fas fa-save me-2"></i> Enregistrer le brouillon
+        </button>
         <button type="button" id="btnPreviewDemande" class="btn btn-gradient-green px-4">
-            <i class="fas fa-eye me-2"></i> Aperçu & confirmer
+            <i class="fas fa-eye me-2"></i> Aperçu & soumettre
         </button>
     </div>
 </div>
@@ -203,11 +230,17 @@
         <div class="modal-content">
             <div class="modal-header btn-gradient-blue">
                 <h5 class="modal-title" id="previewDemandeModalLabel">
-                    <i class="fas fa-eye me-2"></i>Aperçu avant soumission
+                    <i class="fas fa-clipboard-check me-2"></i>Récapitulatif avant soumission
                 </h5>
             </div>
             <div class="modal-body">
-                <table class="table table-borderless align-middle mb-0">
+                <!-- Demandeur, destinataire et circuit -->
+                <div th:replace="~{fragment/demande_brouillon :: recapCircuit}"></div>
+
+                <h6 class="fw-bold text-gradient-blue mb-2">
+                    <i class="fas fa-hand-holding-usd me-2 icon-gradient-blue"></i> Dépense demandée
+                </h6>
+                <table class="table table-sm table-borderless align-middle mb-0">
                     <tbody>
                     <tr><th class="text-muted w-25">Catégorie</th><td id="pvCategorie" class="fw-semibold"></td></tr>
                     <tr><th class="text-muted">Bénéficiaire</th><td id="pvBeneficiaire"></td></tr>
@@ -216,12 +249,18 @@
                     <tr><th class="text-muted">Priorité</th><td id="pvPriorite"></td></tr>
                     <tr><th class="text-muted">Motif évoqué</th><td id="pvMotif"></td></tr>
                     <tr><th class="text-muted">Description</th><td id="pvDescription" style="white-space: pre-wrap;"></td></tr>
-                    <tr><th class="text-muted">Pièces jointes</th><td id="pvPieces"></td></tr>
+                    <tr><th class="text-muted">Mode de règlement</th><td>Paiement direct (sans bon de commande)</td></tr>
                     </tbody>
                 </table>
+
+                <h6 class="fw-bold text-gradient-blue mt-3 mb-2">
+                    <i class="fas fa-paperclip me-2 icon-gradient-blue"></i> Pièces justificatives
+                </h6>
+                <th:block th:replace="~{fragment/demande_brouillon :: recapPiecesJointes}"></th:block>
                 <div class="alert alert-info mt-3 mb-0">
                     <i class="fas fa-info-circle me-2"></i>
-                    Paiement direct, sans bon de commande. Vérifiez les informations avant l'envoi.
+                    Une fois soumise, la demande part en validation chez votre N+1 et n'est plus modifiable.
+                    Pour la garder modifiable, choisissez plutôt « Enregistrer le brouillon ».
                 </div>
             </div>
             <div class="modal-footer">
@@ -356,11 +395,10 @@
         afficherFichiers();
     });
 
-    // ── Aperçu puis soumission ──
-    $("#btnPreviewDemande").addEventListener("click", () => {
+    // ── Contrôle de la saisie (brouillon comme soumission) ──
+    function saisieValide() {
         majBeneficiaire();
-        const total = montantTotal();
-        const montantsOk = total != null;
+        const montantsOk = montantTotal() != null;
         ["#quantiteAffichee", "#montantUnitaireAffiche"].forEach(sel => {
             const inp = $(sel);
             const cache = document.getElementById(inp.dataset.cible);
@@ -369,8 +407,24 @@
         if (!form.checkValidity() || !montantsOk) {
             form.classList.add("was-validated");
             form.reportValidity();
-            return;
+            return false;
         }
+        return true;
+    }
+
+    // ── Enregistrer en brouillon (sans soumettre) ──
+    $("#btnBrouillonDemande").addEventListener("click", function () {
+        if (!saisieValide()) return;
+        $("#actionDemande").value = "brouillon";
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enregistrement...';
+        form.submit();
+    });
+
+    // ── Aperçu puis soumission ──
+    $("#btnPreviewDemande").addEventListener("click", () => {
+        if (!saisieValide()) return;
+        const total = montantTotal();
 
         $("#pvCategorie").textContent = $("#categorie option:checked")?.textContent || "-";
         $("#pvBeneficiaire").textContent = $("#beneficiaire").value || "-";
@@ -383,7 +437,8 @@
         $("#pvPriorite").textContent = $("#priorite").value || "-";
         $("#pvMotif").textContent = $("#motif").value || "-";
         $("#pvDescription").textContent = $("#description").value || "-";
-        $("#pvPieces").textContent = fichiers.length ? fichiers.map(f => f.name).join(", ") : "Aucune";
+        // Pièces jointes : nouvelles, déjà jointes, retirées
+        if (window.recapPiecesJointes) window.recapPiecesJointes();
 
         window.bootstrap.Modal.getOrCreateInstance($("#previewDemandeModal")).show();
     });
@@ -394,6 +449,8 @@
             form.reportValidity();
             return;
         }
+        // Enregistrement puis soumission (lancement du circuit de validation)
+        $("#actionDemande").value = "soumettre";
         this.disabled = true;
         this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Envoi en cours...';
         form.submit();

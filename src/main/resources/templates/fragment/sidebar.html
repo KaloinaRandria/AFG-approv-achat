@@ -2,16 +2,29 @@
 <div th:fragment="sidebar"
      id="sidebar"
      class="d-flex flex-column flex-shrink-0 vh-100 position-fixed border-end"
-     style="width: 250px; background-color: #0A1A44; overflow-y: auto;" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+     style="background-color: #0A1A44; overflow-y: auto;" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
-    <!-- LOGO -->
-    <a th:href="@{/dashboard}"
-       class="d-flex align-items-center justify-content-center mb-4 text-decoration-none py-4 border-bottom">
-        <img th:src="@{/img/logo_afg.png}" alt="Logo" height="60">
-    </a>
+    <!-- État du menu appliqué avant l'affichage (pas de saut de mise en page) : replié sur ordinateur -->
+    <script>
+        try {
+            if (localStorage.getItem("sidebarReduit") === "1") document.documentElement.classList.add("sidebar-reduit");
+        } catch (e) { /* stockage indisponible : menu déplié */ }
+    </script>
+
+    <!-- LOGO + bouton replier (ordinateur) / fermer (mobile) -->
+    <div class="sidebar-entete border-bottom mb-4">
+        <a th:href="@{/dashboard}"
+           class="sidebar-logo d-flex align-items-center justify-content-center text-decoration-none py-4">
+            <img th:src="@{/img/logo_afg.png}" alt="Logo" height="60">
+        </a>
+        <button type="button" class="sidebar-bascule" id="sidebarBascule"
+                title="Replier / déplier le menu" aria-label="Replier ou déplier le menu">
+            <i class="fas fa-angle-double-left"></i>
+        </button>
+    </div>
 
     <!-- TITRE DU MODULE -->
-    <div class="text-white text-center fw-bold mb-3" style="font-size: 15px; letter-spacing: 1px;">
+    <div class="sidebar-titre text-white text-center fw-bold mb-3" style="font-size: 15px; letter-spacing: 1px;">
         APPROVISIONNEMENT & ACHAT
     </div>
 
@@ -20,108 +33,15 @@
         <a class="nav-link text-white d-flex align-items-center sidebar-link"
            th:href="@{/dashboard}"
            th:classappend="${currentUri == '/dashboard' ? 'active' : ''}">
-            <i class="fas fa-chart-line me-3"></i> Tableau de bord
-        </a>
-    </div>
-
-    <div class="px-3 mb-2" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_VALIDATOR','FINANCE','FINANCE_CONSULT')">
-        <a class="nav-link text-white d-flex align-items-center sidebar-link"
-           th:href="@{/demande/paiements-directs}"
-           th:classappend="${currentUri == '/demande/paiements-directs' ? 'active' : ''}">
-            <i class="fas fa-money-check-alt me-3"></i> Paiements directs
-        </a>
-    </div>
-
-    <!--        DEVISE -->
-    <div class="px-3 mb-2">
-        <a class="nav-link text-white d-flex align-items-center sidebar-link"
-           sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','FINANCE','FINANCE_CONSULT')"
-           th:href="@{/devise/devise-pages}"
-            th:classappend="${currentUri == '/devise/devise-pages' ? 'active' : ''}">
-            <i class="fas fa-coins me-3"></i> Devise et Cours
+            <i class="fas fa-home me-3"></i> Accueil
         </a>
     </div>
 
     <div class="accordion accordion-flush px-2" id="sidebarAccordion">
 
-        <!-- ARTICLES -->
-        <div class="accordion-item bg-transparent border-0">
-            <h2 class="accordion-header">
-                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#collapseArticles"
-                        aria-expanded="false"
-                        aria-controls="collapseArticles"
-                        th:classappend="${currentUri.contains('/article') ? '' : 'collapsed'}">
-                    <i class="fas fa-box me-3"></i> Articles
-                </button>
-            </h2>
-            <div id="collapseArticles"
-                 class="accordion-collapse collapse"
-                 aria-labelledby="headingArticles"
-                 data-bs-parent="#sidebarAccordion"
-                 th:classappend="${currentUri.contains('/article') ? 'show' : ''}">
-                <div class="accordion-body p-0">
-                    <ul class="nav flex-column px-3">
-                        <li>
-                            <a class="nav-link text-white sidebar-sub"
-                               th:href="@{/article/list}"
-                               th:classappend="${currentUri == '/article/list' ? 'active' : ''}">
-                                Liste
-                            </a>
-                        </li>
-                        <li>
-                            <a class="nav-link text-white sidebar-sub" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
-                               th:href="@{/article/add}"
-                               th:classappend="${currentUri == '/article/add' ? 'active' : ''}">
-                                Ajouter un article
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Fournisseurs -->
-        <div class="accordion-item bg-transparent border-0">
-            <h2 class="accordion-header">
-                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#collapseFournisseurs"
-                        aria-expanded="false"
-                        aria-controls="collapseFournisseurs"
-                        sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
-                        th:classappend="${currentUri.contains('/fournisseur') ? '' : 'collapsed'}">
-                    <i class="fas fa-building me-3"></i> Fournisseurs
-                </button>
-            </h2>
-            <div id="collapseFournisseurs"
-                 class="accordion-collapse collapse"
-                 aria-labelledby="headingFournisseurs"
-                 data-bs-parent="#sidebarAccordion"
-                 th:classappend="${currentUri.contains('/fournisseur') ? 'show' : ''}">
-                <div class="accordion-body p-0">
-                    <ul class="nav flex-column px-3">
-                        <li>
-                            <a class="nav-link text-white sidebar-sub"
-                               th:href="@{/fournisseur/list}"
-                               th:classappend="${currentUri == '/fournisseur/list' ? 'active' : ''}">
-                                Liste
-                            </a>
-                        </li>
-                        <li>
-                            <a class="nav-link text-white sidebar-sub" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
-                               th:href="@{/fournisseur/add}"
-                               th:classappend="${currentUri == '/fournisseur/add' ? 'active' : ''}">
-                                Ajouter un nouveau fournisseur
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+        <!-- ═══════════════════ ACHATS ═══════════════════ -->
+        <div class="sidebar-groupe-menu groupe-achats">
+        <div class="sidebar-categorie"><span>Achats</span></div>
 <!--    Demande de Materiel-->
         <div class="accordion-item bg-transparent border-0">
             <h2 class="accordion-header">
@@ -141,34 +61,52 @@
                  data-bs-parent="#sidebarAccordion"
                  th:classappend="${currentUri.contains('/demande') ? 'show' : ''}">
                 <div class="accordion-body p-0">
-                    <ul class="nav flex-column px-3">
-                        <!-- Demandes de matériel et demandes autres (paiement direct) ; les anciennes demandes restent consultables -->
+                    <!-- Regroupé par type : matériel, autres (paiement direct), puis consultation -->
+                    <ul class="nav flex-column sidebar-sous-menu">
+                        <li class="sidebar-groupe">
+                            <i class="fas fa-boxes fa-fw me-1"></i> Matériel
+                        </li>
                         <li>
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/demande/list(typeDemande='FOURNITURE')}"
                                th:classappend="${currentUri == '/demande/list' and menuTypeDemande == 'FOURNITURE' ? 'active' : ''}">
-                                <i class="fas fa-boxes fa-fw me-2"></i> Demandes de matériel
+                                <i class="fas fa-list-ul fa-fw me-2"></i> Liste des demandes
                             </a>
                         </li>
                         <li>
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/demande/add}"
                                th:classappend="${currentUri == '/demande/add' and typeDemande != null and typeDemande.name() == 'FOURNITURE' ? 'active' : ''}">
-                                <i class="fas fa-cart-plus fa-fw me-2"></i> Nouvelle demande de matériel
+                                <i class="fas fa-plus-circle fa-fw me-2"></i> Nouvelle demande
                             </a>
+                        </li>
+
+                        <li class="sidebar-groupe">
+                            <i class="fas fa-hand-holding-usd fa-fw me-1"></i> Autres · paiement direct
                         </li>
                         <li>
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/demande/list(typeDemande='AUTRE')}"
                                th:classappend="${currentUri == '/demande/list' and menuTypeDemande == 'AUTRE' ? 'active' : ''}">
-                                <i class="fas fa-hand-holding-usd fa-fw me-2"></i> Demandes autres
+                                <i class="fas fa-list-ul fa-fw me-2"></i> Liste des demandes
                             </a>
                         </li>
                         <li>
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/demande/add(type='AUTRE')}"
                                th:classappend="${currentUri == '/demande/add' and typeDemande != null and typeDemande.name() == 'AUTRE' ? 'active' : ''}">
-                                <i class="fas fa-file-invoice-dollar fa-fw me-2"></i> Nouvelle demande autre
+                                <i class="fas fa-plus-circle fa-fw me-2"></i> Nouvelle demande
+                            </a>
+                        </li>
+
+                        <li class="sidebar-groupe">
+                            <i class="fas fa-search fa-fw me-1"></i> Consultation
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/demande/list}"
+                               th:classappend="${currentUri == '/demande/list' and menuTypeDemande == '' ? 'active' : ''}">
+                                <i class="fas fa-layer-group fa-fw me-2"></i> Toutes les demandes
                             </a>
                         </li>
                         <li>
@@ -176,13 +114,6 @@
                                th:href="@{/demande/list(typeDemande='STANDARD')}"
                                th:classappend="${currentUri == '/demande/list' and menuTypeDemande == 'STANDARD' ? 'active' : ''}">
                                 <i class="fas fa-archive fa-fw me-2"></i> Anciennes demandes
-                            </a>
-                        </li>
-                        <li>
-                            <a class="nav-link text-white sidebar-sub"
-                               th:href="@{/demande/list}"
-                               th:classappend="${currentUri == '/demande/list' and menuTypeDemande == '' ? 'active' : ''}">
-                                <i class="fas fa-list fa-fw me-2"></i> Toutes les demandes
                             </a>
                         </li>
                     </ul>
@@ -236,6 +167,21 @@
             </div>
         </div>
 
+        <!-- Paiements directs : MG (consultation), validateur MG (transmission), finance (paiement) -->
+        <div class="accordion-item bg-transparent border-0"
+             sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_VALIDATOR','FINANCE','FINANCE_CONSULT')">
+            <a class="nav-link text-white d-flex align-items-center sidebar-link"
+               style="padding: 1rem 1.25rem;"
+               th:href="@{/demande/paiements-directs}"
+               th:classappend="${currentUri == '/demande/paiements-directs' ? 'active' : ''}">
+                <i class="fas fa-money-check-alt me-3"></i> Paiements directs
+            </a>
+        </div>
+        </div>
+
+        <!-- ═══════════════════ STOCK ET LIVRAISONS ═══════════════════ -->
+        <div class="sidebar-groupe-menu groupe-stock" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','IT')">
+        <div class="sidebar-categorie"><span>Stock et livraisons</span></div>
         <!-- Bon de Livraison -->
         <div class="accordion-item bg-transparent border-0">
             <h2 class="accordion-header">
@@ -300,7 +246,6 @@
             </a>
         </div>
 
-
         <!-- STOCK -->
         <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','IT')">
             <h2 class="accordion-header">
@@ -339,7 +284,113 @@
                 </div>
             </div>
         </div>
+        </div>
 
+        <!-- ═══════════════════ RÉFÉRENTIELS ═══════════════════ -->
+        <div class="sidebar-groupe-menu groupe-referentiels">
+        <div class="sidebar-categorie"><span>Référentiels</span></div>
+        <!-- ARTICLES -->
+        <div class="accordion-item bg-transparent border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseArticles"
+                        aria-expanded="false"
+                        aria-controls="collapseArticles"
+                        th:classappend="${currentUri.contains('/article') or currentUri.startsWith('/famille') ? '' : 'collapsed'}">
+                    <i class="fas fa-box me-3"></i> Articles
+                </button>
+            </h2>
+            <div id="collapseArticles"
+                 class="accordion-collapse collapse"
+                 aria-labelledby="headingArticles"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/article') or currentUri.startsWith('/famille') ? 'show' : ''}">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/article/list}"
+                               th:classappend="${currentUri == '/article/list' ? 'active' : ''}">
+                                Liste
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
+                               th:href="@{/article/add}"
+                               th:classappend="${currentUri == '/article/add' ? 'active' : ''}">
+                                Ajouter un article
+                            </a>
+                        </li>
+                        <li sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/famille}"
+                               th:classappend="${currentUri.startsWith('/famille') ? 'active' : ''}">
+                                Familles
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fournisseurs -->
+        <div class="accordion-item bg-transparent border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseFournisseurs"
+                        aria-expanded="false"
+                        aria-controls="collapseFournisseurs"
+                        sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
+                        th:classappend="${currentUri.contains('/fournisseur') ? '' : 'collapsed'}">
+                    <i class="fas fa-building me-3"></i> Fournisseurs
+                </button>
+            </h2>
+            <div id="collapseFournisseurs"
+                 class="accordion-collapse collapse"
+                 aria-labelledby="headingFournisseurs"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/fournisseur') ? 'show' : ''}">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/fournisseur/list}"
+                               th:classappend="${currentUri == '/fournisseur/list' ? 'active' : ''}">
+                                Liste
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')"
+                               th:href="@{/fournisseur/add}"
+                               th:classappend="${currentUri == '/fournisseur/add' ? 'active' : ''}">
+                                Ajouter un nouveau fournisseur
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Devise et cours -->
+        <div class="accordion-item bg-transparent border-0"
+             sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','FINANCE','FINANCE_CONSULT')">
+            <a class="nav-link text-white d-flex align-items-center sidebar-link"
+               style="padding: 1rem 1.25rem;"
+               th:href="@{/devise/devise-pages}"
+               th:classappend="${currentUri == '/devise/devise-pages' ? 'active' : ''}">
+                <i class="fas fa-coins me-3"></i> Devise et cours
+            </a>
+        </div>
+        </div>
+
+        <!-- ═══════════════════ ADMINISTRATION ═══════════════════ -->
+        <div class="sidebar-groupe-menu groupe-administration"
+             sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','CONTROLEUR','DFC','IT')">
+        <div class="sidebar-categorie"><span>Administration</span></div>
         <!-- OPERATION UTILISATEUR -->
         <div class="accordion-item bg-transparent border-0"
              sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','CONTROLEUR','DFC')">
@@ -351,7 +402,7 @@
                         data-bs-target="#collapseOperation"
                         aria-expanded="false"
                         aria-controls="collapseOperation"
-                        th:classappend="${currentUri.contains('/udm') or currentUri.contains('/ligne-budgetaire') ? '' : 'collapsed'}">
+                        th:classappend="${currentUri.contains('/udm') or currentUri.contains('/ligne-budgetaire') or currentUri.startsWith('/categorie-depense') or currentUri.startsWith('/organisation') ? '' : 'collapsed'}">
                     <i class="fas fa-cogs me-3"></i> Paramétrage des opérations
                 </button>
             </h2>
@@ -360,7 +411,7 @@
                  class="accordion-collapse collapse"
                  aria-labelledby="headingOperation"
                  data-bs-parent="#sidebarAccordion"
-                 th:classappend="${currentUri.contains('/udm') or currentUri.contains('/ligne-budgetaire') ? 'show' : ''}">
+                 th:classappend="${currentUri.contains('/udm') or currentUri.contains('/ligne-budgetaire') or currentUri.startsWith('/categorie-depense') or currentUri.startsWith('/organisation') ? 'show' : ''}">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
 
@@ -370,6 +421,24 @@
                                th:href="@{/udm/udm-pages}"
                                th:classappend="${currentUri == '/udm/udm-pages' ? 'active' : ''}">
                                 Unité de mesure
+                            </a>
+                        </li>
+
+                        <!-- ADMIN + MOYENS GENERAUX : catégories proposées dans les demandes autres -->
+                        <li sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/categorie-depense}"
+                               th:classappend="${currentUri.startsWith('/categorie-depense') ? 'active' : ''}">
+                                Catégories des demandes autres
+                            </a>
+                        </li>
+
+                        <!-- ADMIN + MOYENS GENERAUX : directions et postes attribués aux utilisateurs -->
+                        <li sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/organisation}"
+                               th:classappend="${currentUri.startsWith('/organisation') ? 'active' : ''}">
+                                Directions et postes
                             </a>
                         </li>
 
@@ -387,8 +456,8 @@
             </div>
         </div>
 
-        <!-- GESTION UTILISATEURS -->
-        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN')">
+        <!-- GESTION UTILISATEURS (administrateur et informatique) -->
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','IT')">
             <h2 class="accordion-header">
                 <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
                         type="button"
@@ -457,6 +526,7 @@
                 </div>
             </div>
         </div>
+        </div>
     </div>
 
     <div class="dropdown mt-auto p-3 border-top">
@@ -468,7 +538,7 @@
             <img th:if="${#authentication.principal.pdp == null || #authentication.principal.pdp.thumbnail == '' }"
                  th:src="@{/img/avatar.png}" alt="Avatar" width="40" height="40" class="rounded-circle me-2">
             <strong style="max-width: 200px; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-                    class="text-white"
+                    class="sidebar-utilisateur-nom text-white"
                     th:text="${#authentication.principal.prenom + ' ' + #authentication.principal.nom}"></strong>
         </a>
         <ul class="dropdown-menu dropdown-menu-end text-small shadow" aria-labelledby="dropdownUser">
@@ -481,5 +551,97 @@
             <li sec:authorize="hasAnyRole('ADMIN')"><a class="dropdown-item" th:href="@{/import/import-saisie-page}">Import de données</a></li>
         </ul>
     </div>
+
+    <!-- Menu dynamique : replier (ordinateur, mémorisé) / ouvrir-fermer (mobile) -->
+    <script>
+        (function () {
+            const html = document.documentElement;
+            const sidebar = document.getElementById("sidebar");
+            const mobile = () => window.matchMedia("(max-width: 768px)").matches;
+
+            // Bouton ☰ et voile hors du menu : un élément fixe dans un parent déplacé (transform) le suivrait
+            const burger = document.createElement("button");
+            burger.type = "button";
+            burger.className = "sidebar-burger";
+            burger.setAttribute("aria-label", "Ouvrir le menu");
+            burger.innerHTML = '<i class="fas fa-bars"></i>';
+            const voile = document.createElement("div");
+            voile.className = "sidebar-voile";
+            document.body.append(burger, voile);
+
+            const ouvrir = () => html.classList.add("sidebar-ouvert");
+            const fermer = () => html.classList.remove("sidebar-ouvert");
+            burger.addEventListener("click", ouvrir);
+            voile.addEventListener("click", fermer);
+            document.addEventListener("keydown", e => { if (e.key === "Escape") fermer(); });
+
+            document.getElementById("sidebarBascule").addEventListener("click", () => {
+                if (mobile()) { fermer(); return; }
+                const reduit = html.classList.toggle("sidebar-reduit");
+                try { localStorage.setItem("sidebarReduit", reduit ? "1" : "0"); } catch (e) { /* non mémorisé */ }
+                // Les tableaux (DataTables) recalculent leur largeur
+                setTimeout(() => window.dispatchEvent(new Event("resize")), 220);
+            });
+
+            // Pas de défilement horizontal : en se rétrécissant, le menu garderait le bouton
+            // (qui a le focus) en vue en décalant son contenu, malgré overflow-x: hidden
+            sidebar.addEventListener("scroll", () => { if (sidebar.scrollLeft !== 0) sidebar.scrollLeft = 0; });
+
+            // Mobile : un lien choisi ferme le menu
+            sidebar.addEventListener("click", e => {
+                if (mobile() && e.target.closest("a[href]:not(.dropdown-toggle)")) fermer();
+            });
+            window.addEventListener("resize", () => { if (!mobile()) fermer(); });
+        })();
+
+        // ── Loader de navigation : barre en haut dès qu'on change de page, badge si ça tarde ──
+        (function () {
+            const html = document.documentElement;
+            const barre = document.createElement("div");
+            barre.className = "nav-loader-barre";
+            const badge = document.createElement("div");
+            badge.className = "nav-loader-badge";
+            badge.setAttribute("role", "status");
+            badge.innerHTML = '<span class="spinner-border" aria-hidden="true"></span><span>Chargement…</span>';
+            document.body.append(barre, badge);
+
+            let minuteurBadge = null, minuteurSecurite = null;
+            function demarrer() {
+                html.classList.add("nav-en-cours");
+                clearTimeout(minuteurBadge);
+                clearTimeout(minuteurSecurite);
+                minuteurBadge = setTimeout(() => html.classList.add("nav-lente"), 400);
+                // Sécurité : si la page ne change pas (téléchargement, réponse vide…), on retire le loader
+                minuteurSecurite = setTimeout(arreter, 10000);
+            }
+            function arreter() {
+                clearTimeout(minuteurBadge);
+                clearTimeout(minuteurSecurite);
+                html.classList.remove("nav-en-cours", "nav-lente");
+            }
+            // Retour arrière (page restaurée depuis le cache du navigateur) : pas de loader resté affiché
+            window.addEventListener("pageshow", arreter);
+
+            // Départ de la page, quelle qu'en soit l'origine : lien, formulaire, ou navigation par
+            // script (lignes cliquables des listes, graphiques de l'accueil…). Annulé ou ouvert
+            // dans un autre onglet, rien ne se déclenche.
+            let ignorerDepart = false;
+            window.addEventListener("beforeunload", () => { if (!ignorerDepart) demarrer(); });
+
+            // Téléchargements (pièces jointes, attribut download, data-sans-loader) : le navigateur
+            // signale aussi un départ, mais la page reste affichée → pas de loader
+            document.addEventListener("click", e => {
+                const a = e.target.closest("a[href]");
+                if (!a) return;
+                let chemin = "";
+                try { chemin = new URL(a.href, location.href).pathname; } catch (err) { /* lien invalide */ }
+                if (a.hasAttribute("download") || a.hasAttribute("data-sans-loader")
+                        || /\/download(\/|$)|\/files\//.test(chemin)) {
+                    ignorerDepart = true;
+                    setTimeout(() => { ignorerDepart = false; }, 1500);
+                }
+            }, true);
+        })();
+    </script>
 
 </div>

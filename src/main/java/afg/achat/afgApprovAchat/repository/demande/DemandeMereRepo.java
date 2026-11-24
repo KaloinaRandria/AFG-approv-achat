@@ -17,6 +17,9 @@ public interface DemandeMereRepo
         extends JpaRepository<DemandeMere, String>,
         JpaSpecificationExecutor<DemandeMere> {
 
+    // Statistiques : « dm.statut <> 2 » écarte les brouillons (StatutDemande.BROUILLON),
+    // qui ne sont pas encore des demandes soumises.
+
     boolean existsById(String id);
     Optional<DemandeMere> findByCodeProvisoire(String codeProvisoire);
     List<DemandeMere> findByStatutOrderByDateDemandeAsc(int statut);
@@ -29,6 +32,7 @@ public interface DemandeMereRepo
             FROM DemandeMere dm
             LEFT JOIN dm.demandeur u
             LEFT JOIN u.service s
+            WHERE dm.statut <> 2
             GROUP BY s.id
             ORDER BY COUNT(dm) DESC limit 5
             """)
@@ -63,6 +67,7 @@ public interface DemandeMereRepo
         SELECT dm.statut, COUNT(dm)
         FROM DemandeMere dm
         WHERE dm.dateDemande >= :from AND dm.dateDemande <= :to
+          AND dm.statut <> 2
         GROUP BY dm.statut
         """)
     List<Object[]> countByStatutAll(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
@@ -72,6 +77,7 @@ public interface DemandeMereRepo
         FROM DemandeMere dm
         WHERE dm.demandeur.id IN :ids
           AND dm.dateDemande >= :from AND dm.dateDemande <= :to
+            AND dm.statut <> 2
         GROUP BY dm.statut
         """)
     List<Object[]> countByStatutByDemandeurIds(@Param("ids") List<Integer> ids, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
@@ -81,6 +87,7 @@ public interface DemandeMereRepo
         SELECT dm.natureDemande, COUNT(dm)
         FROM DemandeMere dm
         WHERE dm.dateDemande >= :from AND dm.dateDemande <= :to
+          AND dm.statut <> 2
         GROUP BY dm.natureDemande
         """)
     List<Object[]> countByNatureAll(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
@@ -90,6 +97,7 @@ public interface DemandeMereRepo
         FROM DemandeMere dm
         WHERE dm.demandeur.id IN :ids
           AND dm.dateDemande >= :from AND dm.dateDemande <= :to
+            AND dm.statut <> 2
         GROUP BY dm.natureDemande
         """)
     List<Object[]> countByNatureByDemandeurIds(@Param("ids") List<Integer> ids, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
@@ -99,6 +107,7 @@ public interface DemandeMereRepo
         SELECT dm.priorite, COUNT(dm)
         FROM DemandeMere dm
         WHERE dm.dateDemande >= :from AND dm.dateDemande <= :to
+          AND dm.statut <> 2
         GROUP BY dm.priorite
         """)
     List<Object[]> countByPrioriteAll(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
@@ -108,6 +117,7 @@ public interface DemandeMereRepo
         FROM DemandeMere dm
         WHERE dm.demandeur.id IN :ids
           AND dm.dateDemande >= :from AND dm.dateDemande <= :to
+            AND dm.statut <> 2
         GROUP BY dm.priorite
         """)
     List<Object[]> countByPrioriteByDemandeurIds(@Param("ids") List<Integer> ids, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
@@ -120,6 +130,7 @@ public interface DemandeMereRepo
            COUNT(dm.id_demande_mere)
     FROM demande_mere dm
     WHERE dm.date_demande >= :from AND dm.date_demande <= :to
+      AND dm.statut <> 2
     GROUP BY EXTRACT(YEAR  FROM dm.date_demande),
              EXTRACT(MONTH FROM dm.date_demande),
              dm.statut
@@ -135,6 +146,7 @@ public interface DemandeMereRepo
     FROM demande_mere dm
     WHERE dm.id_demandeur IN :ids
       AND dm.date_demande >= :from AND dm.date_demande <= :to
+        AND dm.statut <> 2
     GROUP BY EXTRACT(YEAR  FROM dm.date_demande),
              EXTRACT(MONTH FROM dm.date_demande),
              dm.statut
@@ -155,6 +167,7 @@ public interface DemandeMereRepo
     ) v ON dm.id_demande_mere = v.id_demande_mere
     WHERE dm.statut = 15
       AND dm.date_demande >= :from AND dm.date_demande <= :to
+        AND dm.statut <> 2
     GROUP BY dm.priorite
     """, nativeQuery = true)
     List<Object[]> findAverageApprovalDelayByPriorityAll(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
@@ -172,6 +185,7 @@ public interface DemandeMereRepo
     WHERE dm.statut = 15
       AND dm.id_demandeur IN :ids
       AND dm.date_demande >= :from AND dm.date_demande <= :to
+        AND dm.statut <> 2
     GROUP BY dm.priorite
     """, nativeQuery = true)
     List<Object[]> findAverageApprovalDelayByPriorityByDemandeurIds(@Param("ids") List<Integer> ids, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
@@ -189,6 +203,7 @@ public interface DemandeMereRepo
     ) prev ON v.id_validation_demande = prev.id_validation_demande
     WHERE v.id_validateur = :validateurId
       AND dm.date_demande >= :from AND dm.date_demande <= :to
+        AND dm.statut <> 2
     GROUP BY dm.priorite
     """, nativeQuery = true)
     List<Object[]> findAverageApprovalDelayByPriorityAndValidateurId(

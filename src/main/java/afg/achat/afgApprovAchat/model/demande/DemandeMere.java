@@ -156,6 +156,15 @@ public class DemandeMere implements DocumentEnDevise {
         return TypeDemande.ouStandard(typeDemande);
     }
 
+    /** Enregistrée par le demandeur mais pas encore soumise : seul lui la voit et la modifie. */
+    public boolean estBrouillon() {
+        return this.statut == StatutDemande.BROUILLON;
+    }
+
+    public boolean estDemandeur(Utilisateur utilisateur) {
+        return utilisateur != null && demandeur != null && demandeur.getId() == utilisateur.getId();
+    }
+
     public boolean getDecisionViaCodep(Boolean isCodepWorkflow) {
         // Si la demande est validée et qu'elle est dans le workflow CODEP
         if (this.statut == StatutDemande.VALIDE && isCodepWorkflow) {
