@@ -17,6 +17,11 @@ public class Poste {
     int id;
     String poste;
 
+    /** Direction à laquelle le poste est rattaché ; {@code null} si non rattaché. */
+    @ManyToOne
+    @JoinColumn(name = "id_service", referencedColumnName = "id_service", nullable = true)
+    afg.achat.afgApprovAchat.model.util.Service direction;
+
      public Poste(String poste) {
         this.poste = poste;
     }

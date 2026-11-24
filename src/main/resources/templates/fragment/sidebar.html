@@ -382,7 +382,7 @@
                         data-bs-target="#collapseOperation"
                         aria-expanded="false"
                         aria-controls="collapseOperation"
-                        th:classappend="${currentUri.contains('/udm') or currentUri.contains('/ligne-budgetaire') or currentUri.startsWith('/categorie-depense') ? '' : 'collapsed'}">
+                        th:classappend="${currentUri.contains('/udm') or currentUri.contains('/ligne-budgetaire') or currentUri.startsWith('/categorie-depense') or currentUri.startsWith('/organisation') ? '' : 'collapsed'}">
                     <i class="fas fa-cogs me-3"></i> Paramétrage des opérations
                 </button>
             </h2>
@@ -391,7 +391,7 @@
                  class="accordion-collapse collapse"
                  aria-labelledby="headingOperation"
                  data-bs-parent="#sidebarAccordion"
-                 th:classappend="${currentUri.contains('/udm') or currentUri.contains('/ligne-budgetaire') or currentUri.startsWith('/categorie-depense') ? 'show' : ''}">
+                 th:classappend="${currentUri.contains('/udm') or currentUri.contains('/ligne-budgetaire') or currentUri.startsWith('/categorie-depense') or currentUri.startsWith('/organisation') ? 'show' : ''}">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
 
@@ -410,6 +410,15 @@
                                th:href="@{/categorie-depense}"
                                th:classappend="${currentUri.startsWith('/categorie-depense') ? 'active' : ''}">
                                 Catégories des demandes autres
+                            </a>
+                        </li>
+
+                        <!-- ADMIN + MOYENS GENERAUX : directions et postes attribués aux utilisateurs -->
+                        <li sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/organisation}"
+                               th:classappend="${currentUri.startsWith('/organisation') ? 'active' : ''}">
+                                Directions et postes
                             </a>
                         </li>
 
