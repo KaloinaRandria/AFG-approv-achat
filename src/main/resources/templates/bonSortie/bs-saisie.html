@@ -1,10 +1,371 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Nouveau bon de sortie</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <meta name="context-path" th:content="@{/}" />
+    <style>
+        /* Barre de résumé collée en bas de l'écran pendant la saisie */
+        .bs-barre {
+            position: sticky; bottom: 0; z-index: 10;
+            background: var(--bs-body-bg, #fff);
+            border-top: 1px solid rgba(0, 0, 0, .08);
+            box-shadow: 0 -6px 16px rgba(0, 0, 0, .06);
+        }
+        .bs-qte { max-width: 130px; margin-left: auto; }
+        tr.bs-ligne-active > td { background: rgba(25, 135, 84, .06); }
+        tr.bs-ligne-erreur > td { background: rgba(220, 53, 69, .07); }
+    </style>
 </head>
 <body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section th:with="fmt=${T(afg.achat.afgApprovAchat.service.util.FormatNumber)}">
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
 
+        <!-- ── En-tête ── -->
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+            <div>
+                <h1 class="fw-bold text-gradient-blue mb-1">
+                    <i class="fas fa-file-export icon-gradient-blue me-2"></i> Nouveau bon de sortie
+                </h1>
+                <div class="text-muted">
+                    Demande <a class="fw-semibold text-decoration-none"
+                               th:href="@{/demande/fiche/{id}(id=${demande.id})}" th:text="${demande.id}">DM…</a>
+                    · sortie du stock des articles demandés
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" th:href="@{/bon-sortie/a-faire}">
+                    <i class="fas fa-dolly me-1"></i> Bons de sortie à faire
+                </a>
+                <a class="btn btn-outline-secondary" th:href="@{/demande/fiche/{id}(id=${demande.id})}">
+                    <i class="fas fa-arrow-left me-1"></i> Retour à la demande
+                </a>
+            </div>
+        </div>
+
+        <!-- ── Récapitulatif de la demande ── -->
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="small text-muted">Demandeur</div>
+                        <div class="fw-semibold"
+                             th:text="${demande.demandeur != null ? demande.demandeur.nom + ' ' + demande.demandeur.prenom : '—'}"></div>
+                        <small class="text-muted"
+                               th:if="${demande.demandeur != null}"
+                               th:text="${(demande.demandeur.poste != null ? demande.demandeur.poste.poste : '')
+                                        + (demande.demandeur.service != null ? ' - ' + demande.demandeur.service.acronyme : '')}"></small>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="small text-muted">Date de la demande</div>
+                        <div th:text="${demande.dateDemande != null ? #temporals.format(demande.dateDemande, 'dd/MM/yyyy') : '—'}"></div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="small text-muted">Livraison prévue</div>
+                        <div class="fw-semibold"
+                             th:text="${demande.dateSortie != null ? #temporals.format(demande.dateSortie, 'dd/MM/yyyy') : '—'}"></div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="small text-muted">Priorité</div>
+                        <span class="badge"
+                              th:classappend="${demande.priorite?.name() == 'P0' ? 'bg-danger' : (demande.priorite?.name() == 'P1' ? 'bg-warning text-dark' : 'bg-secondary')}"
+                              th:text="${demande.priorite != null ? demande.priorite : '—'}"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="small text-muted">Sortie</div>
+                        <span th:switch="${demande.etatLivraison?.name()}">
+                            <span th:case="'EN_COURS_SORTIE'" class="badge bg-warning text-dark"><i class="fas fa-spinner me-1"></i>Sortie partielle</span>
+                            <span th:case="*" class="badge bg-secondary"><i class="fas fa-clock me-1"></i>Aucune sortie</span>
+                        </span>
+                        <div class="small mt-1" th:if="${bonsSortie != null and !bonsSortie.isEmpty()}">
+                            Bons déjà émis :
+                            <th:block th:each="b, it : ${bonsSortie}">
+                                <a class="text-decoration-none" th:href="@{/bon-sortie/{id}(id=${b.id})}"
+                                   th:text="${b.numeroBs}"
+                                   th:classappend="${b.statut?.name() == 'ANNULE' ? 'text-decoration-line-through text-muted' : ''}"></a><span th:unless="${it.last}">, </span>
+                            </th:block>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="small text-muted">Motif</div>
+                        <div th:text="${demande.motifEvoque}"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Saisie ── -->
+        <form th:action="@{/bon-sortie/creer/{id}(id=${demande.id})}" method="post" id="formBs"
+              th:attr="data-devise=${demande.codeDevise}">
+            <div class="card shadow-lg border-0 mb-0">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
+                    <div>
+                        <h5 class="mb-0 fw-bold text-gradient-blue">
+                            <i class="fas fa-boxes me-2 icon-gradient-blue"></i> Articles à sortir
+                        </h5>
+                        <small class="text-muted">
+                            <span th:text="${#lists.size(lignes)}">0</span> article(s) restant à sortir,
+                            dont <span th:text="${nbSortables}">0</span> avec du stock utilisable.
+                            Le stock utilisable tient compte des réservations des autres demandes.
+                        </small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-gradient-blue" id="btnToutDisponible"
+                                th:disabled="${nbSortables == 0}">
+                            <i class="fas fa-magic me-1"></i> Sortir tout le disponible
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnRemiseAZero">
+                            <i class="fas fa-eraser me-1"></i> Tout remettre à zéro
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0" id="tableBs">
+                            <thead class="table-light small">
+                            <tr>
+                                <th>Article</th>
+                                <th class="text-center">UDM</th>
+                                <th class="text-end">Demandé</th>
+                                <th class="text-end">Déjà sorti</th>
+                                <th class="text-end">Restant</th>
+                                <th class="text-end">Prix unitaire (<span th:text="${demande.codeDevise}">MGA</span>)</th>
+                                <th class="text-center">Stock utilisable</th>
+                                <th class="text-end" style="width: 160px;">Qté à sortir</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="l : ${lignes}"
+                                th:with="df=${l.demandeFille},
+                                         sortable=${l.stockDisponible < l.restant ? l.stockDisponible : l.restant},
+                                         cle=${'qte_' + l.demandeFille.id}"
+                                class="bs-ligne"
+                                th:attr="data-code=${df.article.codeArticle},
+                                         data-designation=${df.article.designation},
+                                         data-udm=${df.article.udm != null ? df.article.udm.acronyme : ''},
+                                         data-prix=${df.prixUnitaire != null ? df.prixUnitaire : 0}">
+                                <td>
+                                    <div class="fw-semibold" th:text="${df.article.codeArticle}">ART-001</div>
+                                    <div class="small" th:text="${df.article.designation}">Désignation</div>
+                                    <span class="badge bg-light text-dark border mt-1"
+                                          th:if="${df.typeApprovisionnement != null}"
+                                          th:text="${df.typeApprovisionnement.name() == 'STOCK' ? 'Réservé en stock' : 'Acheté'}"></span>
+                                </td>
+                                <td class="text-center" th:text="${df.article.udm != null ? df.article.udm.acronyme : '—'}"></td>
+                                <td class="text-end" th:text="${fmt.quantite(df.quantite)}"></td>
+                                <td class="text-end text-muted" th:text="${fmt.quantite(l.totalSorti)}"></td>
+                                <td class="text-end fw-semibold" th:text="${fmt.quantite(l.restant)}"></td>
+                                <td class="text-end">
+                                    <span th:if="${df.prixUnitaire != null and df.prixUnitaire > 0}"
+                                          th:text="${#numbers.formatDecimal(df.prixUnitaire, 1, 'WHITESPACE', 2, 'COMMA')}"></span>
+                                    <span th:unless="${df.prixUnitaire != null and df.prixUnitaire > 0}" class="text-muted">—</span>
+                                </td>
+                                <td class="text-center">
+                                    <span th:if="${l.stockDisponible <= 0}" class="badge bg-danger">
+                                        <i class="fas fa-times-circle me-1"></i>Indisponible
+                                    </span>
+                                    <span th:if="${l.stockDisponible > 0 and l.stockDisponible < l.restant}" class="badge bg-warning text-dark">
+                                        <i class="fas fa-exclamation-triangle me-1"></i><span th:text="${fmt.quantite(l.stockDisponible)}"></span>
+                                    </span>
+                                    <span th:if="${l.stockDisponible >= l.restant}" class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i><span th:text="${fmt.quantite(l.stockDisponible)}"></span>
+                                    </span>
+                                    <!-- Ligne STOCK dont le stock promis manque : la remettre à l'achat -->
+                                    <div th:if="${df.typeApprovisionnement?.name() == 'STOCK' and l.stockDisponible < l.restant}" class="mt-1">
+                                        <button type="submit" class="btn btn-link btn-sm p-0"
+                                                th:form="'remettreAchat-' + ${df.id}">
+                                            <i class="fas fa-shopping-cart me-1"></i>Remettre à l'achat
+                                        </button>
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    <!-- Nom lié à la ligne (qte_<id>) : la quantité reste attachée à sa ligne -->
+                                    <input type="number"
+                                           class="form-control form-control-sm text-end bs-qte"
+                                           th:name="${cle}"
+                                           min="0" step="any"
+                                           th:value="${saisie[cle] != null ? saisie[cle] : 0}"
+                                           th:attr="data-restant=${l.restant}, data-stock=${l.stockDisponible}, data-sortable=${sortable}"
+                                           th:disabled="${l.stockDisponible <= 0}">
+                                    <small class="d-block mt-1 text-muted" th:if="${l.stockDisponible > 0}">
+                                        max <span th:text="${fmt.quantite(sortable)}"></span>
+                                    </small>
+                                    <small class="d-block mt-1 text-danger" th:if="${l.stockDisponible <= 0}">En attente de stock</small>
+                                    <div class="invalid-feedback bs-erreur"></div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="p-3 border-top">
+                        <label for="commentaire" class="form-label fw-bold">
+                            Commentaire <span class="text-muted fw-normal small">(facultatif)</span>
+                        </label>
+                        <textarea id="commentaire" name="commentaire" class="form-control" rows="2"
+                                  placeholder="Ex. remis au demandeur au magasin central"
+                                  th:text="${saisie['commentaire']}"></textarea>
+                    </div>
+                </div>
+
+                <!-- ── Barre de résumé ── -->
+                <div class="bs-barre px-3 py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex flex-wrap gap-4 small">
+                        <div><span class="text-muted">Articles à sortir</span>
+                            <div class="fw-bold fs-6" id="resNbArticles">0</div></div>
+                        <div><span class="text-muted">Quantité totale</span>
+                            <div class="fw-bold fs-6" id="resQuantite">0</div></div>
+                        <div><span class="text-muted">Valeur estimée</span>
+                            <div class="fw-bold fs-6"><span id="resValeur">0</span>
+                                <span th:text="${demande.codeDevise}">MGA</span></div></div>
+                    </div>
+                    <button type="button" class="btn btn-gradient-green px-4" id="btnVerifierBs">
+                        <i class="fas fa-clipboard-check me-1"></i> Vérifier et confirmer
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Formulaires « Remettre à l'achat » (boutons liés par l'attribut form, hors du formulaire du bon) -->
+        <form th:each="l : ${lignes}"
+              th:if="${l.demandeFille.typeApprovisionnement?.name() == 'STOCK' and l.stockDisponible < l.restant}"
+              th:id="'remettreAchat-' + ${l.demandeFille.id}"
+              th:action="@{/demande/ligne/{id}/remettre-achat(id=${l.demandeFille.id})}"
+              method="post" class="d-none"
+              th:attr="data-confirmer=${'Remettre ' + l.demandeFille.article.codeArticle + ' à l''achat ?'}"
+              data-confirmer-texte="Sa réservation de stock sera libérée et le restant apparaîtra dans les lignes à acheter."
+              data-confirmer-bouton="Remettre à l'achat"
+              data-confirmer-type="warning">
+            <input type="hidden" name="retour" value="bon-sortie">
+        </form>
+    </section>
+</div>
+
+<script>
+(() => {
+    "use strict";
+    const form = document.getElementById("formBs");
+    if (!form) return;
+
+    const nfQte = new Intl.NumberFormat("fr-FR", {maximumFractionDigits: 2});
+    const nfMontant = new Intl.NumberFormat("fr-FR", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const lignes = [...form.querySelectorAll("tr.bs-ligne")];
+    const champ = tr => tr.querySelector(".bs-qte");
+    const esc = s => String(s).replace(/[&<>"']/g, c =>
+        ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"}[c]));
+
+    /** Contrôle d'une ligne : renvoie le message d'erreur, ou "" si la quantité est valable. */
+    function controler(tr) {
+        const inp = champ(tr);
+        if (!inp || inp.disabled) return "";
+        const v = parseFloat(inp.value) || 0;
+        const restant = parseFloat(inp.dataset.restant);
+        const stock = parseFloat(inp.dataset.stock);
+        if (v < 0) return "Quantité négative.";
+        if (v > restant + 1e-9) return `Supérieur au restant (${nfQte.format(restant)}).`;
+        if (v > stock + 1e-9) return `Supérieur au stock utilisable (${nfQte.format(stock)}).`;
+        return "";
+    }
+
+    /** Met à jour l'état des lignes et la barre de résumé ; renvoie le nombre d'erreurs. */
+    function majResume() {
+        let nb = 0, qte = 0, valeur = 0, erreurs = 0;
+        lignes.forEach(tr => {
+            const inp = champ(tr);
+            const v = inp && !inp.disabled ? (parseFloat(inp.value) || 0) : 0;
+            const msg = controler(tr);
+            tr.classList.toggle("bs-ligne-erreur", !!msg);
+            tr.classList.toggle("bs-ligne-active", !msg && v > 0);
+            if (inp) {
+                inp.classList.toggle("is-invalid", !!msg);
+                tr.querySelector(".bs-erreur").textContent = msg;
+            }
+            if (msg) erreurs++;
+            if (v > 0) {
+                nb++;
+                qte += v;
+                valeur += v * (parseFloat(tr.dataset.prix) || 0);
+            }
+        });
+        document.getElementById("resNbArticles").textContent = nb;
+        document.getElementById("resQuantite").textContent = nfQte.format(qte);
+        document.getElementById("resValeur").textContent = nfMontant.format(valeur);
+        return erreurs;
+    }
+
+    form.addEventListener("input", e => { if (e.target.classList.contains("bs-qte")) majResume(); });
+
+    document.getElementById("btnToutDisponible")?.addEventListener("click", () => {
+        lignes.forEach(tr => {
+            const inp = champ(tr);
+            if (inp && !inp.disabled) inp.value = parseFloat(inp.dataset.sortable) || 0;
+        });
+        majResume();
+    });
+    document.getElementById("btnRemiseAZero").addEventListener("click", () => {
+        lignes.forEach(tr => { const inp = champ(tr); if (inp && !inp.disabled) inp.value = 0; });
+        majResume();
+    });
+
+    // La touche Entrée dans un champ ne déclenche pas l'envoi sans récapitulatif
+    form.addEventListener("submit", e => { if (!form.dataset.confirme) e.preventDefault(); });
+
+    const btnVerifier = document.getElementById("btnVerifierBs");
+    btnVerifier.addEventListener("click", () => {
+        if (majResume() > 0) {
+            afficherAlerte("Corrigez les quantités signalées en rouge avant de confirmer.", "warning", "Quantités invalides");
+            form.querySelector(".bs-qte.is-invalid")?.focus();
+            return;
+        }
+        const choisies = lignes.filter(tr => {
+            const inp = champ(tr);
+            return inp && !inp.disabled && (parseFloat(inp.value) || 0) > 0;
+        });
+        if (!choisies.length) {
+            afficherAlerte("Saisissez une quantité supérieure à 0 pour au moins un article.", "warning", "Aucun article à sortir");
+            return;
+        }
+
+        const devise = form.dataset.devise || "";
+        let total = 0;
+        const corps = choisies.map(tr => {
+            const v = parseFloat(champ(tr).value);
+            total += v * (parseFloat(tr.dataset.prix) || 0);
+            return `<tr><td class="text-start"><strong>${esc(tr.dataset.code)}</strong><br>
+                        <small>${esc(tr.dataset.designation)}</small></td>
+                    <td class="text-end fw-semibold">${nfQte.format(v)} ${esc(tr.dataset.udm)}</td></tr>`;
+        }).join("");
+
+        confirmerAction({
+            titre: `Confirmer la sortie de ${choisies.length} article(s) ?`,
+            texte: `<div class="table-responsive" style="max-height:40vh">
+                        <table class="table table-sm align-middle mb-2">
+                            <thead class="table-light"><tr><th class="text-start">Article</th><th class="text-end">Quantité</th></tr></thead>
+                            <tbody>${corps}</tbody>
+                        </table>
+                    </div>
+                    <div class="small">Valeur estimée : <strong>${nfMontant.format(total)} ${esc(devise)}</strong></div>
+                    <div class="small text-muted mt-2">Le bon sera créé et confirmé : les quantités sont déstockées immédiatement.</div>`,
+            bouton: "Créer et confirmer",
+            type: "question"
+        }).then(ok => {
+            if (!ok) return;
+            form.dataset.confirme = "1";
+            btnVerifier.dataset.htmlOrigine = btnVerifier.innerHTML;
+            btnVerifier.disabled = true;
+            btnVerifier.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Création du bon de sortie…';
+            form.submit();
+        });
+    });
+
+    majResume();
+})();
+</script>
 </body>
 </html>

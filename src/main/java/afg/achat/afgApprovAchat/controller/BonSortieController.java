@@ -58,31 +58,71 @@ public class BonSortieController {
         return "bonSortie/bs-a-faire";
     }
 
-    // ── Créer un BS depuis la fiche demande ─────────────────────────────────
-    // Même condition que l'affichage du bouton sur la fiche (canCreateBS : rôle MG)
+    // ── Saisie d'un BS (page dédiée, ouverte depuis la demande ou « Bons de sortie à faire ») ──
+    /**
+     * Écran de saisie du bon de sortie d'une demande : récapitulatif de la demande, lignes restant
+     * à sortir avec le stock utilisable, puis confirmation. Après un refus du serveur, la saisie
+     * envoyée (flash « saisie ») est réaffichée.
+     */
+    @PreAuthorize("hasRole('MOYENS_GENERAUX')")
+    @GetMapping("/nouveau")
+    public String nouveauBonSortie(@RequestParam(name = "demande") String idDemande,
+                                   Model model, RedirectAttributes redirectAttributes) {
+        DemandeMere demande = demandeMereService.getDemandeMereById(idDemande).orElse(null);
+        String refus = refusCreation(demande);
+        if (refus != null) {
+            redirectAttributes.addFlashAttribute("ko", refus);
+            return demande == null ? "redirect:/bon-sortie/a-faire" : "redirect:/demande/fiche/" + idDemande;
+        }
+
+        List<afg.achat.afgApprovAchat.DTO.LigneRestanteDTO> lignes = bonSortieService.lignesASortir(demande);
+        if (lignes.isEmpty()) {
+            redirectAttributes.addFlashAttribute("ko", "Tous les articles de la demande " + idDemande + " sont déjà sortis.");
+            return "redirect:/demande/fiche/" + idDemande;
+        }
+
+        model.addAttribute("demande", demande);
+        model.addAttribute("lignes", lignes);
+        model.addAttribute("bonsSortie", bonSortieService.getBonSortieByDemande(demande));
+        model.addAttribute("nbSortables", lignes.stream().filter(l -> l.getStockDisponible() > 0).count());
+        if (!model.containsAttribute("saisie")) {
+            model.addAttribute("saisie", Map.of());
+        }
+        return "bonSortie/bs-saisie";
+    }
+
+    /** Motif empêchant de faire un bon de sortie sur la demande ; {@code null} si c'est possible. */
+    private static String refusCreation(DemandeMere demande) {
+        if (demande == null) return "Demande introuvable.";
+        if (demande.getStatut() != StatutDemande.VALIDE) {
+            return "Un bon de sortie ne peut être créé que sur une demande validée.";
+        }
+        if (!demande.getTypeDemandeEffectif().isArticlesEnStock()) {
+            return "Un bon de sortie ne concerne que les demandes de matériel (articles en stock).";
+        }
+        if (demande.getEtatLivraison() == DemandeMere.EtatLivraison.SOLDEE) {
+            return "La demande " + demande.getId() + " est soldée : tous ses articles sont sortis.";
+        }
+        return null;
+    }
+
+    // Même condition que l'accès à la page de saisie (rôle MG)
     @PreAuthorize("hasRole('MOYENS_GENERAUX')")
     @PostMapping("/creer/{idDemande}")
     public String creerBonSortie(@PathVariable String idDemande,
                                  @RequestParam(name = "commentaire", required = false) String commentaire,
                                  @RequestParam Map<String, String> parametres,
                                  RedirectAttributes redirectAttributes) {
+        String saisieBs = "redirect:/bon-sortie/nouveau?demande=" + idDemande;
         try {
             Utilisateur mg = (Utilisateur) SecurityContextHolder
                     .getContext().getAuthentication().getPrincipal();
 
-            DemandeMere demande = demandeMereService.getDemandeMereById(idDemande)
-                    .orElseThrow(() -> new IllegalArgumentException("Demande introuvable."));
-
-            if (demande.getStatut() != StatutDemande.VALIDE) {
-                redirectAttributes.addFlashAttribute("ko",
-                        "Un bon de sortie ne peut être créé que sur une demande validée.");
-                return "redirect:/demande/fiche/" + idDemande;
-            }
-
-            if (!demande.getTypeDemandeEffectif().isArticlesEnStock()) {
-                redirectAttributes.addFlashAttribute("ko",
-                        "Un bon de sortie ne concerne que les demandes de matériel (articles en stock).");
-                return "redirect:/demande/fiche/" + idDemande;
+            DemandeMere demande = demandeMereService.getDemandeMereById(idDemande).orElse(null);
+            String refus = refusCreation(demande);
+            if (refus != null) {
+                redirectAttributes.addFlashAttribute("ko", refus);
+                return demande == null ? "redirect:/bon-sortie/a-faire" : "redirect:/demande/fiche/" + idDemande;
             }
 
             // Quantités envoyées sous la forme qte_<id de la ligne de demande> : chaque
@@ -105,13 +145,19 @@ public class BonSortieController {
             BonSortieMere bs = bonSortieService.creerEtConfirmer(demande, mg, commentaire, quantitesParLigne);
 
             redirectAttributes.addFlashAttribute("ok",
-                    "Bon de sortie " + bs.getNumeroBs() + " créé et confirmé.");
+                    "Bon de sortie " + bs.getNumeroBs() + " créé et confirmé : le stock a été déstocké.");
+            return "redirect:/bon-sortie/" + bs.getId();
 
         } catch (IllegalArgumentException | IllegalStateException e) {
+            // Retour sur la saisie, avec les quantités et le commentaire envoyés
+            Map<String, String> saisie = new LinkedHashMap<>();
+            parametres.forEach((cle, valeur) -> {
+                if (cle.startsWith(PREFIXE_QUANTITE) || "commentaire".equals(cle)) saisie.put(cle, valeur);
+            });
+            redirectAttributes.addFlashAttribute("saisie", saisie);
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
+            return saisieBs;
         }
-
-        return "redirect:/demande/fiche/" + idDemande;
     }
 
     // ── Annuler un BS confirmé (remise en stock) ────────────────────────────

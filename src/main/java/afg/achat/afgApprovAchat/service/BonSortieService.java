@@ -330,6 +330,40 @@ public class BonSortieService {
         return valeur == null ? "" : valeur.trim();
     }
 
+    /**
+     * Un bon de sortie peut être fait sur la demande : demande de matériel validée, pas encore soldée.
+     * (Le rôle Moyens Généraux est vérifié par l'appelant.)
+     */
+    public static boolean peutCreerBonSortie(DemandeMere demande) {
+        return demande != null
+                && demande.getStatut() == StatutDemande.VALIDE
+                && demande.getTypeDemandeEffectif().isArticlesEnStock()
+                && demande.getEtatLivraison() != DemandeMere.EtatLivraison.SOLDEE;
+    }
+
+    /**
+     * Lignes de la demande qui restent à sortir, avec le stock utilisable pour chacune :
+     * lots FIFO moins le stock réservé par les autres demandes, réparti en priorité sur les
+     * lignes STOCK (leur réservation) avant les lignes ACHAT — même calcul que la sortie.
+     */
+    public List<afg.achat.afgApprovAchat.DTO.LigneRestanteDTO> lignesASortir(DemandeMere demande) {
+        List<DemandeFille> lignesActives = demandeFilleService.getDemandeFilleByDemandeMere(demande).stream()
+                .filter(df -> df.getStatut() != StatutDemande.REFUSE)
+                .toList();
+        Map<Integer, Double> restants = new java.util.HashMap<>();
+        lignesActives.forEach(df -> restants.put(df.getId(), getQuantiteRestante(df)));
+        Map<Integer, Double> stockParLigne = reservationStockService.repartirStockLibre(
+                lignesActives, df -> restants.get(df.getId()));
+        return lignesActives.stream()
+                .map(df -> {
+                    double restant = restants.get(df.getId());
+                    return new afg.achat.afgApprovAchat.DTO.LigneRestanteDTO(df, df.getQuantite() - restant, restant,
+                            stockParLigne.getOrDefault(df.getId(), 0.0));
+                })
+                .filter(l -> l.getRestant() > 0)
+                .toList();
+    }
+
     public double getQuantiteRestante(DemandeFille demandeFille) {
         return demandeFille.getQuantite() - getQuantiteDejaSortie(demandeFille);
     }
