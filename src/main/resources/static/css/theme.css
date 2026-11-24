@@ -793,3 +793,86 @@ table.dataTable tbody tr:hover { background-color: #f3f6fc; }
     .card, .card.shadow-lg, .card.border-0,
     .card:not([class*="border-"]) { box-shadow: none !important; border: none !important; }
 }
+
+
+/* ── 10. Fiche demande : informations de la demande ──────────────────────── */
+
+.dm-infos { padding: 0 1rem 1rem; display: grid; gap: 14px; }
+
+/* Bandeau : demandeur à gauche, statut à droite */
+.dm-hero {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #f7f9ff 0%, #ffffff 70%);
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius);
+}
+.dm-person { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.dm-avatar {
+    flex: 0 0 46px; height: 46px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--ui-brand) 0%, var(--ui-brand-2) 100%);
+    color: #fff; font-weight: 700; letter-spacing: .03em;
+}
+.dm-person > div:last-child { min-width: 0; }
+.dm-person-name { font-weight: 700; color: var(--ui-ink); line-height: 1.2; }
+.dm-person-meta { font-size: .82rem; color: var(--ui-ink-2); }
+.dm-status { text-align: right; max-width: 460px; }
+.dm-status-hint { font-size: .8rem; color: var(--ui-ink-2); margin-top: .35rem; }
+
+/* Tuiles des faits clés */
+.dm-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.dm-fact {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: 12px;
+    padding: .7rem .85rem; min-width: 0;
+}
+.dm-fact-icon {
+    flex: 0 0 34px; height: 34px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--ui-plane); color: var(--ui-brand-2); font-size: .9rem;
+}
+.dm-label {
+    display: block; font-size: .66rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--ui-muted); margin-bottom: .15rem;
+}
+.dm-value { font-weight: 600; color: var(--ui-ink); word-break: break-word; }
+.dm-sub { font-size: .76rem; color: var(--ui-ink-2); }
+.dm-sub.dm-late { color: #b42318; font-weight: 600; }
+.dm-sub.dm-soon { color: #b54708; font-weight: 600; }
+.dm-empty { color: var(--ui-muted); font-weight: 500; font-style: italic; }
+
+/* Priorité */
+.dm-prio { display: inline-flex; align-items: center; gap: .35rem; padding: .15rem .6rem;
+           border-radius: 999px; font-weight: 700; font-size: .82rem; }
+.dm-prio::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.dm-prio-P0 { background: #fef3f2; color: #b42318; }
+.dm-prio-P1 { background: #fffaeb; color: #b54708; }
+.dm-prio-P2 { background: #f2f4f7; color: #475467; }
+
+/* Section « Traitement & budget » */
+.dm-section { border: 1px solid var(--ui-line); border-radius: var(--ui-radius); overflow: hidden; }
+.dm-section-head {
+    padding: .55rem .9rem; background: var(--ui-plane); border-bottom: 1px solid var(--ui-line);
+    font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ui-ink-2);
+}
+.dm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.dm-grid > div { padding: .7rem .9rem; border-right: 1px solid var(--ui-line-2); border-bottom: 1px solid var(--ui-line-2); min-width: 0; }
+
+/* Motif et description */
+.dm-texts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.dm-text { border: 1px solid var(--ui-line); border-radius: 12px; padding: .8rem .95rem; background: var(--ui-surface); }
+.dm-text.dm-motif { border-left: 4px solid var(--ui-brand-2); }
+.dm-text p { margin: 0; white-space: pre-wrap; color: var(--ui-ink); }
+
+@media screen and (max-width: 768px) {
+    .dm-texts { grid-template-columns: 1fr; }
+    .dm-status { text-align: left; }
+}
+
+@media print {
+    .dm-infos { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .dm-hero { background: #fff; }
+    .dm-fact, .dm-section, .dm-text, .dm-hero { border-color: #c9cfda; page-break-inside: avoid; }
+    .dm-facts { grid-template-columns: repeat(4, 1fr); }
+}

@@ -6,14 +6,12 @@ import afg.achat.afgApprovAchat.model.demande.DemandeMere;
 import afg.achat.afgApprovAchat.model.util.Devise;
 import afg.achat.afgApprovAchat.model.util.ModeTraitement;
 import afg.achat.afgApprovAchat.model.util.MontantCalculator;
-import afg.achat.afgApprovAchat.model.util.StatutDemande;
 import afg.achat.afgApprovAchat.model.util.TypeDemande;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
 import afg.achat.afgApprovAchat.repository.demande.CategorieDepenseRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeAutreDetailRepo;
 import afg.achat.afgApprovAchat.repository.demande.DemandeMereRepo;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
-import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import afg.achat.afgApprovAchat.service.util.ModeTraitementService;
 import afg.achat.afgApprovAchat.service.workflow.PieceJointeWorkflowService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,10 +38,10 @@ public class DemandeAutreService {
     private final CategorieDepenseRepo categorieDepenseRepo;
     private final DemandeAutreDetailRepo demandeAutreDetailRepo;
     private final DemandeMereRepo demandeMereRepo;
-    private final IdGenerator idGenerator;
     private final ModeTraitementService modeTraitementService;
     private final DeviseService deviseService;
     private final PieceJointeWorkflowService pieceJointeService;
+    private final DemandeBrouillonService demandeBrouillonService;
 
     /** Saisie du formulaire de création (valeurs brutes du formulaire). */
     public record NouvelleDemandeAutre(
@@ -66,12 +65,18 @@ public class DemandeAutreService {
     }
 
     /**
-     * Crée la demande, sa dépense et ses pièces jointes en une transaction.
+     * Crée la demande en brouillon (avec sa dépense et ses pièces jointes), ou enregistre les
+     * modifications d'un brouillon existant, en une transaction. La soumission est une étape distincte
+     * ({@link DemandeBrouillonService#soumettre}).
      *
+     * @param id identifiant du brouillon à modifier ; vide pour une nouvelle demande
      * @throws IllegalArgumentException si la saisie est incomplète ou invalide (rien n'est enregistré)
      */
     @Transactional
-    public DemandeMere creer(Utilisateur demandeur, NouvelleDemandeAutre saisie, MultipartFile[] piecesJointes) {
+    public DemandeMere enregistrer(String id, Utilisateur demandeur, NouvelleDemandeAutre saisie,
+                                   MultipartFile[] piecesJointes, Collection<Integer> piecesASupprimer) {
+        DemandeMere existante = demandeBrouillonService.brouillonModifiable(id, demandeur);
+
         // ── 1. Contrôles (avant toute écriture) ──
         CategorieDepense categorie = lireCategorie(saisie.categorieId());
 
@@ -105,23 +110,22 @@ public class DemandeAutreService {
         pieceJointeService.verifierFormats(piecesJointes);
 
         // ── 2. Écritures ──
-        DemandeAutreDetail detail = new DemandeAutreDetail();
+        DemandeMere demande = existante != null
+                ? existante
+                : demandeBrouillonService.nouveauBrouillon(demandeur, TypeDemande.AUTRE);
+        DemandeAutreDetail detail = existante != null
+                ? demandeAutreDetailRepo.findByDemandeMere(existante).orElseGet(DemandeAutreDetail::new)
+                : new DemandeAutreDetail();
         detail.setCategorie(categorie);
         detail.setBeneficiaire(beneficiaire);
         detail.definirMontant(quantite, montantUnitaire);
 
-        DemandeMere demande = new DemandeMere();
-        demande.setId(idGenerator);
-        demande.setDateDemande(String.valueOf(LocalDateTime.now()));
         demande.setDateSortie(datePaiement.atStartOfDay().toString());
         demande.setPriorite(priorite);
-        demande.setTypeDemande(TypeDemande.AUTRE);
         demande.appliquerDevise(devise, LocalDateTime.now());
         demande.setModeTraitement(paiementDirect);
         demande.setMotifEvoque(motif);
         demande.setDescription(nettoyer(saisie.description()));
-        demande.setDemandeur(demandeur);
-        demande.setStatut(StatutDemande.CREE);
         demande.setTotalPrix(detail.getMontant());
         demande.setTotalEstime(detail.getMontant());
         demandeMereRepo.save(demande);
@@ -129,6 +133,7 @@ public class DemandeAutreService {
         detail.setDemandeMere(demande);
         demandeAutreDetailRepo.save(detail);
 
+        demandeBrouillonService.supprimerPiecesJointes(demande, piecesASupprimer);
         pieceJointeService.enregistrerPourDemande(piecesJointes, demande, "");
         return demande;
     }
