@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Familles d'articles</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <meta name="context-path" th:content="@{/}" />
+</head>
+<body>
+
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+
+<div class="main-content">
+    <div class="container-fluid py-4"></div>
+    <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-layer-group me-3 icon-gradient-blue"></i> Familles d'articles
+            </h1>
+            <a class="btn btn-gradient-blue" th:href="@{/article/list}">
+                <i class="fas fa-box me-2"></i> Liste des articles
+            </a>
+        </div>
+
+        <div class="row g-4">
+            <!-- LISTE -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="input-group mb-3" th:if="${familles != null && !#lists.isEmpty(familles)}">
+                            <span class="input-group-text bg-light"><i class="fas fa-search icon-gradient-blue"></i></span>
+                            <input type="search" class="form-control" id="filtreFamille" placeholder="Filtrer les familles…"
+                                   autocomplete="off">
+                            <span class="input-group-text bg-light small" id="compteFamilles"
+                                  th:text="${#lists.size(familles) + ' famille(s)'}">0</span>
+                        </div>
+
+                        <!-- Barre de sélection : apparaît dès qu'une famille est cochée -->
+                        <div id="barreSelection"
+                             class="alert alert-warning d-none d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
+                            <span>
+                                <i class="fas fa-check-square me-1"></i>
+                                <strong id="nbSelection">0</strong> famille(s) sélectionnée(s)
+                                — <span id="nbArticlesSelection">0</span> article(s)
+                            </span>
+                            <span class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnViderSelection">
+                                    <i class="fas fa-times me-1"></i>Désélectionner
+                                </button>
+                                <button type="button" class="btn btn-sm btn-warning" id="btnFusionnerSelection" disabled
+                                        title="Sélectionnez au moins deux familles">
+                                    <i class="fas fa-compress-alt me-1"></i>Fusionner la sélection
+                                </button>
+                            </span>
+                        </div>
+
+                        <div class="table-responsive" th:if="${familles != null && !#lists.isEmpty(familles)}">
+                            <table class="table table-striped table-hover align-middle mb-0" id="tableFamilles">
+                                <thead>
+                                <tr>
+                                    <th style="width:5%" class="text-center">
+                                        <input type="checkbox" class="form-check-input" id="toutSelectionner"
+                                               title="Sélectionner les familles affichées">
+                                    </th>
+                                    <th><i class="fas fa-layer-group me-2 icon-gradient-light-blue"></i>Famille</th>
+                                    <th class="text-end" style="width:18%"><i class="fas fa-box me-2 icon-gradient-light-blue"></i>Articles</th>
+                                    <th class="text-center" style="width:16%"><i class="fas fa-cog me-2 icon-gradient-light-blue"></i>Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="f : ${familles}" th:with="nb=${nbArticles[f.id] != null ? nbArticles[f.id] : 0}">
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input choix-famille"
+                                               th:value="${f.id}" th:data-description="${f.description}" th:data-nb="${nb}"
+                                               th:attr="aria-label='Sélectionner ' + ${f.description}">
+                                    </td>
+                                    <td class="fw-semibold nom-famille" th:text="${f.description}">Consommable</td>
+                                    <td class="text-end" th:text="${nb}">0</td>
+                                    <td class="text-center text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal" data-bs-target="#editFamilleModal"
+                                                th:data-id="${f.id}"
+                                                th:data-description="${f.description}"
+                                                title="Renommer">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <form th:if="${nb == 0}"
+                                              th:action="@{/famille/{id}/supprimer(id=${f.id})}" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    title="Supprimer (famille sans article)"
+                                                    th:data-confirm="'Supprimer la famille « ' + ${f.description} + ' » ?'">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                        <button th:unless="${nb == 0}" type="button" class="btn btn-sm btn-outline-secondary"
+                                                disabled title="Famille utilisée par des articles : suppression impossible">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div th:if="${familles == null || #lists.isEmpty(familles)}" class="text-center py-5">
+                            <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Aucune famille enregistrée</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AJOUT -->
+            <div class="col-lg-4">
+                <div class="card shadow">
+                    <div class="card-header btn-gradient-green text-white">
+                        <h5 class="mb-0">Ajouter une famille</h5>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/famille/ajouter}" method="post">
+                            <label for="description" class="form-label required-field">Libellé</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-layer-group icon-gradient-blue"></i></span>
+                                <input type="text" class="form-control" id="description" name="description"
+                                       maxlength="255" required placeholder="Ex. Matériels informatiques">
+                            </div>
+                            <div class="form-text">
+                                Refusé si une famille du même nom existe déjà (accents et majuscules ignorés).
+                            </div>
+                            <button type="submit" class="btn btn-gradient-green px-4 mt-3">
+                                <i class="fas fa-plus-circle me-2"></i>Ajouter la famille
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card shadow mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">À savoir</h5>
+                    </div>
+                    <div class="card-body text-muted small">
+                        <ul class="mb-0 ps-3">
+                            <li>Renommer une famille s'applique à tous ses articles.</li>
+                            <li>Seule une famille <strong>sans article</strong> peut être supprimée.</li>
+                            <li><i class="fas fa-compress-alt"></i> <strong>Fusionner</strong> : cochez les familles à
+                                regrouper (filtrez par exemple sur « prestation », puis cochez la case d'en-tête),
+                                puis choisissez celle à conserver. Les articles y passent, les autres familles sont
+                                supprimées, et le changement est inscrit dans l'historique de chaque article.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Modal de renommage -->
+<div class="modal fade" id="editFamilleModal" tabindex="-1" aria-labelledby="editFamilleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <!-- th:action ajoute le jeton CSRF ; l'adresse est complétée à l'ouverture du modal -->
+            <form id="editFamilleForm" method="post"
+                  th:action="@{/famille/0/modifier}"
+                  th:attr="data-action-base=@{/famille/}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editFamilleModalLabel">
+                        <i class="fas fa-edit me-2"></i>Renommer la famille
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="edit-description" class="form-label required-field">Libellé</label>
+                    <input type="text" class="form-control" id="edit-description" name="description" maxlength="255" required>
+                    <div class="form-text">Le nouveau libellé s'applique à tous les articles de la famille.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-gradient-blue">
+                        <i class="fas fa-save me-1"></i>Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de fusion : les familles cochées, dont une est conservée -->
+<div class="modal fade" id="fusionFamilleModal" tabindex="-1" aria-labelledby="fusionFamilleModalLabel" aria-hidden="true"
+     data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <form id="fusionFamilleForm" method="post" th:action="@{/famille/fusionner}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="fusionFamilleModalLabel">
+                        <i class="fas fa-compress-alt me-2"></i>Fusionner <span id="fusion-nb-familles">0</span> familles
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2 fw-semibold">Choisissez la famille à conserver :</p>
+                    <!-- Rempli à l'ouverture : une ligne par famille cochée -->
+                    <div class="list-group mb-3" id="fusion-choix"></div>
+                    <div class="alert alert-warning small mb-0">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <span id="fusion-resume">—</span>
+                        Cette action est définitive.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-warning" id="btnConfirmerFusion">
+                        <i class="fas fa-compress-alt me-1"></i>Fusionner
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const echapper = s => String(s).replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"}[c]));
+        const sansAccent = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+        // ── Sélection ────────────────────────────────────────────────────────
+        const cases = [...document.querySelectorAll(".choix-famille")];
+        const toutSel = document.getElementById("toutSelectionner");
+        const barre = document.getElementById("barreSelection");
+        const btnFusionner = document.getElementById("btnFusionnerSelection");
+        const cochees = () => cases.filter(c => c.checked);
+        const visible = c => c.closest("tr").style.display !== "none";
+
+        function majSelection() {
+            const sel = cochees();
+            barre.classList.toggle("d-none", sel.length === 0);
+            document.getElementById("nbSelection").textContent = sel.length;
+            document.getElementById("nbArticlesSelection").textContent =
+                sel.reduce((t, c) => t + Number(c.dataset.nb || 0), 0);
+            btnFusionner.disabled = sel.length < 2;
+            cases.forEach(c => c.closest("tr").classList.toggle("table-warning", c.checked));
+            if (toutSel) {
+                const vis = cases.filter(visible);
+                toutSel.checked = vis.length > 0 && vis.every(c => c.checked);
+                toutSel.indeterminate = !toutSel.checked && vis.some(c => c.checked);
+            }
+        }
+        cases.forEach(c => c.addEventListener("change", majSelection));
+        // Case d'en-tête : coche ou décoche les familles affichées (après filtre)
+        toutSel?.addEventListener("change", () => {
+            cases.filter(visible).forEach(c => c.checked = toutSel.checked);
+            majSelection();
+        });
+        document.getElementById("btnViderSelection").addEventListener("click", () => {
+            cases.forEach(c => c.checked = false);
+            majSelection();
+        });
+
+        // ── Fusion ───────────────────────────────────────────────────────────
+        const modalFusion = document.getElementById("fusionFamilleModal");
+        const formFusion = document.getElementById("fusionFamilleForm");
+        const choix = document.getElementById("fusion-choix");
+        const btnConfirmer = document.getElementById("btnConfirmerFusion");
+
+        function majResume() {
+            const sel = cochees();
+            const cible = sel.find(c => c.value === formFusion.querySelector('input[name="cible"]:checked')?.value);
+            const autres = sel.filter(c => c !== cible);
+            const nbDeplaces = autres.reduce((t, c) => t + Number(c.dataset.nb || 0), 0);
+            document.getElementById("fusion-resume").textContent = cible
+                ? `${nbDeplaces} article(s) passeront dans « ${cible.dataset.description} », puis `
+                  + `${autres.length} famille(s) seront supprimées : ${autres.map(c => c.dataset.description).join(", ")}.`
+                : "Choisissez la famille à conserver.";
+        }
+
+        btnFusionner.addEventListener("click", () => {
+            const sel = cochees();
+            if (sel.length < 2) return;
+            document.getElementById("fusion-nb-familles").textContent = sel.length;
+            // Proposée par défaut : la famille qui a le plus d'articles
+            const parDefaut = sel.reduce((a, b) => Number(b.dataset.nb) > Number(a.dataset.nb) ? b : a);
+            choix.innerHTML = sel.map(c => `
+                <label class="list-group-item d-flex align-items-center gap-2">
+                    <input class="form-check-input m-0" type="radio" name="cible" value="${echapper(c.value)}"
+                           ${c === parDefaut ? "checked" : ""}>
+                    <span class="flex-grow-1">${echapper(c.dataset.description)}</span>
+                    <span class="badge bg-light text-dark border">${echapper(c.dataset.nb)} article(s)</span>
+                    <input type="hidden" name="sources" value="${echapper(c.value)}">
+                </label>`).join("");
+            btnConfirmer.disabled = false;
+            btnConfirmer.innerHTML = '<i class="fas fa-compress-alt me-1"></i>Fusionner';
+            majResume();
+            window.bootstrap.Modal.getOrCreateInstance(modalFusion).show();
+        });
+        choix.addEventListener("change", majResume);
+
+        formFusion.addEventListener("submit", e => {
+            if (!formFusion.querySelector('input[name="cible"]:checked')
+                    || !confirm(document.getElementById("fusion-resume").textContent + "\n\nConfirmer la fusion ?")) {
+                e.preventDefault();
+                return;
+            }
+            btnConfirmer.disabled = true;
+            btnConfirmer.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Fusion en cours...';
+        });
+
+        // ── Confirmation avant suppression ───────────────────────────────────
+        document.querySelectorAll("button[data-confirm]").forEach(b => {
+            b.addEventListener("click", e => { if (!confirm(b.dataset.confirm)) e.preventDefault(); });
+        });
+
+        // ── Renommage ────────────────────────────────────────────────────────
+        const modal = document.getElementById("editFamilleModal");
+        const form = document.getElementById("editFamilleForm");
+        modal.addEventListener("show.bs.modal", event => {
+            const b = event.relatedTarget;
+            form.action = form.dataset.actionBase + b.dataset.id + "/modifier";
+            document.getElementById("edit-description").value = b.dataset.description || "";
+        });
+        modal.addEventListener("shown.bs.modal", () => document.getElementById("edit-description").select());
+
+        // ── Filtre de la liste (accents et majuscules ignorés) ───────────────
+        const filtre = document.getElementById("filtreFamille");
+        if (filtre) {
+            const lignes = [...document.querySelectorAll("#tableFamilles tbody tr")];
+            const compte = document.getElementById("compteFamilles");
+            filtre.addEventListener("input", () => {
+                const q = sansAccent(filtre.value.trim());
+                let visibles = 0;
+                lignes.forEach(tr => {
+                    const ok = !q || sansAccent(tr.querySelector(".nom-famille").textContent).includes(q);
+                    tr.style.display = ok ? "" : "none";
+                    if (ok) visibles++;
+                });
+                compte.textContent = visibles + " famille(s)";
+                majSelection(); // état de la case d'en-tête selon les lignes affichées
+            });
+        }
+    });
+</script>
+</body>
+</html>

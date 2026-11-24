@@ -44,6 +44,14 @@ public interface ArticleRepo extends JpaRepository<Article,Integer>,
             Pageable pageable
     );
 
+    List<Article> findByFamille(afg.achat.afgApprovAchat.model.Famille famille);
+
+    long countByFamille(afg.achat.afgApprovAchat.model.Famille famille);
+
+    /** Nombre d'articles par famille : [id famille, nombre]. */
+    @Query("SELECT a.famille.id, COUNT(a) FROM Article a WHERE a.famille IS NOT NULL GROUP BY a.famille.id")
+    List<Object[]> compterParFamille();
+
     @Query("SELECT a FROM Article a WHERE a.codeProvisoire = :codeProvisoire")
     Article findArticlesByCodeProvisoire(String codeProvisoire);
 
