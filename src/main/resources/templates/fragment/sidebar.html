@@ -456,8 +456,8 @@
             </div>
         </div>
 
-        <!-- GESTION UTILISATEURS -->
-        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN')">
+        <!-- GESTION UTILISATEURS (administrateur et informatique) -->
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','IT')">
             <h2 class="accordion-header">
                 <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
                         type="button"
