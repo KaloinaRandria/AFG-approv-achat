@@ -14,6 +14,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/import")
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
 public class ImportController {
     @Autowired
     ImportService importService;

@@ -42,9 +42,19 @@ public class BonSortieMere {
     @Column(name = "commentaire", columnDefinition = "TEXT")
     private String commentaire;
 
+    @Column(name = "date_annulation")
+    private LocalDateTime dateAnnulation;
+
+    @ManyToOne
+    @JoinColumn(name = "id_annule_par", referencedColumnName = "id_utilisateur")
+    private Utilisateur annulePar;
+
+    @Column(name = "motif_annulation", columnDefinition = "TEXT")
+    private String motifAnnulation;
+
     public enum StatutBonSortie {
-        BROUILLON,   // En cours de saisie par le MG
-        CONFIRME,    // Confirmé → stock impacté
-        ANNULE       // Annulé avant confirmation
+        BROUILLON,   // Étape interne de la création (jamais enregistré seul)
+        CONFIRME,    // Confirmé → stock sorti
+        ANNULE       // Annulé → quantités remises en stock
     }
 }

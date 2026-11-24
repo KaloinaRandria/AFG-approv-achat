@@ -1,97 +1,64 @@
 package afg.achat.afgApprovAchat.repository.utilisateur;
 
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
-import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * Spécifications pour les recherches dynamiques d'utilisateurs
- * Approche scalable et maintenable pour les filtres complexes
+ * Recherche multicritère de la liste des utilisateurs.
  */
-public class UtilisateurSpecification {
+public final class UtilisateurSpecification {
 
-    private UtilisateurSpecification() {
-        throw new AssertionError("Classe utility, pas d'instanciation");
-    }
+    private UtilisateurSpecification() {}
 
     /**
-     * Filtre par nom (case-insensitive, partial match)
+     * @param recherche texte cherché dans le nom, le prénom, « prénom nom », « nom prénom » et l'email
+     * @param serviceId service exact (null = tous)
+     * @param roleId    rôle détenu (null = tous)
+     * @param actif     statut du compte (null = tous)
      */
-    public static Specification<Utilisateur> nomLike(String nom) {
+    public static Specification<Utilisateur> rechercher(String recherche, Integer serviceId,
+                                                        Integer roleId, Boolean actif) {
         return (root, query, cb) -> {
-            if (!StringUtils.hasText(nom)) {
-                return null; // Ignore si vide
-            }
-            return cb.like(cb.lower(root.get("nom")), "%" + nom.toLowerCase() + "%");
-        };
-    }
+            List<Predicate> predicats = new ArrayList<>();
 
-    /**
-     * Filtre par prénom (case-insensitive, partial match)
-     */
-    public static Specification<Utilisateur> prenomLike(String prenom) {
-        return (root, query, cb) -> {
-            if (!StringUtils.hasText(prenom)) {
-                return null;
+            if (StringUtils.hasText(recherche)) {
+                String motif = "%" + recherche.trim().toLowerCase() + "%";
+                predicats.add(cb.or(
+                        cb.like(cb.lower(cb.coalesce(root.get("nom"), "")), motif),
+                        cb.like(cb.lower(cb.coalesce(root.get("prenom"), "")), motif),
+                        cb.like(cb.lower(cb.coalesce(root.get("mail"), "")), motif),
+                        cb.like(cb.lower(cb.concat(cb.concat(cb.coalesce(root.get("prenom"), ""), " "),
+                                cb.coalesce(root.get("nom"), ""))), motif),
+                        cb.like(cb.lower(cb.concat(cb.concat(cb.coalesce(root.get("nom"), ""), " "),
+                                cb.coalesce(root.get("prenom"), ""))), motif)
+                ));
             }
-            return cb.like(cb.lower(root.get("prenom")), "%" + prenom.toLowerCase() + "%");
-        };
-    }
 
-    /**
-     * Filtre par email (case-insensitive, partial match)
-     */
-    public static Specification<Utilisateur> mailLike(String mail) {
-        return (root, query, cb) -> {
-            if (!StringUtils.hasText(mail)) {
-                return null;
+            if (serviceId != null) {
+                predicats.add(cb.equal(root.get("service").get("id"), serviceId));
             }
-            return cb.like(cb.lower(root.get("mail")), "%" + mail.toLowerCase() + "%");
-        };
-    }
 
-    /**
-     * Filtre par service (case-insensitive, partial match)
-     * Utilise le LEFT JOIN correctement avec JPA Criteria API
-     */
-    public static Specification<Utilisateur> serviceLibelleLike(String serviceLibelle) {
-        return (root, query, cb) -> {
-            if (!StringUtils.hasText(serviceLibelle)) {
-                return null;
+            if (roleId != null) {
+                // Sous-requête : évite les doublons d'une jointure sur une collection
+                Subquery<Integer> sq = query.subquery(Integer.class);
+                var u = sq.from(Utilisateur.class);
+                sq.select(u.get("id")).where(
+                        cb.equal(u.get("id"), root.get("id")),
+                        cb.equal(u.join("roles").get("id"), roleId));
+                predicats.add(cb.exists(sq));
             }
-            return cb.like(
-                    cb.lower(root.join("service", JoinType.LEFT).get("libelle")),
-                    "%" + serviceLibelle.toLowerCase() + "%"
-            );
-        };
-    }
 
-    /**
-     * Recherche textuelle sur nom, prénom ou email
-     */
-    public static Specification<Utilisateur> searchTerm(String searchTerm) {
-        return (root, query, cb) -> {
-            if (!StringUtils.hasText(searchTerm)) {
-                return null;
+            if (actif != null) {
+                predicats.add(cb.equal(root.get("actif"), actif));
             }
-            String lowerSearchTerm = "%" + searchTerm.toLowerCase() + "%";
-            return cb.or(
-                    cb.like(cb.lower(root.get("nom")), lowerSearchTerm),
-                    cb.like(cb.lower(root.get("prenom")), lowerSearchTerm),
-                    cb.like(cb.lower(root.get("mail")), lowerSearchTerm)
-            );
-        };
-    }
 
-    /**
-     * Combine tous les filtres (nom, prénom, email, service) avec AND
-     */
-    public static Specification<Utilisateur> filterBy(String nom, String prenom, String mail, String service) {
-        return Specification.where(nomLike(nom))
-                .and(prenomLike(prenom))
-                .and(mailLike(mail))
-                .and(serviceLibelleLike(service));
+            return cb.and(predicats.toArray(new Predicate[0]));
+        };
     }
 }
-

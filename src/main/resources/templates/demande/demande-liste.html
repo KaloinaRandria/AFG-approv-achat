@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="fr"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
@@ -7,9 +7,6 @@
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
-    <style>
-
-    </style>
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
@@ -21,11 +18,16 @@
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="fw-bold text-gradient-blue">
-                <i class="fas fa-list-ul icon-gradient-blue"></i> Liste des demandes
+                <i class="fas fa-list-ul icon-gradient-blue"></i>
+                <span th:text="${titreListe}">Liste des demandes</span>
             </h1>
             <div>
-                <a th:href="@{/demande/add}" class="btn btn-gradient-green">
-                    <i class="fas fa-plus-circle me-1"></i> Nouvelle demande
+                <!-- Liste des demandes autres : création d'une demande autre ; sinon demande de matériel -->
+                <a th:if="${typeDemande == 'AUTRE'}" th:href="@{/demande/add(type='AUTRE')}" class="btn btn-gradient-green">
+                    <i class="fas fa-plus-circle me-1"></i> Nouvelle demande autre
+                </a>
+                <a th:unless="${typeDemande == 'AUTRE'}" th:href="@{/demande/add}" class="btn btn-gradient-green">
+                    <i class="fas fa-plus-circle me-1"></i> Nouvelle demande de matériel
                 </a>
             </div>
         </div>
@@ -69,11 +71,24 @@
 
                     <!-- Type -->
                     <div class="col-md-2">
-                        <label class="form-label mb-1">Type</label>
+                        <label class="form-label mb-1">Nature</label>
                         <select class="form-select" name="type">
-                            <option value="" th:selected="${type == null || type == ''}">Tous</option>
+                            <option value="" th:selected="${type == null || type == ''}">Toutes</option>
                             <option value="OPEX" th:selected="${type == 'OPEX'}">OPEX</option>
                             <option value="CAPEX" th:selected="${type == 'CAPEX'}">CAPEX</option>
+                        </select>
+                    </div>
+
+                    <!-- Type de demande (circuit de validation) -->
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Type de demande</label>
+                        <select class="form-select" name="typeDemande">
+                            <option value="" th:selected="${typeDemande == null || typeDemande == ''}">Tous</option>
+                            <option th:each="t : ${typesDemande}"
+                                    th:value="${t.name()}"
+                                    th:text="${t.libelle}"
+                                    th:selected="${typeDemande == t.name()}">
+                            </option>
                         </select>
                     </div>
 
@@ -163,7 +178,8 @@
                         <button class="btn btn-gradient-blue" type="submit" title="Filtrer">
                             <i class="fas fa-filter me-1"></i>Filtrer
                         </button>
-                        <a class="btn btn-outline-secondary" th:href="@{/demande/list}" title="Réinitialiser">
+                        <a class="btn btn-outline-secondary" title="Réinitialiser"
+                           th:href="${typeDemande == ''} ? @{/demande/list} : @{/demande/list(typeDemande=${typeDemande})}">
                             Réinitialiser
                         </a>
                     </div>
@@ -195,7 +211,7 @@
                             <th>
                                 <a class="text-decoration-none text-dark"
                                    th:href="@{/demande/list(page=0,size=${size},
-                                    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+                                    num=${num},demandeur=${demandeur},type=${type},typeDemande=${typeDemande},statut=${statut},
                                     dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
                                     sort='id',dir=${dir=='asc'?'desc':'asc'})}"
                                 >
@@ -208,7 +224,7 @@
                             <th>
                                 <a class="text-decoration-none text-dark"
                                    th:href="@{/demande/list(page=0,size=${size},
-                                    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+                                    num=${num},demandeur=${demandeur},type=${type},typeDemande=${typeDemande},statut=${statut},
                                     dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
                                     sort='dateDemande',dir=${dir=='asc'?'desc':'asc'})}"
                                 >
@@ -222,6 +238,7 @@
                             </th>
                             <th>Motif évoqué</th>
 <!--                            <th sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"><i class="fas fa-tags me-2 icon-gradient-light-blue"></i>Type de demande</th>-->
+                            <th>Type</th>
                             <th>Priorité</th>
                             <th>Statut</th>
                         </tr>
@@ -265,6 +282,7 @@
 <!--                                class="td-nature-demande"-->
 <!--                                th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">-->
 <!--                            </td>-->
+                            <td th:text="${demande.typeDemandeEffectif.libelle}"></td>
                             <td th:text="${demande.priorite != null ? demande.priorite : '-'}"></td>
                             <td>
                                 <!-- Cas VALIDE + SOLDEE -->
@@ -317,7 +335,7 @@
                         <li class="page-item" th:classappend="${demandesMeres.first} ? 'disabled'">
                             <a class="page-link"
                                th:href="@{/demande/list(page=${demandesMeres.number - 1}, size=${size},
-    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    num=${num},demandeur=${demandeur},type=${type},typeDemande=${typeDemande},statut=${statut},
     dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
     sort=${sort},dir=${dir})}"
                             >
@@ -335,7 +353,7 @@
                                 th:classappend="${p == demandesMeres.number} ? 'active'">
                                 <a class="page-link"
                                    th:href="@{/demande/list(page=${p}, size=${size},
-    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    num=${num},demandeur=${demandeur},type=${type},typeDemande=${typeDemande},statut=${statut},
     dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
     sort=${sort},dir=${dir})}"
                                    th:text="${p + 1}"
@@ -348,7 +366,7 @@
                         <li class="page-item" th:classappend="${demandesMeres.last} ? 'disabled'">
                             <a class="page-link"
                                th:href="@{/demande/list(page=${demandesMeres.number + 1}, size=${size},
-    num=${num},demandeur=${demandeur},type=${type},statut=${statut},
+    num=${num},demandeur=${demandeur},type=${type},typeDemande=${typeDemande},statut=${statut},
     dateFrom=${dateFrom},dateTo=${dateTo},scope=${scope},
     sort=${sort},dir=${dir})}"
                             >

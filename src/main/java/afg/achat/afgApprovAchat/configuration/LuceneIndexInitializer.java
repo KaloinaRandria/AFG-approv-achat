@@ -1,8 +1,10 @@
 package afg.achat.afgApprovAchat.configuration;
 
 import afg.achat.afgApprovAchat.model.Article;
+import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.hibernate.Session;
 import org.hibernate.search.mapper.orm.Search;
 import org.hibernate.search.mapper.orm.session.SearchSession;
@@ -12,18 +14,17 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class LuceneIndexInitializer implements ApplicationRunner {
 
-    @Autowired
-    private EntityManager entityManager;
+    private final EntityManager entityManager;
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) throws Exception {
         SearchSession searchSession = Search.session((Session) entityManager);
-        searchSession.massIndexer(Article.class)
+        searchSession.massIndexer(Article.class, Fournisseur.class)
                 .threadsToLoadObjects(4)
                 .startAndWait();
-        System.out.println("Index Lucene initialisé.");
     }
 }

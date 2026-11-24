@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.model.bonLivraison;
 
 import afg.achat.afgApprovAchat.model.Article;
+import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeFille;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -26,6 +27,10 @@ public class BonLivraisonFille {
     double quantiteRecu;
     @Column(name = "quantite_demande")
     double quantiteDemande;
+
+    /** Ligne du bon de commande réceptionnée ; {@code null} pour un BL saisi sans bon de commande. */
+    @ManyToOne @JoinColumn(name = "id_bc_fille", referencedColumnName = "id_bc_fille")
+    BonCommandeFille bonCommandeFille;
 
     public void setPrixUnitaire(String prixUnitaire) {
         this.prixUnitaire = Double.parseDouble(prixUnitaire);

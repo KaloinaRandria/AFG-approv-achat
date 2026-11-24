@@ -14,14 +14,14 @@
 
     <groupId>afg.achat</groupId>
     <artifactId>AFG-approv-achat</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.1</version>
     <packaging>war</packaging>
     <name>AFG-approv-achat</name>
     <description>AFG-approv-achat</description>
 
     <properties>
         <java.version>21</java.version>
-        <!-- ✅ Requis pour Hibernate Search 7.2 -->
+        <!-- Requis pour Hibernate Search 7.2 -->
         <jboss-logging.version>3.6.1.Final</jboss-logging.version>
     </properties>
 

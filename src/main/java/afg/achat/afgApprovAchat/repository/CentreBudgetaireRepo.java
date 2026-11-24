@@ -9,4 +9,6 @@ import org.springframework.stereotype.Repository;
 public interface CentreBudgetaireRepo extends JpaRepository<CentreBudgetaire, Integer> {
     @Query("SELECT c FROM CentreBudgetaire c WHERE c.codeCentre = :codeCentre")
     CentreBudgetaire findCentreBudgetaireByCodeCentre(String codeCentre);
+
+    boolean existsByCodeCentre(String codeCentre);
 }

@@ -24,10 +24,18 @@
         </a>
     </div>
 
+    <div class="px-3 mb-2" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_VALIDATOR','FINANCE','FINANCE_CONSULT')">
+        <a class="nav-link text-white d-flex align-items-center sidebar-link"
+           th:href="@{/demande/paiements-directs}"
+           th:classappend="${currentUri == '/demande/paiements-directs' ? 'active' : ''}">
+            <i class="fas fa-money-check-alt me-3"></i> Paiements directs
+        </a>
+    </div>
+
     <!--        DEVISE -->
     <div class="px-3 mb-2">
         <a class="nav-link text-white d-flex align-items-center sidebar-link"
-           sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','FINANCE')"
+           sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','FINANCE','FINANCE_CONSULT')"
            th:href="@{/devise/devise-pages}"
             th:classappend="${currentUri == '/devise/devise-pages' ? 'active' : ''}">
             <i class="fas fa-coins me-3"></i> Devise et Cours
@@ -134,18 +142,93 @@
                  th:classappend="${currentUri.contains('/demande') ? 'show' : ''}">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
+                        <!-- Demandes de matériel et demandes autres (paiement direct) ; les anciennes demandes restent consultables -->
                         <li>
                             <a class="nav-link text-white sidebar-sub"
-                               th:href="@{/demande/list}"
-                               th:classappend="${currentUri == '/demande/list' ? 'active' : ''}">
-                                Liste
+                               th:href="@{/demande/list(typeDemande='FOURNITURE')}"
+                               th:classappend="${currentUri == '/demande/list' and menuTypeDemande == 'FOURNITURE' ? 'active' : ''}">
+                                <i class="fas fa-boxes fa-fw me-2"></i> Demandes de matériel
                             </a>
                         </li>
                         <li>
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/demande/add}"
-                               th:classappend="${currentUri == '/demande/add' ? 'active' : ''}">
-                                Ajout Demande
+                               th:classappend="${currentUri == '/demande/add' and typeDemande != null and typeDemande.name() == 'FOURNITURE' ? 'active' : ''}">
+                                <i class="fas fa-cart-plus fa-fw me-2"></i> Nouvelle demande de matériel
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/demande/list(typeDemande='AUTRE')}"
+                               th:classappend="${currentUri == '/demande/list' and menuTypeDemande == 'AUTRE' ? 'active' : ''}">
+                                <i class="fas fa-hand-holding-usd fa-fw me-2"></i> Demandes autres
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/demande/add(type='AUTRE')}"
+                               th:classappend="${currentUri == '/demande/add' and typeDemande != null and typeDemande.name() == 'AUTRE' ? 'active' : ''}">
+                                <i class="fas fa-file-invoice-dollar fa-fw me-2"></i> Nouvelle demande autre
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/demande/list(typeDemande='STANDARD')}"
+                               th:classappend="${currentUri == '/demande/list' and menuTypeDemande == 'STANDARD' ? 'active' : ''}">
+                                <i class="fas fa-archive fa-fw me-2"></i> Anciennes demandes
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/demande/list}"
+                               th:classappend="${currentUri == '/demande/list' and menuTypeDemande == '' ? 'active' : ''}">
+                                <i class="fas fa-list fa-fw me-2"></i> Toutes les demandes
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bon de commande : consultation, création manuelle (MG_CREATOR, Moyens Généraux) et validation (MG_VALIDATOR, SG) -->
+        <div class="accordion-item bg-transparent border-0"
+             sec:authorize="hasAnyRole('ADMIN','MG_CREATOR','MG_VALIDATOR','SG')">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseBC"
+                        aria-expanded="false"
+                        aria-controls="collapseBC"
+                        th:classappend="${currentUri.contains('/bon-commande') ? '' : 'collapsed'}">
+                    <i class="fas fa-file-invoice me-3"></i> Bon de commande
+                </button>
+            </h2>
+            <div id="collapseBC"
+                 class="accordion-collapse collapse"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/bon-commande') ? 'show' : ''}">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/bon-commande/list}"
+                               th:classappend="${currentUri == '/bon-commande/list' ? 'active' : ''}">
+                                Liste
+                            </a>
+                        </li>
+                        <li sec:authorize="hasAnyRole('ADMIN','MG_CREATOR','MOYENS_GENERAUX')">
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/bon-commande/lignes-a-acheter}"
+                               th:classappend="${currentUri == '/bon-commande/lignes-a-acheter' ? 'active' : ''}">
+                                Lignes à acheter
+                            </a>
+                        </li>
+                        <li sec:authorize="hasAnyRole('ADMIN','MG_CREATOR','MOYENS_GENERAUX')">
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/bon-commande/manuel/nouveau}"
+                               th:classappend="${currentUri == '/bon-commande/manuel/nouveau' ? 'active' : ''}">
+                                Nouveau bon de commande
                             </a>
                         </li>
                     </ul>
@@ -184,6 +267,7 @@
                             </a>
                         </li>
 
+                        <!--/* Saisie directe masquée : un BL se crée en réceptionnant un bon de commande.
                         <li>
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/bonlivraison/add}"
@@ -191,14 +275,34 @@
                                 Ajouter un bon de livraison
                             </a>
                         </li>
+                        */-->
                     </ul>
                 </div>
             </div>
         </div>
 
+        <!-- Bons de sortie : historique de toutes les sorties de stock (Moyens Généraux) -->
+        <!-- Dans l'accordéon : même retrait que les boutons voisins (padding Bootstrap 1rem 1.25rem) -->
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+            <a class="nav-link text-white d-flex align-items-center sidebar-link"
+               style="padding: 1rem 1.25rem;"
+               th:href="@{/bon-sortie/list}"
+               th:classappend="${currentUri.startsWith('/bon-sortie') and !currentUri.startsWith('/bon-sortie/a-faire') ? 'active' : ''}">
+                <i class="fas fa-file-export me-3"></i> Bons de sortie
+            </a>
+        </div>
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+            <a class="nav-link text-white d-flex align-items-center sidebar-link"
+               style="padding: 1rem 1.25rem;"
+               th:href="@{/bon-sortie/a-faire}"
+               th:classappend="${currentUri.startsWith('/bon-sortie/a-faire') ? 'active' : ''}">
+                <i class="fas fa-dolly me-3"></i> Bons de sortie à faire
+            </a>
+        </div>
+
 
         <!-- STOCK -->
-        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','IT')">
             <h2 class="accordion-header">
                 <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
                         type="button"
@@ -237,7 +341,9 @@
         </div>
 
         <!-- OPERATION UTILISATEUR -->
-        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+        <div class="accordion-item bg-transparent border-0"
+             sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','CONTROLEUR','DFC')">
+
             <h2 class="accordion-header">
                 <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
                         type="button"
@@ -245,24 +351,37 @@
                         data-bs-target="#collapseOperation"
                         aria-expanded="false"
                         aria-controls="collapseOperation"
-                        th:classappend="${currentUri.contains('/udm') or currentUri.contains('/message') ? '' : 'collapsed'}">
+                        th:classappend="${currentUri.contains('/udm') or currentUri.contains('/ligne-budgetaire') ? '' : 'collapsed'}">
                     <i class="fas fa-cogs me-3"></i> Paramétrage des opérations
                 </button>
             </h2>
+
             <div id="collapseOperation"
                  class="accordion-collapse collapse"
                  aria-labelledby="headingOperation"
                  data-bs-parent="#sidebarAccordion"
-                 th:classappend="${currentUri.contains('/udm') ? 'show' : ''}">
+                 th:classappend="${currentUri.contains('/udm') or currentUri.contains('/ligne-budgetaire') ? 'show' : ''}">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
-                        <li>
+
+                        <!-- ADMIN + MOYENS GENERAUX -->
+                        <li sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/udm/udm-pages}"
                                th:classappend="${currentUri == '/udm/udm-pages' ? 'active' : ''}">
                                 Unité de mesure
                             </a>
                         </li>
+
+                        <!-- DFC + CONTROLEUR -->
+                        <li sec:authorize="hasAnyRole('ADMIN','DFC','CONTROLEUR')">
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/ligne-budgetaire/ligne-budgetaire-pages}"
+                               th:classappend="${currentUri == '/ligne-budgetaire/ligne-budgetaire-pages' ? 'active' : ''}">
+                                Ligne budgétaire
+                            </a>
+                        </li>
+
                     </ul>
                 </div>
             </div>
@@ -307,6 +426,37 @@
             </div>
         </div>
 
+        <!-- CONFIGURATION MAIL -->
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','IT')">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseMailConfig"
+                        aria-expanded="false"
+                        aria-controls="collapseMailConfig"
+                        th:classappend="${currentUri.contains('/admin/mail-config') ? '' : 'collapsed'}">
+                    <i class="fas fa-key me-3"></i> Configuration mail
+                </button>
+            </h2>
+            <div id="collapseMailConfig"
+                 class="accordion-collapse collapse"
+                 aria-labelledby="headingMailConfig"
+                 data-bs-parent="#sidebarAccordion"
+                 th:classappend="${currentUri.contains('/admin/mail-config') ? 'show' : ''}">
+                <div class="accordion-body p-0">
+                    <ul class="nav flex-column px-3">
+                        <li>
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/admin/mail-config}"
+                               th:classappend="${currentUri == '/admin/mail-config' ? 'active' : ''}">
+                                <i class="fas fa-lock me-2"></i> Mot de passe mail
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="dropdown mt-auto p-3 border-top">
@@ -322,8 +472,13 @@
                     th:text="${#authentication.principal.prenom + ' ' + #authentication.principal.nom}"></strong>
         </a>
         <ul class="dropdown-menu dropdown-menu-end text-small shadow" aria-labelledby="dropdownUser">
-            <li><a class="dropdown-item" th:href="@{/logout}">Déconnexion</a></li>
-<!--            <li><a class="dropdown-item" th:href="@{/import/import-saisie-page}">Import de données</a></li>-->
+            <li>
+                <!-- Déconnexion en POST (exigé par la protection CSRF) -->
+                <form th:action="@{/logout}" method="post" class="m-0">
+                    <button type="submit" class="dropdown-item">Déconnexion</button>
+                </form>
+            </li>
+            <li sec:authorize="hasAnyRole('ADMIN')"><a class="dropdown-item" th:href="@{/import/import-saisie-page}">Import de données</a></li>
         </ul>
     </div>
 

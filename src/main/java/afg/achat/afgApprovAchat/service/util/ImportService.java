@@ -2,7 +2,7 @@ package afg.achat.afgApprovAchat.service.util;
 
 import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.Famille;
-import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
@@ -11,7 +11,7 @@ import afg.achat.afgApprovAchat.model.utilisateur.Poste;
 import afg.achat.afgApprovAchat.repository.bonLivraison.BonLivraisonFilleRepo;
 import afg.achat.afgApprovAchat.service.ArticleService;
 import afg.achat.afgApprovAchat.service.FamilleService;
-import afg.achat.afgApprovAchat.service.FournisseurService;
+import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
 import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
 import afg.achat.afgApprovAchat.service.stock.StockMereService;
@@ -53,6 +53,8 @@ public class ImportService {
     UdmService udmService;
     @Autowired
     StockMereService stockMereService;
+    @Autowired
+    afg.achat.afgApprovAchat.service.stock.MouvementStockService mouvementStockService;
     @Autowired
     DemandeMereService demandeMereService;
     @Autowired
@@ -338,13 +340,7 @@ public class ImportService {
                 // 2) Article
                 Article article = articleService.getArticleByCodeProvisoire(codeArt);
 
-                // 3) Update dernier prix article (dernier prix = celui de la dernière ligne lue)
-                if (pu > 0) {
-                    article.setPrixUnitaire(String.valueOf(pu));
-                    // si tu veux éviter save à chaque ligne, tu peux laisser JPA dirty-checker,
-                    // mais safe: articleService.saveArticle(article) ou articleRepo.save(article)
-                    articleService.saveArticle(article);
-                }
+                // 3) Le prix n'est plus stocké sur l'article : il vit dans prix_article et les lots FIFO.
 
                 // 4) BL Fille (cumule)
                 BonLivraisonMere finalBlMere = blMere;
@@ -367,9 +363,12 @@ public class ImportService {
                 blFille.setQuantiteDemande(String.valueOf(blFille.getQuantiteDemande() + qte));
                 bonLivraisonFilleRepo.save(blFille);
 
-                // 5) Stock : entrée
+                // 5) Stock : lot FIFO daté de la réception + mouvement d'entrée
                 StockMere stockMere = stockMereService.getOrCreateStockMere(blMere);
-                stockMereService.addEntree(stockMere, article, qte);
+                if (qte > 0) {
+                    mouvementStockService.entrer(stockMere, article, qte, Math.max(pu, 0.0), blMere,
+                            dateStr.isEmpty() ? null : parseDateReception(dateStr));
+                }
 
                 // 6) Total BL
                 double ligneTotal = qte * pu;
@@ -469,8 +468,9 @@ public class ImportService {
                 // 3) StockMere lié à demande
                 StockMere stockMere = stockMereService.getOrCreateStockMere(dm);
 
-                // 4) StockFille : sortie
-                stockMereService.addSortie(stockMere, article, qte);
+                // 4) Sortie : consommation FIFO des lots + mouvement de sortie
+                //    (refusée, et tout l'import annulé, si les lots ne couvrent pas la quantité)
+                mouvementStockService.sortir(stockMere, article, qte);
             }
 
         } catch (Exception e) {

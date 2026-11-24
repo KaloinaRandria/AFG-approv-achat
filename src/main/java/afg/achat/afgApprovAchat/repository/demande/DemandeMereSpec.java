@@ -1,6 +1,8 @@
 package afg.achat.afgApprovAchat.repository.demande;
 
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.model.util.ModeTraitementEnum;
+import afg.achat.afgApprovAchat.model.util.TypeDemande;
 import jakarta.persistence.criteria.*;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -41,6 +43,14 @@ public final class DemandeMereSpec {
                 predicates.add(cb.equal(cb.lower(root.get("natureDemande").as(String.class)),
                         c.type().toLowerCase()));
 
+            // Type de demande : les demandes sans type (antérieures) sont des demandes standard
+            if (c.typeDemande() != null) {
+                Predicate egal = cb.equal(root.get("typeDemande"), c.typeDemande());
+                predicates.add(c.typeDemande() == TypeDemande.STANDARD
+                        ? cb.or(egal, cb.isNull(root.get("typeDemande")))
+                        : egal);
+            }
+
             if (hasText(c.priorite()))
                 predicates.add(cb.equal(cb.lower(root.get("priorite").as(String.class)),
                         c.priorite().toLowerCase()));
@@ -53,6 +63,19 @@ public final class DemandeMereSpec {
                 predicates.add(root.get("statut").in(c.statuts()));
             } else if (c.statut() != null) {
                 predicates.add(cb.equal(root.get("statut"), c.statut()));
+            }
+
+            // ── Mode Traitement : Paiement direct ───────────────────────────
+            if (Boolean.TRUE.equals(c.paiementDirectOnly())) {
+                Join<Object, Object> mt = root.join("modeTraitement", JoinType.INNER);
+                predicates.add(cb.equal(cb.lower(mt.get("libelle")), ModeTraitementEnum.PAIEMENT_DIRECT.getLibelle().toLowerCase()));
+            }
+
+            // ── Statut transmission finance ──────────────────────────────────
+            if (c.statutsTransmissionFinance() != null && !c.statutsTransmissionFinance().isEmpty()) {
+                predicates.add(root.get("statutTransmissionFinance").in(c.statutsTransmissionFinance()));
+            } else if (c.statutTransmissionFinance() != null) {
+                predicates.add(cb.equal(root.get("statutTransmissionFinance"), c.statutTransmissionFinance()));
             }
 
             // ── Restriction sur les demandeurs visibles ──────────────────────
@@ -97,14 +120,18 @@ public final class DemandeMereSpec {
             String          motif,
             Integer         statut,
             List<Integer>   statuts,
+            Boolean         paiementDirectOnly,
+            DemandeMere.StatutTransmissionFinance statutTransmissionFinance,
+            List<DemandeMere.StatutTransmissionFinance> statutsTransmissionFinance,
             LocalDateTime   dateFrom,
             LocalDateTime   dateTo,
             List<Integer>   demandeurIds,
             List<Integer>   roleStatuts,
             Integer         myStatut,
-            List<Integer>   myVisibleIds
+            List<Integer>   myVisibleIds,
+            TypeDemande     typeDemande
     ) {
-        // Builder statique pour éviter les constructeurs à 13 params
+        // Builder statique
         public static Builder builder() { return new Builder(); }
 
         public static final class Builder {
@@ -115,20 +142,36 @@ public final class DemandeMereSpec {
             private String        motif      = "";
             private Integer       statut     = null;
             private List<Integer> statuts    = null;
+            private Boolean       paiementDirectOnly = false;
+            private DemandeMere.StatutTransmissionFinance statutTransmissionFinance = null;
+            private List<DemandeMere.StatutTransmissionFinance> statutsTransmissionFinance = null;
             private LocalDateTime dateFrom   = LocalDateTime.of(1900,1,1,0,0);
             private LocalDateTime dateTo     = LocalDateTime.of(2999,12,31,23,59,59);
             private List<Integer> demandeurIds  = null;
             private List<Integer> roleStatuts   = null;
             private Integer       myStatut      = null;
             private List<Integer> myVisibleIds  = null;
+            private TypeDemande   typeDemande   = null;
 
             public Builder num(String v)              { num = v == null ? "" : v.trim(); return this; }
             public Builder demandeur(String v)        { demandeur = v == null ? "" : v.trim(); return this; }
             public Builder type(String v)             { type = v == null ? "" : v.trim(); return this; }
-            public Builder priorite(String v)         { priorite = v == null ? "" : v.trim(); return this; }
+            /** Valeur de filtre ; vide ou inconnue = pas de filtre. */
+            public Builder typeDemande(String v) {
+                try {
+                    typeDemande = TypeDemande.parse(v);
+                } catch (IllegalArgumentException e) {
+                    typeDemande = null;
+                }
+                return this;
+            }
+            public Builder priorite(String v)        { priorite = v == null ? "" : v.trim(); return this; }
             public Builder motif(String v)            { motif = v == null ? "" : v.trim(); return this; }
             public Builder statut(Integer v)          { statut = (v == null || v == 0) ? null : v; return this; }
             public Builder statuts(List<Integer> v)   { statuts = (v == null || v.isEmpty()) ? null : v; return this; }
+            public Builder paiementDirectOnly(Boolean v) { paiementDirectOnly = Boolean.TRUE.equals(v); return this; }
+            public Builder statutTransmissionFinance(DemandeMere.StatutTransmissionFinance v) { statutTransmissionFinance = v; return this; }
+            public Builder statutsTransmissionFinance(List<DemandeMere.StatutTransmissionFinance> v) { statutsTransmissionFinance = (v == null || v.isEmpty()) ? null : v; return this; }
             public Builder dateFrom(LocalDateTime v)  { if (v != null) dateFrom = v; return this; }
             public Builder dateTo(LocalDateTime v)    { if (v != null) dateTo = v; return this; }
             public Builder demandeurIds(List<Integer> v)  { demandeurIds = v; return this; }
@@ -138,9 +181,9 @@ public final class DemandeMereSpec {
 
             public SearchCriteria build() {
                 return new SearchCriteria(num, demandeur, type, priorite, motif,
-                        statut, statuts, dateFrom, dateTo,
-                        demandeurIds, roleStatuts, myStatut, myVisibleIds);
+                        statut, statuts, paiementDirectOnly, statutTransmissionFinance, statutsTransmissionFinance,
+                        dateFrom, dateTo, demandeurIds, roleStatuts, myStatut, myVisibleIds, typeDemande);
             }
         }
     }
-}
+}

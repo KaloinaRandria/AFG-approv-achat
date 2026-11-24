@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.model.bonLivraison;
 
-import afg.achat.afgApprovAchat.model.Fournisseur;
+import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
+import afg.achat.afgApprovAchat.model.fournisseur.Fournisseur;
 import afg.achat.afgApprovAchat.model.util.Devise;
 import afg.achat.afgApprovAchat.service.util.IdGenerator;
 import jakarta.persistence.*;
@@ -38,6 +39,10 @@ public class BonLivraisonMere {
     Double totalPrix;
     @Column(name = "id_facture")
     String idFacture;
+
+    /** Bon de commande réceptionné par ce BL ; {@code null} pour un BL saisi sans bon de commande. */
+    @ManyToOne @JoinColumn(name = "id_bc_mere", referencedColumnName = "id_bc_mere")
+    BonCommandeMere bonCommandeMere;
 
     public void setId(IdGenerator idGenerator) {
         this.id = idGenerator.generateId("BL","bon_livraison_mere_id_bl_mere_seq");

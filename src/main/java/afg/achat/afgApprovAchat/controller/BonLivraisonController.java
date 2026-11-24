@@ -1,32 +1,15 @@
 package afg.achat.afgApprovAchat.controller;
 
-import afg.achat.afgApprovAchat.model.Fournisseur;
-import afg.achat.afgApprovAchat.model.Article;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonFille;
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
-import afg.achat.afgApprovAchat.model.demande.DemandeFille;
-import afg.achat.afgApprovAchat.model.demande.DemandeMere;
-import afg.achat.afgApprovAchat.model.stock.StockFille;
-import afg.achat.afgApprovAchat.model.stock.StockMere;
-import afg.achat.afgApprovAchat.model.util.Devise;
-import afg.achat.afgApprovAchat.model.util.MontantCalculator;
-import afg.achat.afgApprovAchat.model.util.PrixArticle;
-import afg.achat.afgApprovAchat.service.ArticleService;
-import afg.achat.afgApprovAchat.service.FournisseurService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonFilleService;
 import afg.achat.afgApprovAchat.service.bonlivraison.BonLivraisonMereService;
-import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
-import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
-import afg.achat.afgApprovAchat.service.stock.LotStockService;
-import afg.achat.afgApprovAchat.service.stock.StockFilleService;
-import afg.achat.afgApprovAchat.service.stock.StockMereService;
+import afg.achat.afgApprovAchat.service.bonlivraison.LigneLivraisonAffichee;
 import afg.achat.afgApprovAchat.service.util.DeviseService;
-import afg.achat.afgApprovAchat.service.util.IdGenerator;
-import afg.achat.afgApprovAchat.service.util.PrixArticleService;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -35,240 +18,103 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
+/**
+ * Bons de livraison : liste et fiche. Un BL se crée en réceptionnant un bon de commande
+ * ({@link ReceptionBonCommandeController}).
+ */
 @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
 @Controller
 @RequestMapping("/bonlivraison")
 public class BonLivraisonController {
     @Autowired
-    FournisseurService fournisseurService;
-    @Autowired
     DeviseService deviseService;
-    @Autowired
-    ArticleService articleService;
     @Autowired
     BonLivraisonMereService bonLivraisonMereService;
     @Autowired
     BonLivraisonFilleService bonLivraisonFilleService;
-    @Autowired
-    StockMereService stockMereService;
-    @Autowired
-    StockFilleService stockFilleService;
-    @Autowired
-    IdGenerator idGenerator;
-    @Autowired
-    PrixArticleService prixArticleService;
-    @Autowired
-    LotStockService lotStockService;
 
 
-    @GetMapping("/add")
-    public String addBonLivraisonPage(Model model, HttpServletRequest request, HttpSession session) {
-        // Token anti double-soumission
-        String token = UUID.randomUUID().toString();
-        session.setAttribute("submissionToken", token);
-        model.addAttribute("submissionToken", token);
-
-        model.addAttribute("fournisseurs", fournisseurService.getAllFournisseurs());
-        model.addAttribute("devises", deviseService.getAllDevises());
-        model.addAttribute("articles", articleService.getAllArticles());
-        return "bl/bl-saisie";
+    /**
+     * Saisie directe d'un BL (sans bon de commande) : désactivée. Un bon de livraison se crée
+     * en réceptionnant un bon de commande validé ({@link ReceptionBonCommandeController}).
+     * Les anciennes adresses redirigent vers la liste, y compris un formulaire déjà ouvert.
+     */
+    @RequestMapping({"/add", "/save"})
+    public String saisieDirecteDesactivee(RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute("ko", "La saisie directe d'un bon de livraison est désactivée : "
+                + "réceptionnez le bon de commande depuis sa fiche (bouton « Réceptionner »).");
+        return "redirect:/bonlivraison/list";
     }
 
-    @PostMapping("/save")
-    public String insertBonLivraison(@RequestParam(name = "fournisseurs") String fournisseurId,
-                                     @RequestParam(name = "devises") String deviseId,
-                                     @RequestParam(name = "dateLivraison") String dateLivraison,
-                                     @RequestParam(name = "description" , required = false) String description,
-                                     @RequestParam("articleCodes[]") List<String> articleCodes,
-                                     @RequestParam("quantiteDemande[]") List<String> qteDemandes,
-                                     @RequestParam("quantiteRecu[]") List<String> qteRecues,
-                                     @RequestParam("prixUnitaire[]") List<String> prixUnitaires,
-                                     @RequestParam(name = "submissionToken") String submissionToken,
-                                     HttpSession session,
-                                     RedirectAttributes redirectAttributes) {
-        // ── Vérification token anti double-soumission ────────────────────────────
-        String sessionToken = (String) session.getAttribute("submissionToken");
+    // ── Fiche ────────────────────────────────────────────────────────────────
 
-        if (sessionToken == null || !sessionToken.equals(submissionToken)) {
-            redirectAttributes.addFlashAttribute("warningMessage",
-                    "Ce bon de livraison a déjà été soumis. Veuillez vérifier la liste.");
+    @GetMapping("/fiche/{id}")
+    public String ficheBonLivraison(@PathVariable String id, Model model, RedirectAttributes redirectAttributes) {
+        BonLivraisonMere bl = bonLivraisonMereService.getBonLivraisonMereById(id).orElse(null);
+        if (bl == null) {
+            redirectAttributes.addFlashAttribute("ko", "Bon de livraison introuvable.");
             return "redirect:/bonlivraison/list";
         }
+        List<BonLivraisonFille> lignes = bonLivraisonFilleService.getBonLivraisonFillesByMereId(id);
+        double totalLignes = lignes.stream().mapToDouble(l -> l.getQuantiteRecu() * l.getPrixUnitaire()).sum();
 
-        // Consommer le token immédiatement
-        session.removeAttribute("submissionToken");
-        try {
-            if (fournisseurId == null || fournisseurId.isEmpty()) {
-                redirectAttributes.addFlashAttribute("ko", "Veuillez sélectionner un fournisseur.");
-                return "redirect:/bonlivraison/add";
-            }
-            if (deviseId == null || deviseId.isEmpty()) {
-                redirectAttributes.addFlashAttribute("ko", "Veuillez sélectionner une devise.");
-                return "redirect:/bonlivraison/add";
-            }
-            Fournisseur fournisseur = fournisseurService.getFournisseurById(Integer.parseInt(fournisseurId))
-                    .orElseThrow(() -> new IllegalArgumentException("Fournisseur introuvable"));
-
-            Devise devise = deviseService.getDeviseById(Integer.parseInt(deviseId))
-                    .orElseThrow(() -> new IllegalArgumentException("Devise introuvable"));
-
-            double totalGeneral = MontantCalculator.calculerTotal(qteRecues, prixUnitaires);
-
-//            Enregistrement du bon de livraison mère
-            BonLivraisonMere bonLivraisonMere = new BonLivraisonMere();
-            bonLivraisonMere.setId(idGenerator);
-            bonLivraisonMere.setFournisseur(fournisseur);
-            bonLivraisonMere.setDevise(devise);
-            bonLivraisonMere.setDateReception(dateLivraison);
-            bonLivraisonMere.setDescription(description != null ? description : "");
-            bonLivraisonMere.setTotalPrix(totalGeneral);
-
-            this.bonLivraisonMereService.insertBonLivraisonMere(bonLivraisonMere);
-
-
-//            Enregistrement des bons de livraison filles
-            List<BonLivraisonFille> bonLivraisonFilles = new ArrayList<>();
-            // Enregistrement des bons de livraison filles
-            for (int i = 0; i < articleCodes.size(); i++) {
-                BonLivraisonFille bonLivraisonFille = new BonLivraisonFille();
-                bonLivraisonFille.setBonLivraisonMere(bonLivraisonMere);
-
-                int finalI = i;
-                Article article = articleService.getArticleByCodeArticle(articleCodes.get(i))
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                "Article introuvable avec le code: " + articleCodes.get(finalI)));
-
-                bonLivraisonFille.setArticle(article);
-                bonLivraisonFille.setQuantiteDemande(qteDemandes.get(i));
-                bonLivraisonFille.setQuantiteRecu(qteRecues.get(i));
-                bonLivraisonFille.setPrixUnitaire(prixUnitaires.get(i));
-
-                this.bonLivraisonFilleService.insertBonLivraisonFilleList(bonLivraisonFille);
-
-                //Historique du prix au lieu d'écraser l'article
-                PrixArticle prixArticle = new PrixArticle();
-                prixArticle.setArticle(article);
-                prixArticle.setBonLivraisonMere(bonLivraisonMere);
-                prixArticle.setPrixUnitaire(Double.parseDouble(prixUnitaires.get(i)));
-                prixArticle.setDatePrix(LocalDate.from(bonLivraisonMere.getDateReception()));
-                prixArticleService.insert(prixArticle);
-
-                double qteRecue = Double.parseDouble(qteRecues.get(i));
-                double prixUnit = Double.parseDouble(prixUnitaires.get(i));
-                if (qteRecue > 0) {
-                    lotStockService.creerLot(article, bonLivraisonMere, qteRecue, prixUnit);
-                }
-            }
-
-//            Entree en Stock
-            StockMere stockMere = new StockMere();
-            stockMere.setBonLivraisonMere(bonLivraisonMere);
-
-            this.stockMereService.insertStockMere(stockMere);
-
-            List<StockFille> stockFilles = new ArrayList<>();
-            for (int i = 0; i < articleCodes.size(); i++) {
-                StockFille stockFille = new StockFille();
-                stockFille.setStockMere(stockMere);
-                int finalI = i;
-                stockFille.setArticle(articleService.getArticleByCodeArticle(articleCodes.get(i))
-                        .orElseThrow(() -> new IllegalArgumentException("Article introuvable avec le code: " + articleCodes.get(finalI))));
-                stockFille.setEntree(qteRecues.get(i));
-                stockFilles.add(stockFille);
-                this.stockFilleService.insertStockFille(stockFille);
-            }
-            // Vérification : au moins une ligne de bon de livraison
-            if (articleCodes.isEmpty()) {
-                redirectAttributes.addFlashAttribute(
-                        "ko",
-                        "Impossible de valider le bon de livraison sans aucune ligne d’article."
-                );
-                return "redirect:/bonlivraison/add";
-            }
-
-            boolean hasValidLine = false;
-
-            for (int i = 0; i < articleCodes.size(); i++) {
-                if (qteRecues.get(i) != null && !qteRecues.get(i).isBlank()) {
-                    try {
-                        double qte = Double.parseDouble(qteRecues.get(i));
-                        if (qte > 0) {
-                            hasValidLine = true;
-                            break;
-                        }
-                    } catch (NumberFormatException ignored) {}
-                }
-            }
-
-            if (!hasValidLine) {
-                redirectAttributes.addFlashAttribute(
-                        "ko",
-                        "Veuillez saisir au moins une ligne avec une quantité reçue valide."
-                );
-                return "redirect:/bonlivraison/add";
-            }
-
-
-
-
-            redirectAttributes.addFlashAttribute("ok", "Bon de livraison enregistré avec succès.");
-//            redirecte mankany am page liste rehefa misy page liste
-            return "redirect:/bonlivraison/list";
-
-        } catch (IllegalArgumentException e) {
-            redirectAttributes.addFlashAttribute("ko", e.getMessage());
-            return "redirect:/bonlivraison/add";
-        }
-        catch (Exception e) {
-            redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement du bon de livraison.");
-            return "redirect:/bonlivraison/add";
-        }
+        model.addAttribute("bl", bl);
+        // Lignes de même article et même prix fusionnées (BC groupé : une ligne par demande en base)
+        model.addAttribute("lignes", LigneLivraisonAffichee.regrouper(lignes));
+        // Total enregistré sur le BL ; à défaut, recalculé depuis les lignes
+        model.addAttribute("total", bl.getTotalPrix() != null ? bl.getTotalPrix() : totalLignes);
+        return "bl/bl-fiche";
     }
 
     @GetMapping("/list")
-    public String bonLivraisonMereListe(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "dateReception") String sort,
-            @RequestParam(defaultValue = "desc") String dir,
+    public String bonLivraisonMereListe(@RequestParam(defaultValue = "0") int page,
+                                        @RequestParam(defaultValue = "20") int size,
+                                        @RequestParam(required = false) String numero,
+                                        @RequestParam(required = false) String fournisseur,
+                                        @RequestParam(required = false) String bonCommande,
+                                        @RequestParam(required = false) String article,
+                                        @RequestParam(required = false) String devise,
+                                        @RequestParam(required = false) String origine,
+                                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+                                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+                                        HttpServletRequest request,
+                                        Model model) {
+        Integer deviseId = null;
+        if (devise != null && !devise.isBlank()) {
+            try {
+                deviseId = Integer.parseInt(devise.trim());
+            } catch (NumberFormatException ignored) {
+                // devise inconnue : pas de filtre
+            }
+        }
+        BonLivraisonMereService.Origine origineFiltre = null;
+        if (origine != null && !origine.isBlank()) {
+            try {
+                origineFiltre = BonLivraisonMereService.Origine.valueOf(origine.trim().toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+                // origine inconnue : pas de filtre
+            }
+        }
 
-            @RequestParam(required = false) String num,
-            @RequestParam(required = false) String fournisseur,
-            @RequestParam(required = false) String devise,
+        int taille = Math.min(Math.max(size, 5), 100);
+        Page<BonLivraisonMere> bons = bonLivraisonMereService.rechercher(new BonLivraisonMereService.Recherche(
+                        numero, fournisseur, bonCommande, article, deviseId, origineFiltre, dateFrom, dateTo),
+                PageRequest.of(Math.max(page, 0), taille));
 
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
-
-            Model model,
-            HttpServletRequest request
-    ) {
-        // sécurité sort (évite PropertyReferenceException)
-        if (!Set.of("id", "dateReception").contains(sort)) sort = "dateReception";
-
-        Page<BonLivraisonMere> result = bonLivraisonMereService.searchBonLivraisonMeres(
-                num, fournisseur, devise, dateFrom, dateTo, page, size, sort, dir
-        );
-
-        model.addAttribute("bonLivraisonMeres", result);
-
-        model.addAttribute("page", page);
-        model.addAttribute("size", size);
-        model.addAttribute("sort", sort);
-        model.addAttribute("dir", dir);
-
-        // pour afficher la valeur dans les inputs
-        model.addAttribute("num", num == null ? "" : num);
+        model.addAttribute("bons", bons);
+        model.addAttribute("devises", deviseService.getAllDevises());
+        model.addAttribute("numero", numero == null ? "" : numero);
         model.addAttribute("fournisseur", fournisseur == null ? "" : fournisseur);
-        model.addAttribute("devise", devise == null ? "" : devise);
-
+        model.addAttribute("bonCommande", bonCommande == null ? "" : bonCommande);
+        model.addAttribute("article", article == null ? "" : article);
+        model.addAttribute("devise", deviseId == null ? "" : String.valueOf(deviseId));
+        model.addAttribute("origine", origineFiltre == null ? "" : origineFiltre.name());
         model.addAttribute("dateFrom", dateFrom);
         model.addAttribute("dateTo", dateTo);
-
+        model.addAttribute("size", taille);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
         return "bl/bl-liste";
     }
 
