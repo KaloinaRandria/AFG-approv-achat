@@ -17,4 +17,14 @@ public interface CategorieDepenseRepo extends JpaRepository<CategorieDepense, In
             ORDER BY COALESCE(c.ordre, 999), c.libelle
             """)
     List<CategorieDepense> findActives();
+
+    /** Toutes les catégories, dans l'ordre d'affichage (écran de paramétrage). */
+    @Query("SELECT c FROM CategorieDepense c ORDER BY COALESCE(c.ordre, 999), c.libelle")
+    List<CategorieDepense> findAllOrdonnees();
+
+    boolean existsByCodeIgnoreCase(String code);
+
+    boolean existsByLibelleIgnoreCase(String libelle);
+
+    boolean existsByLibelleIgnoreCaseAndIdNot(String libelle, Integer id);
 }
