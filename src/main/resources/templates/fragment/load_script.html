@@ -69,6 +69,123 @@
         roue sur le bouton cliqué et bloque ses boutons pendant l'envoi (évite le double clic).
         Les boutons extérieurs au formulaire (attribut form="id") sont aussi bloqués.
     -->
+    <!--
+        Boîtes de dialogue SweetAlert2 à la place des alert() / confirm() du navigateur.
+
+        Formulaire  : data-confirmer="Titre" (+ data-confirmer-texte, -bouton, -type) → confirmation avant envoi.
+        Bouton      : data-confirm="Titre" (+ data-confirm-texte, -bouton, -type) → confirmation avant le clic.
+                      type : question (défaut pour un formulaire) | warning | danger (défaut pour un bouton).
+                      Le texte accepte du HTML : contenu de confiance uniquement.
+        Script      : confirmerAction({titre, texte, bouton, type}) → Promise<boolean>
+                      confirmerEnvoi(event, {…}) dans un écouteur submit (message calculé)
+                      afficherAlerte(message, type = 'error', titre) à la place de alert()
+        Écouteurs en phase de capture : ils passent avant le chargement des boutons (data-chargement).
+    -->
+    <script>
+        (function () {
+            const STYLES = {
+                question: {icon: 'question', bouton: 'btn btn-gradient-green px-4'},
+                warning:  {icon: 'warning',  bouton: 'btn btn-warning px-4'},
+                danger:   {icon: 'warning',  bouton: 'btn btn-danger px-4'},
+                info:     {icon: 'info',     bouton: 'btn btn-gradient-blue px-4'}
+            };
+
+            window.confirmerAction = function (opts) {
+                opts = opts || {};
+                if (typeof Swal === 'undefined') {      // SweetAlert non chargé : rien n'est envoyé sans confirmation
+                    console.error('SweetAlert2 indisponible : confirmation impossible.');
+                    return Promise.resolve(false);
+                }
+                const style = STYLES[opts.type] || STYLES.question;
+                return Swal.fire({
+                    icon: style.icon,
+                    title: opts.titre || 'Confirmer ?',
+                    html: opts.texte || '',
+                    showCancelButton: true,
+                    confirmButtonText: opts.bouton || 'Confirmer',
+                    cancelButtonText: 'Annuler',
+                    reverseButtons: true,
+                    focusCancel: opts.type === 'danger',
+                    buttonsStyling: false,
+                    customClass: {
+                        confirmButton: style.bouton,
+                        cancelButton: 'btn btn-outline-secondary px-4 me-2'
+                    }
+                }).then(function (r) { return r.isConfirmed; });
+            };
+
+            /** opts.html : message en HTML (contenu de confiance) ; opts.bloquante : fermeture par le bouton seulement. */
+            window.afficherAlerte = function (message, type, titre, opts) {
+                opts = opts || {};
+                if (typeof Swal === 'undefined') { console.error(message); return Promise.resolve(); }
+                const icone = type || 'error';
+                return Swal.fire({
+                    icon: icone,
+                    title: titre || ({error: 'Erreur', warning: 'Attention', success: 'Succès', info: 'Information'}[icone] || ''),
+                    text: opts.html ? undefined : message,
+                    html: opts.html ? message : undefined,
+                    confirmButtonText: 'OK',
+                    allowOutsideClick: !opts.bloquante,
+                    allowEscapeKey: !opts.bloquante,
+                    buttonsStyling: false,
+                    customClass: {confirmButton: icone === 'error' ? 'btn btn-danger px-4' : 'btn btn-gradient-blue px-4'}
+                });
+            };
+
+            /** Dans un écouteur submit : bloque l'envoi, demande confirmation, puis renvoie le formulaire. */
+            window.confirmerEnvoi = function (e, opts) {
+                const form = e.target;
+                if (form.dataset.confirme === '1') {   // déjà confirmé : l'envoi suit son cours
+                    delete form.dataset.confirme;
+                    return;
+                }
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                const submitter = e.submitter;
+                window.confirmerAction(opts).then(function (ok) {
+                    if (!ok) return;
+                    form.dataset.confirme = '1';
+                    // requestSubmit relance l'événement submit : la roue de chargement s'affiche
+                    if (form.requestSubmit) form.requestSubmit(submitter || undefined);
+                    else form.submit();
+                });
+            };
+
+            // Formulaires data-confirmer
+            document.addEventListener('submit', function (e) {
+                const form = e.target;
+                if (!form.hasAttribute || !form.hasAttribute('data-confirmer')) return;
+                window.confirmerEnvoi(e, {
+                    titre: form.getAttribute('data-confirmer'),
+                    texte: form.dataset.confirmerTexte,
+                    bouton: form.dataset.confirmerBouton,
+                    type: form.dataset.confirmerType || 'question'
+                });
+            }, true);
+
+            // Boutons data-confirm
+            document.addEventListener('click', function (e) {
+                const b = e.target.closest && e.target.closest('[data-confirm]');
+                if (!b || !b.getAttribute('data-confirm')) return;
+                if (b.dataset.confirme === '1') {
+                    delete b.dataset.confirme;
+                    return;
+                }
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                window.confirmerAction({
+                    titre: b.getAttribute('data-confirm'),
+                    texte: b.dataset.confirmTexte,
+                    bouton: b.dataset.confirmBouton,
+                    type: b.dataset.confirmType || 'danger'
+                }).then(function (ok) {
+                    if (!ok) return;
+                    b.dataset.confirme = '1';
+                    b.click();
+                });
+            }, true);
+        })();
+    </script>
     <script>
         (function () {
             document.addEventListener('submit', function (e) {

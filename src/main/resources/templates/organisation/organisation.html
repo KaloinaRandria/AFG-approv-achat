@@ -171,7 +171,8 @@
                                         <form th:if="${nb == 0 and nbPostes == 0}" th:action="@{/organisation/directions/{id}/supprimer(id=${d.id})}"
                                               method="post" class="d-inline">
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"
-                                                    th:data-confirm="'Supprimer la direction « ' + ${d.libelle} + ' » ?'">
+                                                    th:data-confirm="'Supprimer la direction « ' + ${d.libelle} + ' » ?'"
+                                                    data-confirm-texte="Cette suppression est définitive." data-confirm-bouton="Supprimer">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </form>
@@ -300,7 +301,8 @@
                                         <form th:if="${nb == 0}" th:action="@{/organisation/postes/{id}/supprimer(id=${p.id})}"
                                               method="post" class="d-inline">
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"
-                                                    th:data-confirm="'Supprimer le poste « ' + ${#strings.trim(p.poste)} + ' » ?'">
+                                                    th:data-confirm="'Supprimer le poste « ' + ${#strings.trim(p.poste)} + ' » ?'"
+                                                    data-confirm-texte="Cette suppression est définitive." data-confirm-bouton="Supprimer">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </form>
@@ -423,6 +425,8 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
+        const escapeHtml = s => String(s).replace(/[&<>"']/g, c =>
+            ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"}[c]));
         const sansAccent = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
         // Modales de modification : adresse et champs remplis depuis le bouton
@@ -437,10 +441,7 @@
             modal.addEventListener("shown.bs.modal", () => form.querySelector("[data-champ]").select());
         });
 
-        // Confirmation avant suppression
-        document.querySelectorAll("button[data-confirm]").forEach(b => {
-            b.addEventListener("click", e => { if (!confirm(b.dataset.confirm)) e.preventDefault(); });
-        });
+        // Confirmation avant suppression : boutons data-confirm, gérés par le modèle commun (load_script)
 
         // Filtres : texte (accents et majuscules ignorés) et, pour les postes, direction
         const filtreDirection = document.getElementById("filtreDirection");
@@ -492,12 +493,27 @@
             majPostes();
         });
         formRattachement?.addEventListener("submit", e => {
-            const n = casesPostes.filter(c => c.checked).length;
+            if (!selectRattachement.value) { e.preventDefault(); return; }
+            const coches = casesPostes.filter(c => c.checked);
+            const n = coches.length;
             const choix = selectRattachement.options[selectRattachement.selectedIndex].text;
-            const message = selectRattachement.value === "aucune"
-                ? `Détacher ${n} poste(s) de leur direction ?`
-                : `Rattacher ${n} poste(s) à « ${choix} » ?`;
-            if (!selectRattachement.value || !confirm(message)) e.preventDefault();
+            const detacher = selectRattachement.value === "aucune";
+            // Aperçu des postes concernés (5 premiers)
+            const noms = coches.slice(0, 5)
+                .map(c => escapeHtml(c.closest("tr").querySelector(".texte-filtre")?.textContent.trim() || ""))
+                .filter(Boolean);
+            const liste = noms.length
+                ? `<ul class="text-start small mt-2 mb-0">${noms.map(x => `<li>${x}</li>`).join("")}`
+                  + (n > noms.length ? `<li class="text-muted">… et ${n - noms.length} autre(s)</li>` : "") + `</ul>`
+                : "";
+            confirmerEnvoi(e, {
+                titre: detacher ? `Détacher ${n} poste(s) ?` : `Rattacher ${n} poste(s) ?`,
+                texte: (detacher
+                        ? "Les postes sélectionnés ne seront plus rattachés à aucune direction."
+                        : `Les postes sélectionnés seront rattachés à <strong>${escapeHtml(choix)}</strong>.`) + liste,
+                bouton: detacher ? "Détacher" : "Rattacher",
+                type: detacher ? "warning" : "question"
+            });
         });
 
         // Incohérences : alignement des utilisateurs cochés sur la direction de leur poste
@@ -517,7 +533,13 @@
             tousUtil.addEventListener("change", () => { casesUtil.forEach(c => c.checked = tousUtil.checked); majUtilisateurs(); });
             document.getElementById("formAligner").addEventListener("submit", e => {
                 const n = casesUtil.filter(c => c.checked).length;
-                if (!n || !confirm(`Placer ${n} utilisateur(s) dans la direction de leur poste ?`)) e.preventDefault();
+                if (!n) { e.preventDefault(); return; }
+                confirmerEnvoi(e, {
+                    titre: `Aligner ${n} utilisateur(s) ?`,
+                    texte: "Chaque utilisateur sélectionné sera placé dans la direction de son poste.",
+                    bouton: "Aligner",
+                    type: "question"
+                });
             });
         }
 

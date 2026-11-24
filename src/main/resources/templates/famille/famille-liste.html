@@ -117,7 +117,8 @@
                                               th:action="@{/famille/{id}/supprimer(id=${f.id})}" method="post" class="d-inline">
                                             <button type="submit" class="btn btn-sm btn-outline-danger"
                                                     title="Supprimer (famille sans article)"
-                                                    th:data-confirm="'Supprimer la famille « ' + ${f.description} + ' » ?'">
+                                                    th:data-confirm="'Supprimer la famille « ' + ${f.description} + ' » ?'"
+                                                    data-confirm-texte="Cette suppression est définitive." data-confirm-bouton="Supprimer">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </form>
@@ -338,19 +339,25 @@
         });
 
         formFusion.addEventListener("submit", e => {
-            if (!formFusion.querySelector('input[name="cible"]:checked')
-                    || !confirm(document.getElementById("fusion-resume").textContent + "\n\nConfirmer la fusion ?")) {
+            if (!formFusion.querySelector('input[name="cible"]:checked')) {
                 e.preventDefault();
                 return;
             }
+            if (formFusion.dataset.confirme !== "1") {
+                confirmerEnvoi(e, {
+                    titre: "Confirmer la fusion ?",
+                    texte: document.getElementById("fusion-resume").innerHTML,
+                    bouton: "Fusionner",
+                    type: "warning"
+                });
+                return;
+            }
+            delete formFusion.dataset.confirme;
             btnConfirmer.disabled = true;
             btnConfirmer.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Fusion en cours...';
         });
 
-        // ── Confirmation avant suppression ───────────────────────────────────
-        document.querySelectorAll("button[data-confirm]").forEach(b => {
-            b.addEventListener("click", e => { if (!confirm(b.dataset.confirm)) e.preventDefault(); });
-        });
+        // ── Confirmation avant suppression : boutons data-confirm (modèle commun, load_script) ──
 
         // ── Renommage ────────────────────────────────────────────────────────
         const modal = document.getElementById("editFamilleModal");
