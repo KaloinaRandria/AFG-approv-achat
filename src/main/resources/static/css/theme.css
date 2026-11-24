@@ -1,0 +1,795 @@
+@charset "UTF-8";
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Thème commun : le style du tableau de bord appliqué à tous les modules.
+   Chargé après Bootstrap et datatables.css (fragment/load_css).
+
+   Ne change aucune couleur de la charte (dégradés bleus, boutons verts,
+   badges de statut, entêtes de tableau) : seulement les formes, l'espacement,
+   la typographie, les bordures et les ombres.
+
+   1. Jetons
+   2. Page et en-tête
+   3. Cartes
+   4. Formulaires
+   5. Boutons, badges, alertes
+   6. Tableaux
+   7. Modales, pagination, onglets
+   8. Composants réutilisables (.ui-*)
+   9. Impression
+   ════════════════════════════════════════════════════════════════════════════ */
+
+
+/* ── 1. Jetons ───────────────────────────────────────────────────────────── */
+
+:root {
+    --ui-plane:    #f4f6fa;
+    --ui-surface:  #ffffff;
+    --ui-line:     #e6e9f0;
+    --ui-line-2:   #f0f2f6;
+    --ui-input:    #dfe3ec;
+    --ui-ink:      #0f1b3d;
+    --ui-ink-2:    #535d75;
+    --ui-muted:    #8a92a6;
+    --ui-brand:    #001051;
+    --ui-brand-2:  #00129f;
+    --ui-radius:   14px;
+    --ui-radius-s: 8px;
+    --ui-shadow:   0 1px 2px rgba(16, 24, 40, .04), 0 1px 3px rgba(16, 24, 40, .06);
+    --ui-shadow-h: 0 8px 24px rgba(16, 24, 40, .10);
+    --ui-focus:    0 0 0 3px rgba(0, 18, 159, .12);
+}
+
+
+/* ── 2. Page et en-tête ──────────────────────────────────────────────────── */
+
+.main-content {
+    background: var(--ui-plane) !important;
+    padding: 28px 32px !important;
+}
+
+@media (max-width: 768px) {
+    .main-content { padding: 18px 16px !important; }
+}
+
+/* Titre de page : garde son dégradé, gagne la hiérarchie du tableau de bord */
+.main-content h1 {
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: 1.2;
+    margin-bottom: 0;
+}
+
+.main-content h1 > i:first-child {
+    font-size: .8em;
+    margin-right: .55rem !important;
+    vertical-align: 1px;
+}
+
+/* Barre d'en-tête (titre à gauche, actions à droite) */
+.main-content > section > .d-flex.justify-content-between.mb-4:first-of-type,
+.main-content > section > .d-flex.justify-content-between.align-items-center.mb-4 {
+    flex-wrap: wrap;
+    gap: .75rem;
+    margin-bottom: 1.5rem !important;
+}
+
+/* Barre de titre et d'actions des fiches (bon de livraison, bon de sortie) */
+.page-actions { flex-wrap: wrap; margin-bottom: 1.5rem !important; }
+
+.main-content h2, .main-content h3, .main-content h4,
+.main-content h5, .main-content h6 {
+    letter-spacing: -.01em;
+}
+
+
+
+/* ── 3. Cartes ───────────────────────────────────────────────────────────── */
+
+.card {
+    border-radius: var(--ui-radius);
+    box-shadow: var(--ui-shadow) !important;
+    background: var(--ui-surface);
+}
+
+/* Bordure fine, sauf sur les cartes à bordure colorée (border-primary, border-danger…) */
+.card:not([class*="border-"]),
+.card.border-0 { border: 1px solid var(--ui-line) !important; }
+
+/* Les ombres fortes historiques deviennent l'ombre légère du tableau de bord */
+.card.shadow-lg, .card.shadow, .card.shadow-sm { box-shadow: var(--ui-shadow) !important; }
+
+.card > .card-header:first-child { border-radius: calc(var(--ui-radius) - 1px) calc(var(--ui-radius) - 1px) 0 0; }
+.card > .card-footer:last-child  { border-radius: 0 0 calc(var(--ui-radius) - 1px) calc(var(--ui-radius) - 1px); }
+.card > .table-responsive:last-child,
+.card > .card-body.p-0 > .table-responsive:last-child { border-radius: 0 0 calc(var(--ui-radius) - 1px) calc(var(--ui-radius) - 1px); }
+
+.card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--ui-line-2);
+}
+
+/* Entête neutre (sans couleur de fond explicite) : transparent comme au tableau de bord */
+.card-header:not([class*="bg-"]):not([class*="btn-gradient"]):not([class*="grad-"]) {
+    background: transparent;
+    font-weight: 700;
+    color: var(--ui-ink);
+}
+
+.card-header h5, .card-header h6 { font-size: 1rem; font-weight: 700; }
+.card-header p.text-muted { font-size: .82rem; }
+
+.card-body { padding: 1.25rem; }
+.card-body.p-0 { padding: 0 !important; }
+
+.card-footer {
+    padding: .85rem 1.25rem;
+    border-top: 1px solid var(--ui-line-2);
+    background: #fcfcfd;
+}
+
+
+/* ── 4. Formulaires ──────────────────────────────────────────────────────── */
+
+.form-label {
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--ui-ink-2);
+    margin-bottom: .35rem;
+}
+
+.form-control, .form-select {
+    border-color: var(--ui-input);
+    border-radius: var(--ui-radius-s);
+    color: var(--ui-ink);
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.form-control-sm, .form-select-sm { border-radius: 7px; }
+
+.form-control::placeholder { color: #a7adbd; }
+
+.form-control:focus, .form-select:focus,
+.form-check-input:focus {
+    border-color: var(--ui-brand-2);
+    box-shadow: var(--ui-focus);
+}
+
+.form-control:disabled, .form-control[readonly], .form-select:disabled {
+    background-color: #f6f7fa;
+}
+
+.input-group-text {
+    background: #f6f7fa;
+    border-color: var(--ui-input);
+    color: var(--ui-muted);
+    border-radius: var(--ui-radius-s);
+}
+
+.input-group:focus-within .input-group-text { border-color: var(--ui-brand-2); }
+
+.form-text { font-size: .76rem; }
+
+/* Titre de section de formulaire : même style que les sections du tableau de bord */
+.form-section-title {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .78rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--ui-muted) !important;
+    border-bottom: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 1.1rem !important;
+}
+
+.form-section-title::after {
+    content: "" !important;
+    position: static !important;
+    flex: 1;
+    width: auto !important;
+    height: 1px !important;
+    background: var(--ui-line) !important;
+}
+
+.form-section-title i { font-size: .95rem; }
+
+/* Select2 aligné sur les champs */
+.select2-container .select2-selection--single,
+.select2-container .select2-selection--multiple {
+    border-color: var(--ui-input) !important;
+    border-radius: var(--ui-radius-s) !important;
+}
+
+.select2-container--focus .select2-selection,
+.select2-container--open .select2-selection {
+    border-color: var(--ui-brand-2) !important;
+    box-shadow: var(--ui-focus) !important;
+}
+
+.select2-dropdown {
+    border-color: var(--ui-line) !important;
+    border-radius: var(--ui-radius-s) !important;
+    box-shadow: var(--ui-shadow-h) !important;
+    overflow: hidden;
+}
+
+
+/* ── 5. Boutons, badges, alertes ─────────────────────────────────────────── */
+
+.btn {
+    border-radius: var(--ui-radius-s);
+    font-weight: 600;
+    font-size: .875rem;
+    letter-spacing: .005em;
+}
+
+.btn-sm { border-radius: 7px; font-size: .8rem; }
+.btn-lg { border-radius: 10px; }
+
+/* Boutons en dégradé : couleurs inchangées, ombre plus sobre */
+[class*="btn-gradient-"] {
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .12) !important;
+    font-weight: 600 !important;
+}
+
+[class*="btn-gradient-"]:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 16px rgba(16, 24, 40, .16) !important;
+}
+
+.btn-outline-secondary {
+    border-color: var(--ui-input);
+    color: var(--ui-ink-2);
+}
+
+.btn-outline-secondary:hover {
+    background: var(--ui-plane);
+    border-color: var(--ui-input);
+    color: var(--ui-ink);
+}
+
+.btn:focus { box-shadow: var(--ui-focus); }
+
+.badge:not(.badge-status):not(.notification-badge) {
+    border-radius: 6px;
+    font-weight: 600;
+    letter-spacing: .01em;
+    padding: .38em .6em;
+}
+
+.alert {
+    border-radius: 12px;
+    border-width: 1px;
+    font-size: .9rem;
+}
+
+.alert > i:first-child { margin-right: .35rem; }
+
+
+/* ── 6. Tableaux ─────────────────────────────────────────────────────────── */
+
+/* Les tableaux de document (.bl-table : demande, bon de sortie, bon de commande)
+   gardent leur quadrillage noir d'impression : ils sont exclus de ces règles. */
+.main-content .table:not(.bl-table) {
+    font-size: .875rem;
+    border-color: var(--ui-line-2);
+}
+
+.main-content .table:not(.bl-table) > :not(caption) > * > * {
+    padding: .65rem .9rem;
+    border-bottom-color: var(--ui-line-2);
+}
+
+.main-content .table-sm:not(.bl-table) > :not(caption) > * > * { padding: .4rem .6rem; }
+
+.main-content .table:not(.bl-table) > :not(:first-child) { border-top: 1px solid var(--ui-line); }
+
+/* Entêtes neutres (sans dégradé) : petites capitales grises, comme au tableau de bord.
+   Toutes les cellules d'un même entête sont traitées pareil (une largeur en style
+   inline ne doit pas en exclure une seule colonne). */
+.main-content .table:not(.dt-head-gradient):not(.dataTable):not(.bl-table) > thead:not(.table-dark):not([class*="bg-"]) > tr:not([class*="bg-"]) > th:not([class*="bg-"]) {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--ui-muted);
+    background-color: #f8f9fc;
+    border-bottom: 1px solid var(--ui-line);
+    white-space: nowrap;
+}
+
+/* Entêtes en dégradé : couleur inchangée, typographie affinée */
+table.dt-head-gradient thead th,
+table.dataTable thead th {
+    font-size: .72rem;
+    font-weight: 700 !important;
+    letter-spacing: .06em !important;
+    padding-top: .75rem !important;
+    padding-bottom: .75rem !important;
+    white-space: nowrap;
+}
+
+.table-bordered > :not(caption) > * > * { border-color: var(--ui-line-2); }
+.table-bordered > :not(caption) > * { border-color: var(--ui-line-2); }
+
+.table-striped > tbody > tr:nth-of-type(odd) > * { --bs-table-accent-bg: rgba(15, 27, 61, .022); }
+.table-hover > tbody > tr:hover > * { --bs-table-accent-bg: #f3f6fc; }
+
+.clickable-row:hover td { background: #f3f6fc; }
+
+.main-content .table a:not(.btn) { font-weight: 600; text-decoration: none; }
+.main-content .table a:not(.btn):hover { text-decoration: underline; }
+
+/* Tableau dans une carte : coins arrondis et bord à bord */
+.card .table-responsive { border-radius: var(--ui-radius-s); }
+/* Sauf les tableaux de document : leur marge basse sépare le tableau des blocs qui suivent
+   (commentaire du contrôleur de gestion, actions) dans les fiches en card-body p-0 */
+.card-body.p-0 .table:not(.bl-table), .card > .table { margin-bottom: 0; }
+
+/* DataTables : bordures et zébrures adoucies */
+table.dataTable th,
+table.dataTable td {
+    border-color: var(--ui-line-2) !important;
+}
+
+table.dataTable tbody tr:nth-child(odd) { background-color: #fbfbfd; }
+table.dataTable tbody tr:hover { background-color: #f3f6fc; }
+
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+    border: 1px solid var(--ui-input) !important;
+    border-radius: var(--ui-radius-s) !important;
+    padding: .3rem .6rem !important;
+}
+
+.dataTables_wrapper .dataTables_info { color: var(--ui-muted) !important; font-size: .8rem; }
+
+
+/* ── 7. Modales, pagination, onglets ─────────────────────────────────────── */
+
+.modal-content {
+    border: 0;
+    border-radius: var(--ui-radius);
+    box-shadow: 0 24px 60px rgba(16, 24, 40, .22);
+}
+
+.modal-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--ui-line-2);
+    border-top-left-radius: var(--ui-radius);
+    border-top-right-radius: var(--ui-radius);
+}
+
+.modal-title { font-weight: 700; font-size: 1.05rem; }
+.modal-body { padding: 1.25rem; }
+
+.modal-footer {
+    padding: .85rem 1.25rem;
+    border-top: 1px solid var(--ui-line-2);
+    background: #fcfcfd;
+    border-bottom-left-radius: var(--ui-radius);
+    border-bottom-right-radius: var(--ui-radius);
+}
+
+.pagination { gap: 3px; }
+
+.pagination .page-link {
+    border-radius: 7px !important;
+    border-color: var(--ui-line);
+    min-width: 2rem;
+    text-align: center;
+    font-weight: 600;
+}
+
+.nav-tabs { border-bottom-color: var(--ui-line); }
+.nav-tabs .nav-link { font-weight: 600; color: var(--ui-ink-2); border-radius: 8px 8px 0 0; }
+.nav-tabs .nav-link.active { color: var(--ui-brand); border-color: var(--ui-line) var(--ui-line) #fff; }
+
+.nav-pills .nav-link { border-radius: var(--ui-radius-s); font-weight: 600; }
+
+.list-group-item { border-color: var(--ui-line-2); }
+
+.dropdown-menu {
+    border-color: var(--ui-line);
+    border-radius: 10px;
+    box-shadow: var(--ui-shadow-h);
+    padding: .35rem;
+}
+
+.dropdown-item { border-radius: 6px; font-size: .875rem; }
+
+.toast { border-radius: 12px; }
+
+
+/* ── 8. Composants réutilisables (.ui-*) ─────────────────────────────────── */
+
+/* Titre de section : <div class="ui-section-title"><span>Titre</span></div> */
+.ui-section-title {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--ui-muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: .85rem;
+}
+
+.ui-section-title::after { content: ""; flex: 1; height: 1px; background: var(--ui-line); }
+
+/* Sous-titre de page sous le h1 */
+.ui-subtitle { color: var(--ui-ink-2); font-size: .92rem; margin-top: .2rem; }
+
+/* État vide */
+.ui-empty {
+    color: var(--ui-muted);
+    font-size: .9rem;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+.ui-empty i { display: block; font-size: 1.6rem; margin-bottom: .5rem; opacity: .6; }
+
+
+/* Historique des mouvements (état de stock) : l'article, commun à toutes les lignes, en en-tête */
+.hist-article {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: .7rem .9rem;
+    background: #f6f7fa;
+    border: 1px solid var(--ui-line-2);
+    border-radius: 12px;
+}
+.hist-article-icon {
+    flex: 0 0 2.4rem;
+    height: 2.4rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e8ebf6;
+    color: var(--ui-brand);
+}
+.hist-article-code { font-size: .72rem; font-weight: 700; color: var(--ui-muted); letter-spacing: .03em; }
+.hist-article-des { font-weight: 700; color: var(--ui-ink); font-size: 1rem; }
+.hist-article-stock {
+    margin-left: auto;
+    text-align: right;
+    padding-left: 1rem;
+    border-left: 1px solid var(--ui-line);
+    white-space: nowrap;
+}
+.hist-article-stock-label {
+    display: block;
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--ui-muted);
+}
+.hist-article-stock-value { font-size: 1.15rem; font-weight: 800; color: var(--ui-ink); font-variant-numeric: tabular-nums; }
+.hist-udm { margin-left: .3rem; font-size: .78em; font-weight: 600; opacity: .75; }
+
+
+/* ── 8 bis. Lignes d'articles d'un document (.bl-table.ui-lines) ─────────────
+   À l'écran : style du tableau de bord (entête gris clair, lignes séparées
+   par un filet, code article au-dessus de la désignation, type en pastille).
+   À l'impression : le quadrillage noir du document papier est conservé. */
+
+@media screen {
+    .ui-lines-head {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        margin-bottom: .75rem;
+    }
+
+    .ui-lines-title {
+        display: inline-flex;
+        align-items: center;
+        gap: .45rem;
+        font-size: .78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: var(--ui-muted);
+    }
+
+    .ui-lines-count {
+        font-size: .72rem;
+        font-weight: 700;
+        background: var(--ui-plane);
+        color: var(--ui-ink-2);
+        border-radius: 999px;
+        padding: .1rem .55rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+    table.bl-table.ui-lines {
+        border-collapse: separate;
+        border-spacing: 0;
+        border: 1px solid var(--ui-line);
+        border-radius: 12px;
+        overflow: hidden;
+        font-size: .875rem;
+        margin-bottom: 1rem;
+    }
+
+    table.bl-table.ui-lines > :not(caption) > * > * {
+        border: 0;
+        border-bottom: 1px solid var(--ui-line-2);
+        padding: .75rem 1rem;
+    }
+
+    table.bl-table.ui-lines > :not(:first-child) { border-top: 0; }
+
+    table.bl-table.ui-lines > thead > tr > th {
+        background-color: #f8f9fc;
+        color: var(--ui-muted);
+        font-size: .7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        border-bottom: 1px solid var(--ui-line);
+        padding-top: .7rem;
+        padding-bottom: .7rem;
+        white-space: nowrap;
+    }
+
+    table.bl-table.ui-lines > tbody > tr:last-child > td { border-bottom: 0; }
+
+    table.bl-table.ui-lines > tfoot > tr > td {
+        background-color: #f8f9fc;
+        border-top: 1px solid var(--ui-line);
+        border-bottom: 0;
+    }
+
+    table.bl-table.ui-lines td.text-end { font-variant-numeric: tabular-nums; }
+    table.bl-table.ui-lines .qte-display { font-weight: 700; }
+
+    /* Désignation : code en petit au-dessus, libellé en gras */
+    .ui-art { display: flex; flex-direction: column; gap: .1rem; line-height: 1.3; }
+    .ui-art-code { font-size: .72rem; font-weight: 700; color: var(--ui-muted); letter-spacing: .03em; }
+    .ui-art-des { font-weight: 600; color: var(--ui-ink); }
+    .ui-art-refus {
+        align-self: flex-start;
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        margin-top: .25rem;
+        font-size: .68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        color: #b42318;
+        background: #fdecec;
+        border-radius: 4px;
+        padding: .05rem .4rem;
+    }
+    tr.table-danger .ui-art-des { text-decoration: line-through; }
+
+    .ui-udm { color: var(--ui-muted); font-size: .8rem; }
+
+    /* Type d'approvisionnement : vert stock / bleu achat de la charte */
+    .ui-type {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        font-size: .75rem;
+        font-weight: 600;
+        padding: .2rem .6rem;
+        border-radius: 999px;
+        background: var(--ui-plane);
+        color: var(--ui-ink-2);
+        white-space: nowrap;
+    }
+    .ui-type i { font-size: .7rem; }
+    .ui-type-stock { background: #e9f6ec; color: #1e7e34; }
+    .ui-type-achat { background: #e8ebf6; color: #001051; }
+
+    /* Total */
+    .ui-total-label {
+        font-size: .72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--ui-muted);
+        white-space: nowrap;
+    }
+    .ui-total { font-size: 1.05rem; font-weight: 800; color: var(--ui-ink); white-space: nowrap; }
+
+    /* Boutons d'action compacts */
+    table.bl-table.ui-lines .btn-sm { padding: .25rem .5rem; }
+
+    /* Numéro de ligne */
+    .ui-num { color: var(--ui-muted); font-weight: 700; }
+    td.ui-art-code { font-size: .78rem; white-space: nowrap; }
+}
+
+/* ── Document (.bl-document.ui-doc) : en-tête, informations en tuiles, signatures.
+   Écran et impression (bon de livraison). Sans .ui-doc, un document garde son
+   impression d'origine (fiche de demande). ── */
+@media screen, print {
+    .bl-document.ui-doc { padding: 32px; color: var(--ui-ink); }
+
+    .ui-doc .bl-header {
+        align-items: center;
+        border-bottom: 1px solid var(--ui-line);
+        padding-bottom: 18px;
+        margin-bottom: 22px;
+    }
+
+    .ui-doc .bl-title h3 {
+        font-size: 1.25rem;
+        font-weight: 800;
+        letter-spacing: .16em;
+        color: var(--ui-brand);
+        margin-bottom: .2rem;
+    }
+
+    .ui-doc .bl-title span { font-size: .85rem; color: var(--ui-ink-2); }
+
+    .ui-doc .bl-infos { gap: 12px; margin-bottom: 26px; }
+
+    .ui-doc .bl-infos > div {
+        background: #fafbfd;
+        border: 1px solid var(--ui-line-2);
+        border-radius: 10px;
+        padding: .7rem .9rem;
+        font-size: .88rem;
+        min-width: 0;
+        word-break: break-word;
+    }
+
+    .ui-doc .bl-infos > div > strong:first-child {
+        display: block;
+        font-size: .68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--ui-muted);
+        margin-bottom: .25rem;
+    }
+
+    .ui-doc .bl-infos a { color: var(--ui-brand); }
+
+    /* Huit informations (bon de sortie) : deux rangées de quatre */
+    .ui-doc .bl-infos.ui-infos-4 { grid-template-columns: repeat(4, 1fr); }
+
+    /* Statut porté par le document (imprimé aussi) */
+    .ui-doc-statut {
+        display: inline-block;
+        font-size: .7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        padding: .15rem .55rem;
+        border-radius: 999px;
+        border: 1px solid currentColor;
+    }
+    .ui-doc-statut-ok { color: #1e7e34; background: #e9f6ec; }
+    .ui-doc-statut-brouillon { color: #9a5b00; background: #fff4e0; }
+    .ui-doc-statut-annule { color: #b42318; background: #fdecec; }
+
+    /* Encadré (commentaire, annulation) */
+    .ui-callout {
+        display: flex;
+        gap: .75rem;
+        align-items: flex-start;
+        padding: .8rem 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--ui-line);
+        border-left: 4px solid var(--ui-brand);
+        border-radius: 10px;
+        background: #fafbfd;
+        font-size: .88rem;
+        page-break-inside: avoid;
+    }
+    .ui-callout-icon {
+        flex: 0 0 2rem;
+        height: 2rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #e8ebf6;
+        color: var(--ui-brand);
+        font-size: .85rem;
+    }
+    .ui-callout-title { font-weight: 700; color: var(--ui-ink); margin-bottom: .15rem; }
+    .ui-callout-meta { font-size: .78rem; color: var(--ui-muted); }
+    .ui-callout-danger { border-left-color: #d03b3b; background: #fff8f8; }
+    .ui-callout-danger .ui-callout-icon { background: #fdecec; color: #b42318; }
+    .ui-callout-danger .ui-callout-title { color: #b42318; }
+
+    .ui-doc .table-responsive { border-radius: 12px; }
+
+    .ui-doc .ui-signatures .border-top {
+        border-top: 0 !important;
+        border: 1px dashed var(--ui-input);
+        border-radius: 12px;
+        padding: 1rem 1rem 2.5rem !important;
+        margin: 0 !important;
+        font-size: .82rem;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .ui-doc .bl-infos, .ui-doc .bl-infos.ui-infos-4 { grid-template-columns: 1fr; }
+    .bl-document.ui-doc { padding: 18px; }
+}
+
+/* Impression d'un document .ui-doc : mêmes lignes qu'à l'écran, filets renforcés pour le papier */
+@media print {
+    .ui-doc { -webkit-print-color-adjust: exact; print-color-adjust: exact; color: #000; }
+
+    .ui-doc table.bl-table.ui-lines {
+        border-collapse: separate;
+        border-spacing: 0;
+        border: 1px solid #b8bfcc;
+        border-radius: 12px;
+        overflow: hidden;
+        font-size: .85rem;
+    }
+
+    .ui-doc table.bl-table.ui-lines th,
+    .ui-doc table.bl-table.ui-lines td {
+        border: 0;
+        border-bottom: 1px solid #d5dae3;
+        padding: .55rem .75rem;
+        color: #000;
+    }
+
+    .ui-doc table.bl-table.ui-lines thead th {
+        background: #f1f3f7;
+        color: #535d75;
+        font-size: .68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        border-bottom: 1px solid #b8bfcc;
+    }
+
+    .ui-doc table.bl-table.ui-lines tbody tr:last-child td { border-bottom: 0; }
+    .ui-doc table.bl-table.ui-lines tfoot td { background: #f1f3f7; border-top: 1px solid #b8bfcc; border-bottom: 0; }
+    .ui-doc table.bl-table.ui-lines tr { page-break-inside: avoid; }
+
+    .ui-doc .ui-num, .ui-doc td.ui-art-code, .ui-doc .ui-udm { color: #535d75; }
+    .ui-doc .ui-art-des { font-weight: 600; }
+    .ui-doc .ui-total-label { font-size: .7rem; letter-spacing: .06em; color: #535d75 !important; }
+    /* Montants sur une seule ligne : la colonne MONTANT H.T. (14 %) est trop étroite
+       sur A4 pour « 1 234 567,00 MGA » sans cela */
+    .ui-doc .ui-total { font-size: 1rem; font-weight: 800; white-space: nowrap; }
+    .ui-doc .ui-total-label { white-space: nowrap; }
+    .ui-doc table.bl-table.ui-lines td.text-end { white-space: nowrap; }
+
+    .ui-doc .bl-header { border-bottom-color: #b8bfcc; }
+    .ui-doc .bl-infos > div { border-color: #d5dae3; }
+    .ui-doc .ui-signatures .border-top { border-color: #9aa2b1; }
+    .ui-doc .ui-signatures { page-break-inside: avoid; }
+}
+
+@media print {
+    .ui-lines-head { display: none !important; }
+    .ui-art { display: inline; }
+    .ui-art .ui-art-code::after { content: " - "; }
+    .ui-art-refus { margin-left: .3rem; }
+    .ui-type i { display: none; }
+}
+
+
+/* ── 9. Impression ───────────────────────────────────────────────────────── */
+
+@media print {
+    .main-content { padding: 0 !important; background: #fff !important; }
+    .card, .card.shadow-lg, .card.border-0,
+    .card:not([class*="border-"]) { box-shadow: none !important; border: none !important; }
+}

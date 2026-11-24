@@ -3,7 +3,7 @@
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
-    <title>Paiements directs à transmettre</title>
+    <title>Paiements directs</title>
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
@@ -18,7 +18,7 @@
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="fw-bold text-gradient-blue">
-                <i class="fas fa-paper-plane me-2 icon-gradient-blue"></i> Paiements directs à transmettre
+                <i class="fas fa-money-check-alt me-2 icon-gradient-blue"></i> Paiements directs
             </h1>
             <div>
                 <a th:href="@{/demande/list}" class="btn btn-outline-secondary">
@@ -27,9 +27,6 @@
             </div>
         </div>
 
-<!--        <div class="alert alert-info shadow-sm mb-3">-->
-<!--            <i class="fas fa-info-circle me-2"></i> Vue Moyens Généraux : demandes en paiement direct à transmettre ou transmises à la finance.-->
-<!--        </div>-->
 
         <!-- CARD FILTRES -->
         <div class="card shadow-lg border-0 mb-3">
@@ -110,17 +107,7 @@
                     </div>
 
                     <!-- Taille page -->
-                    <div class="col-md-2">
-                        <label class="form-label mb-1">
-                            <i class="fas fa-list-ol me-1"></i> Taille
-                        </label>
-                        <select class="form-select" name="size">
-                            <option th:value="10" th:selected="${size == 10}">10</option>
-                            <option th:value="25" th:selected="${size == 25}">25</option>
-                            <option th:value="50" th:selected="${size == 50}">50</option>
-                            <option th:value="100" th:selected="${size == 100}">100</option>
-                        </select>
-                    </div>
+                    <div th:replace="~{fragment/pagination :: taille(${size})}"></div>
 
                     <!-- Date début -->
                     <div class="col-md-2">
@@ -200,8 +187,10 @@
                             <th>Motif évoqué</th>
 <!--                            <th>Montant estimé</th>-->
                             <th>Priorité</th>
-                            <th>Statut finance</th>
-<!--                            <th>Actions</th>-->
+                            <th>
+                                <i class="fas fa-paper-plane me-2 icon-gradient-light-blue"></i>Transmise le
+                            </th>
+                            <th>Statut</th>
                         </tr>
                         </thead>
 
@@ -236,6 +225,8 @@
 
                             <td th:text="${demande.priorite != null ? demande.priorite : '-'}"></td>
 
+                            <td th:text="${demande.dateTransmissionFinance != null ? #temporals.format(demande.dateTransmissionFinance, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+
                             <td>
                                 <span class="badge bg-warning text-dark"
                                       th:if="${demande.statutTransmissionFinance != null and demande.statutTransmissionFinance.name() == 'A_TRANSMETTRE'}">
@@ -243,7 +234,7 @@
                                 </span>
                                 <span class="badge bg-gradient-blue"
                                       th:if="${demande.statutTransmissionFinance != null and demande.statutTransmissionFinance.name() == 'TRANSMISE_FINANCE'}">
-                                    <i class="fas fa-check me-1"></i>Transmise à la finance
+                                    <i class="fas fa-paper-plane me-1"></i>Transmise à la finance
                                 </span>
                                 <span class="badge bg-success"
                                       th:if="${demande.statutTransmissionFinance != null and demande.statutTransmissionFinance.name() == 'PAYEE'}">
@@ -267,61 +258,8 @@
                     </table>
                 </div>
 
-                <!-- Pagination -->
-                <nav th:if="${demandesMeres.totalPages > 1}" class="mt-3" aria-label="Pagination paiements directs">
-                    <ul class="pagination justify-content-center mb-0">
-
-                        <!-- Précédente -->
-                        <li class="page-item" th:classappend="${demandesMeres.first} ? 'disabled'">
-                            <a class="page-link"
-                               th:href="@{/demande/paiements-directs(page=${demandesMeres.number - 1}, size=${size},
-                                num=${num},demandeur=${demandeur},type=${type},statutTransmission=${statutTransmission},
-                                priorite=${priorite},motif=${motif},dateFrom=${dateFrom},dateTo=${dateTo},
-                                sort=${sort},dir=${dir})}"
-                            >
-                                Précédente
-                            </a>
-                        </li>
-
-                        <!-- Pages autour -->
-                        <th:block th:with="
-                            start=${T(java.lang.Math).max(0, demandesMeres.number - 2)},
-                            end=${T(java.lang.Math).min(demandesMeres.totalPages - 1, demandesMeres.number + 2)}
-                        ">
-                            <li class="page-item"
-                                th:each="p : ${#numbers.sequence(start, end)}"
-                                th:classappend="${p == demandesMeres.number} ? 'active'">
-                                <a class="page-link"
-                                   th:href="@{/demande/paiements-directs(page=${p}, size=${size},
-                                    num=${num},demandeur=${demandeur},type=${type},statutTransmission=${statutTransmission},
-                                    priorite=${priorite},motif=${motif},dateFrom=${dateFrom},dateTo=${dateTo},
-                                    sort=${sort},dir=${dir})}"
-                                   th:text="${p + 1}"
-                                >
-                                </a>
-                            </li>
-                        </th:block>
-
-                        <!-- Suivante -->
-                        <li class="page-item" th:classappend="${demandesMeres.last} ? 'disabled'">
-                            <a class="page-link"
-                               th:href="@{/demande/paiements-directs(page=${demandesMeres.number + 1}, size=${size},
-                                num=${num},demandeur=${demandeur},type=${type},statutTransmission=${statutTransmission},
-                                priorite=${priorite},motif=${motif},dateFrom=${dateFrom},dateTo=${dateTo},
-                                sort=${sort},dir=${dir})}"
-                            >
-                                Suivante
-                            </a>
-                        </li>
-
-                    </ul>
-
-                    <div class="text-center text-muted small mt-2">
-                        Page <span th:text="${demandesMeres.number + 1}"></span> /
-                        <span th:text="${demandesMeres.totalPages}"></span>
-                        — Total: <span th:text="${demandesMeres.totalElements}"></span>
-                    </div>
-                </nav>
+                <!-- Pagination commune -->
+                <div th:replace="~{fragment/pagination :: pagination(${demandesMeres}, ${urlPagination})}"></div>
 
             </div>
         </div>

@@ -26,12 +26,37 @@ public class BonCommandeFille {
     @Column(name = "designation_fournisseur")
     String designationFournisseur;
 
+    /** Désignation libre d'une ligne saisie à la main ; c'est elle qui est imprimée. */
+    @Column(name = "designation", columnDefinition = "TEXT")
+    String designation;
+    /** Unité saisie à la main (ex. « Unité », « Lot ») quand la ligne n'a pas d'article. */
+    @Column(name = "unite")
+    String unite;
+
+    /** Désignation imprimée : la désignation libre, sinon celle du fournisseur, sinon celle de l'article. */
+    public String getDesignationAffichee() {
+        if (designation != null && !designation.isBlank()) return designation;
+        if (designationFournisseur != null && !designationFournisseur.isBlank()) return designationFournisseur;
+        return article != null ? article.getDesignation() : "";
+    }
+
+    /** Unité imprimée : l'unité saisie, sinon celle de l'article. */
+    public String getUniteAffichee() {
+        if (unite != null && !unite.isBlank()) return unite;
+        return article != null && article.getUdm() != null ? article.getUdm().getDescription() : "";
+    }
+
     @Column(name = "quantite_commandee")
     double quantiteCommandee;
     @Column(name = "quantite_recue")
     double quantiteRecue;
     @Column(name = "quantite_restante")
     double quantiteRestante;
+
+    /** Quantité encore attendue du fournisseur : commandée moins déjà reçue, jamais négative. */
+    public double getResteARecevoir() {
+        return Math.max(0, quantiteCommandee - quantiteRecue);
+    }
 
     @Column(name = "prix_unitaire_ht")
     double prixUnitaireHT;

@@ -1,10 +1,178 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Bon de livraison</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
 </head>
-<body>
 
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+
+<div class="main-content">
+    <section th:with="devise=${bl.devise != null ? bl.devise.acronyme : ''},
+                      bc=${bl.bonCommandeMere},
+                      numeroBc=${bl.bonCommandeMere != null
+                                 ? (bl.bonCommandeMere.numero != null and !#strings.isEmpty(bl.bonCommandeMere.numero)
+                                    ? bl.bonCommandeMere.numero : bl.bonCommandeMere.id)
+                                 : ''}">
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <div class="doc-wrapper">
+
+            <!-- ACTIONS (non imprimées) -->
+            <div class="page-actions no-print">
+                <h1 class="fw-bold text-gradient-blue mb-0">
+                    <i class="fas fa-clipboard-list icon-gradient-blue me-2"></i> Bon de livraison
+                </h1>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-outline-secondary" th:href="@{/bonlivraison/list}">
+                        <i class="fas fa-list-ul me-1"></i> Liste des bons de livraison
+                    </a>
+                    <a class="btn btn-outline-secondary" th:if="${bc != null}"
+                       th:href="@{/bon-commande/{id}(id=${bc.id})}">
+                        <i class="fas fa-file-invoice me-1"></i> Bon de commande
+                    </a>
+                    <button type="button" class="btn btn-gradient-blue" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i> Imprimer
+                    </button>
+                </div>
+            </div>
+
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-0">
+                    <div class="bl-document ui-doc">
+
+                        <!-- EN-TÊTE -->
+                        <div class="bl-header">
+                            <div class="bl-company">
+                                <img th:src="@{/img/logo_afg.png}" alt="Logo" height="60">
+                            </div>
+                            <div class="bl-title text-end">
+                                <h3>BON DE LIVRAISON</h3>
+                                <span>Référence : <strong th:text="${bl.id}">-</strong></span>
+                            </div>
+                        </div>
+
+                        <!-- INFOS GÉNÉRALES -->
+                        <div class="bl-infos">
+                            <div>
+                                <strong>Fournisseur :</strong>
+                                <div class="fw-semibold" th:text="${bl.fournisseur != null ? bl.fournisseur.nom : '—'}"></div>
+                                <small class="text-muted" th:if="${bl.fournisseur != null}"
+                                       th:text="${bl.fournisseur.contact}"></small>
+                            </div>
+                            <div>
+                                <strong>Date de réception :</strong>
+                                <div th:text="${bl.dateReception != null ? #temporals.format(bl.dateReception, 'dd/MM/yyyy HH:mm') : '—'}"></div>
+                            </div>
+                            <div>
+                                <strong>Devise :</strong>
+                                <div th:text="${bl.devise != null ? bl.devise.designation + ' (' + bl.devise.acronyme + ')' : '—'}"></div>
+                            </div>
+                            <div>
+                                <strong>Bon de commande :</strong>
+                                <div th:if="${bc != null}">
+                                    <a class="fw-semibold text-decoration-none"
+                                       th:href="@{/bon-commande/{id}(id=${bc.id})}" th:text="${numeroBc}"></a>
+                                    <div><small class="text-muted" th:text="${bc.statutReception.libelle}"></small></div>
+                                </div>
+                                <div th:unless="${bc != null}" class="text-muted">Hors bon de commande</div>
+                            </div>
+                            <div>
+                                <strong>Facture :</strong>
+                                <div th:text="${bl.idFacture != null and !#strings.isEmpty(bl.idFacture) ? bl.idFacture : '—'}"></div>
+                            </div>
+                            <div>
+                                <strong>Observation :</strong>
+                                <div th:text="${bl.description != null and !#strings.isEmpty(bl.description) ? bl.description : '—'}"></div>
+                            </div>
+                        </div>
+
+                        <!-- LIGNES -->
+                        <div class="table-responsive">
+                            <table class="bl-table ui-lines">
+                                <thead>
+                                <tr>
+                                    <th style="width:5%" class="text-center">N°</th>
+                                    <th style="width:13%">CODE</th>
+                                    <th>DÉSIGNATION</th>
+                                    <th style="width:8%" class="text-center">UDM</th>
+                                    <th style="width:11%" class="text-end">QTÉ ATTENDUE</th>
+                                    <th style="width:11%" class="text-end">QTÉ REÇUE</th>
+                                    <th style="width:13%" class="text-end">PU H.T.</th>
+                                    <th style="width:14%" class="text-end">MONTANT H.T.</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:if="${lignes.isEmpty()}">
+                                    <td colspan="8" class="text-center text-muted">Aucune ligne</td>
+                                </tr>
+                                <tr th:each="l, stat : ${lignes}">
+                                    <td class="text-center ui-num" th:text="${stat.count}"></td>
+                                    <td class="ui-art-code" th:text="${l.article != null ? l.article.codeArticle : '—'}"></td>
+                                    <td>
+                                        <div class="ui-art-des" th:text="${l.article != null ? l.article.designation : '—'}"></div>
+                                        <!-- Désignation du bon de commande quand elle diffère de l'article -->
+                                        <small class="text-muted d-block" th:if="${l.designationBonCommande != null}"
+                                               th:text="${'BC : ' + l.designationBonCommande}"></small>
+                                        <!-- Suivi interne (non imprimé) : répartition de la quantité reçue par demande -->
+                                        <small class="text-muted d-block no-print" th:if="${l.fusionnee}">
+                                            <th:block th:each="d, s : ${l.details}">
+                                                <span th:if="${d.bonCommandeFille != null and d.bonCommandeFille.demandeFille != null}">
+                                                    <a th:href="@{/demande/fiche/{id}(id=${d.bonCommandeFille.demandeFille.demandeMere.id})}"
+                                                       th:text="${d.bonCommandeFille.demandeFille.demandeMere.id}"></a>
+                                                    : <span th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(d.quantiteRecu)}"></span>
+                                                </span>
+                                                <span th:unless="${d.bonCommandeFille != null and d.bonCommandeFille.demandeFille != null}"
+                                                      th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(d.quantiteRecu)}"></span>
+                                                <span th:unless="${s.last}"> · </span>
+                                            </th:block>
+                                        </small>
+                                    </td>
+                                    <td class="text-center ui-udm"
+                                        th:text="${l.article != null and l.article.udm != null ? l.article.udm.description : ''}"></td>
+                                    <td class="text-end" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantiteAttendue)}"></td>
+                                    <td class="text-end fw-bold" th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantiteRecue)}"></td>
+                                    <td class="text-end" th:text="${#numbers.formatDecimal(l.prixUnitaire, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                    <td class="text-end" th:text="${#numbers.formatDecimal(l.montant, 1, 'WHITESPACE', 2, 'COMMA')}"></td>
+                                </tr>
+                                </tbody>
+                                <tfoot>
+                                <tr class="fw-bold">
+                                    <td colspan="7" class="text-end text-uppercase ui-total-label">Total H.T.</td>
+                                    <td class="text-end ui-total"
+                                        th:text="${#numbers.formatDecimal(total, 1, 'WHITESPACE', 2, 'COMMA') + ' ' + devise}"></td>
+                                </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- SIGNATURES -->
+                        <div class="row g-4 mt-4 pb-2 ui-signatures">
+                            <div class="col-6 text-center">
+                                <div class="border-top pt-3 mx-4">
+                                    <div class="fw-bold mb-1">Livré par (fournisseur)</div>
+                                    <small class="text-muted" th:text="${bl.fournisseur != null ? bl.fournisseur.nom : ''}"></small>
+                                </div>
+                            </div>
+                            <div class="col-6 text-center">
+                                <div class="border-top pt-3 mx-4">
+                                    <div class="fw-bold mb-1">Reçu par (Moyens Généraux)</div>
+                                    <small class="text-muted">&nbsp;</small>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div><!-- fin bl-document -->
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
 </body>
 </html>

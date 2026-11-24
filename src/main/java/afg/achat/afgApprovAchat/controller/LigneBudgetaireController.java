@@ -13,6 +13,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/ligne-budgetaire")
+@org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN','DFC','CONTROLEUR')")
 @RequiredArgsConstructor
 public class LigneBudgetaireController {
     private final CentreBudgetaireService centreBudgetaireService;

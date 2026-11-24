@@ -4,6 +4,7 @@
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <title>Liste des fournisseurs</title>
+    <meta name="context-path" th:content="@{/}" />
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
@@ -25,37 +26,72 @@
             </div>
         </div>
 
+        <!-- Recherche instantanée (index Lucene), comme la liste des articles -->
+        <div class="card shadow-lg border-0 mb-3">
+            <div class="card-body">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label mb-1" for="fNom">Nom ou acronyme</label>
+                        <input class="form-control search-input" type="text" id="fNom" name="nom" th:value="${nom}"
+                               placeholder="Nom, acronyme…" autocomplete="off">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1" for="fMail">Mail</label>
+                        <input class="form-control search-input" type="text" id="fMail" name="mail" th:value="${mail}"
+                               placeholder="Adresse mail…" autocomplete="off">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1" for="fContact">Téléphone</label>
+                        <input class="form-control search-input" type="text" id="fContact" name="contact" th:value="${contact}"
+                               placeholder="Numéro…" autocomplete="off">
+                    </div>
+                    <!-- Taille page (fragment commun ; select id="fTaille") -->
+                    <div th:replace="~{fragment/pagination :: taille(${size})}"></div>
+
+                    <!-- Indicateur de chargement + bouton reset -->
+                    <div class="col-md-12 d-flex gap-2 align-items-center mt-2">
+                        <span id="searchSpinner" class="d-none">
+                            <span class="spinner-border spinner-border-sm text-primary me-1"></span>
+                            <small class="text-muted">Recherche...</small>
+                        </span>
+                        <a class="btn btn-outline-secondary btn-sm" th:href="@{/fournisseur/list}" title="Réinitialiser">
+                            <i class="fas fa-times me-1"></i>Réinitialiser
+                        </a>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Carte contenant le tableau -->
         <div class="card shadow-lg border-0">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table id="fournisseurTable" class="table table-striped table-hover">
+                    <table id="fournisseurTable" class="table table-striped table-hover table-bordered dt-head-gradient">
                         <thead>
                         <tr>
                             <th>
-                                <i class="fas fa-hashtag me-2 icon-gradient-light-blue"></i>
-                                N° Fournisseur
+                                <i class="fas fa-hashtag me-2 icon-gradient-light-blue"></i>N° Fournisseur
                             </th>
                             <th>
-                                <i class="fas fa-building me-2 icon-gradient-light-blue"></i>
-                                Nom Fournisseur
+                                <i class="fas fa-building me-2 icon-gradient-light-blue"></i>Nom Fournisseur
                             </th>
                             <th>
-                                <i class="fas fa-envelope me-2 icon-gradient-light-blue"></i>
-                                Mail
+                                <i class="fas fa-envelope me-2 icon-gradient-light-blue"></i>Mail
                             </th>
                             <th>
-                                <i class="fas fa-phone-alt me-2 icon-gradient-light-blue"></i>
-                                Téléphone
+                                <i class="fas fa-phone-alt me-2 icon-gradient-light-blue"></i>Téléphone
                             </th>
                             <th>
-                                <i class="fas fa-tools me-2 icon-gradient-light-blue"></i>
-                                Action
+                                <i class="fas fa-tools me-2 icon-gradient-light-blue"></i>Action
                             </th>
                         </tr>
                         </thead>
-                        <tbody>
-                        <tr th:each="fr : ${fournisseurs}">
+                        <tbody id="fournisseurBody">
+                        <tr th:if="${fournisseurs.totalElements == 0}">
+                            <td colspan="5" class="text-center text-muted py-4">Aucun fournisseur trouvé.</td>
+                        </tr>
+                        <tr th:each="fr : ${fournisseurs.content}">
                             <td th:text="${fr.getId()}"></td>
                             <td th:text="${fr.getNom() + ' (' + (fr.getAcronyme() != null ? fr.getAcronyme() : '---') + ')'}"></td>
                             <td th:text="${fr.getMail()}"></td>
@@ -78,6 +114,10 @@
                         </tr>
                         </tbody>
                     </table>
+                </div>
+                <!-- Pagination commune ; reconstruite à l'identique par la recherche instantanée -->
+                <div id="fournisseursPagination">
+                    <div th:replace="~{fragment/pagination :: pagination(${fournisseurs}, ${urlPagination})}"></div>
                 </div>
             </div>
         </div>
@@ -157,94 +197,148 @@
 
 <script th:inline="none">
     /*<![CDATA[*/
-        document.addEventListener('DOMContentLoaded', function (){
+    const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
 
-            // Quand on ouvre le modal via le bouton "modifier"
-            document.querySelectorAll('[data-bs-target="#modifierFournisseurModal"]').forEach(btn => {
-                btn.addEventListener('click', function () {
+    // Modal de modification : rempli à l'ouverture depuis le bouton cliqué
+    // (délégation : fonctionne aussi pour les lignes affichées par la recherche instantanée)
+    document.getElementById('modifierFournisseurModal').addEventListener('show.bs.modal', function (e) {
+        const btn = e.relatedTarget;
+        if (!btn) return;
+        const val = nom => btn.getAttribute('data-' + nom) || '';
+        // data-nom contient le nom brut : on ne retire plus de parenthèses finales,
+        // ce qui tronquait les noms comme « ABC (Madagascar) »
+        document.getElementById('modalFournisseurId').value = val('id');
+        document.getElementById('modalNom').value = val('nom').trim();
+        document.getElementById('modalAcronyme').value = val('acronyme');
+        document.getElementById('modalMail').value = val('mail');
+        document.getElementById('modalTelephone').value = val('contact');
+        document.getElementById('modalDescription').value = val('description');
+    });
 
-                    const id          = this.getAttribute('data-id');
-                    const nom         = this.getAttribute('data-nom');
-                    const mail        = this.getAttribute('data-mail');
-                    const contact     = this.getAttribute('data-contact');
-                    const description = this.getAttribute('data-description');
-                    const acronyme    = this.getAttribute('data-acronyme');
+    (function () {
+        let minuteur = null;
+        const DELAI = 400; // ms d'attente après la dernière frappe
 
-                    // Acronyme : ton bouton ne l'envoie pas encore => on le récupère depuis l'affichage "Nom (ACR)"
-                    // (Sinon, ajoute th:data-acronyme="${fr.getAcronyme()}" et prends-le directement)
-                    // const nomAffiche = nom || "";
-                    // const match = nomAffiche.match(/\(([^)]+)\)\s*$/);
-                    // const acronyme = match ? match[1] : "";
+        // Échappe le texte venant de la base avant de l'insérer dans le HTML
+        const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
+            ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 
-                    document.getElementById('modalFournisseurId').value = id || "";
-                    document.getElementById('modalNom').value = nom.replace(/\s*\([^)]+\)\s*$/, '').trim();
-                    document.getElementById('modalAcronyme').value = acronyme;
-                    document.getElementById('modalMail').value = mail || "";
-                    document.getElementById('modalTelephone').value = contact || "";
-                    document.getElementById('modalDescription').value = description || "";
-                });
+        function parametres(page) {
+            return new URLSearchParams({
+                nom:     document.getElementById('fNom').value.trim(),
+                mail:    document.getElementById('fMail').value.trim(),
+                contact: document.getElementById('fContact').value.trim(),
+                size:    document.getElementById('fTaille').value,
+                page:    page || 0
             });
+        }
 
+        function rechercher(page) {
+            clearTimeout(minuteur);
+            minuteur = setTimeout(function () {
+                const params = parametres(page);
+                document.getElementById('searchSpinner').classList.remove('d-none');
 
-            const table = $('#fournisseurTable').DataTable({
-                language: {
-                    zeroRecords: "Aucun fournisseur correspondant trouvé",
-                    search: "Rechercher:",
-                    lengthMenu: "Afficher _MENU_",
-                    info: "Affichage de _START_ à _END_ sur _TOTAL_ articles",
-                    infoEmpty: "Aucun fournisseur à afficher",
-                    infoFiltered: "(filtrés sur _MAX_ articles au total)",
-                    paginate: {first: "Première", last: "Dernière", next: "Suivante", previous: "Précédente"}
-                },
-                pageLength: 10,
-                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-                responsive: true,
-                dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
-                initComplete: function () {
-                    const api = this.api();
-                    // Cloner header pour filtres
-                    $('#fournisseurTable thead tr').clone(true).appendTo('#fournisseurTable thead');
-                    $('#fournisseurTable thead tr:eq(1) th').each(function (i) {
-                        if (i < 4) {
-                            $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
-                            $('input', this).on('keyup change', function () {
-                                if (api.column(i).search() !== this.value) {
-                                    api.column(i).search(this.value).draw();
-                                }
-                            });
-                        } else {
-                            $(this).html('<div style="height:32px;"></div>');
-                        }
-                    });
+                fetch(`${CONTEXT_PATH}fournisseur/list/ajax?${params.toString()}`, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        afficherLignes(data);
+                        afficherPagination(data, params);
+                        // Adresse à jour sans recharger : un rafraîchissement garde la recherche
+                        window.history.replaceState({}, '', `${CONTEXT_PATH}fournisseur/list?${params.toString()}`);
+                    })
+                    .catch(err => console.error('Erreur recherche:', err))
+                    .finally(() => document.getElementById('searchSpinner').classList.add('d-none'));
+            }, DELAI);
+        }
 
-                    // Recherche mobile
-                    $('<div class="mobile-search-container mb-3">' +
-                        '<div class="input-group">' +
-                        '<span class="input-group-text"><i class="fas fa-search icon-gradient-blue"></i></span>' +
-                        '<input type="text" class="form-control" id="mobileGlobalSearch" placeholder="Rechercher...">' +
-                        '</div></div>').insertBefore('#articlesTable');
+        function afficherLignes(data) {
+            const tbody = document.getElementById('fournisseurBody');
+            if (!data.content.length) {
+                tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">Aucun fournisseur trouvé.</td>
+                </tr>`;
+                return;
+            }
+            tbody.innerHTML = data.content.map(f => `
+            <tr>
+                <td>${esc(f.id)}</td>
+                <td>${esc(f.nom)} (${esc(f.acronyme || '---')})</td>
+                <td>${esc(f.mail)}</td>
+                <td>${esc(f.contact)}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-view-bl"
+                            data-bs-toggle="modal" data-bs-target="#modifierFournisseurModal"
+                            data-id="${esc(f.id)}" data-nom="${esc(f.nom)}" data-acronyme="${esc(f.acronyme)}"
+                            data-mail="${esc(f.mail)}" data-contact="${esc(f.contact)}"
+                            data-description="${esc(f.description)}"
+                            title="Modifier le fournisseur">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </td>
+            </tr>`).join('');
+        }
 
-                    $('#mobileGlobalSearch').on('keyup', function () {
-                        api.search(this.value).draw();
-                    });
+        // Même rendu que le fragment commun fragment/pagination :: pagination(page, url)
+        function afficherPagination(data, params) {
+            const conteneur = document.getElementById('fournisseursPagination');
+            if (!data.totalElements) { conteneur.innerHTML = ''; return; }
 
-                    function toggleMobileSearch() {
-                        if ($(window).width() <= 768) {
-                            $('.mobile-search-container').show();
-                            $('#fournisseurTable thead tr:eq(1)').hide();
-                            $('.dataTables_filter').hide();
-                        } else {
-                            $('.mobile-search-container').hide();
-                            $('#fournisseurTable thead tr:eq(1)').show();
-                            $('.dataTables_filter').show();
-                        }
-                    }
+            const courante = data.number;
+            const total    = data.totalPages;
+            const debut    = Math.max(0, courante - 2);
+            const fin      = Math.min(total - 1, courante + 2);
+            const premier  = courante * data.size + 1;
+            const dernier  = courante * data.size + data.numberOfElements;
 
-                    toggleMobileSearch();
-                    $(window).on('resize', toggleMobileSearch);
-                }
-            });
+            const base = new URLSearchParams(params);
+            base.delete('page');
+            const lien = p => `${CONTEXT_PATH}fournisseur/list?${base.toString()}&page=${p}`;
+            const item = (p, libelle, desactive, actif, aria) =>
+                `<li class="page-item${desactive ? ' disabled' : ''}${actif ? ' active' : ''}">
+                    <a class="page-link" href="${lien(p)}"${aria ? ` aria-label="${aria}"` : ''}${actif ? ' aria-current="page"' : ''}>${libelle}</a>
+                 </li>`;
+            const ellipse = '<li class="page-item disabled"><span class="page-link">…</span></li>';
+
+            let pages = '';
+            if (debut > 0) pages += ellipse;
+            for (let p = debut; p <= fin; p++) pages += item(p, p + 1, false, p === courante);
+            if (fin < total - 1) pages += ellipse;
+
+            const nav = total > 1 ? `
+                <nav aria-label="Pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        ${item(0, '&laquo;', data.first, false, 'Première page')}
+                        ${item(courante - 1, '&lsaquo;', data.first, false, 'Page précédente')}
+                        ${pages}
+                        ${item(courante + 1, '&rsaquo;', data.last, false, 'Page suivante')}
+                        ${item(total - 1, '&raquo;', data.last, false, 'Dernière page')}
+                    </ul>
+                </nav>` : '';
+
+            conteneur.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+                    <span class="text-muted small">Affichage ${premier}–${dernier} sur ${data.totalElements}</span>
+                    ${nav}
+                </div>`;
+        }
+
+        // Clic sur la pagination (rendue par le serveur ou par la recherche) : recherche instantanée
+        document.getElementById('fournisseursPagination').addEventListener('click', function (e) {
+            const lienPage = e.target.closest('a.page-link');
+            if (!lienPage || lienPage.closest('.disabled')) return;
+            const url = new URL(lienPage.href, window.location.href);
+            e.preventDefault();
+            rechercher(parseInt(url.searchParams.get('page') || '0', 10));
         });
+
+        document.querySelectorAll('.search-input').forEach(input =>
+            input.addEventListener('input', () => rechercher(0)));
+        document.getElementById('fTaille').addEventListener('change', () => rechercher(0));
+    })();
     /*]]>*/
 </script>
 </body>

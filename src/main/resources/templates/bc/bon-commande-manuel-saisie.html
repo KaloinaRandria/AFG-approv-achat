@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Saisie bon de commande</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <meta name="context-path" th:content="@{/}" />
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-file-invoice me-3 icon-gradient-blue"></i>
+                <span th:text="${bonCommandeMere.id == null} ? 'Nouveau bon de commande' : 'Modifier le bon de commande'">Bon de commande</span>
+            </h1>
+            <a class="btn btn-gradient-blue" th:href="@{/bon-commande/list}">
+                <i class="fas fa-list-ul me-2"></i> Liste des bons de commande
+            </a>
+        </div>
+
+        <!-- Motif du dernier rejet : à corriger avant de soumettre à nouveau -->
+        <div class="alert alert-warning"
+             th:if="${bonCommandeMere.motifRejet != null and !#strings.isEmpty(bonCommandeMere.motifRejet)}">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Rejeté<span th:if="${bonCommandeMere.rejetePar != null}"
+                                th:text="' par ' + ${bonCommandeMere.rejetePar.prenom} + ' ' + ${bonCommandeMere.rejetePar.nom}"></span> :</strong>
+            <span th:text="${bonCommandeMere.motifRejet}"></span>
+        </div>
+
+        <form th:action="@{/bon-commande/manuel/sauvegarder}" method="post" id="formBonCommande"
+              data-chargement="Enregistrement en cours…">
+            <input type="hidden" name="id" th:value="${bonCommandeMere.id}">
+
+            <div class="card shadow-lg border-0 mb-3">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0 fw-bold text-gradient-blue">
+                        <i class="fas fa-building me-2 icon-gradient-blue"></i> Fournisseur et livraison
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="fournisseur" class="form-label fw-bold required-field">Fournisseur</label>
+                            <select id="fournisseur" name="fournisseur" class="form-select" required
+                                    data-placeholder="Rechercher un fournisseur...">
+                                <option value="">-- Choisir --</option>
+                                <option th:each="f : ${fournisseurs}"
+                                        th:value="${f.id}"
+                                        th:text="${f.nom}"
+                                        th:selected="${bonCommandeMere.fournisseur != null and bonCommandeMere.fournisseur.id == f.id}">
+                                </option>
+                            </select>
+                            <div class="form-text text-muted">
+                                L'adresse et la personne de contact du fournisseur sont reprises de sa fiche.
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="referenceFournisseur" class="form-label fw-bold">Votre réf (devis du fournisseur)</label>
+                            <input type="text" class="form-control" id="referenceFournisseur" name="referenceFournisseur"
+                                   placeholder="Ex : N° DEVIS-2026/018999"
+                                   th:value="${bonCommandeMere.referenceFournisseur}">
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="devise" class="form-label fw-bold required-field">Devise</label>
+                            <select id="devise" name="devise" class="form-select">
+                                <option th:each="d : ${devises}" th:value="${d.id}"
+                                        th:attr="data-code=${d.acronyme}"
+                                        th:selected="${d.acronyme == bonCommandeMere.codeDevise}"
+                                        th:text="${d.acronyme + ' — ' + d.designation}"></option>
+                            </select>
+                            <div class="form-text text-muted">
+                                Prix et montants du bon sont dans cette devise ; son cours du jour est copié sur le bon.
+                                Les lignes de demandes doivent être dans la même devise.
+                            </div>
+                        </div>
+                        <div class="col-md-8"></div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="dateLivraisonPrevue" class="form-label fw-bold">Date de livraison prévue</label>
+                            <input type="date" class="form-control" id="dateLivraisonPrevue" name="dateLivraisonPrevue"
+                                   th:value="${bonCommandeMere.dateLivraisonPrevue != null ? #temporals.format(bonCommandeMere.dateLivraisonPrevue, 'yyyy-MM-dd') : ''}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="lieuLivraison" class="form-label fw-bold">Lieu de livraison</label>
+                            <input type="text" class="form-control" id="lieuLivraison" name="lieuLivraison"
+                                   placeholder="Ex : IVATO"
+                                   th:value="${bonCommandeMere.lieuLivraison}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="modalitePaiement" class="form-label fw-bold">Modalité de paiement</label>
+                            <input type="text" class="form-control" id="modalitePaiement" name="modalitePaiement"
+                                   placeholder="Ex : 70% à la commande et 30% à la livraison"
+                                   th:value="${bonCommandeMere.modalitePaiement}">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="referenceApprobation" class="form-label fw-bold">Référence d'approbation</label>
+                            <input type="text" class="form-control" id="referenceApprobation" name="referenceApprobation"
+                                   placeholder="Ex : CODEP 007/26 du 06/03/26"
+                                   th:value="${bonCommandeMere.referenceApprobation}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="description" class="form-label fw-bold">Objet du bon de commande</label>
+                            <input type="text" class="form-control" id="description" name="description"
+                                   placeholder="Ex : BRANDING GAB AEROPORT IVATO"
+                                   th:value="${bonCommandeMere.description}">
+                            <div class="form-text text-muted">Imprimé en titre au-dessus des lignes.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-lg border-0 mb-3">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-gradient-blue">
+                        <i class="fas fa-list me-2 icon-gradient-blue"></i> Lignes
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <!-- Les lignes de demandes se choisissent dans l'écran « Lignes à acheter » -->
+                        <a class="btn btn-sm btn-outline-primary" th:if="${bonCommandeMere.id == null}"
+                           th:href="@{/bon-commande/lignes-a-acheter}">
+                            <i class="fas fa-clipboard-list me-1"></i> Choisir des lignes de demandes
+                        </a>
+                        <button type="button" class="btn btn-sm btn-gradient-green" id="btnAjouterLigne">
+                            <i class="fas fa-plus me-1"></i> Ajouter une ligne libre
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table align-middle" id="tableLignes">
+                            <thead class="table-light">
+                            <tr>
+                                <th style="width:34%">Désignation <span class="text-danger">*</span></th>
+                                <th style="width:18%">Article concerné
+                                    <span class="text-muted small fw-normal d-block">facultatif, non imprimé</span>
+                                </th>
+                                <th style="width:9%">Qté <span class="text-danger">*</span></th>
+                                <th style="width:10%">Unité</th>
+                                <th style="width:13%">PU HT (<span class="code-devise" th:text="${bonCommandeMere.codeDevise}">MGA</span>) <span class="text-danger">*</span></th>
+                                <th style="width:13%" class="text-end">Montant HT</th>
+                                <th style="width:3%"></th>
+                            </tr>
+                            </thead>
+                            <tbody id="corpsLignes">
+                            <tr th:each="l : ${lignes}" class="ligne-bc">
+                                <td>
+                                    <textarea class="form-control form-control-sm" name="designation[]" rows="3" required
+                                              maxlength="2000" th:text="${l.designationAffichee}"></textarea>
+                                    <!-- Ligne de demande commandée par cette ligne (vide pour une ligne libre) -->
+                                    <input type="hidden" name="demandeFilleId[]"
+                                           th:value="${l.demandeFille != null ? l.demandeFille.id : ''}">
+                                    <span class="badge bg-info text-dark mt-1" th:if="${l.demandeFille != null}"
+                                          th:text="'Demande ' + ${l.demandeFille.demandeMere.id}
+                                                   + (${l.demandeFille.demandeMere.demandeur != null}
+                                                      ? ' — ' + ${l.demandeFille.demandeMere.demandeur.nom} : '')"></span>
+                                </td>
+                                <!-- Article imposé par la ligne de demande : lecture seule (et non désactivé, pour être envoyé) -->
+                                <td><input type="text" class="form-control form-control-sm champ-article" name="codeArticle[]"
+                                           list="articlesDatalist" autocomplete="off" placeholder="Code ou désignation"
+                                           th:readonly="${l.demandeFille != null}"
+                                           th:value="${l.article != null ? l.article.codeArticle : ''}"></td>
+                                <td><input type="number" class="form-control form-control-sm champ-qte" name="quantite[]"
+                                           min="0" step="any" required th:value="${l.quantiteCommandee}"></td>
+                                <td><input type="text" class="form-control form-control-sm champ-unite" name="unite[]"
+                                           placeholder="Unité" th:value="${l.uniteAffichee}"></td>
+                                <td><input type="number" class="form-control form-control-sm champ-prix" name="prixUnitaire[]"
+                                           min="0" step="any" required th:value="${l.prixUnitaireHT}"></td>
+                                <td class="text-end fw-semibold montant-ligne">0,00</td>
+                                <td><button type="button" class="btn btn-sm btn-outline-danger btn-supprimer-ligne" title="Supprimer la ligne">
+                                    <i class="fas fa-trash"></i></button></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <datalist id="articlesDatalist"></datalist>
+
+                    <!-- Regroupement à l'impression : rempli par le script selon les lignes saisies -->
+                    <div id="infoRegroupement" class="alert alert-info py-2 small d-none">
+                        <i class="fas fa-layer-group me-1"></i>
+                        <span id="infoRegroupementTexte"></span>
+                    </div>
+                    <div id="alertePrix" class="alert alert-warning py-2 small d-none">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <span id="alertePrixTexte"></span>
+                    </div>
+
+                    <div class="row justify-content-end mt-3">
+                        <div class="col-md-5">
+                            <table class="table table-sm table-bordered">
+                                <tbody>
+                                <tr>
+                                    <th class="text-end bg-light" style="width:55%">Montant HT</th>
+                                    <td class="text-end fw-bold"><span id="totalHT">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.codeDevise}">MGA</span></td>
+                                </tr>
+                                <tr>
+                                    <th class="text-end bg-light">
+                                        Remise
+                                        <input type="number" id="tauxRemise" name="tauxRemise"
+                                               class="form-control form-control-sm d-inline-block ms-1" style="width:80px"
+                                               min="0" max="100" step="0.01" placeholder="%"
+                                               th:value="${bonCommandeMere.remise > 0 ? bonCommandeMere.remise : ''}">
+                                        <span class="text-muted small">%</span>
+                                    </th>
+                                    <td class="text-end text-danger"><span id="totalRemise">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.codeDevise}">MGA</span></td>
+                                </tr>
+                                <tr>
+                                    <th class="text-end bg-light">Montant HT remisé</th>
+                                    <td class="text-end fw-semibold"><span id="totalHTRemise">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.codeDevise}">MGA</span></td>
+                                </tr>
+                                <tr>
+                                    <th class="text-end bg-light">
+                                        TVA
+                                        <input type="number" id="tauxTVA" name="tauxTVA"
+                                               class="form-control form-control-sm d-inline-block ms-1" style="width:80px"
+                                               min="0" max="100" step="0.01" placeholder="%"
+                                               th:value="${bonCommandeMere.tauxTVA > 0 ? bonCommandeMere.tauxTVA : ''}">
+                                        <span class="text-muted small">%</span>
+                                    </th>
+                                    <td class="text-end"><span id="totalTVA">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.codeDevise}">MGA</span></td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <th class="text-end">Montant TTC</th>
+                                    <td class="text-end fw-bold fs-5"><span id="totalTTC">0,00</span> <span class="code-devise" th:text="${bonCommandeMere.codeDevise}">MGA</span></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-end bg-white">
+                    <a th:href="${bonCommandeMere.id == null} ? @{/bon-commande/list} : @{/bon-commande/{id}(id=${bonCommandeMere.id})}"
+                       class="btn btn-secondary me-2">
+                        <i class="fas fa-times me-1"></i> Annuler
+                    </a>
+                    <button type="submit" class="btn btn-gradient-green">
+                        <i class="fas fa-save me-1"></i> Enregistrer le brouillon
+                    </button>
+                </div>
+            </div>
+        </form>
+    </section>
+</div>
+
+<!-- Modèle d'une ligne vide -->
+<template id="modeleLigne">
+    <tr class="ligne-bc">
+        <td>
+            <textarea class="form-control form-control-sm" name="designation[]" rows="3" required maxlength="2000"></textarea>
+            <input type="hidden" name="demandeFilleId[]" value="">
+        </td>
+        <td><input type="text" class="form-control form-control-sm champ-article" name="codeArticle[]"
+                   list="articlesDatalist" autocomplete="off" placeholder="Code ou désignation"></td>
+        <td><input type="number" class="form-control form-control-sm champ-qte" name="quantite[]"
+                   min="0" step="any" required value="1"></td>
+        <td><input type="text" class="form-control form-control-sm champ-unite" name="unite[]" placeholder="Unité" value="Unité"></td>
+        <td><input type="number" class="form-control form-control-sm champ-prix" name="prixUnitaire[]"
+                   min="0" step="any" required></td>
+        <td class="text-end fw-semibold montant-ligne">0,00</td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger btn-supprimer-ligne" title="Supprimer la ligne">
+            <i class="fas fa-trash"></i></button></td>
+    </tr>
+</template>
+
+<script th:inline="none">
+    /*<![CDATA[*/
+    (function () {
+        const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
+
+        // Fournisseur : liste longue -> champ avec recherche
+        if (window.jQuery && $.fn.select2) {
+            $('#fournisseur').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                allowClear: true,
+                placeholder: $('#fournisseur').data('placeholder'),
+                language: {
+                    noResults: () => 'Aucun fournisseur trouvé',
+                    searching: () => 'Recherche...'
+                }
+            });
+        }
+
+        const corps = document.getElementById('corpsLignes');
+        const modele = document.getElementById('modeleLigne');
+        const datalist = document.getElementById('articlesDatalist');
+
+        const formater = v => new Intl.NumberFormat('fr-FR', {
+            minimumFractionDigits: 2, maximumFractionDigits: 2
+        }).format(v);
+        const nombre = el => parseFloat(el && el.value) || 0;
+
+        // Montant de chaque ligne et récapitulatif : HT → remise → HT remisé → TVA → TTC
+        /*
+         * Signale les lignes d'un même article : celles au même prix (et de même désignation
+         * et unité) seront fusionnées sur le bon imprimé ; des prix différents empêchent la fusion.
+         */
+        function verifierRegroupements() {
+            const parArticle = new Map();
+            corps.querySelectorAll('tr.ligne-bc').forEach(tr => {
+                const code = (tr.querySelector('.champ-article').value || '').trim().toUpperCase();
+                if (!code) return;
+                if (!parArticle.has(code)) parArticle.set(code, []);
+                parArticle.get(code).push(nombre(tr.querySelector('.champ-prix')));
+            });
+
+            const fusions = [];
+            const conflits = [];
+            parArticle.forEach((prix, code) => {
+                if (prix.length < 2) return;
+                const distincts = [...new Set(prix)];
+                if (distincts.length === 1) {
+                    fusions.push(`${code} (${prix.length} lignes)`);
+                } else {
+                    conflits.push(`${code} : ${distincts.map(formater).join(' / ')}`);
+                }
+            });
+
+            const info = document.getElementById('infoRegroupement');
+            document.getElementById('infoRegroupementTexte').textContent =
+                'Regroupées en une seule ligne sur le bon imprimé : ' + fusions.join(', ') + '.';
+            info.classList.toggle('d-none', fusions.length === 0);
+
+            const alerte = document.getElementById('alertePrix');
+            document.getElementById('alertePrixTexte').textContent =
+                'Prix unitaires différents pour un même article : ' + conflits.join(' ; ')
+                + '. Harmonisez-les selon le devis du fournisseur pour imprimer une seule ligne.';
+            alerte.classList.toggle('d-none', conflits.length === 0);
+        }
+
+        function recalculer() {
+            verifierRegroupements();
+            let totalHT = 0;
+            corps.querySelectorAll('tr.ligne-bc').forEach(tr => {
+                const montant = nombre(tr.querySelector('.champ-qte')) * nombre(tr.querySelector('.champ-prix'));
+                tr.querySelector('.montant-ligne').textContent = formater(montant);
+                totalHT += montant;
+            });
+            const remise = totalHT * nombre(document.getElementById('tauxRemise')) / 100;
+            const htRemise = totalHT - remise;
+            const tva = htRemise * nombre(document.getElementById('tauxTVA')) / 100;
+
+            document.getElementById('totalHT').textContent = formater(totalHT);
+            document.getElementById('totalRemise').textContent = (remise > 0 ? '− ' : '') + formater(remise);
+            document.getElementById('totalHTRemise').textContent = formater(htRemise);
+            document.getElementById('totalTVA').textContent = formater(tva);
+            document.getElementById('totalTTC').textContent = formater(htRemise + tva);
+        }
+
+        function ajouterLigne() {
+            corps.appendChild(modele.content.cloneNode(true));
+            recalculer();
+        }
+
+        document.getElementById('btnAjouterLigne').addEventListener('click', ajouterLigne);
+
+        corps.addEventListener('click', e => {
+            const bouton = e.target.closest('.btn-supprimer-ligne');
+            if (!bouton) return;
+            bouton.closest('tr').remove();
+            if (corps.querySelectorAll('tr.ligne-bc').length === 0) ajouterLigne();
+            recalculer();
+        });
+
+        // ── Unité : pré-remplie avec l'UDM de l'article choisi ──────────────────
+        // code article (majuscules) -> UDM, alimenté par les recherches
+        const udmParCode = new Map();
+        const UNITE_PAR_DEFAUT = 'Unité';
+
+        function memoriserUdm(articles) {
+            (articles || []).forEach(a => {
+                if (a.code && a.udm && a.udm !== '—') udmParCode.set(a.code.trim().toUpperCase(), a.udm);
+            });
+        }
+
+        function appliquerUdm(tr, udm) {
+            const champ = tr.querySelector('.champ-unite');
+            if (!champ || !udm) return;
+            // On ne remplace jamais une unité saisie à la main
+            const valeur = champ.value.trim();
+            if (valeur === '' || valeur === UNITE_PAR_DEFAUT || champ.dataset.auto === '1') {
+                champ.value = udm;
+                champ.dataset.auto = '1';
+            }
+        }
+
+        function remplirUniteDepuisArticle(champArticle) {
+            const code = (champArticle.value || '').trim().toUpperCase();
+            const tr = champArticle.closest('tr');
+            if (!code || !tr) return;
+            if (udmParCode.has(code)) {
+                appliquerUdm(tr, udmParCode.get(code));
+                return;
+            }
+            fetch(`${CONTEXT_PATH}api/articles/search?keyword=${encodeURIComponent(code)}`)
+                .then(r => r.ok ? r.json() : [])
+                .then(articles => {
+                    memoriserUdm(articles);
+                    if (udmParCode.has(code)) appliquerUdm(tr, udmParCode.get(code));
+                })
+                .catch(() => { /* unité laissée telle quelle */ });
+        }
+
+        // Choix dans la liste de suggestions ou sortie du champ
+        corps.addEventListener('change', e => {
+            if (e.target.matches('.champ-article')) remplirUniteDepuisArticle(e.target);
+        });
+
+        // Suggestions d'articles actifs pour la colonne « Article concerné »
+        let minuterie;
+        corps.addEventListener('input', e => {
+            if (e.target.matches('.champ-qte, .champ-prix')) recalculer();
+            // Unité modifiée à la main : on ne l'écrasera plus
+            if (e.target.matches('.champ-unite')) delete e.target.dataset.auto;
+            if (!e.target.matches('.champ-article')) return;
+            verifierRegroupements();
+
+            // Code d'un article déjà connu (ex. choisi dans les suggestions) : unité immédiate
+            const codeSaisi = e.target.value.trim().toUpperCase();
+            if (udmParCode.has(codeSaisi)) appliquerUdm(e.target.closest('tr'), udmParCode.get(codeSaisi));
+
+            const motCle = e.target.value.trim();
+            clearTimeout(minuterie);
+            if (motCle.length < 2) return;
+            minuterie = setTimeout(() => {
+                fetch(`${CONTEXT_PATH}api/articles/search?keyword=${encodeURIComponent(motCle)}`)
+                    .then(r => r.ok ? r.json() : [])
+                    .then(articles => {
+                        memoriserUdm(articles);
+                        datalist.innerHTML = '';
+                        (articles || []).slice(0, 15).forEach(a => {
+                            const option = document.createElement('option');
+                            option.value = a.code;
+                            option.label = a.designation;
+                            datalist.appendChild(option);
+                        });
+                    })
+                    .catch(() => { /* pas de suggestion */ });
+            }, 250);
+        });
+
+        document.getElementById('tauxRemise').addEventListener('input', recalculer);
+        document.getElementById('tauxTVA').addEventListener('input', recalculer);
+
+        // Libellés de devise des colonnes et des totaux
+        const choixDevise = document.getElementById('devise');
+        if (choixDevise) {
+            choixDevise.addEventListener('change', () => {
+                const code = choixDevise.selectedOptions[0]?.dataset.code || 'MGA';
+                document.querySelectorAll('.code-devise').forEach(s => s.textContent = code);
+            });
+        }
+
+        if (corps.querySelectorAll('tr.ligne-bc').length === 0) ajouterLigne();
+        recalculer();
+    })();
+    /*]]>*/
+</script>
+</body>
+</html>

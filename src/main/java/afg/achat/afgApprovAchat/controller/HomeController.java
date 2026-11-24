@@ -42,6 +42,8 @@ public class HomeController {
     DashboardService dashboardService;
     @Autowired
     DemandeMereRepo demandeMereRepo;
+    @Autowired
+    afg.achat.afgApprovAchat.service.TableauDeBordService tableauDeBordService;
     @GetMapping
     public String home() {
         return "redirect:/dashboard";
@@ -299,44 +301,9 @@ public class HomeController {
         Set<Integer> allIds = new HashSet<>(visibleIds);
         allIds.addAll(idsAValider);
 
-        List<Integer> childrenIds = visibleIds.stream()
-                .filter(x -> !x.equals(current.getId())).toList();
-
         // ── Stats (tout délégué au service) ─────────────────────────────
         DashboardStatsDTO stats = dashboardService.computeStats(
                 new ArrayList<>(allIds), isAdminOrSpecial, dateFrom, dateTo, current.getId());
-
-        // ── Compteurs personnels (restent en mémoire, périmètre restreint)
-        // Nécessitent les IDs → calculés ici uniquement si périmètre non-admin
-        long mesDemandesAValider = 0, demandesValidateurAssigne = 0, demandesNPlusUn = 0;
-        if (!isAdminOrSpecial) {
-            List<DemandeMere> demandesVisibles = demandeMereRepo
-                    .findByDemandeurIdsWithFilters(
-                            new ArrayList<>(allIds),
-                            effectiveFrom.atStartOfDay(),
-                            effectiveTo.atTime(23, 59, 59)
-                    );
-
-            mesDemandesAValider = demandesVisibles.stream()
-                    .filter(d -> d.getStatut() == StatutDemande.CREE)
-                    .filter(d -> d.getDemandeur() != null)
-                    .filter(d -> childrenIds.contains(d.getDemandeur().getId())
-                            || idsAValider.contains(d.getDemandeur().getId()))
-                    .count();
-
-            demandesValidateurAssigne = demandesVisibles.stream()
-                    .filter(d -> d.getStatut() == StatutDemande.CREE)
-                    .filter(d -> d.getDemandeur() != null
-                            && idsAValider.contains(d.getDemandeur().getId())
-                            && !childrenIds.contains(d.getDemandeur().getId()))
-                    .count();
-
-            demandesNPlusUn = demandesVisibles.stream()
-                    .filter(d -> d.getStatut() == StatutDemande.CREE)
-                    .filter(d -> d.getDemandeur() != null
-                            && childrenIds.contains(d.getDemandeur().getId()))
-                    .count();
-        }
 
         // ── Model ────────────────────────────────────────────────────────
         model.addAttribute("enCours",            stats.enCours());
@@ -366,14 +333,19 @@ public class HomeController {
         model.addAttribute("trendRefusees",       stats.trendRefusees());
         model.addAttribute("trendTerminees",      stats.trendTerminees());
 
-        model.addAttribute("mesDemandesAValider",       mesDemandesAValider);
-        model.addAttribute("demandesValidateurAssigné", demandesValidateurAssigne);
-        model.addAttribute("demandesNPlusUn",           demandesNPlusUn);
-        model.addAttribute("nbUtilisateursAValider",    idsAValider.size());
-        model.addAttribute("nbSubordonnes",             childrenIds.size());
-        model.addAttribute("hasDemandesAValider",       mesDemandesAValider > 0);
-//        model.addAttribute("dateFrom",                  dateFrom);
-//        model.addAttribute("dateTo",                    dateTo);
+        // ── À traiter (indépendant de la période : ce qui attend aujourd'hui) ──
+        model.addAttribute("actions",     tableauDeBordService.actions(current, auth));
+        model.addAttribute("joursRetard", afg.achat.afgApprovAchat.service.TableauDeBordService.JOURS_AVANT_RETARD);
+
+        // ── Mes demandes ──
+        model.addAttribute("mesDemandes", tableauDeBordService.mesDernieresDemandes(current));
+        model.addAttribute("mesRefus",    tableauDeBordService.mesRefusRecents(current));
+
+        // ── Indicateurs d'achats et délais par étape (encadrement) ──
+        if (isAdminOrSpecial) {
+            model.addAttribute("indicateurs", tableauDeBordService.indicateurs(effectiveFrom, effectiveTo));
+        }
+
         model.addAttribute("currentUser",               current);
         model.addAttribute("isAdminOrSpecial",          isAdminOrSpecial);
         model.addAttribute("dateFrom", effectiveFrom);

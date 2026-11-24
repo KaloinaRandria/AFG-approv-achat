@@ -35,6 +35,8 @@ public class ArticleController {
     FamilleService familleService;
     @Autowired
     IdGenerator idGenerator;
+    @Autowired
+    afg.achat.afgApprovAchat.service.util.PrixArticleService prixArticleService;
 
 
     @GetMapping("/list")
@@ -69,6 +71,7 @@ public class ArticleController {
         model.addAttribute("size", size);
         model.addAttribute("sort", sort);
         model.addAttribute("dir", dir);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
 
         //garder valeurs dans inputs
         model.addAttribute("code", code == null ? "" : code);
@@ -83,13 +86,18 @@ public class ArticleController {
         return "article/article-liste";
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @GetMapping("/entree-saisie/{codeArticle}")
     public String entreeArticle(@PathVariable String codeArticle, Model model, HttpServletRequest request) {
         Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));
         model.addAttribute("article", article);
+        // Prix du lot proposé : dernier prix d'achat connu
+        model.addAttribute("prixUnitaire", prixArticleService.getDernierPrixByArticle(codeArticle)
+                .map(p -> String.valueOf(p.getPrixUnitaire())).orElse(""));
         return "stock/entree-saisie";
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @GetMapping("/sortie-saisie/{codeArticle}")
     public String sortieArticle(@PathVariable String codeArticle, Model model, HttpServletRequest request) {
         Article article = articleService.getArticleByCodeArticle(codeArticle) .orElseThrow(() -> new RuntimeException("Article non trouvé"));
@@ -237,6 +245,27 @@ public class ArticleController {
             redirectAttributes.addFlashAttribute("codeArticle", codeArticle);
         }
 
+        return "redirect:/article/list";
+    }
+
+    /**
+     * Active ou désactive un article. Un article inactif reste visible sur les anciennes
+     * demandes mais n'est plus proposé dans les saisies ni suivi en stock.
+     */
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
+    @PostMapping("/actif")
+    public String changerActif(@RequestParam(name = "codeArticle") String codeArticle,
+                               @RequestParam(name = "actif") boolean actif,
+                               RedirectAttributes redirectAttributes) {
+        Article article = articleService.getArticleByCodeArticle(codeArticle).orElse(null);
+        if (article == null) {
+            redirectAttributes.addFlashAttribute("ko", "Article introuvable.");
+            return "redirect:/article/list";
+        }
+        article.setActif(actif);
+        articleService.saveArticle(article);
+        redirectAttributes.addFlashAttribute("ok", "Article " + article.getCodeArticle()
+                + (actif ? " réactivé." : " désactivé : il n'est plus proposé dans les saisies."));
         return "redirect:/article/list";
     }
 

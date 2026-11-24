@@ -1,4 +1,116 @@
 <div th:fragment="load_script">
+    <!-- Jeton CSRF : ajouté automatiquement aux appels AJAX et aux formulaires POST -->
+    <script th:inline="javascript">
+        (function () {
+            const token  = /*[[${_csrf != null ? _csrf.token : ''}]]*/ '';
+            const header = /*[[${_csrf != null ? _csrf.headerName : 'X-CSRF-TOKEN'}]]*/ 'X-CSRF-TOKEN';
+            const param  = /*[[${_csrf != null ? _csrf.parameterName : '_csrf'}]]*/ '_csrf';
+            if (!token) return;
+            window.CSRF = {token: token, header: header, param: param};
+
+            const estLecture = m => /^(GET|HEAD|OPTIONS|TRACE)$/i.test(m || 'GET');
+            const memeOrigine = url => {
+                try { return new URL(url, window.location.href).origin === window.location.origin; }
+                catch (e) { return false; }
+            };
+
+            // fetch()
+            const fetchOrigine = window.fetch;
+            window.fetch = function (input, init) {
+                const url     = (typeof input === 'string' || input instanceof URL) ? String(input) : input.url;
+                const methode = (init && init.method) || (typeof input === 'object' && input.method) || 'GET';
+                if (!estLecture(methode) && memeOrigine(url)) {
+                    init = init || {};
+                    const headers = new Headers(init.headers
+                        || (typeof input === 'object' && !(input instanceof URL) ? input.headers : undefined));
+                    headers.set(header, token);
+                    init.headers = headers;
+                }
+                return fetchOrigine.call(this, input, init);
+            };
+
+            // XMLHttpRequest (jQuery $.ajax, Dropzone, jQuery Filer…)
+            const openOrigine = XMLHttpRequest.prototype.open;
+            const sendOrigine = XMLHttpRequest.prototype.send;
+            XMLHttpRequest.prototype.open = function (methode, url) {
+                this.__csrf = !estLecture(methode) && memeOrigine(url);
+                return openOrigine.apply(this, arguments);
+            };
+            XMLHttpRequest.prototype.send = function () {
+                if (this.__csrf) {
+                    try { this.setRequestHeader(header, token); } catch (e) { /* requête déjà envoyée */ }
+                }
+                return sendOrigine.apply(this, arguments);
+            };
+
+            // Formulaires POST sans champ de jeton (action posée en JavaScript, etc.)
+            const completer = form => {
+                if ((form.getAttribute('method') || '').toLowerCase() !== 'post') return;
+                if (form.querySelector('input[name="' + param + '"]')) return;
+                const champ = document.createElement('input');
+                champ.type = 'hidden';
+                champ.name = param;
+                champ.value = token;
+                form.appendChild(champ);
+            };
+            const completerTous = () => document.querySelectorAll('form').forEach(completer);
+            document.addEventListener('DOMContentLoaded', completerTous);
+            document.addEventListener('submit', e => completer(e.target), true);
+            // form.submit() ne déclenche pas l'événement "submit"
+            const submitOrigine = HTMLFormElement.prototype.submit;
+            HTMLFormElement.prototype.submit = function () {
+                completer(this);
+                return submitOrigine.call(this);
+            };
+        })();
+    </script>
+    <!--
+        Chargement des boutons : un formulaire marqué data-chargement="Texte…" affiche une
+        roue sur le bouton cliqué et bloque ses boutons pendant l'envoi (évite le double clic).
+        Les boutons extérieurs au formulaire (attribut form="id") sont aussi bloqués.
+    -->
+    <script>
+        (function () {
+            document.addEventListener('submit', function (e) {
+                const form = e.target;
+                // Formulaire non concerné, ou envoi annulé (confirm() refusé, contrôle échoué)
+                if (!form.hasAttribute || !form.hasAttribute('data-chargement') || e.defaultPrevented) return;
+
+                const boutons = Array.from(form.querySelectorAll('button[type="submit"], button:not([type])'));
+                if (form.id) {
+                    boutons.push(...document.querySelectorAll('button[form="' + form.id + '"]'));
+                }
+                const cible = e.submitter || boutons[0];
+
+                // Un bouton désactivé n'est plus envoyé : on recopie son nom et sa valeur (ex. action=soumettre)
+                if (cible && cible.name) {
+                    const champ = document.createElement('input');
+                    champ.type = 'hidden';
+                    champ.name = cible.name;
+                    champ.value = cible.value;
+                    form.appendChild(champ);
+                }
+
+                boutons.forEach(function (b) {
+                    if (b.dataset.htmlOrigine === undefined) b.dataset.htmlOrigine = b.innerHTML;
+                    b.disabled = true;
+                });
+                if (cible) {
+                    cible.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>'
+                        + (form.getAttribute('data-chargement') || 'Traitement en cours…');
+                }
+            });
+
+            // Retour arrière du navigateur (page restaurée depuis le cache) : boutons réactivés
+            window.addEventListener('pageshow', function (e) {
+                if (!e.persisted) return;
+                document.querySelectorAll('button[data-html-origine]').forEach(function (b) {
+                    b.innerHTML = b.dataset.htmlOrigine;
+                    b.disabled = false;
+                });
+            });
+        })();
+    </script>
     <!-- UN SEUL jQuery au début -->
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 

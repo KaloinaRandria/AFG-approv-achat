@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface DeviseRepo extends JpaRepository<Devise, Integer> {
 
+    java.util.Optional<Devise> findByAcronymeIgnoreCase(String acronyme);
 }

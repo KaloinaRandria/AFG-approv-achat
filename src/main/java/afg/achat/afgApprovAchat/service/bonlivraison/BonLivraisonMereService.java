@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Optional;
 
 @Service
@@ -25,30 +26,32 @@ public class BonLivraisonMereService {
         return bonLivraisonMereRepo.findAll(pageable);
     }
 
-    public Page<BonLivraisonMere> searchBonLivraisonMeres(String num,
-                                                          String fournisseur,
-                                                          String devise,
-                                                          LocalDate dateFrom,
-                                                          LocalDate dateTo,
-                                                          int page, int size, String sort, String dir) {
+    /** Origine d'un bon de livraison, pour le filtre de la liste. */
+    public enum Origine {
+        /** Réception d'un bon de commande. */
+        BC,
+        /** Saisie directe, sans bon de commande. */
+        HORS_BC
+    }
 
-        Sort.Direction direction = "desc".equalsIgnoreCase(dir) ? Sort.Direction.DESC : Sort.Direction.ASC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sort));
+    /** Critères de la liste des bons de livraison ; les champs vides ou {@code null} sont ignorés. */
+    public record Recherche(String numero, String fournisseur, String bonCommande, String article,
+                            Integer deviseId, Origine origine, LocalDate du, LocalDate au) {
+    }
 
-        String n = (num == null) ? "" : num.trim();
-        String f = (fournisseur == null) ? "" : fournisseur.trim();
-        String d = (devise == null) ? "" : devise.trim();
+    /** Recherche paginée des bons de livraison, du plus récent au plus ancien. */
+    public Page<BonLivraisonMere> rechercher(Recherche r, Pageable pageable) {
+        return bonLivraisonMereRepo.rechercher(
+                r.du() == null ? LocalDateTime.of(1900, 1, 1, 0, 0) : r.du().atStartOfDay(),
+                r.au() == null ? LocalDateTime.of(2999, 12, 31, 23, 59, 59) : r.au().atTime(LocalTime.MAX),
+                texte(r.numero()), texte(r.fournisseur()), texte(r.bonCommande()), texte(r.article()),
+                r.deviseId() == null ? 0 : r.deviseId(),
+                r.origine() == null ? "" : r.origine().name(),
+                pageable);
+    }
 
-        // ✅ bornes non-null (évite soucis + logique claire)
-        LocalDateTime from = (dateFrom == null)
-                ? LocalDate.of(1900, 1, 1).atStartOfDay()
-                : dateFrom.atStartOfDay();
-
-        LocalDateTime to = (dateTo == null)
-                ? LocalDate.of(2999, 12, 31).atTime(23, 59, 59)
-                : dateTo.atTime(23, 59, 59);
-
-        return bonLivraisonMereRepo.searchMulti(n, f, d, from, to, pageable);
+    private static String texte(String valeur) {
+        return valeur == null ? "" : valeur.trim();
     }
 
 

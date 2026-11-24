@@ -17,5 +17,9 @@ public class GlobalModelAttribute {
 //        System.out.println("=== Current URI: " + cleanUri);
 
         model.addAttribute("currentUri", cleanUri);
+
+        // Type de demande affiché : le menu distingue les demandes de fourniture des autres
+        String typeDemande = request.getParameter("typeDemande");
+        model.addAttribute("menuTypeDemande", typeDemande == null ? "" : typeDemande.trim().toUpperCase());
     }
 }

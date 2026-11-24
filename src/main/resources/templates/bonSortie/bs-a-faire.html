@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Bons de sortie à faire</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section th:with="fmt=${T(afg.achat.afgApprovAchat.service.util.FormatNumber)}">
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-dolly icon-gradient-blue"></i> Bons de sortie à faire
+            </h1>
+            <a class="btn btn-outline-secondary" th:href="@{/bon-sortie/list}">
+                <i class="fas fa-list me-1"></i> Bons de sortie
+            </a>
+        </div>
+        <p class="text-muted mb-4">
+            Demandes de matériel validées dont des articles restent à sortir du stock.
+            Le stock disponible tient compte du stock réservé par les autres demandes.
+        </p>
+
+        <!-- ── Prêtes : du stock est disponible ── -->
+        <div class="card shadow-lg border-0 mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    Stock disponible : bon de sortie à faire
+                    <span class="badge bg-success ms-1" th:text="${#lists.size(pretes)}">0</span>
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div th:if="${#lists.isEmpty(pretes)}" class="text-muted p-3">
+                    Aucune demande n'a d'article à sortir avec du stock disponible.
+                </div>
+                <th:block th:each="d : ${pretes}">
+                    <div th:replace="~{::demandeASortir(${d})}"></div>
+                </th:block>
+            </div>
+        </div>
+
+        <!-- ── En attente : rien n'est en stock pour l'instant ── -->
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-hourglass-half text-warning me-2"></i>
+                    En attente de stock (achat ou livraison)
+                    <span class="badge bg-secondary ms-1" th:text="${#lists.size(enAttente)}">0</span>
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div th:if="${#lists.isEmpty(enAttente)}" class="text-muted p-3">
+                    Aucune demande en attente de stock.
+                </div>
+                <th:block th:each="d : ${enAttente}">
+                    <div th:replace="~{::demandeASortir(${d})}"></div>
+                </th:block>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Une demande et ses articles à sortir (modèle : jamais affiché tel quel) -->
+<div th:remove="all">
+<div th:fragment="demandeASortir(d)" class="border-bottom p-3"
+     th:with="fmt=${T(afg.achat.afgApprovAchat.service.util.FormatNumber)}">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+        <div>
+            <a class="fw-bold" th:href="@{/demande/fiche/{id}(id=${d.demande.id})}" th:text="${d.demande.id}"></a>
+            <span class="text-muted ms-2"
+                  th:text="${d.demande.demandeur != null ? d.demande.demandeur.prenom + ' ' + d.demande.demandeur.nom : ''}"></span>
+            <span class="text-muted ms-2"
+                  th:text="${d.demande.dateDemande != null ? 'du ' + #temporals.format(d.demande.dateDemande, 'dd/MM/yyyy') : ''}"></span>
+            <span class="badge bg-info text-dark ms-2"
+                  th:if="${d.demande.etatLivraison != null and d.demande.etatLivraison.name() == 'EN_COURS_SORTIE'}">Sortie partielle</span>
+            <div class="small text-muted" th:text="${d.demande.motifEvoque}"></div>
+        </div>
+        <a class="btn btn-sm btn-gradient-green" th:if="${d.prete()}"
+           th:href="@{/demande/fiche/{id}(id=${d.demande.id})}">
+            <i class="fas fa-file-export me-1"></i> Faire le bon de sortie
+        </a>
+    </div>
+    <table class="table table-sm align-middle mb-0">
+        <thead>
+        <tr class="small text-muted">
+            <th>Article</th>
+            <th class="text-end">Reste à sortir</th>
+            <th class="text-end">Stock disponible</th>
+            <th class="text-end">Sortable maintenant</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="l : ${d.lignes}" th:classappend="${l.disponible()} ? '' : ' text-muted'">
+            <td th:text="${l.ligne.article.codeArticle + ' - ' + l.ligne.article.designation}"></td>
+            <td class="text-end" th:text="${fmt.quantite(l.reste)}"></td>
+            <td class="text-end" th:text="${fmt.quantite(l.stockLibre)}"></td>
+            <td class="text-end fw-semibold">
+                <span th:if="${l.disponible()}" class="text-success" th:text="${fmt.quantite(l.sortable())}"></span>
+                <span th:unless="${l.disponible()}">—</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</div>
+
+</body>
+</html>

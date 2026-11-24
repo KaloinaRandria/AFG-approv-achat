@@ -32,7 +32,7 @@
                 </div>
 
                 <div class="d-flex gap-2">
-                    <a class="btn btn-outline-secon b dary" th:href="@{${returnUrl}}">
+                    <a class="btn btn-outline-secondary" th:href="@{${returnUrl}}">
                         <i class="fas fa-arrow-left me-1"></i> Retour liste
                     </a>
                 </div>
@@ -88,9 +88,13 @@
 
                                 <span class="badge bg-success" th:if="${isValidated}">
                                     <i class="fas fa-check-circle me-1"></i>
+                                    <!-- Dernier validateur selon le type : contrôleur de gestion pour le matériel,
+                                         S.G. pour les anciennes demandes (circuit standard) -->
                                     <span th:text="${isCodepWorkflow ?
                                                     'Demande validée par le Comité de dépense' :
-                                                    'Demande validée par le S.G.'}">
+                                                    (demande.typeDemandeEffectif.derniereValidation.name() == 'VALIDATION_N2'
+                                                        ? 'Demande validée par le contrôleur de gestion'
+                                                        : 'Demande validée par le S.G.')}">
                                     </span>
                                 </span>
 
@@ -137,7 +141,7 @@
                             </div>
 
                             <div>
-                                <strong>Date prévue pour la livraison :</strong>
+                                <strong th:text="${estAutre ? 'Date souhaitée de paiement :' : 'Date prévue pour la livraison :'}">Date prévue pour la livraison :</strong>
                                 <div th:text="${demande.dateSortie != null ? #temporals.format(demande.dateSortie,'dd/MM/yyyy') : '-'}">-</div>
                             </div>
 
@@ -169,7 +173,14 @@
 
 
                             <div>
-                                <strong>Type de Demande :</strong>
+                                <strong>Type de demande :</strong>
+
+                                <!-- Lecture seule : détermine le circuit de validation -->
+                                <div th:text="${demande.typeDemandeEffectif.libelle}">-</div>
+                            </div>
+
+                            <div>
+                                <strong>Nature (OPEX/CAPEX) :</strong>
 
                                 <!-- Lecture seule -->
                                 <div th:text="${demande.natureDemande != null ? demande.natureDemande : '-'}">-</div>
@@ -191,12 +202,13 @@
                                 <strong>Mode de traitement :</strong>
 
                                 <!-- Lecture seule -->
-                                <div th:text="${demande.modeTraitement != null ? demande.modeTraitement.libelle : '-'}">-</div>
+                                <div th:text="${demande.modeTraitement != null ? demande.modeTraitement.libelle
+                                               : (modeTraitementImpose != null ? modeTraitementImpose.libelle : '-')}">-</div>
                             </div>
                             <div th:if="${demande.statutTransmissionFinance != null and demande.statutTransmissionFinance.name() != 'NON_CONCERNEE'}">
                                 <strong>Transmission finance :</strong>
                                 <div th:if="${demande.statutTransmissionFinance.name() == 'A_TRANSMETTRE'}" class="text-warning fw-semibold">
-                                    À transmettre par les Moyens Généraux
+                                    À transmettre par le validateur des Moyens Généraux
                                 </div>
                                 <div th:if="${demande.statutTransmissionFinance.name() == 'TRANSMISE_FINANCE'}" class="text-primary fw-semibold">
                                     Transmise à la finance
@@ -352,10 +364,50 @@
                         </div>
 
 
+                        <!-- DÉPENSE DEMANDÉE (demande Autre : une seule dépense, paiement direct) -->
+                        <div class="bl-body" th:if="${estAutre}">
+                            <div class="ui-lines-head">
+                                <span class="ui-lines-title"><i class="fas fa-hand-holding-usd"></i>Dépense demandée</span>
+                            </div>
+                            <div th:if="${detailAutre == null}" class="px-3 pb-3 text-muted">
+                                <i class="fas fa-inbox me-1"></i>Aucune dépense enregistrée pour cette demande.
+                            </div>
+                            <table th:if="${detailAutre != null}" class="bl-table ui-lines table align-middle">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>CATÉGORIE</th>
+                                    <th>BÉNÉFICIAIRE</th>
+                                    <th class="text-end">QUANTITÉ</th>
+                                    <th class="text-end">MONTANT UNITAIRE (<span th:text="${demande.codeDevise}">MGA</span>)</th>
+                                    <th class="text-end">MONTANT (<span th:text="${demande.codeDevise}">MGA</span>)</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td class="fw-semibold" th:text="${detailAutre.categorie.libelle}">Sponsoring</td>
+                                    <td th:text="${detailAutre.beneficiaire != null ? detailAutre.beneficiaire : '-'}">-</td>
+                                    <td class="text-end" th:text="${detailAutre.quantite != null ? #numbers.formatDecimal(detailAutre.quantite, 1, 'DEFAULT', 2, 'DEFAULT') : '-'}">1</td>
+                                    <td class="text-end" th:text="${detailAutre.montantUnitaire != null ? #numbers.formatDecimal(detailAutre.montantUnitaire, 1, 'DEFAULT', 2, 'DEFAULT') : '-'}">0</td>
+                                    <td class="text-end ui-total" th:text="${detailAutre.montant != null ? #numbers.formatDecimal(detailAutre.montant, 1, 'DEFAULT', 2, 'DEFAULT') : '-'}">0</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                            <div class="px-3 pb-2 small text-muted text-end"
+                                 th:if="${detailAutre != null and detailAutre.montant != null and demande.deviseEtrangere}">
+                                ≈ <strong th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(demande.enAriary(detailAutre.montant), 'MGA')}"></strong>
+                                au taux du <span th:text="${demande.dateTaux != null ? #temporals.format(demande.dateTaux, 'dd/MM/yyyy') : '—'}"></span>,
+                                à titre indicatif.
+                            </div>
+                        </div>
+
                         <!-- TABLE ARTICLES -->
-                        <div class="bl-body" th:if="${not (canDecisionMG and demande.statut
+                        <div class="bl-body" th:if="${!estAutre and not (canDecisionMG and demande.statut
      == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1)}">
-                            <table class="bl-table table table-hover align-middle">
+                            <div class="ui-lines-head">
+                                <span class="ui-lines-title"><i class="fas fa-box-open"></i>Articles demandés</span>
+                                <span class="ui-lines-count" th:text="${lignes != null ? #lists.size(lignes) : 0}">0</span>
+                            </div>
+                            <table class="bl-table ui-lines table table-hover align-middle">
 
                                 <thead class="table-light">
                                 <tr>
@@ -382,7 +434,7 @@
 
                                     <!-- PRIX -->
                                     <th th:if="${canVoirPrix}" class="text-end" style="width:25%">
-                                        PRIX UNITAIRE HT
+                                        PRIX UNITAIRE HT (<span th:text="${demande.codeDevise}">MGA</span>)
                                         <span th:if="${canDecisionMG}"
                                               id="badgePrixManquants"
                                               class="badge bg-danger ms-1"
@@ -410,7 +462,7 @@
                                 <tr th:if="${lignes == null || lignes.isEmpty()}">
                                     <td th:colspan="${canVoirPrix} ? 5 : 4"
                                         class="text-center text-muted py-4">
-                                        Aucun article
+                                        <i class="fas fa-inbox d-block mb-2" style="font-size:1.4rem; opacity:.5"></i>Aucun article
                                     </td>
                                 </tr>
 
@@ -419,12 +471,22 @@
                                     th:classappend="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE} ? ' table-danger opacity-75'" th:attr="data-type-appro=${l.typeApprovisionnement?.name()}">
 
                                     <!-- DESIGNATION -->
-                                    <td th:text="${l.article != null ? l.article.codeArticle +' - '+ l.article.designation : '-'}"></td>
+                                    <td>
+                                        <div class="ui-art" th:if="${l.article != null}">
+                                            <span class="ui-art-code" th:text="${l.article.codeArticle}"></span>
+                                            <span class="ui-art-des" th:text="${l.article.designation}"></span>
+                                            <span class="ui-art-refus"
+                                                  th:if="${l.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).REFUSE}">
+                                                <i class="fas fa-ban"></i>Refusé
+                                            </span>
+                                        </div>
+                                        <span th:if="${l.article == null}">-</span>
+                                    </td>
 
                                     <!-- QUANTITE -->
                                     <td class="text-end" th:data-ligne-id="${l.id}">
                 <span class="qte-display"
-                      th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                      th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantite)}">
                 </span>
 
                                         <input type="number"
@@ -438,11 +500,15 @@
                                     </td>
 
                                     <!-- UDM -->
-                                    <td th:text="${l.article.udm.description}"></td>
+                                    <td class="text-end ui-udm" th:text="${l.article.udm.description}"></td>
 
                                     <td class="text-center"
-                                        th:if="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}"
-                                        th:text="${l.typeApprovisionnement?.name()}">
+                                        th:if="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}">
+                                        <span th:switch="${l.typeApprovisionnement?.name()}">
+                                            <span th:case="'STOCK'" class="ui-type ui-type-stock"><i class="fas fa-warehouse"></i>Stock</span>
+                                            <span th:case="'ACHAT'" class="ui-type ui-type-achat"><i class="fas fa-shopping-cart"></i>Achat</span>
+                                            <span th:case="*" class="ui-type">—</span>
+                                        </span>
 <!--                                        <span th:switch="${l.typeApprovisionnement?.name()}">-->
 <!--                                            <span th:case="'STOCK'" class="badge bg-success">-->
 <!--                                                <i class="fas fa-warehouse me-1"></i>Stock-->
@@ -550,9 +616,9 @@
                                     <!-- Cellule vide TYPE — uniquement si le rôle la voit -->
                                     <td th:if="${#authorization.expression('hasAnyRole(''ROLE_ADMIN'',''ROLE_MOYENS_GENERAUX'',''ROLE_CONTROLEUR'',''ROLE_DFC'',''ROLE_SG'')')}"></td>
 
-                                    <td class="text-end text-muted text-uppercase small">Total</td>
+                                    <td class="text-end ui-total-label">Total estimé HT</td>
 
-                                    <td class="text-end" id="totalEstimeDisplay"
+                                    <td class="text-end ui-total" id="totalEstimeDisplay"
                                         th:text="${demande.totalEstime != null and demande.totalEstime > 0
             ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')
             : '—'}">
@@ -565,25 +631,79 @@
                                 </tfoot>
 
                             </table>
+
+                            <!-- Devise de la demande et contre-valeur indicative en ariary (contrôle budgétaire) -->
+                            <div class="px-3 pb-2 small text-muted text-end"
+                                 th:if="${canVoirPrix and demande.deviseEtrangere}">
+                                Montants en <strong th:text="${demande.codeDevise}">EUR</strong>
+                                <th:block th:if="${demande.totalEstime != null and demande.totalEstime > 0}">
+                                    — total ≈ <strong th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(demande.enAriary(demande.totalEstime), 'MGA')}"></strong>
+                                </th:block>
+                                au taux du <span th:text="${demande.dateTaux != null ? #temporals.format(demande.dateTaux, 'dd/MM/yyyy') : '—'}"></span>
+                                (1 <span th:text="${demande.codeDevise}"></span> =
+                                <span th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(demande.tauxEffectif, 'MGA')}"></span>),
+                                à titre indicatif.
+                            </div>
                         </div>
 
                         <!-- TABLE ARTICLES — version MG en VALIDATION_N1 -->
-                        <div class="bl-body" th:if="${canDecisionMG and demande.statut
+                        <div class="bl-body" th:if="${!estAutre and canDecisionMG and demande.statut
      == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
 
-                            <div class="alert alert-info py-2 mx-3 mb-2">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Pour chaque article, saisissez le prix proforma. Si du stock est disponible,
-                                utilisez <strong>"Scinder"</strong> pour créer une ligne stock séparée.
+                            <!-- BANDEAU STYLISÉ STATUT PRIX & CONSIGNES MG -->
+                            <div class="mx-3 mb-3 p-3 rounded-4 shadow-sm border" id="alertPrixContainer"
+                                 style="background: linear-gradient(135deg, rgba(255, 243, 205, 0.6) 0%, rgba(255, 255, 255, 0.95) 100%); border-color: rgba(255, 193, 7, 0.4) !important;">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="d-flex align-items-center justify-content-center rounded-circle shadow-sm"
+                                         id="alertPrixIconWrapper"
+                                         style="width: 42px; height: 42px; min-width: 42px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                                        <i class="fas fa-exclamation-triangle fa-lg" id="alertPrixIcon"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
+                                            <h6 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                                                <span id="alertPrixTitle">Saisie des prix proforma</span>
+                                                <span id="badgePrixManquantsHeader" class="badge rounded-pill bg-warning text-dark px-2 py-1 small">
+                                                    <i class="fas fa-clock me-1"></i>En attente de saisie
+                                                </span>
+                                            </h6>
+                                        </div>
+                                        <p class="mb-0 text-muted small" id="alertPrixDescription">
+                                            Pour chaque article, saisissez le prix proforma. Si du stock est disponible, utilisez le bouton <strong class="text-primary"><i class="fas fa-layer-group"></i> Scinder</strong> pour créer une ligne stock séparée.
+                                        </p>
+
+                                        <!-- Devise des prix proforma : changer de devise vide les prix à acheter -->
+                                        <form th:action="@{/demande/fiche/{id}/devise(id=${demande.id})}" method="post"
+                                              class="d-flex align-items-center gap-2 mt-2 flex-wrap"
+                                              onsubmit="return confirm('Changer la devise de la demande ? Les prix proforma des articles à acheter seront à ressaisir dans la nouvelle devise ; les lignes servies depuis le stock seront converties.');">
+                                            <label for="deviseDemande" class="small fw-semibold mb-0">Devise des prix :</label>
+                                            <select id="deviseDemande" name="devise" class="form-select form-select-sm" style="width:auto;">
+                                                <option th:each="d : ${devises}" th:value="${d.id}"
+                                                        th:selected="${d.acronyme == demande.codeDevise}"
+                                                        th:text="${d.acronyme + ' — ' + d.designation}"></option>
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Appliquer</button>
+                                            <span class="small text-muted" th:if="${demande.deviseEtrangere}">
+                                                1 <span th:text="${demande.codeDevise}"></span> =
+                                                <span th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(demande.tauxEffectif, 'MGA')}"></span>
+                                                (cours du <span th:text="${demande.dateTaux != null ? #temporals.format(demande.dateTaux, 'dd/MM/yyyy') : '—'}"></span>)
+                                            </span>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
 
-                            <table class="bl-table table table-hover align-middle">
+                            <div class="ui-lines-head">
+                                <span class="ui-lines-title"><i class="fas fa-box-open"></i>Articles demandés</span>
+                                <span class="ui-lines-count" th:text="${lignes != null ? #lists.size(lignes) : 0}">0</span>
+                            </div>
+                            <table class="bl-table ui-lines table table-hover align-middle">
                                 <thead class="table-light">
                                 <tr>
                                     <th style="width:30%">DÉSIGNATION</th>
                                     <th class="text-end" style="width:10%">QUANTITÉ</th>
                                     <th class="text-end" style="width:8%">UDM</th>
-                                    <th class="text-end" style="width:12%">PRIX UNITAIRE HT</th>
+                                    <th class="text-end" style="width:12%">PRIX UNITAIRE HT (<span th:text="${demande.codeDevise}">MGA</span>)</th>
                                     <th class="text-center" style="width:10%">TYPE</th>
                                     <th class="text-center" style="width:10%">STOCK DISPO</th>
                                     <th class="text-center" style="width:20%">ACTIONS</th>
@@ -595,7 +715,10 @@
 
                                     <!-- Désignation -->
                                     <td>
-                                        <span th:text="${l.article.codeArticle + ' - ' + l.article.designation}"></span>
+                                        <div class="ui-art">
+                                            <span class="ui-art-code" th:text="${l.article.codeArticle}"></span>
+                                            <span class="ui-art-des" th:text="${l.article.designation}"></span>
+                                        </div>
 <!--                                        &lt;!&ndash; Badge si ligne générée par scission &ndash;&gt;-->
 <!--                                        <span th:if="${l.typeApprovisionnement?.name() == 'STOCK'}"-->
 <!--                                              class="badge bg-success ms-1">-->
@@ -608,7 +731,7 @@
                                     <!-- Quantité -->
                                     <td class="text-end" th:data-ligne-id="${l.id}">
                                     <span class="qte-display"
-                                          th:text="${#numbers.formatDecimal(l.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                                          th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(l.quantite)}">
                                     </span>
                                         <input type="number"
                                                class="form-control form-control-sm qte-input d-none text-end"
@@ -620,7 +743,7 @@
                                     </td>
 
                                     <!-- UDM -->
-                                    <td class="text-end" th:text="${l.article.udm.description}"></td>
+                                    <td class="text-end ui-udm" th:text="${l.article.udm.description}"></td>
 
                                     <!-- Prix unitaire -->
                                     <td class="text-end" th:data-ligne-prix-id="${l.id}">
@@ -646,7 +769,12 @@
                                     </td>
 
                                     <!-- Type -->
-                                    <td class="text-center" th:text="${l.typeApprovisionnement?.name()}">
+                                    <td class="text-center">
+                                        <span th:switch="${l.typeApprovisionnement?.name()}">
+                                            <span th:case="'STOCK'" class="ui-type ui-type-stock"><i class="fas fa-warehouse"></i>Stock</span>
+                                            <span th:case="'ACHAT'" class="ui-type ui-type-achat"><i class="fas fa-shopping-cart"></i>Achat</span>
+                                            <span th:case="*" class="ui-type">—</span>
+                                        </span>
 <!--                                        <span th:switch="${l.typeApprovisionnement?.name()}">-->
 <!--                                            <span th:case="'STOCK'" class="badge bg-success">-->
 <!--                                                <i class="fas fa-warehouse me-1"></i>Stock-->
@@ -715,6 +843,17 @@
                                                 <i class="fas fa-layer-group me-1"></i>Scinder
                                             </button>
 
+                                            <!-- REMETTRE À L'ACHAT (ligne STOCK) : libère la réservation de stock -->
+                                            <form th:if="${l.typeApprovisionnement?.name() == 'STOCK'}"
+                                                  th:action="@{/demande/ligne/{id}/remettre-achat(id=${l.id})}"
+                                                  method="post" class="d-inline"
+                                                  onsubmit="return confirm('Remettre cette ligne à l\'achat ? Sa réservation de stock sera libérée.');">
+                                                <button type="submit" class="btn btn-sm btn-outline-primary"
+                                                        title="Remettre à l'achat (libère la réservation de stock)">
+                                                    <i class="fas fa-shopping-cart me-1"></i>Remettre à l'achat
+                                                </button>
+                                            </form>
+
                                         </div>
                                     </td>
                                 </tr>
@@ -724,9 +863,9 @@
                                 <tfoot>
                                 <tr class="table-light fw-bold border-top">
                                     <td></td>
-                                    <td class="text-end text-muted text-uppercase small">Total</td>
+                                    <td class="text-end ui-total-label">Total</td>
                                     <td></td>
-                                    <td class="text-end" id="totalEstimeDisplayMG"
+                                    <td class="text-end ui-total" id="totalEstimeDisplayMG"
                                         th:text="${demande.totalEstime != null and demande.totalEstime > 0
                            ? #numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')
                            : '—'}">
@@ -763,6 +902,7 @@
 
                                 <!-- Ligne des boutons -->
                                 <div class="d-flex align-items-center gap-2 mb-2">
+                                    <th:block th:unless="${estAutre}">
                                     <button type="button"
                                             id="btnSavePrix"
                                             class="btn btn-gradient-blue btn-sm px-3">
@@ -770,6 +910,7 @@
                                         <span class="btn-text">Enregistrer le prix</span>
                                     </button>
                                     <span id="prixSaveStatus" class="small"></span>
+                                    </th:block>
 
                                     <button type="button"
                                             id="btnSavePjMg"
@@ -874,11 +1015,12 @@
                                          th:if="${canDecisionMG and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
 
                                         <label class="form-label mb-1">
-                                            Type de demande <span class="text-danger">*</span>
+                                            Nature (OPEX/CAPEX) <span class="text-danger">*</span>
                                         </label>
 
                                         <select class="form-select form-select-sm"
-                                                name="typeDemande"
+                                                name="natureDemande"
+                                                id="typeDemandeSelect"
                                                 required>
                                             <option value="">-- Choisir --</option>
                                             <option th:each="n : ${natures}"
@@ -892,20 +1034,29 @@
                                             Obligatoire pour valider en Moyens Généraux.
                                         </div>
                                     </div>
-                                    <!-- ================= MODE DE TRAITEMENT (MG seulement en N1) ================= -->
+                                    <!-- ================= MODE DE TRAITEMENT ================= -->
+                                    <!-- Fixé par le type de demande : simple rappel -->
+                                    <div class="mb-2 small text-muted"
+                                         th:if="${canDecisionMG and modeTraitementImpose != null and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
+                                        <i class="fas fa-cogs me-1"></i>
+                                        Mode de traitement : <strong th:text="${modeTraitementImpose.libelle}"></strong>
+                                        <span th:text="${modeTraitementImpose.necessiteBonCommande ? '(avec bon de commande)' : '(sans bon de commande)'}"></span>
+                                    </div>
+                                    <!-- Anciennes demandes seulement : choix par les M.G. en N1 -->
                                     <div class="mb-2"
-                                         th:if="${canDecisionMG and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
+                                         th:if="${canDecisionMG and modeTraitementImpose == null and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
                                         <label class="form-label mb-1">
                                             Mode de traitement <span class="text-danger">*</span>
                                         </label>
 
-                                        <select class="form-select from-select-sm"
-                                        name="modeTraitement"
-                                        required>
+                                        <select class="form-select form-select-sm"
+                                                name="modeTraitement"
+                                                id="modeTraitementSelect"
+                                                required>
                                             <option value="">-- Choisir --</option>
                                             <option th:each="m : ${modeTraitement}"
-                                            th:value="${m.getId()}"
-                                            th:text="${m.getLibelle()}">
+                                                    th:value="${m.getId()}"
+                                                    th:text="${m.getLibelle()}">
                                             </option>
                                         </select>
                                     </div>
@@ -1051,27 +1202,22 @@
 
                                             <button type="button"
                                                     class="btn btn-outline-danger btn-reject"
-                                                    data-decision="REJECT"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#decisionModal">
+                                                    data-decision="REJECT">
                                                 <i class="fas fa-times me-1"></i>
                                                 Rejeter
                                             </button>
 
                                             <button type="button"
                                                     class="btn btn-gradient-green btn-approve"
-                                                    data-decision="APPROVE"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#decisionModal">
+                                                    data-decision="APPROVE">
                                                 <i class="fas fa-check me-1"></i>
                                                 Valider
                                             </button>
 
                                             <button type="button"
                                                     class="btn btn-gradient-purple"
-                                                    th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#codepModal">
+                                                    id="btnEnvoyerCodep"
+                                                    th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDATION_N1}">
                                                 <i class="fas fa-landmark me-1"></i>
                                                 Envoyer au CODEP
                                             </button>
@@ -1083,18 +1229,14 @@
 
                                             <button type="button"
                                                     class="btn btn-outline-danger btn-reject"
-                                                    data-decision="REJECT"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#decisionModal">
+                                                    data-decision="REJECT">
                                                 <i class="fas fa-times me-1"></i>
                                                 Rejeter
                                             </button>
 
                                             <button type="button"
                                                     class="btn btn-gradient-green btn-approve"
-                                                    data-decision="APPROVE"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#decisionModal">
+                                                    data-decision="APPROVE">
                                                 <i class="fas fa-check me-1"></i>
                                                 Valider
                                             </button>
@@ -1161,18 +1303,18 @@
                                                 <td>
                                                     <span class="badge"
                                                           th:classappend="${
-                                                              h.decision == T(afg.achat.afgApprovAchat.model.demande.ValidationDemande.DecisionValidation).REFUSE
+                                                              (h.decision != null and h.decision.name() == 'REFUSE')
                                                               ? ' bg-danger'
                                                               : ' bg-success'
                                                           }">
                                                         <i class="fas"
                                                            th:classappend="${
-                                                               h.decision == T(afg.achat.afgApprovAchat.model.demande.ValidationDemande.DecisionValidation).REFUSE
+                                                               (h.decision != null and h.decision.name() == 'REFUSE')
                                                                ? ' fa-times-circle'
                                                                : ' fa-check-circle'
                                                            }"></i>
                                                         <span th:text="${
-                                                            h.decision == T(afg.achat.afgApprovAchat.model.demande.ValidationDemande.DecisionValidation).REFUSE
+                                                            (h.decision != null and h.decision.name() == 'REFUSE')
                                                             ? 'REFUSÉE'
                                                             : 'VALIDÉE'
                                                         }"></span>
@@ -1248,9 +1390,11 @@
                         </div>
 
                         <!-- ===================== BON DE COMMANDE ===================== -->
+                        <!-- Lecture seule : les bons de commande se créent depuis le menu « Bon de commande »
+                             (Lignes à acheter), en regroupant les lignes de plusieurs demandes -->
                         <div class="px-3 pb-3 mt-3"
                              th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE
-                                and (canCreateBC or (bonsCommande != null and !bonsCommande.isEmpty()))}">
+                                and bonsCommande != null and !bonsCommande.isEmpty()}">
                             <div class="p-3 border rounded bg-light">
                                 <div class="d-flex align-items-center justify-content-between mb-3">
                                     <div class="fw-bold">
@@ -1262,13 +1406,6 @@
                                         <i class="fas fa-info-circle me-1"></i>
                                         Mode : <span th:text="${demande.modeTraitement?.libelle}"></span>
                                     </span>
-                                </div>
-
-                                <!-- Message si aucun bon de commande -->
-                                <div th:if="${bonsCommande == null or bonsCommande.isEmpty()}"
-                                     class="text-muted mb-3">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    Aucun bon de commande créé pour cette demande.
                                 </div>
 
                                 <!-- ── HISTORIQUE DES BONS DE COMMANDE ── -->
@@ -1284,14 +1421,19 @@
                                                 <th>Créé par</th>
                                                 <th>Statut</th>
                                                 <th>Montant total</th>
-                                                <th class="text-center">Action</th>
                                             </tr>
                                             </thead>
                                             <tbody>
                                             <tr th:each="bc : ${bonsCommande}">
-                                                <td class="fw-semibold" th:text="${bc.numero}"></td>
+                                                <td>
+                                                    <!-- Brouillon : la fiche ouvre l'écran de saisie pour le compléter -->
+                                                    <a class="fw-semibold text-decoration-none"
+                                                       th:href="@{/bon-commande/{id}(id=${bc.id})}"
+                                                       th:text="${bc.numero != null and !#strings.isEmpty(bc.numero) ? bc.numero : bc.id}"
+                                                       th:title="${bc.statut?.name() == 'BROUILLON' ? 'Compléter le bon de commande' : 'Voir le bon de commande'}"></a>
+                                                </td>
                                                 <td th:text="${bc.dateCreation != null ? #temporals.format(bc.dateCreation, 'dd/MM/yyyy HH:mm') : '—'}"></td>
-                                                <td>—</td>
+                                                <td th:text="${bc.dateValidationSg != null ? #temporals.format(bc.dateValidationSg, 'dd/MM/yyyy HH:mm') : '—'}"></td>
                                                 <td th:text="${bc.createur != null ? bc.createur.nom + ' ' + bc.createur.prenom : '—'}"></td>
                                                 <td>
                                                 <span th:switch="${bc.statut?.name()}">
@@ -1299,6 +1441,9 @@
                                                           class="badge bg-warning text-dark">
                                                         <i class="fas fa-pencil me-1"></i>Brouillon
                                                     </span>
+                                                    <span th:case="'EN_ATTENTE_VALIDATION'"
+                                                          class="badge bg-info text-dark"
+                                                          th:text="${bc.libelleStatut}">En attente</span>
                                                     <span th:case="'VALIDE'"
                                                           class="badge bg-success">
                                                         <i class="fas fa-check me-1"></i>Validé
@@ -1314,44 +1459,40 @@
                                                  ? #numbers.formatDecimal(bc.montantTTC, 1, 'DEFAULT', 2, 'DEFAULT')
                                                  : '—'}">
                                                 </td>
-                                                <td class="text-center">
-                                                    <a th:href="@{/bon-commande/{id}(id=${bc.id})}"
-                                                       class="btn btn-sm btn-outline-gradient-blue"
-                                                       title="Voir le bon de commande">
-                                                        <i class="fas fa-eye me-1"></i>
-                                                        <span th:text="${bc.statut?.name() == 'BROUILLON' ? 'Compléter' : 'Voir'}">Voir</span>
-                                                    </a>
-                                                </td>
                                             </tr>
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
-                                <!-- ── BOUTON CREER BON DE COMMANDE ── -->
-                                <div th:if="${canCreateBC and (bonsCommande == null or bonsCommande.isEmpty())}">
-                                    <hr class="my-3">
-                                    <div class="d-flex gap-2">
-                                        <form th:action="@{/bon-commande/creer/{id}(id=${demande.id})}"
-                                              method="get"
-                                              id="formCreerBc">
 
-                                            <button type="submit"
-                                                    class="btn btn-gradient-purple">
-                                                <i class="fas fa-file-invoice me-1"></i>
-                                                Créer le bon de commande
-                                            </button>
-                                        </form>
-                                    </div>
-
-                                    <!-- Informations supplémentaires -->
-                                    <div class="mt-3 small text-muted">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        Le bon de commande sera créé avec les prix proforma saisis par les Moyens Généraux.
-                                        <span th:if="${demande.totalEstime != null and demande.totalEstime > 0}">
-                                            <br>
-                                            <strong>Total estimé :</strong>
-                                            <span th:text="${#numbers.formatDecimal(demande.totalEstime, 1, 'DEFAULT', 2, 'DEFAULT')}"></span> MGA
-                                        </span>
+                                <!-- ── LIGNES DE LA DEMANDE COMMANDÉES (bons non annulés) ── -->
+                                <div th:if="${lignesCommandees != null and !lignesCommandees.isEmpty()}">
+                                    <div class="fw-semibold small mb-2">Lignes commandées</div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered align-middle bg-white mb-0">
+                                            <thead class="table-light">
+                                            <tr>
+                                                <th>Article</th>
+                                                <th>Bon de commande</th>
+                                                <th>Fournisseur</th>
+                                                <th class="text-end">Qté commandée</th>
+                                                <th>Statut du bon</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr th:each="lc : ${lignesCommandees}">
+                                                <td th:text="${lc.article != null ? lc.article.codeArticle + ' - ' + lc.article.designation : lc.designationAffichee}"></td>
+                                                <td>
+                                                    <a th:href="@{/bon-commande/{id}(id=${lc.bonCommandeMere.id})}"
+                                                       th:text="${lc.bonCommandeMere.numero}"></a>
+                                                </td>
+                                                <td th:text="${lc.bonCommandeMere.fournisseur != null ? lc.bonCommandeMere.fournisseur.nom : '—'}"></td>
+                                                <td class="text-end"
+                                                    th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(lc.quantiteCommandee)}"></td>
+                                                <td th:text="${lc.bonCommandeMere.libelleStatut}"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
@@ -1359,7 +1500,7 @@
                         <!-- ===================== BON DE SORTIE ===================== -->
                         <!-- Section visible uniquement si demande VALIDE -->
                         <div class="px-3 pb-3 mt-3"
-                             th:if="${demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE}">
+                             th:if="${!estAutre and demande.statut == T(afg.achat.afgApprovAchat.model.util.StatutDemande).VALIDE}">
 
                             <div class="p-3 border rounded bg-light">
                                 <div class="d-flex align-items-center justify-content-between mb-3">
@@ -1396,12 +1537,15 @@
                                                 <th>Date confirmation</th>
                                                 <th>Créé par</th>
                                                 <th>Statut</th>
-                                                <th class="text-center">Action</th>
                                             </tr>
                                             </thead>
                                             <tbody>
                                             <tr th:each="bs : ${bonsSortie}">
-                                                <td class="fw-semibold" th:text="${bs.numeroBs}"></td>
+                                                <td>
+                                                    <a class="fw-semibold text-decoration-none"
+                                                       th:href="@{/bon-sortie/{id}(id=${bs.id})}"
+                                                       th:text="${bs.numeroBs}" title="Voir le bon de sortie"></a>
+                                                </td>
                                                 <td th:text="${#temporals.format(bs.dateCreation, 'dd/MM/yyyy HH:mm')}"></td>
                                                 <td th:text="${bs.dateConfirmation != null
                                                               ? #temporals.format(bs.dateConfirmation, 'dd/MM/yyyy HH:mm')
@@ -1423,14 +1567,6 @@
                                                             <i class="fas fa-times me-1"></i>Annulé
                                                         </span>
                                                     </span>
-                                                </td>
-                                                <td class="text-center">
-                                                    <a th:href="@{/bon-sortie/{id}(id=${bs.id})}"
-                                                       class="btn btn-sm btn-outline-gradient-blue"
-                                                       title="Voir le bon de sortie"
-                                                       >
-                                                        <i class="fas fa-eye me-1"></i> Voir
-                                                    </a>
                                                 </td>
                                             </tr>
                                             </tbody>
@@ -1472,7 +1608,7 @@
                                                     <th class="text-end" style="width:12%">Qté demandée</th>
                                                     <th class="text-end" style="width:12%">Déjà sorti</th>
                                                     <th class="text-end" style="width:12%">Restant</th>
-                                                    <th class="text-end" style="width:12%">Prix unitaire</th>
+                                                    <th class="text-end" style="width:12%">Prix unitaire (<span th:text="${demande.codeDevise}">MGA</span>)</th>
                                                     <th class="text-center" style="width:14%">
                                                         Stock disponible
                                                         <i class="fas fa-info-circle text-muted ms-1"
@@ -1485,9 +1621,6 @@
                                                 <tbody>
                                                 <tr th:each="ligne : ${lignesRestantes}">
                                                     <td>
-                                                        <input type="hidden"
-                                                               name="lignes[]"
-                                                               th:value="${ligne.demandeFille.id}"/>
                                                         <span th:text="${ligne.demandeFille.article.codeArticle
                             + ' - '
                             + ligne.demandeFille.article.designation}">
@@ -1496,7 +1629,7 @@
 
                                                     <!-- Qté demandée -->
                                                     <td class="text-end"
-                                                        th:text="${#numbers.formatDecimal(ligne.demandeFille.quantite, 1, 'DEFAULT', 2, 'DEFAULT')}">
+                                                        th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).quantite(ligne.demandeFille.quantite)}">
                                                     </td>
 
                                                     <!-- Déjà sorti -->
@@ -1542,8 +1675,10 @@
 
                                                     <!-- Qté à sortir -->
                                                     <td class="text-center">
+                                                        <!-- Nom lié à la ligne (qte_<id>) : la quantité reste attachée
+                                                             à sa ligne même si un champ désactivé n'est pas envoyé -->
                                                         <input type="number"
-                                                               name="quantites[]"
+                                                               th:name="'qte_' + ${ligne.demandeFille.id}"
                                                                class="form-control form-control-sm text-end bs-qte-input"
                                                                min="0"
                                                                step="1"
@@ -1563,6 +1698,22 @@
                                                                th:if="${ligne.stockDisponible <= 0}">
                                                             En attente de livraison
                                                         </small>
+                                                    </td>
+                                                </tr>
+                                                <!-- Ligne STOCK dont le stock promis manque : la remettre à l'achat.
+                                                     Formulaire hors du formulaire du bon (pas de formulaires imbriqués). -->
+                                                <tr th:each="ligne : ${lignesRestantes}"
+                                                    th:if="${ligne.demandeFille.typeApprovisionnement?.name() == 'STOCK'
+                                                             and ligne.stockDisponible < ligne.restant}"
+                                                    class="table-warning">
+                                                    <td colspan="7" class="small">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                                        <span th:text="${ligne.demandeFille.article.codeArticle}"></span> :
+                                                        le stock promis ne couvre plus le restant.
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary ms-2"
+                                                                th:form="'remettreAchat-' + ${ligne.demandeFille.id}">
+                                                            <i class="fas fa-shopping-cart me-1"></i>Remettre à l'achat
+                                                        </button>
                                                     </td>
                                                 </tr>
                                                 </tbody>
@@ -1603,6 +1754,16 @@
                                         </div>
 
                                     </form>
+
+                                    <!-- Formulaires « Remettre à l'achat » (boutons liés par l'attribut form) -->
+                                    <form th:each="ligne : ${lignesRestantes}"
+                                          th:if="${ligne.demandeFille.typeApprovisionnement?.name() == 'STOCK'
+                                                   and ligne.stockDisponible < ligne.restant}"
+                                          th:id="'remettreAchat-' + ${ligne.demandeFille.id}"
+                                          th:action="@{/demande/ligne/{id}/remettre-achat(id=${ligne.demandeFille.id})}"
+                                          method="post" class="d-none"
+                                          onsubmit="return confirm('Remettre cette ligne à l\'achat ? Sa réservation de stock sera libérée et le restant apparaîtra dans les lignes à acheter.');">
+                                    </form>
                                 </div>
 
                             </div>
@@ -1623,6 +1784,62 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body text-center p-3" id="previewPjBody"></div>
+        </div>
+    </div>
+</div>
+<!-- MODAL ALERTE INFORMATIONS REQUISES (PRIX, TYPE DEMANDE, MODE TRAITEMENT) -->
+<div class="modal fade" id="prixManquantsModal" tabindex="-1"
+     aria-labelledby="prixManquantsModalLabel" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0 rounded-4">
+
+            <!-- HEADER AVEC GRADIENT ORANGE -->
+            <div class="modal-header btn-gradient-orange rounded-top-4 text-white">
+                <h5 class="modal-title d-flex align-items-center" id="prixManquantsModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="prixManquantsModalTitle">Informations obligatoires requises</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+
+            <!-- BODY -->
+            <div class="modal-body p-4">
+                <div class="p-3 border rounded-4 bg-light mb-3">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="fas fa-info-circle text-warning mt-1 fa-lg"></i>
+                        <div>
+                            <div class="fw-bold text-dark mb-1" id="prixManquantsModalActionText">
+                                Action impossible
+                            </div>
+                            <div class="small text-muted" id="prixManquantsModalSubText">
+                                Veuillez compléter les éléments obligatoires ci-dessous avant de pouvoir continuer.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fw-semibold text-dark small text-uppercase mb-2">
+                    <i class="fas fa-list-ul me-1 text-muted"></i> <span id="prixManquantsModalSectionTitle">Éléments à renseigner</span> (<span id="prixManquantsModalCount">0</span>) :
+                </div>
+
+                <div class="border rounded-3 p-2 bg-white" style="max-height: 200px; overflow-y: auto;">
+                    <ul class="list-group list-group-flush small" id="prixManquantsModalList">
+                        <!-- Rempli dynamiquement par JS -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- FOOTER -->
+            <div class="modal-footer border-0 pt-0 justify-content-between">
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-3" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Fermer
+                </button>
+                <button type="button" class="btn btn-gradient-orange rounded-3 px-4 text-white" id="btnFocusPremierPrix">
+                    <i class="fas fa-edit me-1"></i> Compléter les informations
+                </button>
+            </div>
+
         </div>
     </div>
 </div>
@@ -1782,8 +1999,8 @@
                   enctype="multipart/form-data">
 
                 <div class="modal-body">
-                    <input type="hidden" name="typeDemande" id="codepTypeDemande">
-                    <input type="hidden" name="priorite" id="codepPriorite">
+                    <input type="hidden" name="natureDemande" id="codepTypeDemande">                    <input type="hidden" name="priorite" id="codepPriorite">
+                    <input type="hidden" name="modeTraitement" id="codepModeTraitement">
 
                     <!-- Message informatif -->
                     <div class="alert alert-warning">
@@ -1912,6 +2129,64 @@
         </div>
     </div>
 </div>
+<style>
+    /* ── Modal de scission : le stock disponible est l'information principale ── */
+    #scinderModal .modal-dialog { max-width: 620px; }
+    .sc-article {
+        display: flex; align-items: center; gap: .75rem; padding: .75rem .9rem; margin-bottom: 1rem;
+        background: #f6f7fa; border: 1px solid var(--ui-line-2); border-radius: 10px; font-size: .9rem;
+    }
+    .sc-article-icon {
+        flex: 0 0 2.2rem; height: 2.2rem; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+        background: #e8ebf6; color: #001051;
+    }
+    .sc-article-code { display: block; font-size: .72rem; font-weight: 700; color: var(--ui-muted); letter-spacing: .03em; }
+    .sc-article-des { font-weight: 700; color: var(--ui-ink); }
+
+    .sc-tiles { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: .6rem; margin-bottom: .9rem; }
+    .sc-tile { border: 1px solid var(--ui-line); border-radius: 12px; padding: .7rem .85rem; background: #fff; }
+    .sc-tile-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ui-muted); display: flex; align-items: center; gap: .35rem; }
+    .sc-tile-value { font-size: 1.35rem; font-weight: 800; color: var(--ui-ink); line-height: 1.2; margin-top: .25rem; font-variant-numeric: tabular-nums; }
+    .sc-tile-sub { font-size: .72rem; color: var(--ui-muted); }
+    /* Tuile principale : vert du stock, ou rouge / orange quand il n'y a rien à prendre */
+    .sc-tile-stock { background: #e9f6ec; border-color: #b7e1c1; }
+    .sc-tile-stock .sc-tile-label, .sc-tile-stock .sc-tile-sub { color: #1e7e34; }
+    .sc-tile-stock .sc-tile-value { font-size: 2rem; color: #1e7e34; }
+    .sc-tile-stock.vide { background: #fdecec; border-color: #f3c4c4; }
+    .sc-tile-stock.vide .sc-tile-label, .sc-tile-stock.vide .sc-tile-sub, .sc-tile-stock.vide .sc-tile-value { color: #b42318; }
+    .sc-tile-stock.reserve { background: #fff4e0; border-color: #f5d08a; }
+    .sc-tile-stock.reserve .sc-tile-label, .sc-tile-stock.reserve .sc-tile-sub, .sc-tile-stock.reserve .sc-tile-value { color: #9a5b00; }
+
+    .sc-coverage { margin-bottom: 1.1rem; }
+    .sc-coverage-label { font-size: .82rem; color: var(--ui-ink-2); }
+    .sc-coverage-pct { font-size: .85rem; font-weight: 800; color: #1e7e34; }
+    .sc-bar { height: 8px; background: var(--ui-line-2); border-radius: 999px; overflow: hidden; }
+    .sc-bar > span { display: block; height: 100%; width: 0; background: #28a745; border-radius: 999px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
+
+    .sc-input { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    .sc-result { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-bottom: .9rem; }
+    .sc-part { border: 1px solid var(--ui-line); border-radius: 12px; padding: .7rem .85rem; }
+    .sc-part-stock { border-color: #b7e1c1; background: #fbfefc; }
+    .sc-part-achat { border-color: #cdd3ea; background: #fbfcff; }
+    .sc-part-qte { font-size: 1.3rem; font-weight: 800; color: var(--ui-ink); margin: .35rem 0 .15rem; font-variant-numeric: tabular-nums; }
+    .sc-part-line { font-size: .78rem; color: var(--ui-ink-2); font-variant-numeric: tabular-nums; }
+    .sc-result.sans-achat { grid-template-columns: 1fr; }
+
+    .sc-prix { font-size: .75rem; color: var(--ui-ink-2); display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
+    .sc-prix-input {
+        border: 0; background: transparent; font-weight: 700; color: var(--ui-ink); width: 8rem; padding: 0;
+        font-variant-numeric: tabular-nums; -moz-appearance: textfield;
+    }
+    .sc-prix-input::-webkit-inner-spin-button, .sc-prix-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .sc-prix-input:focus { outline: none; box-shadow: none; }
+
+    @media (max-width: 576px) {
+        .sc-tiles { grid-template-columns: 1fr 1fr; }
+        .sc-tile-stock { grid-column: 1 / -1; }
+        .sc-result { grid-template-columns: 1fr; }
+    }
+</style>
 <div class="modal fade" id="scinderModal" tabindex="-1"
      aria-hidden="true"
      data-bs-backdrop="static"
@@ -1927,73 +2202,84 @@
             </div>
 
             <div class="modal-body">
-                <div class="alert alert-info mb-3" id="scinderInfo"></div>
+                <!-- Article concerné -->
+                <div class="sc-article" id="scinderInfo"></div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">
-                        Quantité disponible en stock
-                        <span class="text-danger">*</span>
-                    </label>
-                    <div class="input-group">
-                        <input type="number"
-                               id="scinderQteStock"
-                               class="form-control"
-                               min="0.01" step="0.01"
-                               placeholder="Ex: 5"/>
-                        <span class="input-group-text" id="scinderStockDispo"></span>
+                <!-- Stock : l'information principale du modal -->
+                <div class="sc-tiles">
+                    <div class="sc-tile sc-tile-stock" id="scinderTileStock">
+                        <div class="sc-tile-label"><i class="fas fa-warehouse"></i>Stock disponible</div>
+                        <div class="sc-tile-value" id="scinderStockDispo">
+                            <span class="spinner-border spinner-border-sm"></span>
+                        </div>
+                        <div class="sc-tile-sub">libre pour cette demande</div>
                     </div>
-                    <div class="form-text text-muted">
-                        <i class="fas fa-warehouse me-1"></i>
-                        Le reste sera automatiquement mis en ligne achat.
+                    <div class="sc-tile">
+                        <div class="sc-tile-label"><i class="fas fa-box-open"></i>Demandé</div>
+                        <div class="sc-tile-value" id="scinderQteDemandee">—</div>
+                        <div class="sc-tile-sub">quantité de la ligne</div>
+                    </div>
+                    <div class="sc-tile">
+                        <div class="sc-tile-label"><i class="fas fa-lock"></i>Déjà réservé</div>
+                        <div class="sc-tile-value" id="scinderQteReservee">—</div>
+                        <div class="sc-tile-sub">par d'autres demandes</div>
+                    </div>
+                </div>
+
+                <!-- Couverture de la demande par le stock -->
+                <div class="sc-coverage">
+                    <div class="d-flex justify-content-between align-items-baseline mb-1">
+                        <span class="sc-coverage-label" id="scinderCouvertureTexte">Calcul de la couverture…</span>
+                        <span class="sc-coverage-pct" id="scinderCouverturePct"></span>
+                    </div>
+                    <div class="sc-bar"><span id="scinderCouvertureBar"></span></div>
+                </div>
+
+                <!-- Saisie -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-end mb-1">
+                        <label class="form-label fw-bold mb-0" for="scinderQteStock">
+                            Quantité à servir depuis le stock <span class="text-danger">*</span>
+                        </label>
+                        <button type="button" class="btn btn-sm btn-outline-success" id="scinderToutPrendre" disabled>
+                            <i class="fas fa-check-double me-1"></i>Tout le disponible
+                        </button>
+                    </div>
+                    <input type="number"
+                           id="scinderQteStock"
+                           class="form-control form-control-lg sc-input"
+                           min="0.01" step="0.01"
+                           placeholder="Ex : 5"/>
+                    <div class="form-text">
+                        <i class="fas fa-shopping-cart me-1"></i>
+                        Le reste devient automatiquement une ligne achat.
                     </div>
                     <div id="scinderQteError"
                          class="invalid-feedback d-block"
                          style="display:none !important"></div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">
-                        Prix stock (auto — dernier BL)
-                    </label>
-                    <div class="input-group">
-                        <input type="number"
-                               id="scinderPrixStock"
-                               class="form-control"
-                               readonly/>
-                        <span class="input-group-text">Ar</span>
+                <!-- Résultat de la scission -->
+                <div class="sc-result">
+                    <div class="sc-part sc-part-stock">
+                        <div class="sc-part-head"><span class="ui-type ui-type-stock"><i class="fas fa-warehouse"></i>Ligne stock</span></div>
+                        <div class="sc-part-qte" id="scinderResQteStock">—</div>
+                        <div class="sc-part-line">PU <span id="scinderResPrixStock">—</span></div>
+                        <div class="sc-part-line">Montant <strong id="scinderResMontantStock">—</strong></div>
                     </div>
-                    <small class="text-muted">
-                        <i class="fas fa-magic me-1"></i>
-                        Pré-rempli automatiquement depuis le dernier bon de livraison.
-                    </small>
+                    <div class="sc-part sc-part-achat" id="scinderPartAchat">
+                        <div class="sc-part-head"><span class="ui-type ui-type-achat"><i class="fas fa-shopping-cart"></i>Ligne achat</span></div>
+                        <div class="sc-part-qte" id="scinderResQteAchat">—</div>
+                        <div class="sc-part-line text-muted">Prix proforma à saisir ensuite</div>
+                    </div>
                 </div>
 
-                <!-- Résumé -->
-                <div class="table-responsive mt-3">
-                    <table class="table table-sm table-bordered">
-                        <thead class="table-light">
-                        <tr>
-                            <th>Type</th>
-                            <th class="text-end">Quantité</th>
-                            <th class="text-end">Prix</th>
-                            <th class="text-end">Montant</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr class="table-success">
-                            <td><span class="badge bg-success">Stock</span></td>
-                            <td class="text-end" id="scinderResQteStock">—</td>
-                            <td class="text-end" id="scinderResPrixStock">—</td>
-                            <td class="text-end fw-semibold" id="scinderResMontantStock">—</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge bg-primary">Achat</span></td>
-                            <td class="text-end" id="scinderResQteAchat">—</td>
-                            <td class="text-end text-muted">Prix proforma</td>
-                            <td class="text-end text-muted">à saisir après</td>
-                        </tr>
-                        </tbody>
-                    </table>
+                <!-- Prix du stock (lecture seule) -->
+                <div class="sc-prix">
+                    <i class="fas fa-tag"></i>
+                    Prix unitaire stock (FIFO, en MGA converti dans la devise de la demande) :
+                    <input type="number" id="scinderPrixStock" class="sc-prix-input" readonly tabindex="-1"/>
+                    <span class="text-muted">— pré-rempli depuis le dernier bon de livraison</span>
                 </div>
             </div>
 
@@ -2067,70 +2353,125 @@
         let currentLigneId   = null;
         let currentQteTotale = 0;
         let currentPrixStock = 0;
+        let currentStockDispo = null;   // null tant que le stock n'est pas chargé
+
+        const $ = id => document.getElementById(id);
+        const qte = n => new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 2}).format(n);
+        const prix = n => new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(n);
+        const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
+            ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 
         // Ouvrir le modal au clic sur "Scinder"
         document.querySelectorAll('.btn-scinder').forEach(btn => {
             btn.addEventListener('click', function () {
                 currentLigneId    = this.dataset.id;
                 currentQteTotale  = parseFloat(this.dataset.qte);
+                currentStockDispo = null;
                 const code        = this.dataset.code;
                 const designation = this.dataset.designation;
 
                 // Reset
-                document.getElementById('scinderQteStock').value = '';
-                document.getElementById('scinderPrixStock').value = '';
-                const errEl = document.getElementById('scinderQteError');
+                $('scinderQteStock').value = '';
+                $('scinderPrixStock').value = '';
+                const errEl = $('scinderQteError');
                 errEl.style.display = 'none';
                 errEl.textContent   = '';
 
-                document.getElementById('scinderInfo').innerHTML =
-                    `<i class="fas fa-info-circle me-1"></i>
-                 <strong>${designation}</strong> — Quantité totale : <strong>${currentQteTotale}</strong>`;
+                // Article : data-designation vaut « CODE - Désignation »
+                const sep = designation.indexOf(' - ');
+                const codeArt = sep > 0 ? designation.slice(0, sep) : code;
+                const libelle = sep > 0 ? designation.slice(sep + 3) : designation;
+                $('scinderInfo').innerHTML =
+                    `<span class="sc-article-icon"><i class="fas fa-box"></i></span>
+                     <span><span class="sc-article-code">${esc(codeArt)}</span>
+                           <span class="sc-article-des">${esc(libelle)}</span></span>`;
+
+                $('scinderQteDemandee').textContent = qte(currentQteTotale);
+                $('scinderQteReservee').textContent = '—';
+                $('scinderStockDispo').innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                $('scinderTileStock').classList.remove('vide', 'reserve');
+                $('scinderToutPrendre').disabled = true;
+                $('btnConfirmScinder').disabled = true;
+                afficherCouverture();
 
                 // Charger stock + dernier prix
-                // Dans le modal scinder
                 fetch(`${CONTEXT_PATH}demande/stock/disponible/${code}?demandeId=${demandeId}`)
                     .then(r => r.json())
                     .then(data => {
                         currentPrixStock = data.dernierPrix ?? 0;
-                        document.getElementById('scinderPrixStock').value = currentPrixStock;
+                        $('scinderPrixStock').value = currentPrixStock;
 
-                        const stockDispo = data.stockDisponible ?? 0;
-                        document.getElementById('scinderStockDispo').textContent = `Dispo: ${stockDispo}`;
-                        document.getElementById('scinderQteStock').max =
-                            Math.min(stockDispo, currentQteTotale);
+                        currentStockDispo = data.stockDisponible ?? 0;
+                        const reserve = data.quantiteReservee ?? 0;
+                        $('scinderStockDispo').textContent = qte(currentStockDispo);
+                        $('scinderQteReservee').textContent = qte(reserve);
+                        $('scinderQteStock').max = Math.min(currentStockDispo, currentQteTotale);
 
+                        // Rien à prendre : tuile rouge (ou orange si tout est réservé ailleurs)
+                        if (currentStockDispo <= 0) {
+                            $('scinderTileStock').classList.add(reserve > 0 ? 'reserve' : 'vide');
+                        } else {
+                            $('scinderToutPrendre').disabled = false;
+                            $('btnConfirmScinder').disabled = false;
+                        }
+                        afficherCouverture();
                         recalculerResume();
                     })
                     .catch(() => {
-                        document.getElementById('scinderStockDispo').textContent = 'Erreur chargement';
+                        $('scinderStockDispo').textContent = 'Erreur';
+                        $('scinderTileStock').classList.add('vide');
+                        $('scinderCouvertureTexte').textContent = 'Le stock n\'a pas pu être chargé.';
                     });
             });
         });
 
+        // Part de la quantité demandée que le stock peut couvrir
+        function afficherCouverture() {
+            const texte = $('scinderCouvertureTexte');
+            const pctEl = $('scinderCouverturePct');
+            const bar   = $('scinderCouvertureBar');
+            if (currentStockDispo === null) {
+                texte.textContent = 'Calcul de la couverture…';
+                pctEl.textContent = '';
+                bar.style.width = '0';
+                return;
+            }
+            const couvrable = Math.min(currentStockDispo, currentQteTotale);
+            const pct = currentQteTotale > 0 ? Math.round(couvrable * 100 / currentQteTotale) : 0;
+            bar.style.width = pct + '%';
+            pctEl.textContent = pct + ' %';
+            if (currentStockDispo <= 0) {
+                texte.textContent = 'Aucun stock disponible : la ligne reste à l\'achat.';
+            } else if (pct >= 100) {
+                texte.textContent = 'Le stock couvre toute la demande.';
+            } else {
+                texte.textContent = `Le stock peut couvrir ${qte(couvrable)} sur ${qte(currentQteTotale)}.`;
+            }
+        }
+
+        // « Tout le disponible » : le maximum servable depuis le stock
+        $('scinderToutPrendre')?.addEventListener('click', function () {
+            if (currentStockDispo === null) return;
+            $('scinderQteStock').value = Math.min(currentStockDispo, currentQteTotale);
+            recalculerResume();
+        });
+
         // Recalcul résumé en temps réel
-        document.getElementById('scinderQteStock')
-            ?.addEventListener('input', recalculerResume);
+        $('scinderQteStock')?.addEventListener('input', recalculerResume);
 
         function recalculerResume() {
-            const qteStock  = parseFloat(document.getElementById('scinderQteStock').value) || 0;
+            const qteStock  = parseFloat($('scinderQteStock').value) || 0;
             const qteAchat  = Math.max(0, currentQteTotale - qteStock);
             const prixStock = currentPrixStock;
 
-            document.getElementById('scinderResQteStock').textContent =
-                qteStock.toFixed(2);
-            document.getElementById('scinderResQteAchat').textContent =
-                qteAchat.toFixed(2);
-            document.getElementById('scinderResPrixStock').textContent =
-                new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 2}).format(prixStock);
-            document.getElementById('scinderResMontantStock').textContent =
-                new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 2}).format(qteStock * prixStock);
+            $('scinderResQteStock').textContent = qte(qteStock);
+            $('scinderResQteAchat').textContent = qte(qteAchat);
+            $('scinderResPrixStock').textContent = prix(prixStock);
+            $('scinderResMontantStock').textContent = prix(qteStock * prixStock);
 
-            //AJOUTER : masquer la ligne ACHAT si tout est couvert par le stock
-            const ligneAchat = document.getElementById('scinderResQteAchat')?.closest('tr');
-            if (ligneAchat) {
-                ligneAchat.style.display = qteAchat <= 0 ? 'none' : '';
-            }
+            // Masquer la ligne ACHAT si tout est couvert par le stock
+            $('scinderPartAchat').style.display = qteAchat <= 0 ? 'none' : '';
+            $('scinderPartAchat').parentElement.classList.toggle('sans-achat', qteAchat <= 0);
         }
 
         // Confirmer la scission
@@ -2147,6 +2488,11 @@
                 }
                 if (qteStock > currentQteTotale) {
                     errEl.textContent   = `La quantité stock (${qteStock}) ne peut pas dépasser la quantité totale (${currentQteTotale}).`;
+                    errEl.style.display = 'block';
+                    return;
+                }
+                if (currentStockDispo !== null && qteStock > currentStockDispo) {
+                    errEl.textContent   = `La quantité stock (${qteStock}) dépasse le stock disponible (${currentStockDispo}).`;
                     errEl.style.display = 'block';
                     return;
                 }
@@ -2237,13 +2583,12 @@
                 return;
             }
 
+            // Bouton bloqué jusqu'au retour du serveur (pas de réactivation par minuterie, qui
+            // permettait un second envoi si le serveur était lent). Le retour arrière du
+            // navigateur le réactive (data-html-origine, voir fragment/load_script).
+            btnCreerBs.dataset.htmlOrigine = btnCreerBs.innerHTML;
             btnCreerBs.disabled  = true;
-            btnCreerBs.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Création en cours...';
-
-            setTimeout(() => {
-                btnCreerBs.disabled  = false;
-                btnCreerBs.innerHTML = '<i class="fas fa-file-export me-1"></i> Créer et confirmer le bon de sortie';
-            }, 15000);
+            btnCreerBs.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Création du bon de sortie…';
 
             form.submit();
         });
@@ -2291,28 +2636,203 @@
         document.getElementById('decisionCodepForm').submit();
     });
 
-    // ── Save prix ──────────────────────────────────────────────────────────────
+    // ── Helper & Modal pour les vérifications préalables (Prix, Type Demande, Mode Traitement) ──
+    function getArticlesSansPrix() {
+        const articles = [];
+        document.querySelectorAll('.prix-input').forEach(inp => {
+            if (inp.closest('tr')?.classList.contains('table-danger')) return;
+            const val = parseFloat(inp.value);
+            if (!inp.value || isNaN(val) || val <= 0) {
+                const tr = inp.closest('tr');
+                const designation = tr?.querySelector('td:first-child')?.textContent?.replace(/\s+/g, ' ').trim() ||`Ligne #${inp.dataset.ligneId}`;
+                articles.push({ input: inp, designation: designation });
+            }
+        });
+        return articles;
+    }
+
+    function verifierPreconditionsMG(actionName) {
+        const erreurs = [];
+
+        // 1. Type de demande (OPEX/CAPEX)
+        const typeDemandeSelect = document.getElementById('typeDemandeSelect') || document.querySelector('select[name="natureDemande"]');
+        if (typeDemandeSelect && (!typeDemandeSelect.value || typeDemandeSelect.value.trim() === '')) {
+            erreurs.push({
+                type: 'TYPE_DEMANDE',
+                element: typeDemandeSelect,
+                titre: 'Nature (OPEX / CAPEX)',
+                description: 'Le type de demande (OPEX ou CAPEX) doit être obligatoirement sélectionné.',
+                badge: 'À choisir',
+                icon: 'fa-tag'
+            });
+        }
+
+        // 2. Mode de traitement (seulement en Validation MG)
+        if (actionName === 'Validation') {
+            const modeTraitementSelect = document.getElementById('modeTraitementSelect') || document.querySelector('select[name="modeTraitement"]');
+            if (modeTraitementSelect && (!modeTraitementSelect.value || modeTraitementSelect.value.trim() === '')) {
+                erreurs.push({
+                    type: 'MODE_TRAITEMENT',
+                    element: modeTraitementSelect,
+                    titre: 'Mode de traitement',
+                    description: 'Le mode de traitement doit être obligatoirement sélectionné.',
+                    badge: 'À choisir',
+                    icon: 'fa-cogs'
+                });
+            }
+        }
+
+        // 3. Prix unitaires des articles
+        const articlesSansPrix = getArticlesSansPrix();
+        if (articlesSansPrix.length > 0) {
+            erreurs.push({
+                type: 'PRIX_ARTICLES',
+                element: articlesSansPrix[0].input,
+                titre: `${articlesSansPrix.length} article(s) sans prix unitaire`,
+                description: 'Tous les articles doivent avoir un prix unitaire proforma renseigné (> 0).',
+                badge: 'Prix manquant',
+                icon: 'fa-box',
+                subItems: articlesSansPrix
+            });
+        }
+
+        return erreurs;
+    }
+
+    function afficherModalChampsRequis(actionName, erreurs) {
+        const modalEl = document.getElementById('prixManquantsModal');
+        if (!modalEl) return;
+
+        const listEl = document.getElementById('prixManquantsModalList');
+        const countEl = document.getElementById('prixManquantsModalCount');
+        const actionTextEl = document.getElementById('prixManquantsModalActionText');
+        const subTextEl = document.getElementById('prixManquantsModalSubText');
+        const sectionTitleEl = document.getElementById('prixManquantsModalSectionTitle');
+
+        if (countEl) countEl.textContent = erreurs.length;
+        if (actionTextEl) actionTextEl.textContent = `${actionName} impossible`;
+        if (subTextEl) {
+            subTextEl.textContent = `Certains éléments obligatoires doivent être renseignés avant de pouvoir procéder à l'action "${actionName}".`;
+        }
+        if (sectionTitleEl) {
+            sectionTitleEl.textContent = 'Éléments obligatoires à renseigner';
+        }
+
+        if (listEl) {
+            listEl.innerHTML = '';
+            erreurs.forEach(err => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item px-2 py-2 border-bottom';
+                let subHtml = '';
+                if (err.subItems && err.subItems.length > 0) {
+                    subHtml = `<ul class="list-unstyled ms-4 mt-1 mb-0 small text-muted">
+                        ${err.subItems.map(item => `<li class="py-1"><i class="fas fa-angle-right text-warning me-1"></i>${item.designation}</li>`).join('')}
+                    </ul>`;
+                }
+                li.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas ${err.icon} text-warning"></i>
+                            <div>
+                                <span class="fw-semibold text-dark">${err.titre}</span>
+                                <div class="small text-muted">${err.description}</div>
+                            </div>
+                        </div>
+                        <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 small">${err.badge}</span>
+                    </div>
+                    ${subHtml}
+                `;
+                listEl.appendChild(li);
+            });
+        }
+
+        const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+
+    document.getElementById('btnFocusPremierPrix')?.addEventListener('click', function () {
+        const modalEl = document.getElementById('prixManquantsModal');
+        if (modalEl) {
+            const modal = window.bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+
+        const typeDemandeSelect = document.getElementById('typeDemandeSelect') || document.querySelector('select[name="natureDemande"]');
+        const modeTraitementSelect = document.getElementById('modeTraitementSelect') || document.querySelector('select[name="modeTraitement"]');
+        const articlesSansPrix = getArticlesSansPrix();
+
+        setTimeout(() => {
+            if (typeDemandeSelect && (!typeDemandeSelect.value || typeDemandeSelect.value.trim() === '')) {
+                typeDemandeSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                typeDemandeSelect.focus();
+                typeDemandeSelect.classList.add('is-invalid');
+            } else if (modeTraitementSelect && (!modeTraitementSelect.value || modeTraitementSelect.value.trim() === '')) {
+                modeTraitementSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                modeTraitementSelect.focus();
+                modeTraitementSelect.classList.add('is-invalid');
+            } else if (articlesSansPrix.length > 0 && articlesSansPrix[0].input) {
+                articlesSansPrix[0].input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                articlesSansPrix[0].input.focus();
+                articlesSansPrix[0].input.classList.add('is-invalid');
+            }
+        }, 350);
+    });
+
+    document.getElementById('typeDemandeSelect')?.addEventListener('change', function () {
+        if (this.value && this.value.trim() !== '') this.classList.remove('is-invalid');
+    });
+    document.getElementById('modeTraitementSelect')?.addEventListener('change', function () {
+        if (this.value && this.value.trim() !== '') this.classList.remove('is-invalid');
+    });
+
+    // ── Save prix & gestion bandeau dynamique ──────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         const btnSave = document.getElementById('btnSavePrix');
-        if (!btnSave) return;
-
-        const statusEl = document.getElementById('prixSaveStatus');
-        const badge    = document.getElementById('badgePrixManquants');
 
         function verifierPrixManquants() {
-            const inputs = document.querySelectorAll('.prix-input');
-            let manquants = 0;
-            inputs.forEach(inp => {
-                const val = parseFloat(inp.value);
-                if (!inp.value || isNaN(val) || val <= 0) manquants++;
-            });
+            const articlesSansPrix = getArticlesSansPrix();
+            const manquants = articlesSansPrix.length;
+
+            const badge = document.getElementById('badgePrixManquants');
             if (badge) badge.style.display = manquants > 0 ? 'inline-block' : 'none';
+
+            const container = document.getElementById('alertPrixContainer');
+            const iconWrapper = document.getElementById('alertPrixIconWrapper');
+            const icon = document.getElementById('alertPrixIcon');
+            const title = document.getElementById('alertPrixTitle');
+            const badgeHeader = document.getElementById('badgePrixManquantsHeader');
+            const desc = document.getElementById('alertPrixDescription');
+
+            if (container && iconWrapper && icon && title && badgeHeader && desc) {
+                if (manquants > 0) {
+                    container.style.background = 'linear-gradient(135deg, rgba(255, 243, 205, 0.6) 0%, rgba(255, 255, 255, 0.95) 100%)';
+                    container.style.borderColor = 'rgba(255, 193, 7, 0.4)';
+                    iconWrapper.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                    icon.className = 'fas fa-exclamation-triangle fa-lg';
+                    title.textContent = 'Prix proforma requis';
+                    badgeHeader.className = 'badge rounded-pill bg-danger text-white px-2 py-1 small';
+                    badgeHeader.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i>${manquants} article(s) sans prix`;
+                    desc.innerHTML = `Il reste <strong>${manquants} article(s)</strong> sans prix unitaire. Renseignez et enregistrez les prix pour pouvoir valider ou envoyer la demande au CODEP.`;
+                } else {
+                    container.style.background = 'linear-gradient(135deg, rgba(209, 250, 229, 0.5) 0%, rgba(255, 255, 255, 0.95) 100%)';
+                    container.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                    iconWrapper.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                    icon.className = 'fas fa-check-circle fa-lg';
+                    title.textContent = 'Prix proforma renseignés';
+                    badgeHeader.className = 'badge rounded-pill bg-success text-white px-2 py-1 small';
+                    badgeHeader.innerHTML = `<i class="fas fa-check me-1"></i>Tous les prix saisis`;
+                    desc.innerHTML = `Tous les articles disposent d'un prix valide. Vous pouvez enregistrer les prix et procéder à la validation ou à l'envoi au CODEP.`;
+                }
+            }
         }
 
         document.querySelectorAll('.prix-input').forEach(inp => {
             inp.addEventListener('input', verifierPrixManquants);
         });
         verifierPrixManquants();
+
+        if (!btnSave) return;
+        const statusEl = document.getElementById('prixSaveStatus');
 
         btnSave.addEventListener('click', function () {
             const inputs  = document.querySelectorAll('.prix-input');
@@ -2400,6 +2920,14 @@
         const modal         = window.bootstrap.Modal.getOrCreateInstance(modalEl);
 
         function openModal(decision) {
+            if (decision === "APPROVE") {
+                const erreurs = verifierPreconditionsMG("Validation");
+                if (erreurs.length > 0) {
+                    afficherModalChampsRequis("Validation", erreurs);
+                    return;
+                }
+            }
+
             decisionValue.value = decision;
             commentInput.value  = "";
             commentInput.classList.remove("is-invalid");
@@ -2462,19 +2990,35 @@
         }
     });
 
-
-
     // ── Modal CODEP envoi ──────────────────────────────────────────────────────
-    document.getElementById('codepModal')?.addEventListener('show.bs.modal', function () {
-        const typeDemandeSelect    = document.querySelector('select[name="typeDemande"]');
+    document.getElementById('btnEnvoyerCodep')?.addEventListener('click', function () {
+        const erreurs = verifierPreconditionsMG("Envoi au CODEP");
+        if (erreurs.length > 0) {
+            afficherModalChampsRequis("Envoi au CODEP", erreurs);
+            return;
+        }
+
+        const typeDemandeSelect = document.getElementById('typeDemandeSelect') || document.querySelector('select[name="natureDemande"]');
         const codepTypeDemandeInput = document.getElementById('codepTypeDemande');
         if (typeDemandeSelect && codepTypeDemandeInput)
             codepTypeDemandeInput.value = typeDemandeSelect.value;
 
-        const prioriteSelect    = document.querySelector('select[name="priorite"]');
+        const prioriteSelect = document.querySelector('select[name="priorite"]');
         const codepPrioriteInput = document.getElementById('codepPriorite');
         if (prioriteSelect && codepPrioriteInput)
             codepPrioriteInput.value = prioriteSelect.value;
+
+        // Le mode de traitement saisi par les MG est transmis avec l'envoi au CODEP
+        const modeTraitementSelect = document.getElementById('modeTraitementSelect') || document.querySelector('select[name="modeTraitement"]');
+        const codepModeTraitementInput = document.getElementById('codepModeTraitement');
+        if (modeTraitementSelect && codepModeTraitementInput)
+            codepModeTraitementInput.value = modeTraitementSelect.value;
+
+        const modalEl = document.getElementById('codepModal');
+        if (modalEl) {
+            const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        }
     });
 
     // ── Aperçu pièces jointes ──────────────────────────────────────────────────
@@ -3120,7 +3664,8 @@
     });
 
     // ── Anti-double : Transmission à la finance ──────────────────────────────
-    (function () {
+    // Après le chargement de la page : le modal est déclaré plus bas que ce script
+    document.addEventListener('DOMContentLoaded', function () {
         const transmitModal = document.getElementById('transmitFinanceModal');
         if (!transmitModal) return;
 
@@ -3140,19 +3685,23 @@
 
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Transmission en cours...';
+            // Le modal reste ouvert pendant l'envoi : pas de fermeture ni de double clic
+            transmitModal.querySelectorAll('[data-bs-dismiss="modal"]').forEach(function (b) { b.disabled = true; });
 
             // Sécurité : réactiver après 15s en cas de timeout réseau
             setTimeout(function () {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Confirmer la transmission';
+                transmitModal.querySelectorAll('[data-bs-dismiss="modal"]').forEach(function (b) { b.disabled = false; });
             }, 15000);
         }, true);
-    })();
+    });
 
     /*]]>*/
 </script>
 
-<div class="modal fade" id="transmitFinanceModal" tabindex="-1" aria-labelledby="transmitFinanceModalLabel" aria-hidden="true">
+<div class="modal fade" id="transmitFinanceModal" tabindex="-1" aria-labelledby="transmitFinanceModalLabel" aria-hidden="true"
+     data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
