@@ -74,7 +74,7 @@
                         <label class="form-label mb-1" for="fAu">au</label>
                         <input class="form-control" type="date" id="fAu" name="dateTo" th:value="${dateTo}">
                     </div>
-                    <!-- Seulement pour les validateurs (MG_VALIDATOR, SG, admin) ; remplace le filtre de statut -->
+                    <!-- Seulement pour les validateurs (MG_CHECKER, SG, admin) ; remplace le filtre de statut -->
                     <div class="col-md-3 d-flex align-items-end" th:if="${peutValiderUneEtape}">
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" id="fAValider" name="aValider" value="true"

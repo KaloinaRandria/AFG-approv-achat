@@ -28,9 +28,23 @@
             <h1 class="fw-bold text-gradient-blue mb-0">
                 <i class="fas fa-users me-3 icon-gradient-blue"></i> Utilisateurs
             </h1>
-            <a th:href="@{/user/add}" class="btn btn-gradient-green">
-                <i class="fas fa-user-plus me-1"></i> Nouvel utilisateur
-            </a>
+            <div class="d-flex gap-2">
+                <a th:href="@{/user/demandes}" class="btn btn-outline-gradient-blue">
+                    <i class="fas fa-user-check me-1"></i> Demandes de compte
+                    <span class="badge bg-warning text-dark ms-1" th:if="${nbDemandesEnAttente > 0}"
+                          th:text="${nbDemandesEnAttente}">0</span>
+                </a>
+                <a th:if="${peutSaisir}" th:href="@{/user/add}" class="btn btn-gradient-green">
+                    <i class="fas fa-user-plus me-1"></i> Nouvel utilisateur
+                </a>
+            </div>
+        </div>
+
+        <!-- Maker : les changements partent en validation -->
+        <div class="alert alert-info py-2 small" th:if="${peutSaisir and avecValidation}">
+            <i class="fas fa-info-circle me-1"></i>
+            Vos créations, modifications et (dés)activations de comptes sont envoyées pour validation
+            et ne s'appliquent qu'après l'accord d'une autre personne.
         </div>
 
         <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
@@ -118,6 +132,10 @@
                         <tr th:each="u : ${utilisateurs}" th:classappend="${!u.actif} ? 'utilisateur-inactif'">
                             <td>
                                 <div class="fw-semibold" th:text="${u.nom + ' ' + u.prenom}"></div>
+                                <a th:if="${ciblesEnAttente.contains(u.id)}" th:href="@{/user/demandes}"
+                                   class="badge bg-warning text-dark text-decoration-none">
+                                    <i class="fas fa-hourglass-half me-1"></i>Demande en attente
+                                </a>
                                 <small class="text-muted d-block" th:text="${u.mail}"></small>
                                 <small class="text-muted d-block" th:if="${u.contact != null and !#strings.isEmpty(u.contact)}">
                                     <i class="fas fa-phone me-1"></i><span th:text="${u.contact}"></span>
@@ -144,9 +162,12 @@
                                 <span th:unless="${u.actif}" class="badge bg-secondary">Inactif</span>
                             </td>
                             <td class="text-nowrap text-center"
-                                th:with="protege=${!connecteEstAdmin and u.roles != null and u.roles.?[role == 'ADMIN'].size() > 0}">
+                                th:with="protege=${!connecteEstAdmin and u.roles != null and u.roles.?[role == 'ADMIN'].size() > 0},
+                                         enAttente=${ciblesEnAttente.contains(u.id)}">
                                 <span th:if="${protege}" class="text-muted small" title="Compte administrateur : géré par un administrateur"><i class="fas fa-lock"></i></span>
-                                <th:block th:unless="${protege}">
+                                <span th:if="${!protege and enAttente and peutSaisir}" class="text-muted small"
+                                      title="Une demande attend une validation pour ce compte"><i class="fas fa-hourglass-half"></i></span>
+                                <th:block th:if="${peutSaisir and !protege and !enAttente}">
                                 <button type="button" class="btn btn-sm btn-outline-primary"
                                         data-bs-toggle="modal" data-bs-target="#modifierModal"
                                         th:data-id="${u.id}" title="Modifier">
@@ -286,7 +307,8 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
                     <button type="submit" class="btn btn-gradient-blue" id="btnEnregistrer" disabled>
-                        <i class="fas fa-save me-1"></i> Enregistrer
+                        <i class="fas me-1" th:classappend="${avecValidation ? 'fa-paper-plane' : 'fa-save'}"></i>
+                        <span th:text="${avecValidation ? 'Soumettre pour validation' : 'Enregistrer'}">Enregistrer</span>
                     </button>
                 </div>
             </form>
@@ -308,6 +330,9 @@
                 <div class="modal-body">
                     <p class="mb-2" id="statutQuestion"></p>
                     <p class="text-muted small mb-0" id="statutExplication"></p>
+                    <p class="small mb-0 mt-2 text-primary" th:if="${avecValidation}">
+                        <i class="fas fa-paper-plane me-1"></i>La demande sera appliquée après validation par une autre personne.
+                    </p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>

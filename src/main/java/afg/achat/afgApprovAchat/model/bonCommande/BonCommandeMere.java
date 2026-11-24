@@ -165,7 +165,7 @@ public class BonCommandeMere implements DocumentEnDevise {
 
     /** Étapes de validation d'un bon de commande, dans l'ordre. */
     public enum EtapeValidation {
-        MG("Moyens Généraux", "MG_VALIDATOR"),
+        MG("Moyens Généraux", "MG_CHECKER"),
         SG("Secrétariat Général", "SG");
 
         private final String libelle;

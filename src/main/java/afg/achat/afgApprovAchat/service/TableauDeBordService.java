@@ -54,6 +54,7 @@ public class TableauDeBordService {
     private final StockAlerteService stockAlerteService;
     private final UtilisateurService utilisateurService;
     private final SortieAFaireService sortieAFaireService;
+    private final afg.achat.afgApprovAchat.service.utilisateur.DemandeCompteService demandeCompteService;
 
     // ════════════════════════════════════════════════════════════════════════
     // 1. À traiter
@@ -104,7 +105,15 @@ public class TableauDeBordService {
             }
         }
 
-        // ── Bons de commande à valider (MG_VALIDATOR, SG) ──
+        // ── Comptes utilisateurs à valider (IT_CHECKER, hors ses propres demandes) ──
+        if (afg.achat.afgApprovAchat.service.securite.Habilitations.peutValider(auth,
+                afg.achat.afgApprovAchat.service.securite.Habilitations.IT)) {
+            Object[] r = demandeCompteService.aValiderPar(current);
+            ajouterSiNonVide(actions, "Demandes de compte à valider", "Créations et modifications d'utilisateurs",
+                    "fa-user-check", nombre(r[0]), jours(r[1], maintenant), "/user/demandes");
+        }
+
+        // ── Bons de commande à valider (MG_CHECKER, SG) ──
         Set<BonCommandeMere.EtapeValidation> etapesBc = EnumSet.noneOf(BonCommandeMere.EtapeValidation.class);
         for (BonCommandeMere.EtapeValidation e : BonCommandeMere.EtapeValidation.values()) {
             if (admin || role(auth, e.getRole())) etapesBc.add(e);
@@ -123,7 +132,7 @@ public class TableauDeBordService {
         }
 
         // ── Achats (création des bons de commande) ──
-        if (admin || mg || role(auth, "MG_CREATOR")) {
+        if (admin || mg || role(auth, "MG_MAKER")) {
             long lignes = besoinAchatService.lignesEnAttente(
                     new BesoinAchatService.Recherche(null, null, null, null, null, null),
                     PageRequest.of(0, 1)).getTotalElements();

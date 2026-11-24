@@ -44,7 +44,7 @@ import java.util.Map;
  * suivent le même circuit de validation (Moyens Généraux puis S.G.).
  */
 // Consultation : Moyens Généraux et acteurs du bon de commande (créateur, validateur MG, S.G.).
-@PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_CREATOR','MG_VALIDATOR','SG')")
+@PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_MAKER','MG_CHECKER','SG')")
 @Controller
 @RequestMapping("/bon-commande")
 @RequiredArgsConstructor
@@ -134,7 +134,7 @@ public class BonCommandeController {
      * Lignes de demandes validées encore à commander, toutes demandes confondues.
      * Les Moyens Généraux en cochent plusieurs pour créer un bon de commande groupé.
      */
-    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_CREATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_MAKER')")
     @GetMapping("/lignes-a-acheter")
     public String lignesAAcheter(@RequestParam(defaultValue = "0") int page,
                                  @RequestParam(defaultValue = "50") int size,
