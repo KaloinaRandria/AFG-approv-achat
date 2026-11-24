@@ -2,6 +2,8 @@ package afg.achat.afgApprovAchat.model.util;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class EtapeWorkflowTest {
@@ -58,6 +60,52 @@ class EtapeWorkflowTest {
     void fraiseAutantDeLibellesQueDEtapes() {
         assertEquals(EtapeWorkflow.circuit(false).size(), EtapeWorkflow.libellesCircuit(false).size());
         assertEquals(EtapeWorkflow.circuit(true).size(), EtapeWorkflow.libellesCircuit(true).size());
+    }
+
+    // ── Type de demande ──────────────────────────────────────────────────────
+
+    @Test
+    void fournitureSArreteAuControleur() {
+        TypeDemande f = TypeDemande.FOURNITURE;
+        assertEquals(EtapeWorkflow.VALIDATION_N1, EtapeWorkflow.CREE.suivante(f));
+        assertEquals(EtapeWorkflow.VALIDATION_N2, EtapeWorkflow.VALIDATION_N1.suivante(f));
+        assertEquals(EtapeWorkflow.VALIDATION_N2, EtapeWorkflow.DECISION_CODEP.suivante(f));
+        assertEquals(EtapeWorkflow.VALIDE, EtapeWorkflow.VALIDATION_N2.suivante(f));
+        assertNull(EtapeWorkflow.VALIDE.suivante(f));
+        assertNull(EtapeWorkflow.REFUSE.suivante(f));
+    }
+
+    @Test
+    void typeStandardOuAbsentSuitLeCircuitComplet() {
+        for (EtapeWorkflow e : EtapeWorkflow.values()) {
+            assertEquals(e.suivante(), e.suivante(TypeDemande.STANDARD), e.name());
+            assertEquals(e.suivante(), e.suivante(null), e.name());
+        }
+        assertEquals(EtapeWorkflow.circuit(false), EtapeWorkflow.circuit(false, null));
+        assertEquals(EtapeWorkflow.circuit(true), EtapeWorkflow.circuit(true, TypeDemande.STANDARD));
+        assertEquals(EtapeWorkflow.libellesCircuit(true), EtapeWorkflow.libellesCircuit(true, null));
+    }
+
+    @Test
+    void circuitEtFriseDUneFourniture() {
+        TypeDemande f = TypeDemande.FOURNITURE;
+        assertEquals(List.of(EtapeWorkflow.CREE, EtapeWorkflow.VALIDATION_N1, EtapeWorkflow.VALIDATION_N2,
+                EtapeWorkflow.VALIDE), EtapeWorkflow.circuit(false, f));
+        assertEquals(List.of(EtapeWorkflow.CREE, EtapeWorkflow.VALIDATION_N1, EtapeWorkflow.DECISION_CODEP,
+                EtapeWorkflow.VALIDATION_N2, EtapeWorkflow.VALIDE), EtapeWorkflow.circuit(true, f));
+
+        assertEquals(List.of("Demande créée", "Supérieur hiérarchique (N+1)", "Moyens Généraux",
+                "Contrôleur de gestion"), EtapeWorkflow.libellesCircuit(false, f));
+        assertEquals(List.of("Demande créée", "Supérieur hiérarchique (N+1)", "Moyens Généraux",
+                "Comité de dépense", "Contrôleur de gestion"), EtapeWorkflow.libellesCircuit(true, f));
+
+        assertEquals(3, EtapeWorkflow.numeroDansCircuit(StatutDemande.VALIDATION_N2, false, f));
+        assertEquals(4, EtapeWorkflow.numeroDansCircuit(StatutDemande.VALIDE, false, f));
+        assertEquals(5, EtapeWorkflow.numeroDansCircuit(StatutDemande.VALIDE, true, f));
+        assertEquals(-1, EtapeWorkflow.numeroDansCircuit(StatutDemande.REFUSE, false, f));
+
+        assertEquals("Contrôleur de gestion",
+                EtapeWorkflow.libellesEtapeFranchie(false, f).get(StatutDemande.VALIDE));
     }
 
     @Test

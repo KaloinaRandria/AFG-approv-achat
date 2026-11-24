@@ -41,12 +41,20 @@ public class ApiController {
     DemandeMereService demandeMereService;
     @Autowired
     DemandeFilleService demandeFilleService;
+    @Autowired
+    afg.achat.afgApprovAchat.service.workflow.WorkflowService workflowService;
+    @Autowired
+    afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService utilisateurService;
+
+    @Autowired
+    afg.achat.afgApprovAchat.service.ArticleService articleService;
 
     @GetMapping("/articles/search")
     @ResponseBody
     public List<Map<String, String>> searchArticles(@RequestParam String keyword) {
-        return articleRepo
-                .findByCodeArticleContainingIgnoreCaseOrDesignationContainingIgnoreCase(keyword, keyword)
+        // Recherche utilisée par les saisies (demande, bon de livraison, bon de commande) :
+        // articles actifs dont le code ou la désignation contient chaque mot saisi
+        return articleService.rechercherPourSaisie(keyword, 50)
                 .stream()
                 .map(a -> {
                     Map<String, String> map = new HashMap<>();
@@ -58,6 +66,7 @@ public class ApiController {
                 .toList();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @GetMapping("/bonlivraison/{id}/details")
     public BonLivraisonDetailDTO getBonLivraisonDetails(@PathVariable String id) {
         BonLivraisonMere bonLivraisonMere = this.bonLivraisonMereService.getBonLivraisonMereById(id)
@@ -90,6 +99,14 @@ public class ApiController {
 
         DemandeMere demandeMere = this.demandeMereService.getDemandeMereById(id)
                 .orElseThrow(() -> new RuntimeException("Demande non trouvée avec l'ID: " + id));
+
+        // Même règle de consultation que la fiche de la demande
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        afg.achat.afgApprovAchat.model.utilisateur.Utilisateur current = utilisateurService.getUtilisateurByMail(
+                ((afg.achat.afgApprovAchat.model.utilisateur.Utilisateur) auth.getPrincipal()).getMail());
+        if (!workflowService.aAccesDemande(demandeMere, current, auth)) {
+            throw new org.springframework.security.access.AccessDeniedException("Accès refusé à cette demande.");
+        }
 
         DemandeDetailDTO dto = new DemandeDetailDTO();
 

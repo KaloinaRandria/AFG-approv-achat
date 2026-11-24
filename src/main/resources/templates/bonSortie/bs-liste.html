@@ -1,10 +1,127 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Bons de sortie</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
 </head>
 <body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
 
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-file-export icon-gradient-blue"></i> Bons de sortie
+            </h1>
+        </div>
+
+        <!-- Filtres -->
+        <div class="card shadow-lg border-0 mb-3">
+            <div class="card-body">
+                <form method="get" th:action="@{/bon-sortie/list}" class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">N° bon / demande</label>
+                        <input class="form-control" type="text" name="numero" th:value="${numero}"
+                               placeholder="BS-… ou DM…">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Demandeur</label>
+                        <input class="form-control" type="text" name="demandeur" th:value="${demandeur}"
+                               placeholder="Nom ou prénom">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Article</label>
+                        <input class="form-control" type="text" name="article" th:value="${article}"
+                               placeholder="Code ou désignation">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Du</label>
+                        <input class="form-control" type="date" name="dateFrom" th:value="${dateFrom}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Au</label>
+                        <input class="form-control" type="date" name="dateTo" th:value="${dateTo}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Statut</label>
+                        <select class="form-select" name="statut">
+                            <option value="" th:selected="${statut == ''}">Tous</option>
+                            <option th:each="s : ${statuts}"
+                                    th:value="${s.name()}"
+                                    th:text="${s.name() == 'CONFIRME' ? 'Confirmé' : 'Annulé'}"
+                                    th:selected="${statut == s.name()}"></option>
+                        </select>
+                    </div>
+                    <div th:replace="~{fragment/pagination :: taille(${size})}"></div>
+                    <div class="col-md-10 d-flex gap-2 align-items-end">
+                        <button class="btn btn-gradient-blue" type="submit">
+                            <i class="fas fa-filter me-1"></i>Filtrer
+                        </button>
+                        <a class="btn btn-outline-secondary" th:href="@{/bon-sortie/list}">Réinitialiser</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-lg border-0">
+            <div class="card-body">
+                <div class="text-muted small mb-2"
+                     th:text="${bons.totalElements} + ' bon(s) de sortie'"></div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>N° bon de sortie</th>
+                            <th>Date</th>
+                            <th>Demande</th>
+                            <th>Demandeur</th>
+                            <th>Créé par</th>
+                            <th class="text-center">Articles</th>
+                            <th class="text-end">Montant</th>
+                            <th>Statut</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${bons.totalElements == 0}">
+                            <td colspan="8" class="text-center text-muted py-4">Aucun bon de sortie.</td>
+                        </tr>
+                        <tr th:each="bs : ${bons.content}" th:with="t=${totaux.get(bs.id)}">
+                            <td>
+                                <a class="fw-semibold text-decoration-none"
+                                   th:href="@{/bon-sortie/{id}(id=${bs.id})}" th:text="${bs.numeroBs}"></a>
+                            </td>
+                            <td th:text="${#temporals.format(bs.dateConfirmation != null ? bs.dateConfirmation : bs.dateCreation, 'dd/MM/yyyy HH:mm')}"></td>
+                            <td>
+                                <a th:if="${bs.demandeMere != null}"
+                                   th:href="@{/demande/fiche/{id}(id=${bs.demandeMere.id})}"
+                                   th:text="${bs.demandeMere.id}"></a>
+                            </td>
+                            <td th:text="${bs.demandeMere != null and bs.demandeMere.demandeur != null
+                                          ? bs.demandeMere.demandeur.nom + ' ' + bs.demandeMere.demandeur.prenom : '—'}"></td>
+                            <td th:text="${bs.creePar != null ? bs.creePar.nom + ' ' + bs.creePar.prenom : '—'}"></td>
+                            <td class="text-center" th:text="${t != null ? #numbers.formatInteger(t[0], 1) : 0}"></td>
+                            <td class="text-end"
+                                th:text="${t != null ? #numbers.formatDecimal(t[1], 1, 'WHITESPACE', 2, 'COMMA') : '0,00'}"></td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${bs.statut?.name() == 'CONFIRME'} ? 'bg-success' : 'bg-danger'"
+                                      th:text="${bs.statut?.name() == 'CONFIRME' ? 'Confirmé' : 'Annulé'}"></span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div th:replace="~{fragment/pagination :: pagination(${bons}, ${urlPagination})}"></div>
+            </div>
+        </div>
+    </section>
+</div>
 </body>
 </html>

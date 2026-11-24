@@ -32,6 +32,7 @@ public class DemandeMereService {
 
     private final DemandeMereRepo   demandeMereRepo;
     private final DemandeFilleRepo  demandeFilleRepo;
+    private final afg.achat.afgApprovAchat.repository.demande.DemandeAutreDetailRepo demandeAutreDetailRepo;
     private final IdGenerator       idGenerator;
     private final ModeTraitementRepo modeTraitementRepo;
     private final PaiementDirectService paiementDirectService;
@@ -81,26 +82,10 @@ public class DemandeMereService {
         }
     }
 
-    public List<DemandeMere>getPaiementsDirectsATransmettre() {
-        return demandeMereRepo.findByStatutOrderByDateDemandeAsc(StatutDemande.VALIDE).stream()
-                .filter(this::estPaiementDirect)
-                .filter(d -> d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE
-                        || d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE)
-                .toList();
-    }
-
     @Transactional
     public boolean transmettreAFinance(DemandeMere demande, Utilisateur transmetteur, String commentaire) {
         if (!estPaiementDirect(demande)) return false;
         return paiementDirectService.transmettreAFinance(demande, transmetteur, commentaire);
-    }
-
-    public List<DemandeMere> getPaiementsDirectsTransmisAFinance() {
-        return demandeMereRepo.findByStatutOrderByDateDemandeAsc(StatutDemande.VALIDE).stream()
-                .filter(this::estPaiementDirect)
-                .filter(d -> d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE
-                        || d.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.PAYEE)
-                .toList();
     }
 
     @Transactional
@@ -141,7 +126,12 @@ public class DemandeMereService {
 
     @Transactional
     public void recalculerTotal(DemandeMere demande) {
-        double total = demandeFilleRepo.calculerTotal(demande, StatutDemande.REFUSE);
+        // Demande Autre : le total est le montant de son unique dépense (pas de ligne article)
+        double total = demande.getTypeDemandeEffectif().isDepenseAutre()
+                ? demandeAutreDetailRepo.findByDemandeMere(demande)
+                        .map(d -> d.getMontant() != null ? d.getMontant() : 0.0)
+                        .orElse(0.0)
+                : demandeFilleRepo.calculerTotal(demande, StatutDemande.REFUSE);
         demande.setTotalEstime(total);
         demandeMereRepo.save(demande);
     }

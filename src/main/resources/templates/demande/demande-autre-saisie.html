@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Nouvelle demande autre</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <meta name="context-path" th:content="@{/}" />
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section>
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold text-gradient-blue">
+                <i class="fas fa-plus-circle me-3 icon-gradient-blue"></i>
+                <span>Nouvelle demande autre</span>
+            </h1>
+            <div>
+                <a class="btn btn-gradient-blue me-2" th:href="@{/demande/list(typeDemande=${typeDemande.name()})}">
+                    <i class="fas fa-list-ul me-2"></i> <span th:text="${typeDemande.libelleListe}">Demandes autres</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold text-gradient-blue">
+                    <i class="fas fa-file-alt me-2 icon-gradient-blue"></i> Formulaire de création
+                </h5>
+                <p class="text-muted mb-0 mt-1">
+                    Sponsoring, remboursement, indemnité de repas, lot / récompense, droits divers / honoraires…
+                    Une demande porte sur une seule dépense, réglée en <strong>paiement direct</strong> (sans bon de commande).
+                    Circuit : N+1, Moyens Généraux, contrôleur de gestion, D.F.C. puis S.G.
+                </p>
+            </div>
+
+            <div class="card-body">
+                <form method="post"
+                      id="demandeForm"
+                      th:action="@{/demande/autre/save}"
+                      class="needs-validation"
+                      novalidate
+                      enctype="multipart/form-data">
+                    <input type="hidden" name="submissionToken" th:value="${submissionToken}" />
+
+                    <!-- ===================== DÉPENSE ===================== -->
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-hand-holding-usd me-2 icon-gradient-blue"></i> Dépense demandée
+                        </h6>
+
+                        <div th:if="${categories == null || categories.isEmpty()}" class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Aucune catégorie de dépense n'est paramétrée : contactez l'administrateur.
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="categorie" class="form-label fw-bold required-field">Catégorie</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="fas fa-tags icon-gradient-blue"></i></span>
+                                    <select id="categorie" name="categorie" class="form-select" required>
+                                        <option value="">-- Choisir --</option>
+                                        <option th:each="c : ${categories}"
+                                                th:value="${c.id}"
+                                                th:text="${c.libelle}"
+                                                th:attr="data-beneficiaire-obligatoire=${c.estBeneficiaireObligatoire()}"></option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="beneficiaire" class="form-label fw-bold" id="beneficiaireLabel">Bénéficiaire</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="fas fa-user-tag icon-gradient-blue"></i></span>
+                                    <input type="text" class="form-control" id="beneficiaire" name="beneficiaire"
+                                           maxlength="255" placeholder="Personne ou organisme à payer">
+                                </div>
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label for="quantiteAffichee" class="form-label fw-bold required-field">Quantité</label>
+                                <input type="text" class="form-control text-end montant-input" id="quantiteAffichee"
+                                       inputmode="decimal" autocomplete="off" value="1" required
+                                       data-cible="quantite">
+                                <input type="hidden" name="quantite" id="quantite" value="1">
+                                <div class="form-text text-muted">Ex. nombre de repas ; 1 pour un montant forfaitaire.</div>
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label for="montantUnitaireAffiche" class="form-label fw-bold required-field">Montant unitaire</label>
+                                <input type="text" class="form-control text-end montant-input" id="montantUnitaireAffiche"
+                                       inputmode="decimal" autocomplete="off" required
+                                       data-cible="montantUnitaire">
+                                <input type="hidden" name="montantUnitaire" id="montantUnitaire">
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label for="devise" class="form-label fw-bold required-field">Devise</label>
+                                <select id="devise" name="devise" class="form-select" required>
+                                    <option th:each="d : ${devises}"
+                                            th:value="${d.id}"
+                                            th:selected="${deviseReference != null and d.id == deviseReference.id}"
+                                            th:text="${d.acronyme + ' — ' + d.designation}"></option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Montant total</label>
+                                <div class="form-control text-end fw-bold bg-light" id="montantTotal">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===================== INFORMATIONS GÉNÉRALES ===================== -->
+                    <div class="mb-4">
+                        <h6 class="form-section-title">
+                            <i class="fas fa-info-circle me-2 icon-gradient-blue"></i> Informations générales
+                        </h6>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="dateSortie" class="form-label fw-bold required-field">Date souhaitée de paiement</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="fas fa-calendar-alt icon-gradient-blue"></i></span>
+                                    <input type="date" class="form-control" id="dateSortie" name="dateSortie" required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="priorite" class="form-label fw-bold required-field">Priorité</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="fas fa-bolt icon-gradient-blue"></i></span>
+                                    <select id="priorite" name="priorite" class="form-select" required>
+                                        <option value="">-- Choisir --</option>
+                                        <option th:each="p : ${priorites}" th:value="${p.name()}" th:text="${p.name()}"></option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12 mb-3">
+                                <label for="motif" class="form-label fw-bold required-field">Motif évoqué</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="fas fa-tag icon-gradient-blue"></i></span>
+                                    <input type="text" class="form-control" id="motif" name="motif" required
+                                           placeholder="Ex. Sponsoring du tournoi inter-entreprises 2026">
+                                </div>
+                            </div>
+
+                            <div class="col-md-12 mb-3">
+                                <label for="description" class="form-label fw-bold">Description</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="fas fa-align-left icon-gradient-blue"></i></span>
+                                    <textarea class="form-control" id="description" name="description" rows="3"
+                                              placeholder="Informations complémentaires (période, référence de la facture, coordonnées de paiement…)"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Pièces jointes -->
+                            <div class="col-md-12 mb-2">
+                                <label for="piecesJointes" class="form-label fw-bold">Pièces justificatives</label>
+                                <div class="file-upload-card border rounded-4 p-4 text-center position-relative">
+                                    <input type="file" class="file-upload-input" id="piecesJointes" name="piecesJointes"
+                                           multiple accept="image/jpeg,image/png,image/gif,image/webp,application/pdf">
+                                    <div class="file-upload-content">
+                                        <div class="mb-2"><i class="fas fa-paperclip fa-2x text-gradient-blue"></i></div>
+                                        <p class="mb-1 fw-semibold">Glissez-déposez vos fichiers ici</p>
+                                        <p class="text-muted mb-2">ou cliquez pour sélectionner</p>
+                                        <span class="badge bg-light text-dark border">PDF · Images (JPG, PNG, GIF, WEBP)</span>
+                                    </div>
+                                </div>
+                                <div class="form-text text-muted mt-2">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Joignez les justificatifs (facture, note de frais, convention de sponsoring…).
+                                </div>
+                                <div id="fileTypeAlert" class="alert alert-danger mt-2 d-none" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-1"></i><span id="fileTypeAlertMsg"></span>
+                                </div>
+                                <ul id="fileList" class="list-group list-group-flush mt-3"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <div class="d-flex justify-content-end gap-2 mt-4 px-4">
+        <button type="button" id="btnPreviewDemande" class="btn btn-gradient-green px-4">
+            <i class="fas fa-eye me-2"></i> Aperçu & confirmer
+        </button>
+    </div>
+</div>
+
+<!-- Modal aperçu avant soumission -->
+<div class="modal fade" id="previewDemandeModal" tabindex="-1" aria-labelledby="previewDemandeModalLabel"
+     aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header btn-gradient-blue">
+                <h5 class="modal-title" id="previewDemandeModalLabel">
+                    <i class="fas fa-eye me-2"></i>Aperçu avant soumission
+                </h5>
+            </div>
+            <div class="modal-body">
+                <table class="table table-borderless align-middle mb-0">
+                    <tbody>
+                    <tr><th class="text-muted w-25">Catégorie</th><td id="pvCategorie" class="fw-semibold"></td></tr>
+                    <tr><th class="text-muted">Bénéficiaire</th><td id="pvBeneficiaire"></td></tr>
+                    <tr><th class="text-muted">Montant</th><td id="pvMontant" class="fw-bold"></td></tr>
+                    <tr><th class="text-muted">Date souhaitée de paiement</th><td id="pvDate"></td></tr>
+                    <tr><th class="text-muted">Priorité</th><td id="pvPriorite"></td></tr>
+                    <tr><th class="text-muted">Motif évoqué</th><td id="pvMotif"></td></tr>
+                    <tr><th class="text-muted">Description</th><td id="pvDescription" style="white-space: pre-wrap;"></td></tr>
+                    <tr><th class="text-muted">Pièces jointes</th><td id="pvPieces"></td></tr>
+                    </tbody>
+                </table>
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Paiement direct, sans bon de commande. Vérifiez les informations avant l'envoi.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-pen me-1"></i>Modifier
+                </button>
+                <button type="submit" class="btn btn-gradient-green" form="demandeForm" id="btnSubmitDemande">
+                    <i class="fas fa-save me-1"></i>Confirmer et soumettre
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(() => {
+    "use strict";
+    const $ = (sel) => document.querySelector(sel);
+    const form = $("#demandeForm");
+    if (!form) return;
+
+    const nf = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+    function escapeHtml(str) {
+        return String(str).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+    }
+
+    // ── Montants : affichage FR (espaces, virgule) et valeur numérique dans le champ caché ──
+    function formaterMontant(input) {
+        let value = (input.value || "").replace(/[^\d,]/g, "");
+        const premiereVirgule = value.indexOf(",");
+        if (premiereVirgule >= 0) {
+            value = value.slice(0, premiereVirgule + 1) + value.slice(premiereVirgule + 1).replace(/,/g, "");
+        }
+        const numerique = value.replace(",", ".");
+        const cache = document.getElementById(input.dataset.cible);
+        if (!numerique) {
+            input.value = "";
+            if (cache) cache.value = "";
+            return;
+        }
+        const parts = numerique.split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        input.value = parts.join(",");
+        if (cache) cache.value = numerique;
+    }
+
+    function codeDevise() {
+        const opt = $("#devise option:checked");
+        return opt ? opt.textContent.split("—")[0].trim() : "";
+    }
+
+    function montantTotal() {
+        const q = parseFloat($("#quantite").value);
+        const pu = parseFloat($("#montantUnitaire").value);
+        return (q > 0 && pu > 0) ? q * pu : null;
+    }
+
+    function majTotal() {
+        const total = montantTotal();
+        $("#montantTotal").textContent = total == null ? "—" : `${nf.format(total)} ${codeDevise()}`;
+    }
+
+    document.querySelectorAll(".montant-input").forEach(inp => {
+        inp.addEventListener("input", () => { formaterMontant(inp); majTotal(); });
+    });
+    $("#devise").addEventListener("change", majTotal);
+
+    // ── Bénéficiaire obligatoire selon la catégorie ──
+    function majBeneficiaire() {
+        const opt = $("#categorie option:checked");
+        const obligatoire = opt && opt.dataset.beneficiaireObligatoire === "true";
+        $("#beneficiaire").required = obligatoire;
+        $("#beneficiaireLabel").classList.toggle("required-field", obligatoire);
+    }
+    $("#categorie").addEventListener("change", majBeneficiaire);
+    majBeneficiaire();
+    majTotal();
+
+    // ── Pièces jointes : formats autorisés, liste, suppression ──
+    const fileInput = $("#piecesJointes");
+    const fileList = $("#fileList");
+    const ALLOWED = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
+    let fichiers = [];
+
+    function syncFichiers() {
+        const dt = new DataTransfer();
+        fichiers.forEach(f => dt.items.add(f));
+        fileInput.files = dt.files;
+    }
+
+    function afficherFichiers() {
+        fileList.innerHTML = "";
+        fichiers.forEach((f, i) => {
+            const li = document.createElement("li");
+            li.className = "list-group-item d-flex align-items-center gap-2";
+            li.innerHTML = `
+                <i class="fas ${f.type === "application/pdf" ? "fa-file-pdf text-danger" : "fa-file-image text-primary"}"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">${escapeHtml(f.name)}</div>
+                    <small class="text-muted">${(f.size / 1024).toFixed(1)} KB</small>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-remove-index="${i}" title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                </button>`;
+            fileList.appendChild(li);
+        });
+    }
+
+    fileInput.addEventListener("change", () => {
+        const alerte = $("#fileTypeAlert");
+        alerte.classList.add("d-none");
+        const entrants = Array.from(fileInput.files || []);
+        const refuses = entrants.filter(f => !ALLOWED.includes(f.type));
+        if (refuses.length) {
+            $("#fileTypeAlertMsg").textContent =
+                "Fichier(s) refusé(s) — PDF et images uniquement : " + refuses.map(f => f.name).join(", ");
+            alerte.classList.remove("d-none");
+        }
+        const cles = new Set(fichiers.map(f => `${f.name}_${f.size}`));
+        fichiers = [...fichiers, ...entrants.filter(f => ALLOWED.includes(f.type) && !cles.has(`${f.name}_${f.size}`))];
+        syncFichiers();
+        afficherFichiers();
+    });
+
+    fileList.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-remove-index]");
+        if (!btn) return;
+        fichiers.splice(parseInt(btn.dataset.removeIndex, 10), 1);
+        syncFichiers();
+        afficherFichiers();
+    });
+
+    // ── Aperçu puis soumission ──
+    $("#btnPreviewDemande").addEventListener("click", () => {
+        majBeneficiaire();
+        const total = montantTotal();
+        const montantsOk = total != null;
+        ["#quantiteAffichee", "#montantUnitaireAffiche"].forEach(sel => {
+            const inp = $(sel);
+            const cache = document.getElementById(inp.dataset.cible);
+            inp.classList.toggle("is-invalid", !(parseFloat(cache.value) > 0));
+        });
+        if (!form.checkValidity() || !montantsOk) {
+            form.classList.add("was-validated");
+            form.reportValidity();
+            return;
+        }
+
+        $("#pvCategorie").textContent = $("#categorie option:checked")?.textContent || "-";
+        $("#pvBeneficiaire").textContent = $("#beneficiaire").value || "-";
+        const q = parseFloat($("#quantite").value);
+        const pu = parseFloat($("#montantUnitaire").value);
+        $("#pvMontant").textContent = (q !== 1 ? `${nf.format(q)} × ${nf.format(pu)} = ` : "")
+            + `${nf.format(total)} ${codeDevise()}`;
+        const d = $("#dateSortie").value;
+        $("#pvDate").textContent = d ? d.split("-").reverse().join("/") : "-";
+        $("#pvPriorite").textContent = $("#priorite").value || "-";
+        $("#pvMotif").textContent = $("#motif").value || "-";
+        $("#pvDescription").textContent = $("#description").value || "-";
+        $("#pvPieces").textContent = fichiers.length ? fichiers.map(f => f.name).join(", ") : "Aucune";
+
+        window.bootstrap.Modal.getOrCreateInstance($("#previewDemandeModal")).show();
+    });
+
+    $("#btnSubmitDemande").addEventListener("click", function (e) {
+        e.preventDefault();
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Envoi en cours...';
+        form.submit();
+    });
+})();
+</script>
+
+</body>
+</html>

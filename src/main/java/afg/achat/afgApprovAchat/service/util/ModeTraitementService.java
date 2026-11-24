@@ -25,4 +25,13 @@ public class ModeTraitementService {
     public ModeTraitement getModeTraitementById(int id) {
         return modeTraitementRepo.findById(id).orElse(null);
     }
+
+    /**
+     * Mode de traitement imposé par le type de demande ; {@code null} si le type n'en impose pas
+     * (anciennes demandes) ou si le mode n'est pas paramétré en base.
+     */
+    public ModeTraitement getModeImpose(afg.achat.afgApprovAchat.model.util.TypeDemande type) {
+        if (type == null || type.getModeTraitement() == null) return null;
+        return modeTraitementRepo.findFirstByLibelleIgnoreCase(type.getModeTraitement().getLibelle()).orElse(null);
+    }
 }

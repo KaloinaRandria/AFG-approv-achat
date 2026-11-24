@@ -42,8 +42,6 @@ public class Article {
     @IndexedEmbedded(includePaths = {"description", "description_kw"})
     @IndexingDependency(reindexOnUpdate = ReindexOnUpdate.SHALLOW)
     Famille famille;
-    @Column(name = "prix_unitaire")
-    Double prixUnitaire;
     @Column(name = "code_provisoire")
     String codeProvisoire;
 
@@ -54,15 +52,24 @@ public class Article {
         this.setFamille(famille);
     }
 
+    /**
+     * Un article inactif (ancien article sans stock : sponsoring, remboursement, per diem…)
+     * reste rattaché aux anciennes demandes mais n'est plus proposé nulle part.
+     * {@code null} pour les articles antérieurs à ce champ : ils restent actifs.
+     */
+    @Column(name = "actif")
+    Boolean actif = true;
+
+    /** Version sans {@code null} de {@link #actif}. */
+    public boolean estActif() {
+        return actif == null || actif;
+    }
+
     public void setCodeArticle(IdGenerator idGenerator) {
         this.codeArticle = idGenerator.generateId("ART", "s_code_article");
     }
 
     public void setCodeArticle(String codeArticle) {
         this.codeArticle = codeArticle;
-    }
-
-    public void setPrixUnitaire(String prixUnitaire) {
-        this.prixUnitaire = Double.parseDouble(prixUnitaire);
     }
 }

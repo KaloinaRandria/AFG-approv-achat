@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.model.util;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,7 +15,8 @@ import java.util.Map;
  * les éléments d'affichage (badges, icône).</p>
  *
  * <p>Circuit normal : CREE → N1 (MG) → N2 (Contrôleur) → N3 (DFC) → N4 (SG) → VALIDE.<br>
- * Circuit CODEP : … → N1 (MG) → DECISION_CODEP → N2 → … (les MG envoient au CODEP).</p>
+ * Circuit CODEP : … → N1 (MG) → DECISION_CODEP → N2 → … (les MG envoient au CODEP).<br>
+ * Le {@link TypeDemande} peut raccourcir le circuit : une fourniture est validée dès le contrôleur.</p>
  */
 public enum EtapeWorkflow {
 
@@ -24,7 +26,8 @@ public enum EtapeWorkflow {
     VALIDATION_N2 (StatutDemande.VALIDATION_N2,  "En attente Contrôle de gestion", "Contrôleur de gestion",   "CONTROLEUR",      "PJ_CONTROLEUR",  "badge-light-blue", "badge-purple",  "fa-coins"),
     VALIDATION_N3 (StatutDemande.VALIDATION_N3,  "En attente D.F.C.",              "D.F.C.",                  "DFC",             "PJ_DFC",         "badge-purple",     "badge-warning", "fa-gavel"),
     VALIDATION_N4 (StatutDemande.VALIDATION_N4,  "En attente S.G.",                "S.G.",                    "SG",              "PJ_SG",          "badge-green-soft", "badge-teal",    "fa-stamp"),
-    DECISION_CODEP(StatutDemande.DECISION_CODEP, "En attente CODEP",               "Comité de dépense",       "MOYENS_GENERAUX", "PV_CODEP",       "badge-orange",     "badge-codep",   "fa-landmark"),
+    // Décision CODEP : réservée au validateur des Moyens Généraux (les autres M.G. envoient au CODEP et consultent)
+    DECISION_CODEP(StatutDemande.DECISION_CODEP, "En attente CODEP",               "Comité de dépense",       "MG_VALIDATOR",    "PV_CODEP",       "badge-orange",     "badge-codep",   "fa-landmark"),
     VALIDE        (StatutDemande.VALIDE,         "VALIDÉE",                        null,                      null,              null,             "badge-green",      "badge-success", "fa-check-circle"),
     REFUSE        (StatutDemande.REFUSE,         "REFUSÉE",                        null,                      null,              null,             "badge-red",        "badge-danger",  "fa-times-circle");
 
@@ -73,6 +76,17 @@ public enum EtapeWorkflow {
         };
     }
 
+    /**
+     * Étape atteinte après approbation pour une demande du type donné : la demande
+     * est validée dès que la dernière validation prévue par son type est franchie.
+     */
+    public EtapeWorkflow suivante(TypeDemande type) {
+        if (!estTerminale() && this == TypeDemande.ouStandard(type).getDerniereValidation()) {
+            return VALIDE;
+        }
+        return suivante();
+    }
+
     public static EtapeWorkflow fromStatut(int statut) {
         for (EtapeWorkflow e : values()) {
             if (e.statut == statut) return e;
@@ -117,6 +131,11 @@ public enum EtapeWorkflow {
 
     /** Libellé de l'étape franchie pour atteindre chaque statut (frise de la fiche). */
     public static Map<Integer, String> libellesEtapeFranchie(boolean viaCodep) {
+        return libellesEtapeFranchie(viaCodep, TypeDemande.STANDARD);
+    }
+
+    public static Map<Integer, String> libellesEtapeFranchie(boolean viaCodep, TypeDemande type) {
+        String dernierValidateur = TypeDemande.ouStandard(type).getDerniereValidation().libelleValidateur;
         Map<Integer, String> m = new LinkedHashMap<>();
         m.put(StatutDemande.CREE,           "Création");
         m.put(StatutDemande.VALIDATION_N1,  "N+1");
@@ -125,33 +144,62 @@ public enum EtapeWorkflow {
         m.put(StatutDemande.VALIDATION_N4,  "D.F.C.");
         m.put(StatutDemande.DECISION_CODEP, "Comité de dépense");
         m.put(StatutDemande.REFUSE,         "Refus");
-        m.put(StatutDemande.VALIDE,         viaCodep ? "Comité de dépense" : "S.G.");
+        m.put(StatutDemande.VALIDE,         viaCodep ? "Comité de dépense" : dernierValidateur);
         return m;
     }
 
     // ── Circuit ─────────────────────────────────────────────────────────────
 
-    /** Étapes parcourues, dans l'ordre, selon que la demande passe ou non par le CODEP. */
+    /** Circuit standard (toutes les validations), selon que la demande passe ou non par le CODEP. */
     public static List<EtapeWorkflow> circuit(boolean viaCodep) {
-        return viaCodep
-                ? List.of(CREE, VALIDATION_N1, DECISION_CODEP, VALIDATION_N2, VALIDATION_N3, VALIDATION_N4, VALIDE)
-                : List.of(CREE, VALIDATION_N1, VALIDATION_N2, VALIDATION_N3, VALIDATION_N4, VALIDE);
+        return circuit(viaCodep, TypeDemande.STANDARD);
     }
 
-    /** Libellés de la frise de progression (un par position du circuit). */
+    /**
+     * Étapes parcourues, dans l'ordre, pour une demande du type donné : le circuit
+     * standard, coupé après la dernière validation prévue par le type.
+     */
+    public static List<EtapeWorkflow> circuit(boolean viaCodep, TypeDemande type) {
+        List<EtapeWorkflow> complet = viaCodep
+                ? List.of(CREE, VALIDATION_N1, DECISION_CODEP, VALIDATION_N2, VALIDATION_N3, VALIDATION_N4, VALIDE)
+                : List.of(CREE, VALIDATION_N1, VALIDATION_N2, VALIDATION_N3, VALIDATION_N4, VALIDE);
+        int fin = complet.indexOf(TypeDemande.ouStandard(type).getDerniereValidation());
+        if (fin < 0 || fin >= complet.size() - 2) return complet;
+
+        List<EtapeWorkflow> coupe = new ArrayList<>(complet.subList(0, fin + 1));
+        coupe.add(VALIDE);
+        return List.copyOf(coupe);
+    }
+
+    /** Libellés de la frise de progression du circuit standard (un par position du circuit). */
     public static List<String> libellesCircuit(boolean viaCodep) {
-        return viaCodep
+        return libellesCircuit(viaCodep, TypeDemande.STANDARD);
+    }
+
+    /**
+     * Libellés de la frise pour une demande du type donné. Le libellé d'une position
+     * est le validateur qui y fait arriver : un circuit raccourci garde donc les
+     * premiers libellés du circuit standard.
+     */
+    public static List<String> libellesCircuit(boolean viaCodep, TypeDemande type) {
+        List<String> complet = viaCodep
                 ? List.of("Demande créée", "Supérieur hiérarchique (N+1)", "Moyens Généraux",
                           "Comité de dépense", "Contrôleur de gestion", "D.F.C.", "S.G.")
                 : List.of("Demande créée", "Supérieur hiérarchique (N+1)", "Moyens Généraux",
                           "Contrôleur de gestion", "D.F.C.", "S.G.");
+        return complet.subList(0, circuit(viaCodep, type).size());
     }
 
-    /** Position (1-based) du statut dans le circuit ; -1 si refusée, 1 si inconnu. */
+    /** Position (1-based) du statut dans le circuit standard ; -1 si refusée, 1 si inconnu. */
     public static int numeroDansCircuit(int statut, boolean viaCodep) {
+        return numeroDansCircuit(statut, viaCodep, TypeDemande.STANDARD);
+    }
+
+    /** Position (1-based) du statut dans le circuit du type donné ; -1 si refusée, 1 si inconnu. */
+    public static int numeroDansCircuit(int statut, boolean viaCodep, TypeDemande type) {
         if (statut == StatutDemande.REFUSE) return -1;
         int index = Arrays.stream(values()).anyMatch(e -> e.statut == statut)
-                ? circuit(viaCodep).indexOf(fromStatut(statut))
+                ? circuit(viaCodep, type).indexOf(fromStatut(statut))
                 : -1;
         return index < 0 ? 1 : index + 1;
     }

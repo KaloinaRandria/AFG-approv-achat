@@ -15,6 +15,9 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "devise")
 public class Devise {
+    /** Monnaie de référence : comptabilité, budget, stock et prix d'achat sont en ariary. */
+    public static final String CODE_REFERENCE = "MGA";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_devise")
     int id;

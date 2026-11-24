@@ -100,14 +100,69 @@ public class DemandeController {
 
     private final ModeTraitementService modeTraitementService;
 
-    private final afg.achat.afgApprovAchat.service.paiement.PaiementDirectService paiementDirectService;
-
     private final WorkflowService workflowService;
 
     private final PieceJointeWorkflowService pieceJointeService;
 
+    private final afg.achat.afgApprovAchat.service.stock.ReservationStockService reservationStockService;
+
+    private final afg.achat.afgApprovAchat.service.demande.ApprovisionnementLigneService approvisionnementLigneService;
+
+    private final afg.achat.afgApprovAchat.service.util.DeviseService deviseService;
+
+    private final afg.achat.afgApprovAchat.service.demande.DeviseDemandeService deviseDemandeService;
+
+    private final DemandeAutreService demandeAutreService;
+
+    /**
+     * Les Moyens Généraux, à leur étape, choisissent la devise des prix proforma.
+     * Les prix des lignes à acheter sont à ressaisir ; les lignes stock sont converties.
+     */
+    @PostMapping("/fiche/{id}/devise")
+    public String changerDevise(@PathVariable("id") String id,
+                                @RequestParam(name = "devise", required = false) String deviseId,
+                                RedirectAttributes redirectAttributes) {
+        String fiche = "redirect:/demande/fiche/" + id;
+        DemandeMere demande = demandeMereService.getDemandeMereById(id).orElse(null);
+        if (demande == null) {
+            redirectAttributes.addFlashAttribute("ko", "Demande introuvable.");
+            return "redirect:/demande/list";
+        }
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (!workflowService.calculerDroits(demande, utilisateurCourant(auth), auth).mg()) {
+            redirectAttributes.addFlashAttribute("ko", "Seuls les Moyens Généraux, à leur étape, choisissent la devise.");
+            return fiche;
+        }
+        // Demande Autre : la devise est celle du montant saisi par le demandeur
+        if (demande.getTypeDemandeEffectif().isDepenseAutre()) {
+            redirectAttributes.addFlashAttribute("ko", "La devise d'une demande Autre est fixée à la saisie.");
+            return fiche;
+        }
+        try {
+            int aRessaisir = deviseDemandeService.changerDevise(demande, deviseService.lireDevise(deviseId));
+            redirectAttributes.addFlashAttribute("ok", "Devise de la demande : " + demande.getCodeDevise()
+                    + (aRessaisir > 0 ? ". Ressaisissez le prix proforma de " + aRessaisir + " article(s) dans cette devise." : "."));
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+        }
+        return fiche;
+    }
+
     @GetMapping("/add")
-    public String addDemandePage(Model model, HttpServletRequest request, HttpSession session) {
+    public String addDemandePage(@RequestParam(name = "type", required = false) String type,
+                                 Model model, HttpServletRequest request, HttpSession session) {
+
+        // Matériel par défaut ; « type=AUTRE » ouvre le formulaire des demandes Autres
+        TypeDemande typeDemande;
+        try {
+            typeDemande = TypeDemande.parse(type);
+        } catch (IllegalArgumentException e) {
+            typeDemande = null;
+        }
+        if (typeDemande == null || !typeDemande.isCreable()) {
+            typeDemande = TypeDemande.FOURNITURE;
+        }
+        model.addAttribute("typeDemande", typeDemande);
 
         // Token anti double-soumission
         String token = UUID.randomUUID().toString();
@@ -117,6 +172,12 @@ public class DemandeController {
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("ligneBudgetaires", centreBudgetaireService.getAllCentreBudgetaires());
 
+        if (typeDemande.isDepenseAutre()) {
+            model.addAttribute("categories", demandeAutreService.getCategoriesActives());
+            model.addAttribute("devises", deviseService.getAllDevises());
+            model.addAttribute("deviseReference", deviseService.getDeviseReference());
+            return "demande/demande-autre-saisie";
+        }
         return "demande/demande-saisie";
     }
     @PostMapping("/save")
@@ -126,6 +187,7 @@ public class DemandeController {
                                 @RequestParam(name = "articleCodes[]") List<String> articleCodes,
                                 @RequestParam(name = "quantite[]") List<String> quantite,
                                 @RequestParam(name = "priorite") String priorite,
+                                @RequestParam(name = "typeDemande", required = false) String typeDemande,
                                 @RequestParam(name = "piecesJointes") MultipartFile[] piecesJointes,
                                 @RequestParam(name = "submissionToken") String submissionToken,
                                 HttpSession session,
@@ -146,19 +208,36 @@ public class DemandeController {
         Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
 
+        TypeDemande type;
+        try {
+            type = TypeDemande.parse(typeDemande);
+        } catch (IllegalArgumentException e) {
+            type = null;
+        }
+        // Ce formulaire crée les demandes de matériel ; les demandes Autres ont le leur
+        if (type == TypeDemande.AUTRE) {
+            return "redirect:/demande/add?type=" + TypeDemande.AUTRE.name();
+        }
+        // Les anciennes demandes hors matériel ne se créent plus
+        if (type == null || !type.isCreable()) {
+            redirectAttributes.addFlashAttribute("ko", "Seule une demande de matériel peut être créée.");
+            return "redirect:/demande/add";
+        }
+        final String retourSaisie = "redirect:/demande/add";
+
         try {
             if (dateSortie == null || dateSortie.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "La date prévue pour la livraison est obligatoire.");
-                return "redirect:/demande/add";
+                return retourSaisie;
             }
             if (motif == null || motif.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "Le motif evoqué est obligatoire.");
-                return "redirect:/demande/add";
+                return retourSaisie;
             }
 
             if (articleCodes == null || articleCodes.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "Impossible de valider la demande sans aucune ligne d’article.");
-                return "redirect:/demande/add";
+                return retourSaisie;
             }
 
             double totalGeneral = 0.0;
@@ -169,6 +248,11 @@ public class DemandeController {
                 String code = articleCodes.get(i);
                 Article article = articleService.getArticleByCodeArticle(code)
                         .orElseThrow(() -> new IllegalArgumentException("Article introuvable : " + code));
+
+                // Un article inactif ne peut plus être demandé
+                if (!article.estActif()) {
+                    throw new IllegalArgumentException("L'article " + code + " est inactif : il ne peut plus être demandé.");
+                }
 
                 double qte = MontantCalculator.parseDoubleSafe(quantite.get(i));
                 if (qte <= 0) continue;
@@ -192,13 +276,13 @@ public class DemandeController {
             // serait créée puis resoumise (doublon).
             if (lignes.isEmpty()) {
                 redirectAttributes.addFlashAttribute("ko", "Impossible de valider la demande : aucune ligne n'a une quantité supérieure à 0.");
-                return "redirect:/demande/add";
+                return retourSaisie;
             }
             try {
                 pieceJointeService.verifierFormats(piecesJointes);
             } catch (WorkflowException e) {
                 redirectAttributes.addFlashAttribute("ko", e.getMessage());
-                return "redirect:/demande/add";
+                return retourSaisie;
             }
 
             DemandeMere demandeMere = new DemandeMere();
@@ -206,6 +290,11 @@ public class DemandeController {
             demandeMere.setDateDemande(String.valueOf(LocalDateTime.now()));
             demandeMere.setDateSortie(dateSortie + "T00:00");
             demandeMere.setPriorite(DemandeMere.PrioriteDemande.valueOf(priorite.trim()));
+            demandeMere.setTypeDemande(type);
+            // Le type impose le mode de traitement (matériel → M.G. avec bon de commande)
+            demandeMere.setModeTraitement(modeTraitementService.getModeImpose(type));
+            // Prix proposés en ariary (derniers prix d'achat) : la demande naît en ariary
+            demandeMere.appliquerDevise(deviseService.getDeviseReference(), LocalDateTime.now());
             demandeMere.setMotifEvoque(motif);
             demandeMere.setDemandeur(utilisateur);
             demandeMere.setDescription(description);
@@ -221,6 +310,76 @@ public class DemandeController {
             }
             pieceJointeService.enregistrerPourDemande(piecesJointes, demandeMere, "");
 
+            notifierCreation(demandeMere, utilisateur);
+
+            redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
+            return "redirect:/demande/list?typeDemande=" + type.name();
+
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+            return retourSaisie;
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement : " + e.getMessage());
+            return retourSaisie;
+        }
+    }
+
+    /**
+     * Demande Autre : une seule dépense hors matériel (sponsoring, remboursement, indemnité de repas…),
+     * réglée en paiement direct. Circuit complet jusqu'au S.G.
+     */
+    @PostMapping("/autre/save")
+    public String insertDemandeAutre(@RequestParam(name = "categorie", required = false) String categorie,
+                                     @RequestParam(name = "beneficiaire", required = false) String beneficiaire,
+                                     @RequestParam(name = "quantite", required = false) String quantite,
+                                     @RequestParam(name = "montantUnitaire", required = false) String montantUnitaire,
+                                     @RequestParam(name = "devise", required = false) String devise,
+                                     @RequestParam(name = "dateSortie", required = false) String datePaiement,
+                                     @RequestParam(name = "priorite", required = false) String priorite,
+                                     @RequestParam(name = "motif", required = false) String motif,
+                                     @RequestParam(name = "description", required = false) String description,
+                                     @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
+                                     @RequestParam(name = "submissionToken") String submissionToken,
+                                     HttpSession session,
+                                     RedirectAttributes redirectAttributes) {
+        String sessionToken = (String) session.getAttribute("submissionToken");
+        if (sessionToken == null || !sessionToken.equals(submissionToken)) {
+            redirectAttributes.addFlashAttribute("warningMessage",
+                    "Cette demande a déjà été soumise. Veuillez vérifier la liste des demandes.");
+            return "redirect:/demande/list?typeDemande=" + TypeDemande.AUTRE.name();
+        }
+        session.removeAttribute("submissionToken");
+
+        final String retourSaisie = "redirect:/demande/add?type=" + TypeDemande.AUTRE.name();
+        Utilisateur utilisateur = utilisateurCourant(SecurityContextHolder.getContext().getAuthentication());
+
+        DemandeMere demande;
+        try {
+            demande = demandeAutreService.creer(utilisateur, new DemandeAutreService.NouvelleDemandeAutre(
+                    categorie, beneficiaire, quantite, montantUnitaire, devise,
+                    datePaiement, priorite, motif, description), piecesJointes);
+        } catch (IllegalArgumentException | WorkflowException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+            return retourSaisie;
+        } catch (Exception e) {
+            log.error("Échec de l'enregistrement d'une demande Autre", e);
+            redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement : " + e.getMessage());
+            return retourSaisie;
+        }
+
+        // Après le commit : un échec d'envoi ne remet pas la demande en cause
+        try {
+            notifierCreation(demande, utilisateur);
+        } catch (Exception e) {
+            log.error("Échec des notifications de création de la demande {}", demande.getId(), e);
+        }
+
+        redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
+        return "redirect:/demande/list?typeDemande=" + TypeDemande.AUTRE.name();
+    }
+
+    /** Mails de création : confirmation au demandeur, puis action requise pour le N+1 et les validateurs assignés. */
+    private void notifierCreation(DemandeMere demandeMere, Utilisateur utilisateur) {
             // ── Mail 1 : confirmation au demandeur ──────────────────────────────────
             Map<String, Object> propsDemandeur = new HashMap<>();
             propsDemandeur.put("id",          demandeMere.getId());
@@ -286,18 +445,6 @@ public class DemandeController {
                     ess.sendEmail(mailValidateur);
                 }
             }
-
-
-            redirectAttributes.addFlashAttribute("ok", "Demande enregistrée avec succès.");
-            return "redirect:/demande/list";
-
-        } catch (IllegalArgumentException e) {
-            redirectAttributes.addFlashAttribute("ko", e.getMessage());
-            return "redirect:/demande/add";
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("ko", "Erreur lors de l'enregistrement : " + e.getMessage());
-            return "redirect:/demande/add";
-        }
     }
 
 
@@ -315,6 +462,7 @@ public class DemandeController {
             @RequestParam(required = false)             String   num,
             @RequestParam(required = false)             String   demandeur,
             @RequestParam(required = false)             String   type,
+            @RequestParam(required = false)             String   typeDemande,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(required = false, defaultValue = "ALL") String scope) {
@@ -349,6 +497,7 @@ public class DemandeController {
                 .num(num)
                 .demandeur(demandeur)
                 .type(type)
+                .typeDemande(typeDemande)
                 .priorite(priorite)
                 .motif(motif)
                 .statut(statutFilter)
@@ -381,13 +530,13 @@ public class DemandeController {
         // ── 6. Alimentation du modèle Thymeleaf ──────────────────────────────────
         populateModel(
                 model, demandesMeres,
-                statut, priorite, motif, num, demandeur, type,
+                statut, priorite, motif, num, demandeur, type, typeDemande,
                 dateFrom, dateTo, scope,
                 size, sort, dir,
                 isBackoffice, hasChildren,
                 isMG, isControleur, isDFC, isSG, isAdmin
         );
-        String returnUrl = buildReturnUrl(page, size, sort, dir, statut, priorite, motif, num, demandeur, type, dateFrom, dateTo, scope);
+        String returnUrl = buildReturnUrl(page, size, sort, dir, statut, priorite, motif, num, demandeur, type, typeDemande, dateFrom, dateTo, scope);
         model.addAttribute("returnUrl", returnUrl);
 
         model.addAttribute("motif",                  motif);
@@ -451,7 +600,7 @@ public class DemandeController {
 
     private void populateModel(Model model, Page<DemandeMere> demandesMeres,
                                Integer statut, String priorite, String motif, String num,
-                               String demandeur, String type,
+                               String demandeur, String type, String typeDemande,
                                LocalDate dateFrom, LocalDate dateTo,
                                String scope, int size, String sort, String dir,
                                boolean isBackofficeValidator, boolean hasChildren,
@@ -482,7 +631,7 @@ public class DemandeController {
         model.addAttribute("isSGOnly",         isSG && !isAdmin);
 
         // Colspan calculé (évite l'expression #authorization fragile dans Thymeleaf)
-        int colCount = 5; // id + date + motif + priorité + statut
+        int colCount = 6; // id + date + motif + type + priorité + statut
         if (isBackofficeValidator || hasChildren) colCount++;
         model.addAttribute("tableColCount", colCount);
 
@@ -494,6 +643,16 @@ public class DemandeController {
         model.addAttribute("num",       num       == null ? "" : num);
         model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
         model.addAttribute("type",      type      == null ? "" : type);
+        // Type affiché : normalisé, vide si absent ou inconnu (liste de toutes les demandes)
+        TypeDemande typeListe;
+        try {
+            typeListe = TypeDemande.parse(typeDemande);
+        } catch (IllegalArgumentException e) {
+            typeListe = null;
+        }
+        model.addAttribute("typeDemande",  typeListe == null ? "" : typeListe.name());
+        model.addAttribute("titreListe",   typeListe == null ? "Toutes les demandes" : typeListe.getLibelleListe());
+        model.addAttribute("typesDemande", TypeDemande.values());
         model.addAttribute("dateFrom",  dateFrom);
         model.addAttribute("dateTo",    dateTo);
         model.addAttribute("scope",     scope);
@@ -508,7 +667,7 @@ public class DemandeController {
 
     private String buildReturnUrl(int page, int size, String sort, String dir,
                                   Integer statut, String priorite, String motif,
-                                  String num, String demandeur, String type,
+                                  String num, String demandeur, String type, String typeDemande,
                                   LocalDate dateFrom, LocalDate dateTo, String scope) {
         StringBuilder sb = new StringBuilder("/demande/list?");
         sb.append("page=").append(page);
@@ -521,6 +680,7 @@ public class DemandeController {
         if (num     != null)    sb.append("&num=").append(num);
         if (demandeur != null)  sb.append("&demandeur=").append(demandeur);
         if (type    != null)    sb.append("&type=").append(type);
+        if (typeDemande != null && !typeDemande.isBlank()) sb.append("&typeDemande=").append(typeDemande);
         if (dateFrom != null)   sb.append("&dateFrom=").append(dateFrom);
         if (dateTo  != null)    sb.append("&dateTo=").append(dateTo);
         if (scope   != null)    sb.append("&scope=").append(scope);
@@ -616,27 +776,13 @@ public class DemandeController {
 
         // VÉRIFICATION STOCK POUR LES LIGNES STOCK
         if (ligne.getTypeApprovisionnement() == DemandeFille.TypeApprovisionnement.STOCK) {
-            String codeArticle = ligne.getArticle().getCodeArticle();
-            double stockDisponible = lotStockService.getStockDisponible(codeArticle);
+            // Stock libre pour CETTE ligne : lots moins les réservations de toutes les autres lignes
+            // STOCK (toutes demandes). La quantité déjà sortie de la ligne n'est plus dans les lots.
+            double dejaSorti = bonSortieService.getQuantiteDejaSortie(ligne);
+            double stockReelDisponible = reservationStockService.stockLibre(
+                    ligne.getArticle().getCodeArticle(), List.of(ligneId)) + dejaSorti;
 
-            // Récupérer la demande mère pour connaître les autres lignes du même article
-            DemandeMere demande = ligne.getDemandeMere();
-            List<DemandeFille> autresLignesStock = demandeFilleService.getDemandeFilleByDemandeMere(demande)
-                    .stream()
-                    .filter(l -> l.getId() != ligneId)  // Exclure la ligne en cours
-                    .filter(l -> l.getTypeApprovisionnement() == DemandeFille.TypeApprovisionnement.STOCK)
-                    .filter(l -> l.getArticle().getCodeArticle().equals(codeArticle))
-                    .toList();
-
-            // Calculer la quantité totale déjà réservée par d'autres lignes stock du même article
-            double totalReserveAutres = autresLignesStock.stream()
-                    .mapToDouble(DemandeFille::getQuantite)
-                    .sum();
-
-            // Stock réellement disponible pour CETTE ligne
-            double stockReelDisponible = stockDisponible - totalReserveAutres;
-
-            if (quantite > stockReelDisponible) {
+            if (quantite > stockReelDisponible + 0.001) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", String.format(
                                 "Stock insuffisant pour l'article %s - %s. " +
@@ -699,6 +845,12 @@ public class DemandeController {
                                Model model,
                                @RequestParam(required = false, defaultValue = "/demande/list") String returnUrl,
                                RedirectAttributes redirectAttributes, HttpSession session) {
+
+        // Lien de retour : uniquement une page interne des demandes (pas de redirection externe)
+        if (returnUrl == null || !returnUrl.startsWith("/demande/")
+                || returnUrl.contains("//") || returnUrl.contains("\\")) {
+            returnUrl = "/demande/list";
+        }
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
@@ -778,12 +930,13 @@ public class DemandeController {
         // Libellés, badges et frise : source unique EtapeWorkflow
         Map<Integer, String> statutLabels = EtapeWorkflow.libellesAttente();
         String statutLabel  = statutLabels.getOrDefault(demande.getStatut(), "INCONNU");
-        Map<Integer, String> stepLabels   = EtapeWorkflow.libellesEtapeFranchie(isCodepWorkflow);
+        TypeDemande typeCircuit = demande.getTypeDemandeEffectif();
+        Map<Integer, String> stepLabels   = EtapeWorkflow.libellesEtapeFranchie(isCodepWorkflow, typeCircuit);
         Map<Integer, String> histoLabels  = EtapeWorkflow.libellesValidateur();
         Map<Integer, String> badgeClasses = EtapeWorkflow.badgesFiche();
         Map<Integer, String> badgeIcons   = EtapeWorkflow.icones();
-        List<String> steps = EtapeWorkflow.libellesCircuit(isCodepWorkflow);
-        int currentStep    = EtapeWorkflow.numeroDansCircuit(demande.getStatut(), isCodepWorkflow);
+        List<String> steps = EtapeWorkflow.libellesCircuit(isCodepWorkflow, typeCircuit);
+        int currentStep    = EtapeWorkflow.numeroDansCircuit(demande.getStatut(), isCodepWorkflow, typeCircuit);
 
         List<DemandePieceJointe> piecesJointes = demandePieceJointeService.listByDemandeId(demande.getId());
         List<CodepPieceJointe> codepPiecesJointes = codepPieceJointeService.listByDemandeId(demande.getId());
@@ -793,7 +946,14 @@ public class DemandeController {
         List<ValidationDemande> historiques = validationDemandeService.getHistorique(demande);
         CentreBudgetaire[] ligneBudgetaires = centreBudgetaireService.getAllCentreBudgetaires();
         ModeTraitement[] modeTraitements = modeTraitementService.getAllTraitements();
-        boolean canVoirPrix = isAdminOrSpecial || isViewerNplus1OfDemandeur;
+        // Demande Autre : une seule dépense, dont le montant a été saisi par le demandeur
+        boolean estAutre = typeCircuit.isDepenseAutre();
+        model.addAttribute("estAutre", estAutre);
+        // Mode de traitement fixé par le type : les M.G. ne le choisissent plus (sauf anciennes demandes)
+        model.addAttribute("modeTraitementImpose", typeCircuit.getModeTraitement());
+        model.addAttribute("detailAutre", estAutre ? demandeAutreService.getDetail(demande).orElse(null) : null);
+
+        boolean canVoirPrix = isAdminOrSpecial || isViewerNplus1OfDemandeur || estAutre;
         model.addAttribute("canVoirPrix", canVoirPrix);
 
         model.addAttribute("steps", steps);
@@ -811,6 +971,7 @@ public class DemandeController {
         // Model (IMPORTANT : toujours envoyer les booléens)
         model.addAttribute("demande", demande);
         model.addAttribute("lignes", lignes);
+        model.addAttribute("devises", deviseService.getAllDevises());
 
         model.addAttribute("canDecisionN1", canDecisionN1);
         model.addAttribute("canDecisionMG", canDecisionMG);
@@ -827,6 +988,7 @@ public class DemandeController {
         model.addAttribute("badgeIcons", badgeIcons);
 
         model.addAttribute("natures", DemandeMere.NatureDemande.values());
+        model.addAttribute("typesDemande", TypeDemande.values());
         model.addAttribute("priorites", DemandeMere.PrioriteDemande.values());
         model.addAttribute("modeTraitement", modeTraitements);
         model.addAttribute("ligneBudgetaires", ligneBudgetaires);
@@ -836,21 +998,23 @@ public class DemandeController {
         model.addAttribute("isViewerNplus1OfDemandeur", isViewerNplus1OfDemandeur);
         model.addAttribute("returnUrl", returnUrl);
 
-        //Bon de Commande Creation
-        boolean canCreateBC = demandeMereService.peutCreerBonCommande(demande,isMG);
-        model.addAttribute("canCreateBC", canCreateBC);
-        boolean canTransmitFinance = isMG
+        boolean canTransmitFinance = WorkflowService.peutTransmettreFinance(auth)
                 && demande.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE;
         model.addAttribute("canTransmitFinance", canTransmitFinance);
         boolean isFinance = hasFinanceAccess(auth);
         boolean canPayFinance = isFinance
                 && demande.getStatutTransmissionFinance() == DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE;
         model.addAttribute("canPayFinance", canPayFinance);
-        model.addAttribute("bonsCommande", bonCommandeService.getBonCommandesByDemande(demande));
+        // Bons de commande de la demande (lecture seule) : créés depuis la demande (ancien circuit)
+        // ou bons groupés qui contiennent au moins une de ses lignes
+        model.addAttribute("bonsCommande", bonCommandeService.getBonsCommandeDeLaDemande(demande));
+        model.addAttribute("lignesCommandees", bonCommandeService.getLignesCommandeesDeLaDemande(demande));
 
 
         // ── Bon de sortie ────────────────────────────────────────────────────────
+        // Seules les demandes de fourniture portent sur des articles en stock
         boolean canCreateBS = demande.getStatut() == StatutDemande.VALIDE
+                && demande.getTypeDemandeEffectif().isArticlesEnStock()
                 && isMG
                 && demande.getEtatLivraison() != DemandeMere.EtatLivraison.SOLDEE;
 
@@ -858,15 +1022,20 @@ public class DemandeController {
         model.addAttribute("bonsSortie", bonSortieService.getBonSortieByDemande(demande));
 
         if (canCreateBS) {
-            List<LigneRestanteDTO> lignesRestantes = lignes.stream()
+            // Même calcul que la sortie : lots FIFO moins le stock réservé par les autres demandes,
+            // réparti en priorité sur les lignes STOCK (leur réservation) avant les lignes ACHAT
+            List<DemandeFille> lignesActives = lignes.stream()
                     .filter(df -> df.getStatut() != StatutDemande.REFUSE)
+                    .toList();
+            Map<Integer, Double> restants = new HashMap<>();
+            lignesActives.forEach(df -> restants.put(df.getId(), bonSortieService.getQuantiteRestante(df)));
+            Map<Integer, Double> stockParLigne = reservationStockService.repartirStockLibre(
+                    lignesActives, df -> restants.get(df.getId()));
+            List<LigneRestanteDTO> lignesRestantes = lignesActives.stream()
                     .map(df -> {
-                        double restant         = bonSortieService.getQuantiteRestante(df);
-                        double totalSorti      = df.getQuantite() - restant;
-                        double stockDisponible = stockFilleRepo.getStockDisponible(
-                                df.getArticle().getCodeArticle()
-                        ); // ← SUM(entree) - SUM(sortie)
-                        return new LigneRestanteDTO(df, totalSorti, restant, stockDisponible);
+                        double restant = restants.get(df.getId());
+                        return new LigneRestanteDTO(df, df.getQuantite() - restant, restant,
+                                stockParLigne.getOrDefault(df.getId(), 0.0));
                     })
                     .filter(l -> l.getRestant() > 0)
                     .toList();
@@ -886,7 +1055,7 @@ public class DemandeController {
     @PostMapping("/fiche/{id}/decision")
     public String decision(@PathVariable("id") String id,
                            @RequestParam("decision") String decision,
-                           @RequestParam(value = "typeDemande", required = false) String typeDemande,
+                           @RequestParam(value = "natureDemande", required = false) String natureDemande,
                            @RequestParam(value = "modeTraitement", required = false) String modeTraitement,
                            @RequestParam(value = "commentaire", required = false) String commentaire,
                            @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
@@ -916,7 +1085,7 @@ public class DemandeController {
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Utilisateur current = utilisateurCourant(auth);
-        DecisionDemande cmd = new DecisionDemande(commentaire, piecesJointes, typeDemande, priorite,
+        DecisionDemande cmd = new DecisionDemande(commentaire, piecesJointes, natureDemande, priorite,
                 modeTraitement, ligneBudgetaire, commentaireControleur);
         String action = (decision == null) ? "" : decision.trim().toUpperCase();
 
@@ -939,6 +1108,12 @@ public class DemandeController {
         return redirectFiche;
     }
 
+    /**
+     * Liste unique des paiements directs (Moyens Généraux + Finance).
+     * Les statuts visibles dépendent du rôle :
+     *  - MG / Admin : à transmettre, transmise à la finance, payée
+     *  - Finance (lecture) : transmise à la finance, payée
+     */
     @GetMapping("/paiements-directs")
     public String listePaiementsDirects(
             Model model,
@@ -957,24 +1132,20 @@ public class DemandeController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (!hasRole(auth, "ROLE_MOYENS_GENERAUX") && !hasRole(auth, "ROLE_ADMIN")) {
+        List<DemandeMere.StatutTransmissionFinance> visibles = statutsPaiementDirectVisibles(auth);
+        if (visibles.isEmpty()) {
             return "redirect:/error/403";
         }
 
-        DemandeMere.StatutTransmissionFinance singleTransmission = null;
-        List<DemandeMere.StatutTransmissionFinance> allowedTransmissions = null;
+        // Un statut demandé hors du périmètre du rôle est ignoré
+        DemandeMere.StatutTransmissionFinance statutChoisi = null;
         if (statutTransmission != null && !statutTransmission.isBlank()) {
             try {
-                singleTransmission = DemandeMere.StatutTransmissionFinance.valueOf(statutTransmission.trim());
-            } catch (Exception ignored) {}
+                statutChoisi = DemandeMere.StatutTransmissionFinance.valueOf(statutTransmission.trim());
+            } catch (IllegalArgumentException ignored) {}
+            if (!visibles.contains(statutChoisi)) statutChoisi = null;
         }
-        if (singleTransmission == null) {
-            allowedTransmissions = List.of(
-                    DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE,
-                    DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE,
-                    DemandeMere.StatutTransmissionFinance.PAYEE
-            );
-        }
+        statutTransmission = statutChoisi == null ? null : statutChoisi.name();
 
         DemandeMereSpec.SearchCriteria criteria = DemandeMereSpec.SearchCriteria.builder()
                 .num(num)
@@ -984,113 +1155,21 @@ public class DemandeController {
                 .motif(motif)
                 .statut(StatutDemande.VALIDE)
                 .paiementDirectOnly(true)
-                .statutTransmissionFinance(singleTransmission)
-                .statutsTransmissionFinance(allowedTransmissions)
+                .statutTransmissionFinance(statutChoisi)
+                .statutsTransmissionFinance(statutChoisi == null ? visibles : null)
                 .dateFrom(DemandeMereService.toFrom(dateFrom))
                 .dateTo(DemandeMereService.toTo(dateTo))
                 .build();
 
         Page<DemandeMere> mePage = demandeMereService.search(criteria, page, size, sort, dir);
-
-        populatePaiementDirectModel(
-                model, mePage, statutTransmission, priorite, motif, num, demandeur, type,
-                dateFrom, dateTo, size, sort, dir,
-                List.of(
-                        DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE,
-                        DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE,
-                        DemandeMere.StatutTransmissionFinance.PAYEE
-                )
-        );
-
-        String returnUrl = buildPaiementDirectReturnUrl("/demande/paiements-directs", page, size, sort, dir,
-                statutTransmission, priorite, motif, num, demandeur, type, dateFrom, dateTo);
-        model.addAttribute("returnUrl", returnUrl);
-
-        return "demande/paiements-directs-liste";
-    }
-
-    @GetMapping("/paiements-directs-finance")
-    public String listePaiementsDirectsFinance(
-            Model model,
-            HttpServletRequest request,
-            @RequestParam(defaultValue = "0")           int page,
-            @RequestParam(defaultValue = "10")          int size,
-            @RequestParam(defaultValue = "dateDemande") String sort,
-            @RequestParam(defaultValue = "desc")        String dir,
-            @RequestParam(required = false)             String   statutTransmission,
-            @RequestParam(required = false)             String   priorite,
-            @RequestParam(required = false)             String   motif,
-            @RequestParam(required = false)             String   num,
-            @RequestParam(required = false)             String   demandeur,
-            @RequestParam(required = false)             String   type,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
-
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (!hasFinanceReadAccess(auth)) {
-            return "redirect:/error/403";
-        }
-
-        DemandeMere.StatutTransmissionFinance singleTransmission = null;
-        List<DemandeMere.StatutTransmissionFinance> allowedTransmissions = null;
-        if (statutTransmission != null && !statutTransmission.isBlank()) {
-            try {
-                singleTransmission = DemandeMere.StatutTransmissionFinance.valueOf(statutTransmission.trim());
-            } catch (Exception ignored) {}
-        }
-        if (singleTransmission == null) {
-            allowedTransmissions = List.of(
-                    DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE,
-                    DemandeMere.StatutTransmissionFinance.PAYEE
-            );
-        }
-
-        DemandeMereSpec.SearchCriteria criteria = DemandeMereSpec.SearchCriteria.builder()
-                .num(num)
-                .demandeur(demandeur)
-                .type(type)
-                .priorite(priorite)
-                .motif(motif)
-                .statut(StatutDemande.VALIDE)
-                .paiementDirectOnly(true)
-                .statutTransmissionFinance(singleTransmission)
-                .statutsTransmissionFinance(allowedTransmissions)
-                .dateFrom(DemandeMereService.toFrom(dateFrom))
-                .dateTo(DemandeMereService.toTo(dateTo))
-                .build();
-
-        Page<DemandeMere> mePage = demandeMereService.search(criteria, page, size, sort, dir);
-
-        populatePaiementDirectModel(
-                model, mePage, statutTransmission, priorite, motif, num, demandeur, type,
-                dateFrom, dateTo, size, sort, dir,
-                List.of(
-                        DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE,
-                        DemandeMere.StatutTransmissionFinance.PAYEE
-                )
-        );
-
-        String returnUrl = buildPaiementDirectReturnUrl("/demande/paiements-directs-finance", page, size, sort, dir,
-                statutTransmission, priorite, motif, num, demandeur, type, dateFrom, dateTo);
-        model.addAttribute("returnUrl", returnUrl);
-
-        return "demande/paiements-directs-finance";
-    }
-
-    private void populatePaiementDirectModel(
-            Model model, Page<DemandeMere> demandesMeres,
-            String statutTransmission, String priorite, String motif, String num,
-            String demandeur, String type,
-            LocalDate dateFrom, LocalDate dateTo,
-            int size, String sort, String dir,
-            List<DemandeMere.StatutTransmissionFinance> allowedStatuts) {
 
         Map<String, String> transmissionFiltre = new LinkedHashMap<>();
-        for (DemandeMere.StatutTransmissionFinance st : allowedStatuts) {
+        for (DemandeMere.StatutTransmissionFinance st : visibles) {
             switch (st) {
-                case A_TRANSMETTRE -> transmissionFiltre.put("A_TRANSMETTRE", "À transmettre");
-                case TRANSMISE_FINANCE -> transmissionFiltre.put("TRANSMISE_FINANCE", "Transmise à la finance");
-                case PAYEE -> transmissionFiltre.put("PAYEE", "Payée");
+                case A_TRANSMETTRE     -> transmissionFiltre.put(st.name(), "À transmettre");
+                case TRANSMISE_FINANCE -> transmissionFiltre.put(st.name(), "Transmise à la finance");
+                case PAYEE             -> transmissionFiltre.put(st.name(), "Payée");
+                default -> {}
             }
         }
         model.addAttribute("transmissionFiltre", transmissionFiltre);
@@ -1101,8 +1180,7 @@ public class DemandeController {
         prioriteFiltre.put(String.valueOf(DemandeMere.PrioriteDemande.P0), "P0");
         model.addAttribute("prioriteFiltre", prioriteFiltre);
 
-        model.addAttribute("demandesMeres", demandesMeres);
-        model.addAttribute("demandes", demandesMeres.getContent());
+        model.addAttribute("demandesMeres", mePage);
         model.addAttribute("statutTransmission", statutTransmission == null ? "" : statutTransmission);
         model.addAttribute("priorite",  priorite  == null ? "" : priorite);
         model.addAttribute("motif",     motif     == null ? "" : motif);
@@ -1111,31 +1189,37 @@ public class DemandeController {
         model.addAttribute("type",      type      == null ? "" : type);
         model.addAttribute("dateFrom",  dateFrom);
         model.addAttribute("dateTo",    dateTo);
-        model.addAttribute("page",      demandesMeres.getNumber());
+        model.addAttribute("page",      mePage.getNumber());
         model.addAttribute("size",      size);
         model.addAttribute("sort",      sort);
         model.addAttribute("dir",       dir);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
+        String qs = request.getQueryString();
+        model.addAttribute("returnUrl", "/demande/paiements-directs" + (qs == null ? "" : "?" + qs));
+
+        return "demande/paiements-directs-liste";
     }
 
-    private String buildPaiementDirectReturnUrl(
-            String path, int page, int size, String sort, String dir,
-            String statutTransmission, String priorite, String motif,
-            String num, String demandeur, String type,
-            LocalDate dateFrom, LocalDate dateTo) {
-        StringBuilder sb = new StringBuilder(path).append("?");
-        sb.append("page=").append(page);
-        sb.append("&size=").append(size);
-        sb.append("&sort=").append(sort);
-        sb.append("&dir=").append(dir);
-        if (statutTransmission != null) sb.append("&statutTransmission=").append(statutTransmission);
-        if (priorite != null)   sb.append("&priorite=").append(priorite);
-        if (motif   != null)    sb.append("&motif=").append(motif);
-        if (num     != null)    sb.append("&num=").append(num);
-        if (demandeur != null)  sb.append("&demandeur=").append(demandeur);
-        if (type    != null)    sb.append("&type=").append(type);
-        if (dateFrom != null)   sb.append("&dateFrom=").append(dateFrom);
-        if (dateTo  != null)    sb.append("&dateTo=").append(dateTo);
-        return sb.toString();
+    /** Ancienne URL de la vue Finance : redirige vers la liste unique en conservant les filtres. */
+    @GetMapping("/paiements-directs-finance")
+    public String listePaiementsDirectsFinance(HttpServletRequest request) {
+        String qs = request.getQueryString();
+        return "redirect:/demande/paiements-directs" + (qs == null ? "" : "?" + qs);
+    }
+
+    private static List<DemandeMere.StatutTransmissionFinance> statutsPaiementDirectVisibles(Authentication auth) {
+        if (WorkflowService.peutTransmettreFinance(auth) || hasRole(auth, "ROLE_MOYENS_GENERAUX")) {
+            return List.of(
+                    DemandeMere.StatutTransmissionFinance.A_TRANSMETTRE,
+                    DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE,
+                    DemandeMere.StatutTransmissionFinance.PAYEE);
+        }
+        if (hasFinanceReadAccess(auth)) {
+            return List.of(
+                    DemandeMere.StatutTransmissionFinance.TRANSMISE_FINANCE,
+                    DemandeMere.StatutTransmissionFinance.PAYEE);
+        }
+        return List.of();
     }
 
     @PostMapping("/fiche/{id}/transmettre-finance")
@@ -1143,8 +1227,8 @@ public class DemandeController {
                                      @RequestParam(required = false) String commentaire,
                                      RedirectAttributes redirectAttributes) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (!hasRole(auth, "ROLE_MOYENS_GENERAUX") && !hasRole(auth, "ROLE_ADMIN")) {
-            redirectAttributes.addFlashAttribute("ko", "Action réservée aux Moyens Généraux.");
+        if (!WorkflowService.peutTransmettreFinance(auth)) {
+            redirectAttributes.addFlashAttribute("ko", "Action réservée au validateur des Moyens Généraux.");
             return "redirect:/demande/fiche/" + id;
         }
         Utilisateur principal = (Utilisateur) auth.getPrincipal();
@@ -1264,8 +1348,9 @@ public class DemandeController {
 
     @PostMapping("/fiche/{id}/send-codep")
     public String sendToCodep(@PathVariable("id") String id,
-                              @RequestParam(value = "typeDemande", required = false) String typeDemande,
+                              @RequestParam(value = "natureDemande", required = false) String natureDemande,
                               @RequestParam(value = "priorite", required = false) String prioriteParam,
+                              @RequestParam(value = "modeTraitement", required = false) String modeTraitement,
                               @RequestParam(name = "piecesJointes", required = false) MultipartFile[] piecesJointes,
                               RedirectAttributes redirectAttributes) {
 
@@ -1278,7 +1363,7 @@ public class DemandeController {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         try {
             workflowService.envoyerAuCodep(demande, utilisateurCourant(auth), auth,
-                    typeDemande, prioriteParam, piecesJointes);
+                    natureDemande, prioriteParam, modeTraitement, piecesJointes);
             redirectAttributes.addFlashAttribute("ok", "Demande envoyée au CODEP (action irréversible).");
         } catch (WorkflowException e) {
             redirectAttributes.addFlashAttribute("ko", e.getMessage());
@@ -1400,16 +1485,10 @@ public class DemandeController {
             @PathVariable String codeArticle,
             @RequestParam(required = false) String demandeId) {
 
-        // Utiliser LotStock au lieu de StockFille
+        // Stock des lots FIFO moins le stock réservé par toutes les demandes de matériel
+        // (demandeId est conservé pour compatibilité de l'appel, la réservation est globale)
         double stockPhysique = lotStockService.getStockDisponible(codeArticle);
-
-        double quantiteReservee = 0;
-        if (demandeId != null && !demandeId.isBlank()) {
-            Double reserved = demandeFilleService
-                    .getQuantiteStockReserveePourDemande(demandeId, codeArticle);
-            quantiteReservee = (reserved != null) ? reserved : 0;
-        }
-
+        double quantiteReservee = reservationStockService.quantiteReservee(codeArticle, List.of());
         double stockDisponible = Math.max(0, stockPhysique - quantiteReservee);
 
         // Prix FIFO : prix du premier lot disponible
@@ -1453,49 +1532,48 @@ public class DemandeController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Accès refusé."));
 
-        double qteTotale = ligneOriginale.getQuantite();
-        double qteStock  = dto.getQteStock();
-        double qteAchat  = qteTotale - qteStock;
-
-        // Correction : > au lieu de >=
-        if (qteStock <= 0 || qteStock > qteTotale)
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Quantité stock invalide."));
-
-        double prixFifo;
+        // Contrôles (quantité, stock libre toutes demandes) et écritures en une transaction
         try {
-            prixFifo = lotStockService.getPrixFifo(
-                    ligneOriginale.getArticle().getCodeArticle(), qteStock
-            );
-        } catch (Exception e) {
-            prixFifo = dto.getPrixStock(); // fallback sur le prix envoyé par le JS
+            approvisionnementLigneService.scinder(id, dto.getQteStock(), dto.getPrixStock());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
-
-        // Cas conversion totale
-        if (qteStock == qteTotale) {
-            ligneOriginale.setTypeApprovisionnement(DemandeFille.TypeApprovisionnement.STOCK);
-            ligneOriginale.setPrixUnitaire(prixFifo);
-            demandeFilleService.saveDemandeFille(ligneOriginale);
-            demandeMereService.recalculerTotal(ligneOriginale.getDemandeMere());
-            return ResponseEntity.ok(Map.of("ok", true));
-        }
-
-        // Scission normale
-        ligneOriginale.setQuantite(String.valueOf(qteAchat));
-        ligneOriginale.setTypeApprovisionnement(DemandeFille.TypeApprovisionnement.ACHAT);
-        demandeFilleService.saveDemandeFille(ligneOriginale);
-
-        DemandeFille ligneStock = new DemandeFille();
-        ligneStock.setDemandeMere(ligneOriginale.getDemandeMere());
-        ligneStock.setArticle(ligneOriginale.getArticle());
-        ligneStock.setQuantite(String.valueOf(qteStock));
-        ligneStock.setPrixUnitaire(prixFifo);
-        ligneStock.setStatut(ligneOriginale.getStatut());
-        ligneStock.setTypeApprovisionnement(DemandeFille.TypeApprovisionnement.STOCK);
-        demandeFilleService.saveDemandeFille(ligneStock);
-
-        demandeMereService.recalculerTotal(ligneOriginale.getDemandeMere());
         return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    /**
+     * Remet une ligne servie depuis le stock à l'achat (stock promis disparu, par exemple).
+     * Moyens Généraux : à leur étape de validation, ou sur une demande validée.
+     */
+    @PostMapping("/ligne/{id}/remettre-achat")
+    public String remettreLigneEnAchat(@PathVariable int id, RedirectAttributes redirectAttributes) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        DemandeFille ligne = demandeFilleService.getDemandeFilleById(id);
+        if (ligne == null) {
+            redirectAttributes.addFlashAttribute("ko", "Ligne introuvable.");
+            return "redirect:/demande/list";
+        }
+        DemandeMere demande = ligne.getDemandeMere();
+        String fiche = "redirect:/demande/fiche/" + demande.getId();
+
+        boolean etapeMG = workflowService.calculerDroits(demande, utilisateurCourant(auth), auth).mg();
+        boolean mgSurDemandeValidee = demande.getStatut() == StatutDemande.VALIDE
+                && hasRole(auth, "ROLE_MOYENS_GENERAUX");
+        if (!etapeMG && !mgSurDemandeValidee) {
+            redirectAttributes.addFlashAttribute("ko", "Accès refusé.");
+            return fiche;
+        }
+
+        try {
+            approvisionnementLigneService.remettreEnAchat(id);
+            redirectAttributes.addFlashAttribute("ok", "La ligne " + ligne.getArticle().getCodeArticle()
+                    + " est remise à l'achat : sa réservation de stock est libérée"
+                    + (demande.getStatut() == StatutDemande.VALIDE
+                       ? " et le reste à sortir apparaît dans les lignes à acheter." : "."));
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
+        }
+        return fiche;
     }
 
     @GetMapping("/ligne/{ligneId}/stock-disponible")
@@ -1513,15 +1591,8 @@ public class DemandeController {
         String codeArticle = ligne.getArticle().getCodeArticle();
         double stockPhysique = lotStockService.getStockDisponible(codeArticle);
 
-        // Récupérer toutes les lignes stock du même article dans la même demande
-        DemandeMere demande = ligne.getDemandeMere();
-        double totalReserveAutres = demandeFilleService.getDemandeFilleByDemandeMere(demande)
-                .stream()
-                .filter(l -> l.getId() != ligneId)
-                .filter(l -> l.getTypeApprovisionnement() == DemandeFille.TypeApprovisionnement.STOCK)
-                .filter(l -> l.getArticle().getCodeArticle().equals(codeArticle))
-                .mapToDouble(DemandeFille::getQuantite)
-                .sum();
+        // Réservations de toutes les autres lignes STOCK, toutes demandes de matériel confondues
+        double totalReserveAutres = reservationStockService.quantiteReservee(codeArticle, List.of(ligneId));
 
         double stockDisponible = Math.max(0, stockPhysique - totalReserveAutres);
 

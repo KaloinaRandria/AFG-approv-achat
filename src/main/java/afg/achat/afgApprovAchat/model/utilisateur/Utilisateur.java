@@ -51,6 +51,13 @@ public class Utilisateur {
     @ManyToMany(mappedBy = "validateurs")
     private Set<Utilisateur> utilisateursAValider = new HashSet<>();
 
+    /**
+     * Compte actif. Un collaborateur parti est désactivé (jamais supprimé) :
+     * il ne peut plus se connecter ni recevoir de tâches, son historique reste intact.
+     */
+    @Column(name = "actif", nullable = false, columnDefinition = "boolean not null default true")
+    private boolean actif = true;
+
     public Utilisateur(String nom, String prenom, String mail, Set<Role> roles, Utilisateur superieurHierarchique, String contact) {
         this.setNom(nom);
         this.setPrenom(prenom);

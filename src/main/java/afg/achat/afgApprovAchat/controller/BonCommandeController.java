@@ -1,22 +1,31 @@
 package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.DTO.FournisseurAutocompleteDTO;
-import afg.achat.afgApprovAchat.model.fournisseur.*;
-import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeFille;
-import afg.achat.afgApprovAchat.model.demande.DemandeFille;
-import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
+import afg.achat.afgApprovAchat.model.fournisseur.AdresseFournisseur;
+import afg.achat.afgApprovAchat.model.fournisseur.ResponsableFournisseur;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
-import afg.achat.afgApprovAchat.service.fournisseur.*;
-import afg.achat.afgApprovAchat.service.bonCommande.BcContactService;
+import afg.achat.afgApprovAchat.service.bonCommande.BesoinAchatService;
+import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeDemandeService;
+import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeManuelService;
 import afg.achat.afgApprovAchat.service.bonCommande.BonCommandeService;
-import afg.achat.afgApprovAchat.service.demande.DemandeFilleService;
-import afg.achat.afgApprovAchat.service.demande.DemandeMereService;
+import afg.achat.afgApprovAchat.service.bonCommande.LigneImprimee;
+import afg.achat.afgApprovAchat.service.bonCommande.SaisieBonCommandeDemande;
+import afg.achat.afgApprovAchat.service.bonlivraison.ReceptionBonCommandeService;
+import afg.achat.afgApprovAchat.service.fournisseur.AdresseFournisseurService;
+import afg.achat.afgApprovAchat.service.fournisseur.FournisseurService;
+import afg.achat.afgApprovAchat.service.fournisseur.ResponsableFournisseurService;
 import afg.achat.afgApprovAchat.service.utilisateur.UtilisateurService;
-import afg.achat.afgApprovAchat.service.util.IdGenerator;
+import afg.achat.afgApprovAchat.service.workflow.WorkflowException;
+import afg.achat.afgApprovAchat.service.workflow.WorkflowService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -24,69 +33,145 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-@PreAuthorize("hasAnyRole('ADMIN', 'MOYENS_GENERAUX')")
+/**
+ * Bons de commande : liste, fiche et bon issu d'une demande (complété par les Moyens Généraux).
+ * Le bon saisi sans demande est géré par {@link BonCommandeManuelController} ; les deux
+ * suivent le même circuit de validation (Moyens Généraux puis S.G.).
+ */
+// Consultation : Moyens Généraux et acteurs du bon de commande (créateur, validateur MG, S.G.).
+@PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_CREATOR','MG_VALIDATOR','SG')")
 @Controller
 @RequestMapping("/bon-commande")
 @RequiredArgsConstructor
 public class BonCommandeController {
+
+    /** Préfixe des champs de désignation fournisseur : designation_&lt;id de la ligne&gt;. */
+    private static final String PREFIXE_DESIGNATION = "designation_";
+
     private final BonCommandeService bonCommandeService;
-    private final DemandeMereService demandeMereService;
-    private final DemandeFilleService demandeFilleService;
+    private final BonCommandeDemandeService bonCommandeDemandeService;
+    private final BonCommandeManuelService bonCommandeManuelService;
+    private final BesoinAchatService besoinAchatService;
     private final FournisseurService fournisseurService;
     private final UtilisateurService utilisateurService;
-    private final BcContactService bcContactService;
     private final ResponsableFournisseurService responsableFournisseurService;
     private final AdresseFournisseurService adresseFournisseurService;
-    private final AdresseService adresseService;
-    private final ResponsableService responsableService;
-    private final IdGenerator idGenerator;
+    private final ReceptionBonCommandeService receptionBonCommandeService;
 
-    @GetMapping("")
-    public String goToBonCommandePage() {
-        //redirection vers la fiche du bon de commande dans une demande validee
-        return "";
-    }
+    // ── Liste ────────────────────────────────────────────────────────────────
 
     @GetMapping("/list")
-    public String bonCommandeList() {
-        return "";
-    }
-    @GetMapping("/creer/{id}")
-    public String creeBonCommandeByDemande(@PathVariable(name = "id") String demandeMereId,
-                                           RedirectAttributes redirectAttributes) {
-        DemandeMere demandeMere = demandeMereService.getDemandeById(demandeMereId);
-        List<BonCommandeMere> bcExistants = bonCommandeService.getBonCommandesByDemande(demandeMere);
-        if (!bcExistants.isEmpty()) {
-            BonCommandeMere bcExistant = bcExistants.get(0);
-            redirectAttributes.addFlashAttribute("warningMessage",
-                    "Un bon de commande existe deja pour cette demande.");
-            return "redirect:/bon-commande/" + bcExistant.getId();
+    public String bonCommandeList(@RequestParam(defaultValue = "0") int page,
+                                  @RequestParam(defaultValue = "20") int size,
+                                  @RequestParam(required = false) String statut,
+                                  @RequestParam(defaultValue = "false") boolean aValider,
+                                  @RequestParam(defaultValue = "false") boolean aRecevoir,
+                                  @RequestParam(required = false) String numero,
+                                  @RequestParam(required = false) String fournisseur,
+                                  @RequestParam(required = false) String objet,
+                                  @RequestParam(required = false) String demande,
+                                  @RequestParam(required = false) String article,
+                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+                                  HttpServletRequest request,
+                                  Model model) {
+        Authentication auth = auth();
+
+        BonCommandeMere.StatutBonCommande statutFiltre = null;
+        if (statut != null && !statut.isBlank()) {
+            try {
+                statutFiltre = BonCommandeMere.StatutBonCommande.valueOf(statut.trim().toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+                // statut inconnu : pas de filtre
+            }
         }
 
-        Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
-        BonCommandeMere bonCommandeMere = initialiserBonCommandeDepuisDemande(demandeMere, utilisateur);
+        // Étapes que l'utilisateur connecté peut valider (filtre « À valider par moi »)
+        List<BonCommandeMere.EtapeValidation> etapesValidables = Arrays.stream(BonCommandeMere.EtapeValidation.values())
+                .filter(e -> WorkflowService.hasRole(auth, "ROLE_" + e.getRole()) || WorkflowService.hasRole(auth, "ROLE_ADMIN"))
+                .toList();
 
-        BonCommandeMere bcSauvegardee = bonCommandeService.saveBonCommandeMere(bonCommandeMere);
-        List<BonCommandeFille> bonCommandeFilles = initialiserLignesBonCommande(demandeMere, bcSauvegardee);
-        for (BonCommandeFille bcFille : bonCommandeFilles) {
-            bonCommandeService.saveBonCommandeFille(bcFille);
-        }
+        int taille = Math.min(Math.max(size, 5), 100);
+        Page<BonCommandeMere> bons = bonCommandeService.rechercher(new BonCommandeService.Recherche(
+                        statutFiltre, aValider, etapesValidables, dateFrom, dateTo,
+                        numero, fournisseur, objet, demande, article, aRecevoir),
+                PageRequest.of(Math.max(page, 0), taille));
 
-        redirectAttributes.addFlashAttribute("successMessage",
-                "Bon de commande cree en brouillon. Vous pouvez completer les informations.");
-        return "redirect:/bon-commande/" + bcSauvegardee.getId();
+        model.addAttribute("bons", bons);
+        // Bons de la page qui attendent une décision de l'utilisateur connecté
+        model.addAttribute("idsAValider", bons.getContent().stream()
+                .filter(bc -> BonCommandeManuelService.peutValider(bc, auth))
+                .map(BonCommandeMere::getId)
+                .toList());
+        model.addAttribute("statuts", BonCommandeMere.StatutBonCommande.values());
+        model.addAttribute("statut", statutFiltre == null ? "" : statutFiltre.name());
+        model.addAttribute("aValider", aValider);
+        model.addAttribute("aRecevoir", aRecevoir);
+        model.addAttribute("peutReceptionner",
+                WorkflowService.hasRole(auth, "ROLE_MOYENS_GENERAUX") || WorkflowService.hasRole(auth, "ROLE_ADMIN"));
+        model.addAttribute("peutValiderUneEtape", !etapesValidables.isEmpty());
+        model.addAttribute("numero", numero == null ? "" : numero);
+        model.addAttribute("fournisseur", fournisseur == null ? "" : fournisseur);
+        model.addAttribute("objet", objet == null ? "" : objet);
+        model.addAttribute("demande", demande == null ? "" : demande);
+        model.addAttribute("article", article == null ? "" : article);
+        model.addAttribute("dateFrom", dateFrom);
+        model.addAttribute("dateTo", dateTo);
+        model.addAttribute("size", taille);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
+        model.addAttribute("peutCreer", BonCommandeManuelService.peutCreer(auth));
+        return "bc/bon-commande-liste";
     }
 
+    // ── Lignes à acheter ─────────────────────────────────────────────────────
+
+    /**
+     * Lignes de demandes validées encore à commander, toutes demandes confondues.
+     * Les Moyens Généraux en cochent plusieurs pour créer un bon de commande groupé.
+     */
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_CREATOR')")
+    @GetMapping("/lignes-a-acheter")
+    public String lignesAAcheter(@RequestParam(defaultValue = "0") int page,
+                                 @RequestParam(defaultValue = "50") int size,
+                                 @RequestParam(required = false) String demande,
+                                 @RequestParam(required = false) String demandeur,
+                                 @RequestParam(required = false) String article,
+                                 @RequestParam(required = false) String motif,
+                                 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+                                 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+                                 HttpServletRequest request,
+                                 Model model) {
+        int taille = Math.min(Math.max(size, 5), 100);
+        Page<BesoinAchatService.BesoinAchat> besoins = besoinAchatService.lignesEnAttente(
+                new BesoinAchatService.Recherche(demande, demandeur, article, motif, dateFrom, dateTo),
+                PageRequest.of(Math.max(page, 0), taille));
+
+        model.addAttribute("besoins", besoins);
+        model.addAttribute("demande", demande == null ? "" : demande);
+        model.addAttribute("demandeur", demandeur == null ? "" : demandeur);
+        model.addAttribute("article", article == null ? "" : article);
+        model.addAttribute("motif", motif == null ? "" : motif);
+        model.addAttribute("dateFrom", dateFrom);
+        model.addAttribute("dateTo", dateTo);
+        model.addAttribute("size", taille);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
+        return "bc/lignes-a-acheter";
+    }
+
+    // ── Bon issu d'une demande (bons existants) ──────────────────────────────
+    // La création depuis la fiche de la demande est retirée : un bon de commande regroupe
+    // désormais les lignes de plusieurs demandes (écran « Lignes à acheter »). Les brouillons
+    // déjà créés depuis une demande peuvent encore être complétés, soumis ou annulés.
+
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @PostMapping("/sauvegarder")
     public String sauvegarderBonCommande(
-            @RequestParam(required = false) String idBcMere,
-            @RequestParam String demandeMereId,
+            @RequestParam(name = "idBcMere") String idBcMere,
             @RequestParam(required = false) String numero,
             @RequestParam(required = false) String dateLivraisonPrevue,
             @RequestParam(name = "fournisseurs", required = false) String fournisseurId,
@@ -97,351 +182,130 @@ public class BonCommandeController {
             @RequestParam(required = false) String nouveauResponsableContact,
             @RequestParam(required = false) String referenceFournisseur,
             @RequestParam(required = false) String lieuLivraison,
-            @RequestParam(required = false) Double montantHT,
-            @RequestParam(required = false) Double montantTTC,
             @RequestParam(required = false) Double tauxTVA,
-            @RequestParam(required = false) Double remise,
+            @RequestParam(required = false) Double tauxRemise,
             @RequestParam(required = false) String actionAdresse, // "update", "new" ou vide
             @RequestParam(required = false) String adresseFournisseurId,
             @RequestParam(required = false) String nouvelleAdresseLibelle,
-            HttpServletRequest request,
+            @RequestParam(required = false) String action, // "enregistrer" ou "soumettre"
+            @RequestParam Map<String, String> parametres,
             RedirectAttributes redirectAttributes) {
+        // Désignations fournisseur envoyées sous la forme designation_<id de la ligne>
+        Map<Integer, String> designations = new HashMap<>();
+        parametres.forEach((cle, valeur) -> {
+            if (!cle.startsWith(PREFIXE_DESIGNATION)) return;
+            try {
+                designations.put(Integer.parseInt(cle.substring(PREFIXE_DESIGNATION.length())), valeur);
+            } catch (NumberFormatException ignored) {
+                // champ inattendu : ignoré
+            }
+        });
+
+        SaisieBonCommandeDemande saisie = new SaisieBonCommandeDemande(idBcMere, numero, dateLivraisonPrevue,
+                fournisseurId, referenceFournisseur, lieuLivraison, tauxRemise, tauxTVA,
+                new SaisieBonCommandeDemande.Responsable(actionResponsable, responsableFournisseurId,
+                        nouveauResponsableNom, nouveauResponsablePrenom, nouveauResponsableContact),
+                new SaisieBonCommandeDemande.Adresse(actionAdresse, adresseFournisseurId, nouvelleAdresseLibelle),
+                designations);
         try {
-            Utilisateur user = (Utilisateur) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            Utilisateur utilisateur = utilisateurService.getUtilisateurByMail(user.getMail());
-
-            // Récupérer ou créer le BC
-            BonCommandeMere bonCommandeMere;
-            if (idBcMere == null || idBcMere.isEmpty()) {
-                bonCommandeMere = new BonCommandeMere();
-                bonCommandeMere.setId(idGenerator);
-                bonCommandeMere.setDateCreation(LocalDateTime.now());
-                bonCommandeMere.setCreateur(utilisateur);
-                bonCommandeMere.setStatut(BonCommandeMere.StatutBonCommande.BROUILLON);
+            BonCommandeMere bc = bonCommandeDemandeService.enregistrer(saisie, auth());
+            if ("soumettre".equals(action)) {
+                // La saisie reste enregistrée si la soumission est refusée (ex. fournisseur manquant)
+                bonCommandeManuelService.soumettre(bc.getId(), utilisateurCourant(), auth());
+                redirectAttributes.addFlashAttribute("ok", "Bon de commande n° " + bc.getNumero()
+                        + " enregistré et soumis à la validation des Moyens Généraux.");
             } else {
-                bonCommandeMere = bonCommandeService.getBonCommandeMereById(idBcMere)
-                        .orElse(new BonCommandeMere());
-                if (bonCommandeMere.getId() == null) {
-                    bonCommandeMere.setId(idGenerator);
-                    bonCommandeMere.setDateCreation(LocalDateTime.now());
-                    bonCommandeMere.setCreateur(utilisateur);
-                    bonCommandeMere.setStatut(BonCommandeMere.StatutBonCommande.BROUILLON);
-                }
+                redirectAttributes.addFlashAttribute("ok", "Bon de commande n° " + bc.getNumero() + " enregistré.");
             }
-
-            // Mettre à jour les champs du BC
-            if (numero != null && !numero.isBlank()) {
-                bonCommandeMere.setNumero(numero.trim());
-            } else if (bonCommandeMere.getNumero() == null || bonCommandeMere.getNumero().isBlank()) {
-                bonCommandeMere.setNumero(idGenerator.generateNumeroBC());
-            }
-            if (dateLivraisonPrevue != null && !dateLivraisonPrevue.isEmpty()) {
-                bonCommandeMere.setDateLivraisonPrevue(LocalDate.parse(dateLivraisonPrevue).atStartOfDay());
-            }
-            if (fournisseurId != null && !fournisseurId.isEmpty()) {
-                Fournisseur fournisseur = fournisseurService.getById(Integer.parseInt(fournisseurId));
-                bonCommandeMere.setFournisseur(fournisseur);
-
-                boolean nouveauxChampsRenseignes = nouveauResponsableNom != null && !nouveauResponsableNom.isBlank()
-                        && nouveauResponsablePrenom != null && !nouveauResponsablePrenom.isBlank();
-
-                if ("update".equals(actionResponsable)
-                        && responsableFournisseurId != null && !responsableFournisseurId.isEmpty()
-                        && nouveauxChampsRenseignes) {
-                    // Cas : on corrige les infos du responsable déjà affecté (même personne)
-                    ResponsableFournisseur rfExistant = responsableFournisseurService
-                            .getById(Integer.parseInt(responsableFournisseurId))
-                            .orElseThrow(() -> new IllegalArgumentException("Affectation responsable introuvable"));
-
-                    Responsable responsable = rfExistant.getResponsable();
-                    responsable.setNom(nouveauResponsableNom.trim());
-                    responsable.setPrenom(nouveauResponsablePrenom.trim());
-                    if (nouveauResponsableContact != null && !nouveauResponsableContact.isBlank()) {
-                        responsable.setContact(nouveauResponsableContact.trim());
-                    }
-                    responsableService.save(responsable);
-                    bonCommandeMere.setResponsableFournisseur(rfExistant);
-
-                } else if ("new".equals(actionResponsable) && nouveauxChampsRenseignes) {
-                    // Cas : on affecte une toute nouvelle personne (nouvel historique d'affectation)
-                    Responsable responsable = new Responsable();
-                    responsable.setNom(nouveauResponsableNom.trim());
-                    responsable.setPrenom(nouveauResponsablePrenom.trim());
-                    responsable.setContact(nouveauResponsableContact != null ? nouveauResponsableContact.trim() : null);
-                    Responsable responsableSauvegarde = responsableService.save(responsable);
-
-                    ResponsableFournisseur rf = new ResponsableFournisseur();
-                    rf.setFournisseur(fournisseur);
-                    rf.setResponsable(responsableSauvegarde);
-                    rf.setDateAffectation(LocalDate.now());
-                    ResponsableFournisseur rfSauvegarde = responsableFournisseurService.save(rf);
-
-                    bonCommandeMere.setResponsableFournisseur(rfSauvegarde);
-
-                } else if (responsableFournisseurId != null && !responsableFournisseurId.isEmpty()) {
-                    // Cas normal : responsable existant sélectionné, aucune modification
-                    responsableFournisseurService.getById(Integer.parseInt(responsableFournisseurId))
-                            .ifPresent(bonCommandeMere::setResponsableFournisseur);
-
-                } else if (nouveauxChampsRenseignes) {
-                    // Cas initial : aucun responsable affecté -> création (comportement existant)
-                    Responsable responsable = new Responsable();
-                    responsable.setNom(nouveauResponsableNom.trim());
-                    responsable.setPrenom(nouveauResponsablePrenom.trim());
-                    responsable.setContact(nouveauResponsableContact != null ? nouveauResponsableContact.trim() : null);
-                    Responsable responsableSauvegarde = responsableService.save(responsable);
-
-                    ResponsableFournisseur rf = new ResponsableFournisseur();
-                    rf.setFournisseur(fournisseur);
-                    rf.setResponsable(responsableSauvegarde);
-                    rf.setDateAffectation(LocalDate.now());
-                    ResponsableFournisseur rfSauvegarde = responsableFournisseurService.save(rf);
-
-                    bonCommandeMere.setResponsableFournisseur(rfSauvegarde);
-                }
-
-                boolean nouvelleAdresseRenseignee = nouvelleAdresseLibelle != null && !nouvelleAdresseLibelle.isBlank();
-
-                if ("update".equals(actionAdresse)
-                        && adresseFournisseurId != null && !adresseFournisseurId.isEmpty()
-                        && nouvelleAdresseRenseignee) {
-                    // Cas : on corrige l'adresse déjà affectée
-                    AdresseFournisseur afExistante = adresseFournisseurService
-                            .getById(Integer.parseInt(adresseFournisseurId))
-                            .orElseThrow(() -> new IllegalArgumentException("Affectation adresse introuvable"));
-
-                    Adresse adresse = afExistante.getAdresse();
-                    adresse.setLibelle(nouvelleAdresseLibelle.trim());
-                    adresseService.save(adresse);
-                    bonCommandeMere.setAdresseFournisseur(afExistante);
-
-                } else if ("new".equals(actionAdresse) && nouvelleAdresseRenseignee) {
-                    // Cas : on affecte une toute nouvelle adresse (nouvel historique)
-                    Adresse adresse = new Adresse();
-                    adresse.setLibelle(nouvelleAdresseLibelle.trim());
-                    Adresse adresseSauvegardee = adresseService.save(adresse);
-
-                    AdresseFournisseur af = new AdresseFournisseur();
-                    af.setFournisseur(fournisseur);
-                    af.setAdresse(adresseSauvegardee);
-                    af.setDateAffectation(LocalDate.now());
-                    AdresseFournisseur afSauvegardee = adresseFournisseurService.save(af);
-
-                    bonCommandeMere.setAdresseFournisseur(afSauvegardee);
-
-                } else if (adresseFournisseurId != null && !adresseFournisseurId.isEmpty()) {
-                    // Cas normal : adresse existante sélectionnée, aucune modification
-                    adresseFournisseurService.getById(Integer.parseInt(adresseFournisseurId))
-                            .ifPresent(bonCommandeMere::setAdresseFournisseur);
-
-                } else if (nouvelleAdresseRenseignee) {
-                    // Cas initial : aucune adresse affectée -> création
-                    Adresse adresse = new Adresse();
-                    adresse.setLibelle(nouvelleAdresseLibelle.trim());
-                    Adresse adresseSauvegardee = adresseService.save(adresse);
-
-                    AdresseFournisseur af = new AdresseFournisseur();
-                    af.setFournisseur(fournisseur);
-                    af.setAdresse(adresseSauvegardee);
-                    af.setDateAffectation(LocalDate.now());
-                    AdresseFournisseur afSauvegardee = adresseFournisseurService.save(af);
-
-                    bonCommandeMere.setAdresseFournisseur(afSauvegardee);
-                }
-            }
-            if (referenceFournisseur != null && !referenceFournisseur.isEmpty()) {
-                bonCommandeMere.setReferenceFournisseur(referenceFournisseur);
-            }
-            if (lieuLivraison != null && !lieuLivraison.isEmpty()) {
-                bonCommandeMere.setLieuLivraison(lieuLivraison);
-            }
-            if (montantHT != null) {
-                bonCommandeMere.setMontantHT(montantHT);
-            }
-            if (montantTTC != null) {
-                bonCommandeMere.setMontantTTC(montantTTC);
-            }
-            if (tauxTVA != null) {
-                bonCommandeMere.setTauxTVA(tauxTVA);
-            }
-            if (remise != null) {
-                bonCommandeMere.setRemise(remise);
-            }
-
-            bonCommandeMere.setDemandeMere(demandeMereService.getDemandeById(demandeMereId));
-            if (bonCommandeMere.getStatut() == null) {
-                bonCommandeMere.setStatut(BonCommandeMere.StatutBonCommande.BROUILLON);
-            }
-            if (bonCommandeMere.getContacts() == null || bonCommandeMere.getContacts().isEmpty()) {
-                bonCommandeMere.setContacts(bcContactService.getAllContacts());
-            }
-
-            // Sauvegarder le BC mère
-            BonCommandeMere bcSauvegardee = bonCommandeService.saveBonCommandeMere(bonCommandeMere);
-            bonCommandeService.deleteBonCommandeFillesByBonCommandeMere(bcSauvegardee);
-
-            // Récupérer les lignes du formulaire et créer les BonCommandeFille
-            String[] demandeFilleIds = request.getParameterValues("lignes[0].demandeFilleId");
-            if (demandeFilleIds != null && demandeFilleIds.length > 0) {
-                int i = 0;
-                while (request.getParameter("lignes[" + i + "].demandeFilleId") != null) {
-                    String[] params = request.getParameterValues("lignes[" + i + "].demandeFilleId");
-                    if (params != null && params.length > 0) {
-                        BonCommandeFille bcFille = new BonCommandeFille();
-                        bcFille.setBonCommandeMere(bcSauvegardee);
-
-                        // Récupérer la demande fille
-                        int demandeFilleId = Integer.parseInt(request.getParameter("lignes[" + i + "].demandeFilleId"));
-                        DemandeFille demandeFille = demandeFilleService.getDemandeFilleById(demandeFilleId);
-                        bcFille.setDemandeFille(demandeFille);
-
-                        // Récupérer l'article
-                        String articleIdParam = request.getParameter("lignes[" + i + "].articleId");
-                        if (articleIdParam != null && !articleIdParam.isEmpty()) {
-                            // À récupérer depuis un service d'article si disponible
-                            bcFille.setArticle(demandeFille.getArticle());
-                        }
-
-                        // Définir les données de la ligne
-                        String designationFournisseur = request.getParameter("lignes[" + i + "].designationFournisseur");
-                        if (designationFournisseur != null) {
-                            bcFille.setDesignationFournisseur(designationFournisseur);
-                        }
-
-                        String quantiteParam = request.getParameter("lignes[" + i + "].quantiteCommandee");
-                        if (quantiteParam != null && !quantiteParam.isEmpty()) {
-                            double quantite = Double.parseDouble(quantiteParam);
-                            bcFille.setQuantiteCommandee(quantite);
-                            bcFille.setQuantiteRestante(quantite);
-                        }
-
-                        String prixParam = request.getParameter("lignes[" + i + "].prixUnitaireHT");
-                        if (prixParam != null && !prixParam.isEmpty()) {
-                            double prix = Double.parseDouble(prixParam);
-                            bcFille.setPrixUnitaireHT(prix);
-                        }
-
-                        String montantParam = request.getParameter("lignes[" + i + "].montantHT");
-                        if (montantParam != null && !montantParam.isEmpty()) {
-                            double montant = Double.parseDouble(montantParam);
-                            bcFille.setMontantHT(montant);
-                        }
-
-                        // Sauvegarder la ligne
-                        bonCommandeService.saveBonCommandeFille(bcFille);
-                    }
-                    i++;
-                }
-            }
-
-            redirectAttributes.addFlashAttribute("ok",
-                    "Bon de commande n° " + (bcSauvegardee.getNumero() != null ? bcSauvegardee.getNumero() : bcSauvegardee.getId()) + " sauvegardé avec succès avec " +
-                    (demandeFilleIds != null ? demandeFilleIds.length : 0) + " ligne(s).");
-            return "redirect:/bon-commande/" + bcSauvegardee.getId();
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Erreur lors de la sauvegarde du bon de commande : " + e.getMessage());
-            return "redirect:/bon-commande/list";
+        } catch (WorkflowException e) {
+            redirectAttributes.addFlashAttribute("ko", e.getMessage());
         }
+        return "redirect:/bon-commande/" + idBcMere;
     }
 
+    // ── Fiche ────────────────────────────────────────────────────────────────
+
     @GetMapping("/{id}")
-    public String afficherBonCommande(@PathVariable String id, Model model) {
-        BonCommandeMere bonCommandeMere = bonCommandeService.getBonCommandeMereById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Bon de commande non trouvé"));
+    public String afficherBonCommande(@PathVariable String id, Model model, RedirectAttributes redirectAttributes) {
+        BonCommandeMere bonCommandeMere = bonCommandeService.getBonCommandeMereById(id).orElse(null);
+        if (bonCommandeMere == null) {
+            redirectAttributes.addFlashAttribute("ko", "Bon de commande introuvable.");
+            return "redirect:/bon-commande/list";
+        }
         List<BonCommandeFille> lignes = bonCommandeService.getBonCommandeFillesByBonCommandeMere(bonCommandeMere);
+        Authentication auth = auth();
 
-        if (bonCommandeMere.getStatut() == BonCommandeMere.StatutBonCommande.BROUILLON) {
-            model.addAttribute("demandeMereId", bonCommandeMere.getDemandeMere().getId());
+        // Brouillon issu d'une demande : écran de saisie des Moyens Généraux
+        if (BonCommandeDemandeService.peutCompleter(bonCommandeMere, auth)) {
             model.addAttribute("bonCommandeMere", bonCommandeMere);
-            model.addAttribute("bcContacts", bcContactService.getAllContacts());
             model.addAttribute("bonCommandeFilles", lignes);
-
-            // --- Fournisseurs enrichis avec leur responsable actuel ---
-            List<FournisseurAutocompleteDTO> fournisseursDTO = Arrays.stream(fournisseurService.getAllFournisseurs())
-                    .map(f -> {
-                        var respOpt = responsableFournisseurService.getResponsableActuel(f.getId());
-                        Integer rfId = respOpt.map(ResponsableFournisseur::getId).orElse(null);
-                        Integer respId = respOpt.map(rf -> rf.getResponsable().getId()).orElse(null);
-                        String respNom = respOpt
-                                .map(rf -> rf.getResponsable().getPrenom() + " " + rf.getResponsable().getNom())
-                                .orElse("");
-
-                        var adrOpt = adresseFournisseurService.getAdresseActuel(f.getId());
-                        Integer afId = adrOpt.map(AdresseFournisseur::getId).orElse(null);
-                        Integer adrId = adrOpt.map(af -> af.getAdresse().getId()).orElse(null);
-                        String adrLibelle = adrOpt.map(af -> af.getAdresse().getLibelle()).orElse("");
-
-                        return new FournisseurAutocompleteDTO(
-                                f.getId(), f.getNom(),
-                                rfId, respId, respNom,
-                                afId, adrId, adrLibelle
-                        );
-                    })
-                    .toList();
-            model.addAttribute("fournisseurs", fournisseursDTO);
+            model.addAttribute("peutSoumettre", BonCommandeManuelService.peutSoumettre(bonCommandeMere, auth));
+            model.addAttribute("fournisseurs", fournisseursPourSaisie());
 
             if (bonCommandeMere.getFournisseur() != null) {
-                responsableFournisseurService
-                        .getResponsableActuel(bonCommandeMere.getFournisseur().getId())
-                        .ifPresent(respActuel -> model.addAttribute("responsableFournisseurActuel", respActuel));
-
-                adresseFournisseurService
-                        .getAdresseActuel(bonCommandeMere.getFournisseur().getId())
-                        .ifPresent(adrActuel -> model.addAttribute("adresseFournisseurActuel", adrActuel));
+                int fournisseurId = bonCommandeMere.getFournisseur().getId();
+                responsableFournisseurService.getResponsableActuel(fournisseurId)
+                        .ifPresent(r -> model.addAttribute("responsableFournisseurActuel", r));
+                adresseFournisseurService.getAdresseActuel(fournisseurId)
+                        .ifPresent(a -> model.addAttribute("adresseFournisseurActuel", a));
             }
-
-            // --- Pré-remplissage du responsable si un fournisseur est déjà sélectionné ---
-            if (bonCommandeMere.getFournisseur() != null) {
-                responsableFournisseurService
-                        .getResponsableActuel(bonCommandeMere.getFournisseur().getId())
-                        .ifPresent(respActuel -> model.addAttribute("responsableFournisseurActuel", respActuel));
-            }
-
             return "bc/bon-commande-saisie";
         }
 
         model.addAttribute("bonCommandeMere", bonCommandeMere);
         model.addAttribute("lignes", lignes);
+        // Présentation fournisseur : lignes identiques (article, désignation, unité, prix) fusionnées
+        model.addAttribute("lignesImprimees", LigneImprimee.regrouper(lignes));
+        model.addAttribute("peutModifier", BonCommandeManuelService.peutModifier(bonCommandeMere, auth));
+        model.addAttribute("peutSoumettre", BonCommandeManuelService.peutSoumettre(bonCommandeMere, auth));
+        model.addAttribute("peutValider", BonCommandeManuelService.peutValider(bonCommandeMere, auth));
+
+        // Réception : bons de livraison rattachés ; saisie réservée aux Moyens Généraux
+        boolean gereLaReception = WorkflowService.hasRole(auth, "ROLE_MOYENS_GENERAUX")
+                || WorkflowService.hasRole(auth, "ROLE_ADMIN");
+        model.addAttribute("bonsLivraison", receptionBonCommandeService.getBonsLivraison(bonCommandeMere));
+        model.addAttribute("peutReceptionner", gereLaReception && bonCommandeMere.estReceptionnable());
+        model.addAttribute("peutSolder", gereLaReception && ReceptionBonCommandeService.peutSolder(bonCommandeMere));
+
+        // Montants du récapitulatif (la remise et la TVA sont enregistrées en pourcentage)
+        double montantHT = lignes.stream().mapToDouble(BonCommandeFille::getMontantHT).sum();
+        double montantRemise = montantHT * bonCommandeMere.getRemise() / 100;
+        double montantHTRemise = montantHT - montantRemise;
+        double montantTVA = montantHTRemise * bonCommandeMere.getTauxTVA() / 100;
+        model.addAttribute("montantHT", montantHT);
+        model.addAttribute("montantRemise", montantRemise);
+        model.addAttribute("montantHTRemise", montantHTRemise);
+        model.addAttribute("montantTVA", montantTVA);
+        model.addAttribute("montantTTC", montantHTRemise + montantTVA);
         return "bc/bon-commande-fiche";
     }
 
-    private BonCommandeMere initialiserBonCommandeDepuisDemande(DemandeMere demandeMere, Utilisateur utilisateur) {
-        BonCommandeMere bonCommandeMere = new BonCommandeMere();
-        bonCommandeMere.setNumero(idGenerator.generateNumeroBC());
-        bonCommandeMere.setDateCreation(LocalDateTime.now());
-        bonCommandeMere.setLieuLivraison("");
-        bonCommandeMere.setReferenceFournisseur("");
-        bonCommandeMere.setStatut(BonCommandeMere.StatutBonCommande.BROUILLON);
-        bonCommandeMere.setDescription(demandeMere.getMotifEvoque());
-        bonCommandeMere.setCreateur(utilisateur);
-        bonCommandeMere.setDemandeMere(demandeMere);
-        bonCommandeMere.setContacts(bcContactService.getAllContacts());
-        return bonCommandeMere;
+    /** Fournisseurs pour l'autocomplétion, avec leur responsable et leur adresse actuels. */
+    private List<FournisseurAutocompleteDTO> fournisseursPourSaisie() {
+        return Arrays.stream(fournisseurService.getAllFournisseurs())
+                .map(f -> {
+                    var respOpt = responsableFournisseurService.getResponsableActuel(f.getId());
+                    var adrOpt = adresseFournisseurService.getAdresseActuel(f.getId());
+                    return new FournisseurAutocompleteDTO(
+                            f.getId(), f.getNom(),
+                            respOpt.map(ResponsableFournisseur::getId).orElse(null),
+                            respOpt.map(rf -> rf.getResponsable().getId()).orElse(null),
+                            respOpt.map(rf -> rf.getResponsable().getPrenom() + " " + rf.getResponsable().getNom()).orElse(""),
+                            adrOpt.map(AdresseFournisseur::getId).orElse(null),
+                            adrOpt.map(af -> af.getAdresse().getId()).orElse(null),
+                            adrOpt.map(af -> af.getAdresse().getLibelle()).orElse(""));
+                })
+                .toList();
     }
 
-    private List<BonCommandeFille> initialiserLignesBonCommande(DemandeMere demandeMere, BonCommandeMere bonCommandeMere) {
-        List<DemandeFille> demandeFilles = demandeFilleService.getDemandeFilleByDemandeMere(demandeMere);
-        List<BonCommandeFille> bonCommandeFilles = new ArrayList<>();
+    // ── Helpers ──────────────────────────────────────────────────────────────
 
-        for (DemandeFille demandeFille : demandeFilles) {
-            BonCommandeFille bcFille = new BonCommandeFille();
-            bcFille.setBonCommandeMere(bonCommandeMere);
-            bcFille.setDemandeFille(demandeFille);
-            bcFille.setArticle(demandeFille.getArticle());
-            bcFille.setQuantiteCommandee(demandeFille.getQuantite());
-            bcFille.setQuantiteRestante(demandeFille.getQuantite());
+    private static Authentication auth() {
+        return SecurityContextHolder.getContext().getAuthentication();
+    }
 
-            if (demandeFille.getPrixUnitaire() != null) {
-                bcFille.setPrixUnitaireHT(demandeFille.getPrixUnitaire());
-                bcFille.setMontantHT(demandeFille.getQuantite() * demandeFille.getPrixUnitaire());
-            }
-            if (demandeFille.getMontantEstime() != null) {
-                bcFille.setMontantTTC(demandeFille.getMontantEstime());
-            }
-
-            bonCommandeFilles.add(bcFille);
-        }
-        return bonCommandeFilles;
+    private Utilisateur utilisateurCourant() {
+        Utilisateur principal = (Utilisateur) auth().getPrincipal();
+        return utilisateurService.getUtilisateurByMail(principal.getMail());
     }
 }

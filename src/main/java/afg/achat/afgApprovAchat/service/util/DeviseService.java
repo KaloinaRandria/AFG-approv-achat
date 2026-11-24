@@ -33,6 +33,26 @@ public class DeviseService {
         return deviseRepo.findById(id);
     }
 
+    /** L'ariary (monnaie de référence) ; {@code null} s'il n'est pas dans la table des devises. */
+    public Devise getDeviseReference() {
+        return deviseRepo.findByAcronymeIgnoreCase(Devise.CODE_REFERENCE).orElse(null);
+    }
+
+    /**
+     * Devise choisie dans un formulaire (identifiant) ; l'ariary si rien n'est choisi.
+     *
+     * @throws IllegalArgumentException si l'identifiant ne correspond à aucune devise
+     */
+    public Devise lireDevise(String deviseId) {
+        if (deviseId == null || deviseId.isBlank()) return getDeviseReference();
+        try {
+            return deviseRepo.findById(Integer.parseInt(deviseId.trim()))
+                    .orElseThrow(() -> new IllegalArgumentException("Devise introuvable."));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Devise invalide.");
+        }
+    }
+
     @Transactional
     public Devise modifierDevise(int idDevise, String coursAriary) {
         Devise devise = this.getDeviseById(idDevise)

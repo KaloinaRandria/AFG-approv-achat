@@ -19,7 +19,8 @@ public interface UtilisateurRepo extends JpaRepository<Utilisateur, Integer>, Jp
     @Query("SELECT u FROM Utilisateur u WHERE u.mail = :mail")
     Utilisateur findByMail(String mail);
 
-    @Query("SELECT u FROM Utilisateur u JOIN u.roles r WHERE r.role = :roleLibelle")
+    /** Utilisateurs actifs ayant ce rôle (destinataires de mails et de tâches). */
+    @Query("SELECT u FROM Utilisateur u JOIN u.roles r WHERE r.role = :roleLibelle AND u.actif = true")
     List<Utilisateur> findByRoleLibelle(@Param("roleLibelle") String roleLibelle);
 
 
@@ -28,4 +29,7 @@ public interface UtilisateurRepo extends JpaRepository<Utilisateur, Integer>, Jp
 
     @Query("SELECT u.id FROM Utilisateur u JOIN u.validateurs v WHERE v.id = :validateurId")
     List<Integer> findIdsUtilisateursAValiderByValidateurId(@Param("validateurId") Integer validateurId);
+
+    /** Comptes actifs, triés pour les listes de choix (supérieur, validateurs). */
+    List<Utilisateur> findByActifTrueOrderByNomAscPrenomAsc();
 }
