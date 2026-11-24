@@ -162,6 +162,117 @@ body {
 }
 
 /* Entrées actives du menu */
+/* ── Loader de navigation ─────────────────────────────────────────────────────
+   Barre fine en haut de l'écran dès qu'on quitte la page ; si la page suivante tarde,
+   un petit indicateur « Chargement… » apparaît. Créés par le script du menu latéral. */
+.nav-loader-barre {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 2000;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s ease;
+}
+.nav-loader-barre::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -40%;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, #2563eb, #60a5fa, transparent);
+    animation: nav-loader-glisse 1s ease-in-out infinite;
+}
+@keyframes nav-loader-glisse {
+    from { left: -40%; }
+    to   { left: 100%; }
+}
+
+.nav-loader-badge {
+    position: fixed;
+    top: 8px;
+    /* Centré sur la zone de contenu (à droite du menu) */
+    left: calc(50% + var(--sidebar-largeur) / 2);
+    z-index: 2000;
+    transform: translate(-50%, -8px);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .4rem .85rem;
+    border-radius: 999px;
+    background: #0A1A44;
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(10, 26, 68, .25);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .2s ease, transform .2s ease;
+}
+.nav-loader-badge .spinner-border { width: .9rem; height: .9rem; border-width: .14em; }
+
+html.sidebar-reduit .nav-loader-badge { left: calc(50% + var(--sidebar-reduite) / 2); }
+@media (max-width: 768px) {
+    .nav-loader-badge, html.sidebar-reduit .nav-loader-badge { left: 50%; top: 62px; }
+}
+
+html.nav-en-cours .nav-loader-barre { opacity: 1; }
+html.nav-lente .nav-loader-badge { opacity: 1; transform: translate(-50%, 0); }
+html.nav-en-cours, html.nav-en-cours * { cursor: progress !important; }
+
+@media print {
+    .nav-loader-barre, .nav-loader-badge { display: none !important; }
+}
+
+/* ── Catégories du menu : titres et filets en blanc atténué ──────────────────── */
+.sidebar-groupe-menu { --accent: rgba(255, 255, 255, .6); }
+
+.sidebar-groupe-menu + .sidebar-groupe-menu { margin-top: .35rem; }
+
+.sidebar-categorie {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    margin: .9rem .75rem .35rem;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    white-space: nowrap;
+}
+/* Filet après le titre, dans la couleur du groupe */
+.sidebar-categorie::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: .45;
+}
+
+.sidebar-groupe-menu .sidebar-link:hover,
+.sidebar-groupe-menu .sidebar-button:hover {
+    background: rgba(255, 255, 255, .06) !important;
+}
+
+/* Menu replié : le titre devient un simple filet de couleur entre les groupes */
+@media (min-width: 769px) {
+    html.sidebar-reduit #sidebar:not(:hover) .sidebar-categorie {
+        margin: .7rem .9rem .3rem;
+        height: 2px;
+        font-size: 0;
+        gap: 0;
+        background: var(--accent);
+        opacity: .5;
+        border-radius: 2px;
+    }
+    html.sidebar-reduit #sidebar:not(:hover) .sidebar-categorie::after { display: none; }
+}
+
 /* Sous-menu regroupé (Demande d'achat) : titres de groupe, liens pleine largeur */
 .sidebar-sous-menu {
     padding: .25rem .5rem .6rem 1rem;
@@ -190,19 +301,34 @@ body {
     background: rgba(255, 255, 255, .08);
 }
 
+/* Entrée active : fond blanc léger et liseré à gauche (sobre, sans dégradé ni ombre) */
 .sidebar-sub.active,
 .sidebar-link.active {
-    background: linear-gradient(90deg, #2563eb, #3b82f6, #60a5fa) !important;
-    color: white !important;
+    background: rgba(255, 255, 255, .12) !important;
+    color: #fff !important;
     border-radius: 6px;
-    font-weight: bold;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 rgba(255, 255, 255, .9);
+}
+/* Sous-menu : le liseré remplace le trait vertical du groupe */
+.sidebar-sous-menu .sidebar-sub.active {
+    border-left-color: rgba(255, 255, 255, .9);
+    box-shadow: none;
+    border-radius: 0 6px 6px 0;
 }
 
+/* Sous-menu ouvert : titre en blanc, fond à peine marqué */
 .accordion-button:not(.collapsed) {
-    background: linear-gradient(90deg, rgba(37, 99, 235, 0.15), rgba(59, 130, 246, 0.1)) !important;
-    font-weight: bold;
-    color: #3b82f6 !important;
+    background: rgba(255, 255, 255, .05) !important;
+    font-weight: 600;
+    color: #fff !important;
+    box-shadow: none;
+}
+
+/* Chevrons des sous-menus en blanc (Bootstrap les dessine sombres, peu visibles sur le fond bleu nuit) */
+#sidebar .accordion-button::after {
+    filter: brightness(0) invert(1);
+    opacity: .55;
 }
 
 /* Modales au-dessus de tout */
