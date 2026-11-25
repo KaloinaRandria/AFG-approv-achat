@@ -2,7 +2,7 @@
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Nouvel utilisateur</title>
+    <title th:text="${modification ? 'Modifier un utilisateur' : 'Nouvel utilisateur'}">Nouvel utilisateur</title>
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
@@ -18,19 +18,33 @@
 
         <!-- En-tête -->
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="fw-bold text-gradient-blue mb-0">
+            <h1 class="fw-bold text-gradient-blue mb-0" th:unless="${modification}">
                 <i class="fas fa-user-plus me-3 icon-gradient-blue"></i> Nouvel utilisateur
             </h1>
-            <a th:href="@{/user/list}" class="btn btn-outline-secondary">
+            <h1 class="fw-bold text-gradient-blue mb-0" th:if="${modification}">
+                <i class="fas fa-user-edit me-3 icon-gradient-blue"></i>
+                Modifier : <span th:text="${utilisateur.prenom + ' ' + utilisateur.nom}"></span>
+            </h1>
+            <a th:href="@{${modification ? returnUrl : '/user/list'}}" class="btn btn-outline-secondary">
                 <i class="fas fa-users me-2"></i>Liste des utilisateurs
             </a>
         </div>
 
         <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
 
-        <form th:action="@{/user/save}" method="post" th:object="${utilisateur}" id="utilisateurForm" novalidate>
+        <form th:action="${modification} ? @{/user/modifier} : @{/user/save}" method="post"
+              th:object="${utilisateur}" id="utilisateurForm" novalidate
+              th:data-mail-initial="${modification ? mailInitial : ''}">
+            <th:block th:if="${modification}">
+                <input type="hidden" name="id" th:value="${idUtilisateur}">
+                <input type="hidden" name="returnUrl" th:value="${returnUrl}">
+            </th:block>
             <div class="card shadow-lg border-0">
                 <div class="card-body">
+
+                    <div class="alert alert-secondary py-2" th:if="${modification and compteInactif}">
+                        <i class="fas fa-user-slash me-2"></i>Ce compte est <strong>inactif</strong> : il ne peut pas se connecter.
+                    </div>
 
                     <!-- Section 1 : Identité -->
                     <div class="mb-4">
@@ -108,7 +122,9 @@
                                         data-placeholder="Rechercher un supérieur...">
                                     <option value=""></option>
                                     <option th:each="u : ${utilisateursActifs}" th:value="${u.id}"
-                                            th:text="${u.nom + ' ' + u.prenom + ' (' + u.mail + ')'}"></option>
+                                            th:text="${u.nom + ' ' + u.prenom + ' (' + u.mail + ')'}"
+                                            th:disabled="${modification and u.id == idUtilisateur}"></option>
+                                    <option th:each="h : ${utilisateursHorsListe}" th:value="${h.id}" th:text="${h.libelle}"></option>
                                 </select>
                                 <div class="form-text">Laisser vide si aucun supérieur direct.</div>
                             </div>
@@ -123,12 +139,25 @@
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label for="roles" class="form-label fw-bold required-field">Rôles</label>
-                                <select class="select2" id="roles" name="roles" multiple required
-                                        data-placeholder="Choisir un ou plusieurs rôles...">
-                                    <option th:each="r : ${rolesAttribuables}" th:value="${r.id}" th:text="${r.role}"
-                                            th:selected="${utilisateur.roleIds != null and utilisateur.roleIds.contains(r.id)}"></option>
-                                </select>
+                                <span class="form-label fw-bold required-field d-block" id="rolesLibelle">Rôles</span>
+                                <div class="border rounded p-2" id="roles" role="group" aria-labelledby="rolesLibelle">
+                                    <div th:each="g, it : ${groupesRoles}" th:class="${it.last ? '' : 'pb-2 mb-2 border-bottom'}">
+                                        <div class="small fw-bold text-muted mb-1">
+                                            <i class="fas fa-fw me-1" th:classappend="${g.icone}"></i>
+                                            <span th:text="${g.libelle}">Type</span>
+                                            <span class="fw-normal" th:if="${g.aide}" th:text="${'— ' + g.aide}"></span>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <th:block th:each="r : ${g.roles}">
+                                                <input type="checkbox" class="btn-check" name="roles" autocomplete="off"
+                                                       th:id="${'role-' + r.id}" th:value="${r.id}"
+                                                       th:checked="${utilisateur.roleIds != null and utilisateur.roleIds.contains(r.id)}">
+                                                <label class="btn btn-outline-primary btn-sm" th:for="${'role-' + r.id}" th:text="${r.role}"></label>
+                                            </th:block>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-text">Cliquez pour cocher ou décocher ; plusieurs rôles possibles (ex. IT + MAKER).</div>
                                 <div class="small text-danger mt-1 d-none" id="rolesErreur">
                                     Choisissez au moins un rôle.
                                 </div>
@@ -140,7 +169,10 @@
                                         data-placeholder="Rechercher un ou plusieurs validateurs...">
                                     <option th:each="u : ${utilisateursActifs}" th:value="${u.id}"
                                             th:text="${u.nom + ' ' + u.prenom + ' (' + u.mail + ')'}"
-                                            th:selected="${utilisateur.validateurIds != null and utilisateur.validateurIds.contains(u.id)}"></option>
+                                            th:selected="${utilisateur.validateurIds != null and utilisateur.validateurIds.contains(u.id)}"
+                                            th:disabled="${modification and u.id == idUtilisateur}"></option>
+                                    <option th:each="h : ${utilisateursHorsListe}" th:value="${h.id}" th:text="${h.libelle}"
+                                            th:selected="${utilisateur.validateurIds != null and utilisateur.validateurIds.contains(h.id)}"></option>
                                 </select>
                                 <div class="form-text">
                                     Personnes qui valident ses demandes.
@@ -153,11 +185,17 @@
 
                 <!-- Actions -->
                 <div class="card-footer bg-white border-0 d-flex justify-content-end gap-2 pb-3">
-                    <a th:href="@{/user/list}" class="btn btn-outline-secondary">Annuler</a>
+                    <a th:href="@{${modification ? returnUrl : '/user/list'}}" class="btn btn-outline-secondary">Annuler</a>
                     <span class="text-muted small me-auto align-self-center" th:if="${avecValidation}">
                         <i class="fas fa-info-circle me-1"></i>
-                        Le compte sera créé après validation par une autre personne.
+                        <span th:text="${modification ? 'La modification sera appliquée après validation par une autre personne.'
+                                                       : 'Le compte sera créé après validation par une autre personne.'}"></span>
                     </span>
+                    <button type="submit" class="btn btn-gradient-green px-4" th:if="${modification}">
+                        <i class="fas me-1" th:classappend="${avecValidation ? 'fa-paper-plane' : 'fa-save'}"></i>
+                        <span th:text="${avecValidation ? 'Soumettre pour validation' : 'Enregistrer'}">Enregistrer</span>
+                    </button>
+                    <th:block th:unless="${modification}">
                     <button type="submit" class="btn btn-outline-success" name="ensuite" value="nouveau">
                         <i class="fas fa-plus me-1"></i>
                         <span th:text="${avecValidation ? 'Soumettre et saisir un autre' : 'Créer et saisir un autre'}">Créer et saisir un autre</span>
@@ -166,6 +204,7 @@
                         <i class="fas me-1" th:classappend="${avecValidation ? 'fa-paper-plane' : 'fa-save'}"></i>
                         <span th:text="${avecValidation ? 'Soumettre pour validation' : 'Créer l''utilisateur'}">Créer l'utilisateur</span>
                     </button>
+                    </th:block>
                 </div>
             </div>
         </form>
@@ -194,6 +233,8 @@
 
         // ── Email proposé à partir du prénom et du nom (prenom.nom@afgbank.mg) ──
         const champMail = document.getElementById('mail');
+        // Modification : l'email actuel du compte n'est pas « déjà utilisé »
+        const mailInitial = (form.dataset.mailInitial || '').trim().toLowerCase();
         let mailSaisiALaMain = champMail.value.trim() !== '';
 
         function normaliser(texte) {
@@ -233,6 +274,7 @@
             champMail.setCustomValidity('');
             champMail.classList.remove('is-invalid', 'is-valid');
             if (!mail || !champMail.checkValidity()) return;
+            if (mailInitial && mail.toLowerCase() === mailInitial) return;
 
             fetch(`${CONTEXT_PATH}user/mail-disponible?mail=${encodeURIComponent(mail)}`)
                 .then(r => r.ok ? r.json() : null)
@@ -271,13 +313,11 @@
         // ── Rôles : au moins un ──
         const roles = document.getElementById('roles');
         function verifierRoles() {
-            const ok = roles.selectedOptions.length > 0;
-            document.getElementById('rolesErreur').classList.toggle('d-none', ok);
-            $(roles).next('.select2-container').find('.select2-selection')
-                .toggleClass('border-danger', !ok && form.classList.contains('was-validated'));
+            const ok = roles.querySelector('input[name="roles"]:checked') !== null;
+            document.getElementById('rolesErreur').classList.toggle('d-none', ok || !form.classList.contains('was-validated'));
             return ok;
         }
-        $(roles).on('change', verifierRoles);
+        roles.addEventListener('change', verifierRoles);
 
         // ── Envoi : validation et anti double-clic ──
         form.addEventListener('submit', function (e) {
@@ -288,7 +328,7 @@
                 // Aller au premier champ à corriger
                 const champInvalide = form.querySelector('input:invalid');
                 if (champInvalide) champInvalide.focus();
-                else if (!rolesOk && $.fn.select2) $(roles).select2('open');
+                else if (!rolesOk) roles.querySelector('input[name="roles"]')?.focus();
                 return;
             }
             form.querySelectorAll('button[type="submit"]').forEach(b => b.disabled = true);
@@ -300,7 +340,8 @@
                 champ.name = bouton.name;
                 champ.value = bouton.value;
                 form.appendChild(champ);
-                bouton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Création...';
+                bouton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>'
+                    + (form.dataset.mailInitial ? 'Enregistrement...' : 'Création...');
             }
         });
 

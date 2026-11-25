@@ -121,9 +121,9 @@
             </div>
         </div>
 
-        <!-- Bon de commande : consultation, création manuelle (MG_MAKER, Moyens Généraux) et validation (MG_CHECKER, SG) -->
+        <!-- Bon de commande : consultation, création manuelle (Moyens Généraux) et validation (Moyens Généraux + CHECKER, SG) -->
         <div class="accordion-item bg-transparent border-0"
-             sec:authorize="hasAnyRole('ADMIN','MG_MAKER','MG_CHECKER','SG')">
+             sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','SG')">
             <h2 class="accordion-header">
                 <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
                         type="button"
@@ -148,14 +148,14 @@
                                 Liste
                             </a>
                         </li>
-                        <li sec:authorize="hasAnyRole('ADMIN','MG_MAKER','MOYENS_GENERAUX')">
+                        <li sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/bon-commande/lignes-a-acheter}"
                                th:classappend="${currentUri == '/bon-commande/lignes-a-acheter' ? 'active' : ''}">
                                 Lignes à acheter
                             </a>
                         </li>
-                        <li sec:authorize="hasAnyRole('ADMIN','MG_MAKER','MOYENS_GENERAUX')">
+                        <li sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/bon-commande/manuel/nouveau}"
                                th:classappend="${currentUri == '/bon-commande/manuel/nouveau' ? 'active' : ''}">
@@ -169,7 +169,7 @@
 
         <!-- Paiements directs : MG (consultation), validateur MG (transmission), finance (paiement) -->
         <div class="accordion-item bg-transparent border-0"
-             sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_CHECKER','FINANCE','FINANCE_CONSULT')">
+             sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX','FINANCE','FINANCE_CONSULT')">
             <a class="nav-link text-white d-flex align-items-center sidebar-link"
                style="padding: 1rem 1.25rem;"
                th:href="@{/demande/paiements-directs}"
@@ -456,8 +456,8 @@
             </div>
         </div>
 
-        <!-- GESTION UTILISATEURS : IT consulte, IT_MAKER soumet, IT_CHECKER valide (maker / checker) -->
-        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','IT','IT_MAKER','IT_CHECKER')">
+        <!-- GESTION UTILISATEURS : IT consulte, IT + MAKER soumet, IT + CHECKER valide (maker / checker) -->
+        <div class="accordion-item bg-transparent border-0" sec:authorize="hasAnyRole('ADMIN','IT')">
             <h2 class="accordion-header">
                 <button class="accordion-button bg-transparent text-start text-white sidebar-button collapsed"
                         type="button"
@@ -476,7 +476,7 @@
                  th:classappend="${currentUri.contains('/user') ? 'show' : ''}">
                 <div class="accordion-body p-0">
                     <ul class="nav flex-column px-3">
-                        <li sec:authorize="hasAnyRole('ADMIN','IT_MAKER')">
+                        <li sec:authorize="hasRole('ADMIN') or (hasRole('IT') and hasRole('MAKER'))">
                             <a class="nav-link text-white sidebar-sub"
                                th:href="@{/user/add}"
                                th:classappend="${currentUri == '/user/add' ? 'active' : ''}">

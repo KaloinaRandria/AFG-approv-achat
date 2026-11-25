@@ -9,8 +9,8 @@ import java.time.LocalDateTime;
 
 /**
  * Demande de création, de modification ou de (dés)activation d'un compte utilisateur,
- * soumise par un créateur (IT_MAKER) et appliquée seulement après la validation
- * d'une autre personne (IT_CHECKER). Les données saisies sont conservées telles quelles
+ * soumise par un créateur (IT + MAKER) et appliquée seulement après la validation
+ * d'une autre personne (IT + CHECKER). Les données saisies sont conservées telles quelles
  * (JSON) jusqu'à la décision.
  */
 @Getter

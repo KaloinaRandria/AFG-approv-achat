@@ -31,8 +31,8 @@ import java.util.stream.Collectors;
 /**
  * Circuit « créateur / valideur » des comptes utilisateurs (domaine {@link Habilitations#IT}).
  *
- * <p>Un créateur (IT_MAKER) soumet une création, une modification ou une (dés)activation :
- * rien n'est appliqué tant qu'une autre personne (IT_CHECKER) ne l'a pas validée. Le valideur
+ * <p>Un créateur (IT + MAKER) soumet une création, une modification ou une (dés)activation :
+ * rien n'est appliqué tant qu'une autre personne (IT + CHECKER) ne l'a pas validée. Le valideur
  * peut aussi la rejeter avec un motif ; le créateur peut annuler sa demande tant qu'elle attend.
  * Un compte n'a qu'une demande en attente à la fois. L'administrateur applique directement.</p>
  */
@@ -230,7 +230,7 @@ public class DemandeCompteService {
     private static final DateTimeFormatter FORMAT_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy à HH:mm");
 
     /**
-     * Prévient les checkers qu'une demande attend : IT_CHECKER, ou les seuls administrateurs si
+     * Prévient les checkers qu'une demande attend : IT + CHECKER, ou les seuls administrateurs si
      * elle touche au rôle ADMIN (eux seuls peuvent la traiter). Jamais l'auteur de la demande.
      */
     private DemandeCompte notifierCheckers(DemandeCompte d) {

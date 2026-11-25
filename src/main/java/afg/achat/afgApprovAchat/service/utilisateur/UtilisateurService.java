@@ -56,8 +56,13 @@ public class UtilisateurService {
         return ids;
     }
 
+    /** Utilisateurs actifs ayant ce rôle ; un rôle composé ({@code MOYENS_GENERAUX+CHECKER}) exige chacun de ses rôles. */
     public List<Utilisateur> getUtilisateursByRole(String roleLibelle) {
-        return utilisateurRepo.findByRoleLibelle(roleLibelle);
+        if (roleLibelle == null || roleLibelle.isBlank()) return List.of();
+        String premier = roleLibelle.split("\\" + afg.achat.afgApprovAchat.service.securite.Habilitations.ET)[0].trim();
+        return utilisateurRepo.findByRoleLibelle(premier).stream()
+                .filter(u -> afg.achat.afgApprovAchat.service.securite.Habilitations.compteARole(u, roleLibelle))
+                .toList();
     }
 
     public Utilisateur getUtilisateurById(int id) {

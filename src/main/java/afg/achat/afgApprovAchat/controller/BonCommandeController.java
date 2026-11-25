@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.controller;
 
+import afg.achat.afgApprovAchat.service.securite.Habilitations;
 import afg.achat.afgApprovAchat.DTO.FournisseurAutocompleteDTO;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeFille;
 import afg.achat.afgApprovAchat.model.bonCommande.BonCommandeMere;
@@ -44,7 +45,7 @@ import java.util.Map;
  * suivent le même circuit de validation (Moyens Généraux puis S.G.).
  */
 // Consultation : Moyens Généraux et acteurs du bon de commande (créateur, validateur MG, S.G.).
-@PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_MAKER','MG_CHECKER','SG')")
+@PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX','SG')")
 @Controller
 @RequestMapping("/bon-commande")
 @RequiredArgsConstructor
@@ -93,7 +94,7 @@ public class BonCommandeController {
 
         // Étapes que l'utilisateur connecté peut valider (filtre « À valider par moi »)
         List<BonCommandeMere.EtapeValidation> etapesValidables = Arrays.stream(BonCommandeMere.EtapeValidation.values())
-                .filter(e -> WorkflowService.hasRole(auth, "ROLE_" + e.getRole()) || WorkflowService.hasRole(auth, "ROLE_ADMIN"))
+                .filter(e -> Habilitations.aRole(auth, e.getRole()) || Habilitations.estAdmin(auth))
                 .toList();
 
         int taille = Math.min(Math.max(size, 5), 100);
@@ -134,7 +135,7 @@ public class BonCommandeController {
      * Lignes de demandes validées encore à commander, toutes demandes confondues.
      * Les Moyens Généraux en cochent plusieurs pour créer un bon de commande groupé.
      */
-    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX','MG_MAKER')")
+    @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @GetMapping("/lignes-a-acheter")
     public String lignesAAcheter(@RequestParam(defaultValue = "0") int page,
                                  @RequestParam(defaultValue = "50") int size,

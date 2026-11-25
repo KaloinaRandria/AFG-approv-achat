@@ -105,7 +105,7 @@ public class TableauDeBordService {
             }
         }
 
-        // ── Comptes utilisateurs à valider (IT_CHECKER, hors ses propres demandes) ──
+        // ── Comptes utilisateurs à valider (IT + CHECKER, hors ses propres demandes) ──
         if (afg.achat.afgApprovAchat.service.securite.Habilitations.peutValider(auth,
                 afg.achat.afgApprovAchat.service.securite.Habilitations.IT)) {
             Object[] r = demandeCompteService.aValiderPar(current);
@@ -113,7 +113,7 @@ public class TableauDeBordService {
                     "fa-user-check", nombre(r[0]), jours(r[1], maintenant), "/user/demandes");
         }
 
-        // ── Bons de commande à valider (MG_CHECKER, SG) ──
+        // ── Bons de commande à valider (MOYENS_GENERAUX + CHECKER, SG) ──
         Set<BonCommandeMere.EtapeValidation> etapesBc = EnumSet.noneOf(BonCommandeMere.EtapeValidation.class);
         for (BonCommandeMere.EtapeValidation e : BonCommandeMere.EtapeValidation.values()) {
             if (admin || role(auth, e.getRole())) etapesBc.add(e);
@@ -132,7 +132,7 @@ public class TableauDeBordService {
         }
 
         // ── Achats (création des bons de commande) ──
-        if (admin || mg || role(auth, "MG_MAKER")) {
+        if (admin || mg) {
             long lignes = besoinAchatService.lignesEnAttente(
                     new BesoinAchatService.Recherche(null, null, null, null, null, null),
                     PageRequest.of(0, 1)).getTotalElements();
@@ -374,7 +374,7 @@ public class TableauDeBordService {
     // ════════════════════════════════════════════════════════════════════════
 
     private static boolean role(Authentication auth, String role) {
-        return WorkflowService.hasRole(auth, "ROLE_" + role);
+        return afg.achat.afgApprovAchat.service.securite.Habilitations.aRole(auth, role);
     }
 
     private static void ajouterSiNonVide(List<Action> actions, String titre, String detail, String icone,

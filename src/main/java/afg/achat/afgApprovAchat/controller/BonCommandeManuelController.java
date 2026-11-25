@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 
 /**
  * Bon de commande créé manuellement (sans demande d'achat) : saisie par un créateur
- * (MG_MAKER), validation des Moyens Généraux (MG_CHECKER) puis du S.G.
+ * (MOYENS_GENERAUX), validation des Moyens Généraux (MOYENS_GENERAUX + CHECKER) puis du S.G.
  * Les règles sont dans {@link BonCommandeManuelService}.
  */
 @Controller
@@ -41,8 +41,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BonCommandeManuelController {
 
-    private static final String ROLES_CREATION = "hasAnyRole('ADMIN','MG_MAKER','MOYENS_GENERAUX')";
-    private static final String ROLES_VALIDATION = "hasAnyRole('ADMIN','MG_CHECKER','SG')";
+    private static final String ROLES_CREATION = "hasAnyRole('ADMIN','MOYENS_GENERAUX')";
+    private static final String ROLES_VALIDATION = "hasAnyRole('ADMIN','SG') or (hasRole('MOYENS_GENERAUX') and hasRole('CHECKER'))";
 
     private final BonCommandeManuelService bonCommandeManuelService;
     private final BonCommandeService bonCommandeService;

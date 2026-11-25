@@ -106,7 +106,7 @@ public class WorkflowService {
     }
 
     private static boolean peutDeciderAvecRole(Authentication auth, int statut, EtapeWorkflow etape) {
-        return statut == etape.getStatut() && hasRole(auth, "ROLE_" + etape.getRoleValidateur());
+        return statut == etape.getStatut() && afg.achat.afgApprovAchat.service.securite.Habilitations.aRole(auth, etape.getRoleValidateur());
     }
 
     /** Droit de consulter une demande (fiche et pièces jointes). */
@@ -118,7 +118,7 @@ public class WorkflowService {
 
         // Le validateur M.G. décide au CODEP : il ouvre les demandes qui l'attendent
         if (demande.getStatut() == StatutDemande.DECISION_CODEP
-                && hasRole(auth, "ROLE_" + EtapeWorkflow.DECISION_CODEP.getRoleValidateur())) {
+                && afg.achat.afgApprovAchat.service.securite.Habilitations.aRole(auth, EtapeWorkflow.DECISION_CODEP.getRoleValidateur())) {
             return true;
         }
 

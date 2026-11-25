@@ -168,11 +168,10 @@
                                 <span th:if="${!protege and enAttente and peutSaisir}" class="text-muted small"
                                       title="Une demande attend une validation pour ce compte"><i class="fas fa-hourglass-half"></i></span>
                                 <th:block th:if="${peutSaisir and !protege and !enAttente}">
-                                <button type="button" class="btn btn-sm btn-outline-primary"
-                                        data-bs-toggle="modal" data-bs-target="#modifierModal"
-                                        th:data-id="${u.id}" title="Modifier">
+                                <a class="btn btn-sm btn-outline-primary" title="Modifier"
+                                   th:href="@{/user/{id}/modifier(id=${u.id},returnUrl=${returnUrl})}">
                                     <i class="fas fa-edit"></i>
-                                </button>
+                                </a>
                                 <button type="button" class="btn btn-sm btn-outline-secondary"
                                         th:if="${u.actif}"
                                         data-bs-toggle="modal" data-bs-target="#statutModal"
@@ -205,115 +204,6 @@
             </div>
         </div>
     </section>
-</div>
-
-<!-- Modification : informations, rôles, supérieur et validateurs -->
-<div class="modal fade" id="modifierModal" tabindex="-1" aria-labelledby="modifierModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header btn-gradient-blue">
-                <h5 class="modal-title" id="modifierModalLabel">
-                    <i class="fas fa-user-edit me-2"></i>Modifier l'utilisateur
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
-            </div>
-            <form th:action="@{/user/modifier}" method="post" id="utilisateurForm">
-                <input type="hidden" name="returnUrl" th:value="${returnUrl}">
-                <input type="hidden" id="modalId" name="id">
-                <div class="modal-body">
-                    <div id="modalChargement" class="text-center text-muted py-4">
-                        <div class="spinner-border spinner-border-sm me-2" role="status"></div> Chargement...
-                    </div>
-                    <div id="modalErreur" class="alert alert-danger d-none">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Impossible de charger cet utilisateur.
-                    </div>
-
-                    <div id="modalChamps" class="d-none">
-                        <div id="modalInactif" class="alert alert-secondary py-2 d-none">
-                            <i class="fas fa-user-slash me-2"></i>Ce compte est <strong>inactif</strong> :
-                            il ne peut pas se connecter.
-                        </div>
-
-                        <h6 class="text-muted text-uppercase small fw-bold mb-2">Identité</h6>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label for="modalNom" class="form-label required-field">Nom</label>
-                                <input type="text" class="form-control" id="modalNom" name="nom" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="modalPrenom" class="form-label required-field">Prénom</label>
-                                <input type="text" class="form-control" id="modalPrenom" name="prenom" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="modalMail" class="form-label required-field">Email</label>
-                                <input type="email" class="form-control" id="modalMail" name="mail" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="modalContact" class="form-label">Contact</label>
-                                <input type="text" class="form-control" id="modalContact" name="contact">
-                            </div>
-                        </div>
-
-                        <h6 class="text-muted text-uppercase small fw-bold mb-2">Organisation</h6>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label for="modalService" class="form-label">Service</label>
-                                <select class="w-100" id="modalService" name="serviceId" data-placeholder="Rechercher un service...">
-                                    <option value=""></option>
-                                    <option th:each="s : ${services}" th:value="${s.id}" th:text="${s.libelle}"></option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="modalPoste" class="form-label">Poste</label>
-                                <select class="w-100" id="modalPoste" name="posteId" data-placeholder="Rechercher un poste...">
-                                    <option value=""></option>
-                                    <option th:each="p : ${postes}" th:value="${p.id}" th:text="${p.poste}"></option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label for="modalSuperieur" class="form-label">Supérieur hiérarchique</label>
-                                <select class="w-100 choix-utilisateur" id="modalSuperieur" name="superieurHierarchiqueId"
-                                        data-placeholder="Rechercher un supérieur...">
-                                    <option value=""></option>
-                                    <option th:each="a : ${utilisateursActifs}" th:value="${a.id}"
-                                            th:text="${a.nom + ' ' + a.prenom + ' (' + a.mail + ')'}"></option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <h6 class="text-muted text-uppercase small fw-bold mb-2">Droits et validation</h6>
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <label for="modalRoles" class="form-label required-field">Rôles</label>
-                                <select class="w-100" id="modalRoles" name="roles" multiple="multiple" required
-                                        data-placeholder="Choisir un ou plusieurs rôles...">
-                                    <option th:each="r : ${rolesAttribuables}" th:value="${r.id}" th:text="${r.role}"></option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label for="modalValidateurs" class="form-label">Validateurs</label>
-                                <select class="w-100 choix-utilisateur" id="modalValidateurs" name="validateurs" multiple="multiple"
-                                        data-placeholder="Rechercher un ou plusieurs validateurs...">
-                                    <option th:each="a : ${utilisateursActifs}" th:value="${a.id}"
-                                            th:text="${a.nom + ' ' + a.prenom + ' (' + a.mail + ')'}"></option>
-                                </select>
-                                <div class="form-text">
-                                    Personnes qui valident les demandes de cet utilisateur. Retirez-en avec la croix.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-gradient-blue" id="btnEnregistrer" disabled>
-                        <i class="fas me-1" th:classappend="${avecValidation ? 'fa-paper-plane' : 'fa-save'}"></i>
-                        <span th:text="${avecValidation ? 'Soumettre pour validation' : 'Enregistrer'}">Enregistrer</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
 
 <!-- Désactivation / réactivation -->
@@ -361,77 +251,6 @@
         });
         document.getElementById('fTaille')?.addEventListener('change', function () {
             document.getElementById('filtresForm').submit();
-        });
-
-        // ── Fenêtre de modification ──
-        const modal = $('#modifierModal');
-        if (avecSelect2) {
-            ['#modalService', '#modalPoste', '#modalSuperieur', '#modalRoles', '#modalValidateurs'].forEach(sel => {
-                $(sel).select2({
-                    theme: 'bootstrap-5', width: '100%', dropdownParent: modal,
-                    allowClear: !$(sel).prop('multiple'),
-                    placeholder: $(sel).data('placeholder'),
-                    language: { noResults: () => 'Aucun résultat' }
-                });
-            });
-        }
-
-        /** Ajoute l'option si elle manque (ex. supérieur ou validateur devenu inactif). */
-        function assurerOption(select, id, libelle) {
-            if (!select.find('option[value="' + id + '"]').length) {
-                select.append(new Option(libelle, id, false, false));
-            }
-        }
-
-        function afficher(etat) {
-            $('#modalChargement').toggleClass('d-none', etat !== 'chargement');
-            $('#modalErreur').toggleClass('d-none', etat !== 'erreur');
-            $('#modalChamps').toggleClass('d-none', etat !== 'pret');
-            $('#btnEnregistrer').prop('disabled', etat !== 'pret');
-        }
-
-        modal.on('show.bs.modal', function (event) {
-            const userId = $(event.relatedTarget).data('id');
-            afficher('chargement');
-            $('#modifierModalLabel').html('<i class="fas fa-user-edit me-2"></i>Modifier l\'utilisateur');
-
-            fetch(`${CONTEXT_PATH}user/${userId}`)
-                .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-                .then(u => {
-                    $('#modalId').val(u.id);
-                    $('#modalNom').val(u.nom || '');
-                    $('#modalPrenom').val(u.prenom || '');
-                    $('#modalMail').val(u.mail || '');
-                    $('#modalContact').val(u.contact || '');
-                    $('#modalService').val(u.serviceId != null ? String(u.serviceId) : '').trigger('change');
-                    $('#modalPoste').val(u.posteId != null ? String(u.posteId) : '').trigger('change');
-                    $('#modalRoles').val((u.roleIds || []).map(String)).trigger('change');
-
-                    const sup = $('#modalSuperieur');
-                    if (u.superieur) assurerOption(sup, u.superieur.id, u.superieur.libelle);
-                    sup.val(u.superieur ? String(u.superieur.id) : '').trigger('change');
-
-                    const val = $('#modalValidateurs');
-                    (u.validateurs || []).forEach(v => assurerOption(val, v.id, v.libelle));
-                    val.val((u.validateurs || []).map(v => String(v.id))).trigger('change');
-
-                    // On ne peut être ni son propre supérieur ni son propre validateur
-                    $('.choix-utilisateur option').prop('disabled', false);
-                    $('.choix-utilisateur option[value="' + u.id + '"]').prop('disabled', true);
-                    if (avecSelect2) $('.choix-utilisateur').trigger('change.select2');
-
-                    $('#modalInactif').toggleClass('d-none', u.actif !== false);
-                    $('#modifierModalLabel').text('Modifier : ' + (u.prenom || '') + ' ' + (u.nom || ''));
-                    afficher('pret');
-                    $('#modalNom').trigger('focus');
-                })
-                .catch(() => afficher('erreur'));
-        });
-
-        document.getElementById('utilisateurForm').addEventListener('submit', function () {
-            const btn = document.getElementById('btnEnregistrer');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enregistrement...';
         });
 
         // ── Désactivation / réactivation ──

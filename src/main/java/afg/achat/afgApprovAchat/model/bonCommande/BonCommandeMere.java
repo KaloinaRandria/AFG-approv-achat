@@ -165,7 +165,7 @@ public class BonCommandeMere implements DocumentEnDevise {
 
     /** Étapes de validation d'un bon de commande, dans l'ordre. */
     public enum EtapeValidation {
-        MG("Moyens Généraux", "MG_CHECKER"),
+        MG("Moyens Généraux", "MOYENS_GENERAUX+CHECKER"),
         SG("Secrétariat Général", "SG");
 
         private final String libelle;
@@ -178,7 +178,7 @@ public class BonCommandeMere implements DocumentEnDevise {
 
         public String getLibelle() { return libelle; }
 
-        /** Rôle (sans préfixe ROLE_) qui valide à cette étape. */
+        /** Rôle (sans préfixe ROLE_, éventuellement composé « A+B ») qui valide à cette étape. */
         public String getRole() { return role; }
     }
 
