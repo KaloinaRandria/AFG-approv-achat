@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8" /></head>
+<body style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #0f1b3d;">
+<div class="container">
+    <p>Bonjour <span th:text="${destinataire.prenom + ' ' + destinataire.nom}"></span>,</p>
+    <p th:if="${valide}">
+        L'inventaire <strong th:text="${reference}"></strong> (<span th:text="${perimetre}"></span>)
+        a été <strong style="color: #067647;">validé</strong> le <span th:text="${dateDecision}"></span>
+        par <span th:text="${checker != null ? checker.prenom + ' ' + checker.nom : ''}"></span> :
+        les écarts sont passés en stock.
+    </p>
+    <th:block th:unless="${valide}">
+        <p>
+            L'inventaire <strong th:text="${reference}"></strong> (<span th:text="${perimetre}"></span>)
+            a été <strong style="color: #b42318;">renvoyé en comptage</strong> le <span th:text="${dateDecision}"></span>
+            par <span th:text="${checker != null ? checker.prenom + ' ' + checker.nom : ''}"></span>.
+        </p>
+        <p>Motif : <em th:text="${motif}"></em></p>
+    </th:block>
+    <p><a th:href="${lien}">Ouvrir l'inventaire</a></p>
+    <br/>
+    <p>Cordialement,</p>
+    <p><img src="cid:signature-image" /></p>
+</div>
+</body>
+</html>

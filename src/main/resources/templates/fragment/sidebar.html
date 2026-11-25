@@ -273,6 +273,13 @@
                                 État de stock
                             </a>
                         </li>
+                        <li sec:authorize="hasAnyRole('ADMIN','MOYENS_GENERAUX')">
+                            <a class="nav-link text-white sidebar-sub"
+                               th:href="@{/stock/inventaires}"
+                               th:classappend="${currentUri.startsWith('/stock/inventaire') ? 'active' : ''}">
+                                Inventaires
+                            </a>
+                        </li>
                         <!--                        <li>-->
                         <!--                            <a class="nav-link text-white sidebar-sub"-->
                         <!--                               th:href="@{/admin/message/alertes-stock}"-->

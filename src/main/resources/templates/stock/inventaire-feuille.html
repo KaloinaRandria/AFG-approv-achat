@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${'Feuille de comptage ' + inv.reference}">Feuille de comptage</title>
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #0f1b3d; margin: 24px; }
+        h1 { font-size: 18px; margin: 0 0 4px; }
+        .entete { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .meta { color: #535d75; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #b9c0cf; padding: 6px 8px; }
+        th { background: #f1f3f7; text-align: left; }
+        td.saisie { width: 90px; }
+        td.obs { width: 30%; }
+        tr { page-break-inside: avoid; }
+        .signatures { display: flex; gap: 48px; margin-top: 32px; }
+        .signatures div { flex: 1; border-top: 1px solid #0f1b3d; padding-top: 6px; }
+        .imprimer { margin-bottom: 12px; }
+        @media print { .imprimer { display: none; } body { margin: 0; } thead { display: table-header-group; } }
+    </style>
+</head>
+<body>
+<div class="imprimer">
+    <button type="button" onclick="window.print()">Imprimer</button>
+</div>
+<div class="entete">
+    <div>
+        <h1>Feuille de comptage — <span th:text="${inv.reference}"></span></h1>
+        <div class="meta">
+            <span th:text="${inv.libellePerimetre}"></span> ·
+            ouvert le <span th:text="${#temporals.format(inv.dateOuverture, 'dd/MM/yyyy')}"></span>
+            par <span th:text="${inv.creePar.prenom + ' ' + inv.creePar.nom}"></span>
+        </div>
+    </div>
+    <div class="meta">Date du comptage : ____ / ____ / ________</div>
+</div>
+<!-- Comptage à l'aveugle : pas de stock théorique sur la feuille -->
+<table>
+    <thead>
+    <tr>
+        <th style="width: 32px;">#</th>
+        <th>Code</th>
+        <th>Désignation</th>
+        <th>UdM</th>
+        <th>Quantité comptée</th>
+        <th>Observation</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="l, it : ${inv.lignes}">
+        <td th:text="${it.count}"></td>
+        <td th:text="${l.article.codeArticle}"></td>
+        <td th:text="${l.article.designation}"></td>
+        <td th:text="${l.article.udm != null ? l.article.udm.acronyme : ''}"></td>
+        <td class="saisie"></td>
+        <td class="obs"></td>
+    </tr>
+    </tbody>
+</table>
+<div class="signatures">
+    <div>Compté par (nom et signature)</div>
+    <div>Recompté / contrôlé par (nom et signature)</div>
+</div>
+</body>
+</html>

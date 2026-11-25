@@ -2,6 +2,7 @@ package afg.achat.afgApprovAchat.model.stock;
 
 import afg.achat.afgApprovAchat.model.bonLivraison.BonLivraisonMere;
 import afg.achat.afgApprovAchat.model.demande.DemandeMere;
+import afg.achat.afgApprovAchat.model.stock.inventaire.Inventaire;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,6 +22,9 @@ public class StockMere {
     DemandeMere demandeMere;
     @ManyToOne @JoinColumn(name = "id_bl_mere", referencedColumnName = "id_bl_mere")
     BonLivraisonMere bonLivraisonMere;
+    /** Inventaire dont ce mouvement passe les écarts ; {@code null} pour les autres mouvements. */
+    @ManyToOne @JoinColumn(name = "id_inventaire", referencedColumnName = "id_inventaire")
+    Inventaire inventaire;
 
     public StockMere(DemandeMere demandeMere, BonLivraisonMere bonLivraisonMere) {
         this.setDemandeMere(demandeMere);

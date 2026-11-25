@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventaires</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section th:with="FN=${T(afg.achat.afgApprovAchat.service.util.FormatNumber)}">
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <!-- En-tête -->
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+            <div>
+                <h1 class="fw-bold text-gradient-blue mb-1">
+                    <i class="fas fa-clipboard-check icon-gradient-blue"></i> Inventaires
+                </h1>
+                <div class="text-muted small">
+                    Les Moyens Généraux ouvrent et comptent l'inventaire ; <strong th:text="${roleChecker}">MOYENS_GENERAUX + CHECKER</strong>,
+                    une autre personne, le valide. Le stock n'est ajusté qu'à la validation.
+                </div>
+            </div>
+            <button th:if="${peutSaisir}" type="button" class="btn btn-gradient-green"
+                    data-bs-toggle="modal" data-bs-target="#ouvrirModal">
+                <i class="fas fa-plus me-1"></i> Nouvel inventaire
+            </button>
+        </div>
+
+        <!-- Inventaires ouverts -->
+        <div class="card shadow-lg border-0 mb-3" th:if="${!#lists.isEmpty(ouverts)}">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="fas fa-hourglass-half text-warning me-2"></i> En cours
+                    <span class="badge bg-warning text-dark ms-1" th:text="${#lists.size(ouverts)}">0</span>
+                </h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center flex-wrap gap-2"
+                   th:each="o : ${ouverts}" th:href="@{/stock/inventaire/{id}(id=${o.id})}">
+                    <div>
+                        <span class="fw-semibold" th:text="${o.reference}"></span>
+                        <span class="text-muted ms-2" th:text="${o.libellePerimetre}"></span>
+                        <div class="small text-muted">
+                            Ouvert par <span th:text="${o.creePar.prenom + ' ' + o.creePar.nom}"></span>
+                            le <span th:text="${#temporals.format(o.dateOuverture, 'dd/MM/yyyy à HH:mm')}"></span>
+                        </div>
+                    </div>
+                    <span class="badge"
+                          th:classappend="${o.statut.name() == 'SOUMIS' ? 'bg-primary' : 'bg-warning text-dark'}"
+                          th:text="${o.statut.libelle}"></span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="card shadow-lg border-0 mb-3">
+            <div class="card-body">
+                <form method="get" th:action="@{/stock/inventaires}" class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Référence</label>
+                        <input class="form-control" type="text" name="reference" th:value="${reference}" placeholder="INV-…">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Périmètre</label>
+                        <select class="form-select" name="famille">
+                            <option value="" th:selected="${famille == null}">Tous</option>
+                            <option value="0" th:selected="${famille == 0}">Inventaires complets</option>
+                            <option th:each="f : ${familles}" th:value="${f.id}" th:text="${f.description}"
+                                    th:selected="${famille == f.id}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Statut</label>
+                        <select class="form-select" name="statut">
+                            <option value="" th:selected="${statut == ''}">Tous</option>
+                            <option th:each="s : ${statuts}" th:value="${s.name()}" th:text="${s.libelle}"
+                                    th:selected="${statut == s.name()}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Ouvert du</label>
+                        <input class="form-control" type="date" name="du" th:value="${du}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">au</label>
+                        <input class="form-control" type="date" name="au" th:value="${au}">
+                    </div>
+                    <div th:replace="~{fragment/pagination :: taille(${size})}"></div>
+                    <div class="col-md-10 d-flex gap-2 align-items-end">
+                        <button class="btn btn-gradient-blue" type="submit"><i class="fas fa-filter me-1"></i>Filtrer</button>
+                        <a class="btn btn-outline-secondary" th:href="@{/stock/inventaires}">Réinitialiser</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Historique -->
+        <div class="card shadow-lg border-0">
+            <div class="card-body">
+                <div class="text-muted small mb-2" th:text="${inventaires.totalElements} + ' inventaire(s)'"></div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>Référence</th>
+                            <th>Périmètre</th>
+                            <th>Ouvert le</th>
+                            <th>Par</th>
+                            <th class="text-center">Comptés</th>
+                            <th class="text-center">Écarts</th>
+                            <th class="text-end">Écart valorisé</th>
+                            <th>Statut</th>
+                            <th>Clôture</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${inventaires.totalElements == 0}">
+                            <td colspan="9" class="text-center text-muted py-4">Aucun inventaire.</td>
+                        </tr>
+                        <tr th:each="i : ${inventaires.content}"
+                            th:with="s=${syntheses.get(i.id)}">
+                            <td>
+                                <a class="fw-semibold text-decoration-none"
+                                   th:href="@{/stock/inventaire/{id}(id=${i.id})}" th:text="${i.reference}"></a>
+                            </td>
+                            <td th:text="${i.libellePerimetre}"></td>
+                            <td th:text="${#temporals.format(i.dateOuverture, 'dd/MM/yyyy HH:mm')}"></td>
+                            <td th:text="${i.creePar.prenom + ' ' + i.creePar.nom}"></td>
+                            <td class="text-center"
+                                th:text="${s != null ? s.comptees + ' / ' + s.lignes : '—'}"></td>
+                            <td class="text-center">
+                                <span th:if="${s != null and s.ecarts > 0}" class="badge bg-warning text-dark" th:text="${s.ecarts}"></span>
+                                <span th:if="${s == null or s.ecarts == 0}" class="text-muted">0</span>
+                            </td>
+                            <td class="text-end">
+                                <span th:if="${i.statut.name() == 'VALIDE' and s != null}"
+                                      th:classappend="${s.valeurNette < 0 ? 'text-danger' : (s.valeurNette > 0 ? 'text-success' : '')}"
+                                      th:text="${FN.montant(s.valeurNette, 'MGA')}"></span>
+                                <span th:unless="${i.statut.name() == 'VALIDE' and s != null}" class="text-muted">—</span>
+                            </td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${i.statut.name() == 'VALIDE' ? 'bg-success'
+                                                     : (i.statut.name() == 'SOUMIS' ? 'bg-primary'
+                                                     : (i.statut.name() == 'ANNULE' ? 'bg-secondary' : 'bg-warning text-dark'))}"
+                                      th:text="${i.statut.libelle}"></span>
+                            </td>
+                            <td class="small">
+                                <th:block th:if="${i.dateCloture != null}">
+                                    <span th:text="${#temporals.format(i.dateCloture, 'dd/MM/yyyy HH:mm')}"></span>
+                                    <div class="text-muted" th:if="${i.validePar != null}"
+                                         th:text="${i.validePar.prenom + ' ' + i.validePar.nom}"></div>
+                                </th:block>
+                                <span th:if="${i.dateCloture == null}" class="text-muted">—</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div th:replace="~{fragment/pagination :: pagination(${inventaires}, ${urlPagination})}"></div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Ouverture d'un inventaire -->
+<div class="modal fade" id="ouvrirModal" tabindex="-1" aria-labelledby="ouvrirModalLabel" aria-hidden="true" th:if="${peutSaisir}">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" th:action="@{/stock/inventaire/ouvrir}" data-chargement="Ouverture…">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ouvrirModalLabel"><i class="fas fa-clipboard-check me-2"></i>Nouvel inventaire</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="ouvrirFamille" class="form-label">Périmètre</label>
+                    <select class="form-select mb-1" id="ouvrirFamille" name="famille">
+                        <option value="">Inventaire complet (tous les articles actifs)</option>
+                        <option th:each="f : ${familles}" th:value="${f.id}" th:text="${'Famille : ' + f.description}"></option>
+                    </select>
+                    <div class="form-text mb-3">
+                        Un inventaire par famille permet de compter le magasin par zones (inventaire tournant).
+                        Un seul inventaire peut être ouvert à la fois sur un même périmètre.
+                    </div>
+                    <label for="ouvrirCommentaire" class="form-label">Commentaire</label>
+                    <textarea class="form-control" id="ouvrirCommentaire" name="commentaire" rows="2"
+                              placeholder="Ex. inventaire annuel 2026, équipe de comptage…"></textarea>
+                    <div class="alert alert-info small mt-3 mb-0">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Évitez les entrées et sorties sur ce périmètre pendant le comptage. Le stock théorique
+                        de chaque article est relevé au moment où sa quantité est saisie.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-gradient-green"><i class="fas fa-play me-1"></i> Ouvrir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

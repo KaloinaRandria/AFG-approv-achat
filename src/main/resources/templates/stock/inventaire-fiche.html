@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${'Inventaire ' + inv.reference}">Inventaire</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <style>
+        .inv-kpi { border: 1px solid var(--ui-line, #e6e9f0); border-radius: 12px; background: #fff; padding: .75rem 1rem; height: 100%; }
+        .inv-kpi .lib { font-size: .75rem; color: var(--ui-muted, #8a92a6); text-transform: uppercase; letter-spacing: .03em; }
+        .inv-kpi .val { font-size: 1.25rem; font-weight: 700; }
+        .inv-table td, .inv-table th { vertical-align: middle; }
+        .inv-table input.qte { width: 7.5rem; text-align: right; }
+        .inv-table input.qte.modifie { border-color: #0d6efd; background: #f0f6ff; }
+        .inv-table tr.ligne-ecart { background: #fff8e6; }
+        .inv-table .ecart-plus { color: #067647; font-weight: 600; }
+        .inv-table .ecart-moins { color: #b42318; font-weight: 600; }
+        .masquer-theorique .col-theo { display: none; }
+        /* Le titre en dégradé rend son texte transparent : le badge de statut retrouve sa couleur */
+        h1 .badge { -webkit-text-fill-color: currentColor; background-clip: border-box; -webkit-background-clip: border-box; }
+        .inv-barre-actions { position: sticky; bottom: 0; z-index: 5; background: #fff; border-top: 1px solid #e6e9f0; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+<div class="main-content">
+    <section th:with="FN=${T(afg.achat.afgApprovAchat.service.util.FormatNumber)}">
+        <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+        <!-- En-tête -->
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+            <div>
+                <a th:href="@{/stock/inventaires}" class="small text-decoration-none">
+                    <i class="fas fa-arrow-left me-1"></i> Inventaires
+                </a>
+                <h1 class="fw-bold text-gradient-blue mb-1">
+                    <i class="fas fa-clipboard-check icon-gradient-blue"></i>
+                    <span th:text="${inv.reference}">INV-2026-0001</span>
+                    <span class="badge fs-6 align-middle ms-2"
+                          th:classappend="${inv.statut.name() == 'VALIDE' ? 'bg-success'
+                                         : (inv.statut.name() == 'SOUMIS' ? 'bg-primary'
+                                         : (inv.statut.name() == 'ANNULE' ? 'bg-secondary' : 'bg-warning text-dark'))}"
+                          th:text="${inv.statut.libelle}"></span>
+                </h1>
+                <div class="text-muted">
+                    <span th:text="${inv.libellePerimetre}"></span>
+                    <span th:if="${inv.commentaire != null}" th:text="${' — ' + inv.commentaire}"></span>
+                </div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a th:if="${inv.estEnCours()}" class="btn btn-outline-secondary" target="_blank"
+                   th:href="@{/stock/inventaire/{id}/feuille(id=${inv.id})}">
+                    <i class="fas fa-print me-1"></i> Feuille de comptage
+                </a>
+                <th:block th:if="${peutDecider}">
+                    <form method="post" th:action="@{/stock/inventaire/{id}/valider(id=${inv.id})}"
+                          th:attr="data-confirmer=${'Valider l’inventaire ' + inv.reference + ' ?'}"
+                          th:data-confirmer-texte="${synthese.ecarts == 0 ? 'Aucun écart : le stock ne sera pas modifié.'
+                                : synthese.ecarts + ' écart(s) vont être passés en stock (sorties FIFO pour les manquants, entrées au dernier prix pour les excédents). Cette opération est définitive.'}"
+                          data-confirmer-bouton="Valider et ajuster le stock"
+                          data-confirmer-type="question"
+                          data-chargement="Validation…">
+                        <button type="submit" class="btn btn-gradient-green"><i class="fas fa-check me-1"></i> Valider</button>
+                    </form>
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejetModal">
+                        <i class="fas fa-undo me-1"></i> Renvoyer en comptage
+                    </button>
+                </th:block>
+                <button th:if="${peutAnnuler}" type="button" class="btn btn-outline-secondary"
+                        data-bs-toggle="modal" data-bs-target="#annulerModal">
+                    <i class="fas fa-ban me-1"></i> Annuler l'inventaire
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages d'état -->
+        <div class="alert alert-warning" th:if="${inv.estEnCours() and inv.motifRejet != null}">
+            <i class="fas fa-undo me-1"></i> <strong>Renvoyé en comptage :</strong>
+            <span th:text="${inv.motifRejet}"></span>
+        </div>
+        <div class="alert alert-primary" th:if="${inv.estSoumis() and !peutDecider}">
+            <i class="fas fa-user-clock me-1"></i>
+            En attente de validation par <strong th:text="${roleChecker}">MOYENS_GENERAUX + CHECKER</strong>
+            <span th:if="${estValideur}"> — vous avez ouvert ou compté cet inventaire : une autre personne doit le valider</span>.
+            Le stock n'est pas encore ajusté.
+        </div>
+        <div class="alert alert-light border" th:if="${peutDecider and ecartsSansJustification > 0}">
+            <i class="fas fa-exclamation-triangle text-warning me-1"></i>
+            <strong th:text="${ecartsSansJustification}">0</strong> écart(s) sans justification.
+        </div>
+
+        <!-- Indicateurs -->
+        <div class="row g-2 mb-3">
+            <div class="col-6 col-lg-3">
+                <div class="inv-kpi">
+                    <div class="lib">Avancement</div>
+                    <div class="val" th:text="${synthese.comptees + ' / ' + synthese.lignes}">0 / 0</div>
+                    <div class="progress mt-1" style="height: 6px;">
+                        <div class="progress-bar bg-success" th:style="${'width:' + synthese.avancement + '%'}"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="inv-kpi">
+                    <div class="lib">Articles en écart</div>
+                    <div class="val" th:classappend="${synthese.ecarts > 0 ? 'text-warning' : ''}" th:text="${synthese.ecarts}">0</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="inv-kpi">
+                    <div class="lib">Écart valorisé</div>
+                    <th:block th:if="${inv.statut.name() == 'VALIDE'}">
+                        <div class="val" th:classappend="${synthese.valeurNette < 0 ? 'text-danger' : (synthese.valeurNette > 0 ? 'text-success' : '')}"
+                             th:text="${FN.montant(synthese.valeurNette, 'MGA')}"></div>
+                        <div class="small text-muted">
+                            <span class="text-success" th:text="${'+ ' + FN.montant(synthese.valeurPlus, 'MGA')}"></span> /
+                            <span class="text-danger" th:text="${FN.montant(synthese.valeurMoins, 'MGA')}"></span>
+                        </div>
+                    </th:block>
+                    <div class="val text-muted" th:unless="${inv.statut.name() == 'VALIDE'}">—</div>
+                    <div class="small text-muted" th:unless="${inv.statut.name() == 'VALIDE'}">calculé à la validation</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="inv-kpi small">
+                    <div>Ouvert par <strong th:text="${inv.creePar.prenom + ' ' + inv.creePar.nom}"></strong>
+                        le <span th:text="${#temporals.format(inv.dateOuverture, 'dd/MM/yyyy HH:mm')}"></span></div>
+                    <div th:if="${inv.soumisPar != null}">Soumis par <strong th:text="${inv.soumisPar.prenom + ' ' + inv.soumisPar.nom}"></strong>
+                        le <span th:text="${#temporals.format(inv.dateSoumission, 'dd/MM/yyyy HH:mm')}"></span></div>
+                    <div th:if="${inv.validePar != null}">
+                        <span th:text="${inv.statut.name() == 'ANNULE' ? 'Annulé par' : 'Validé par'}"></span>
+                        <strong th:text="${inv.validePar.prenom + ' ' + inv.validePar.nom}"></strong>
+                        le <span th:text="${#temporals.format(inv.dateCloture, 'dd/MM/yyyy HH:mm')}"></span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lignes -->
+        <div class="card shadow-lg border-0 mb-3">
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                    <input type="search" class="form-control" id="filtreTexte" style="max-width: 18rem;"
+                           placeholder="Code ou désignation…">
+                    <select class="form-select" id="filtreEtat" style="max-width: 14rem;">
+                        <option value="">Tous les articles</option>
+                        <option value="non-compte" th:if="${peutCompter}">Non comptés</option>
+                        <option value="ecart">En écart</option>
+                    </select>
+                    <div class="form-check form-switch ms-2" th:if="${peutCompter}">
+                        <input class="form-check-input" type="checkbox" id="voirTheorique">
+                        <label class="form-check-label small" for="voirTheorique">Afficher le stock théorique</label>
+                    </div>
+                    <span class="small text-muted ms-auto" id="compteurLignes"></span>
+                </div>
+                <div class="small text-muted mb-2" th:if="${peutCompter}">
+                    <i class="fas fa-eye-slash me-1"></i>Comptage à l'aveugle : le stock théorique est masqué par défaut,
+                    pour compter ce qui est réellement en rayon. Saisissez <strong>0</strong> pour un article absent.
+                </div>
+
+                <form method="post" id="formComptage"
+                      th:action="@{/stock/inventaire/{id}/comptage(id=${inv.id})}"
+                      th:attr="data-chargement=${peutCompter ? 'Enregistrement…' : null}">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover inv-table" id="tableLignes"
+                               th:classappend="${peutCompter ? 'masquer-theorique' : ''}">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Code</th>
+                                <th>Désignation</th>
+                                <th>UdM</th>
+                                <th class="text-end col-theo">Théorique</th>
+                                <th class="text-end">Compté</th>
+                                <th class="text-end col-theo">Écart</th>
+                                <th class="text-end" th:if="${inv.estOuvert() and !peutCompter}">Stock actuel</th>
+                                <th class="text-end" th:if="${inv.statut.name() == 'VALIDE'}">P.U.</th>
+                                <th class="text-end" th:if="${inv.statut.name() == 'VALIDE'}">Valeur écart</th>
+                                <th>Justification</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="l : ${inv.lignes}"
+                                th:with="ecart=${l.ecart}"
+                                th:classappend="${l.aEcart() ? 'ligne-ecart' : ''}"
+                                th:attr="data-texte=${(l.article.codeArticle + ' ' + l.article.designation).toLowerCase()},
+                                         data-compte=${l.estCompte()}, data-ecart=${l.aEcart()}">
+                                <td class="text-nowrap fw-semibold" th:text="${l.article.codeArticle}"></td>
+                                <td th:text="${l.article.designation}"></td>
+                                <td class="small" th:text="${l.article.udm != null ? l.article.udm.acronyme : ''}"></td>
+                                <td class="text-end col-theo" th:text="${FN.quantite(l.stockTheorique)}"></td>
+                                <td class="text-end">
+                                    <input th:if="${peutCompter}" type="text" inputmode="decimal" autocomplete="off"
+                                           class="form-control form-control-sm qte ms-auto"
+                                           th:name="${'q_' + l.id}"
+                                           th:value="${FN.quantite(l.quantiteComptee)}"
+                                           th:attr="data-initial=${FN.quantite(l.quantiteComptee)}">
+                                    <span th:unless="${peutCompter}" th:text="${l.estCompte() ? FN.quantite(l.quantiteComptee) : '—'}"></span>
+                                </td>
+                                <td class="text-end col-theo">
+                                    <span th:if="${l.estCompte()}"
+                                          th:classappend="${ecart > 0.001 ? 'ecart-plus' : (ecart < -0.001 ? 'ecart-moins' : 'text-muted')}"
+                                          th:text="${(ecart > 0.001 ? '+' : '') + FN.quantite(ecart)}"></span>
+                                    <span th:unless="${l.estCompte()}" class="text-muted">—</span>
+                                </td>
+                                <td class="text-end" th:if="${inv.estOuvert() and !peutCompter}"
+                                    th:with="actuel=${stocksActuels.get(l.article.id)}"
+                                    th:text="${FN.quantite(actuel != null ? actuel : 0.0)}"></td>
+                                <td class="text-end small" th:if="${inv.statut.name() == 'VALIDE'}"
+                                    th:text="${l.prixUnitaire != null ? FN.nombre(l.prixUnitaire, 'MGA') : '—'}"></td>
+                                <td class="text-end" th:if="${inv.statut.name() == 'VALIDE'}">
+                                    <span th:if="${l.valeurEcart != null}"
+                                          th:classappend="${l.valeurEcart < 0 ? 'ecart-moins' : 'ecart-plus'}"
+                                          th:text="${FN.nombre(l.valeurEcart, 'MGA')}"></span>
+                                    <span th:if="${l.valeurEcart == null}" class="text-muted">—</span>
+                                </td>
+                                <td>
+                                    <input th:if="${peutCompter}" type="text" class="form-control form-control-sm justif"
+                                           th:name="${'c_' + l.id}" th:value="${l.commentaire}"
+                                           th:attr="data-initial=${l.commentaire != null ? l.commentaire : ''}"
+                                           placeholder="Casse, erreur de sortie…" maxlength="500">
+                                    <span th:unless="${peutCompter}" class="small"
+                                          th:text="${l.commentaire != null ? l.commentaire : ''}"></span>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="inv-barre-actions d-flex gap-2 justify-content-end py-2" th:if="${peutCompter}">
+                        <span class="small text-muted align-self-center me-auto" id="infoModifs"></span>
+                        <button type="submit" name="action" value="enregistrer" class="btn btn-gradient-blue">
+                            <i class="fas fa-save me-1"></i> Enregistrer le comptage
+                        </button>
+                        <button type="submit" name="action" value="soumettre" class="btn btn-gradient-green" id="btnSoumettre">
+                            <i class="fas fa-paper-plane me-1"></i> Enregistrer et soumettre
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Journal -->
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="fas fa-history me-2 text-muted"></i> Journal</h5>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0 small">
+                    <tbody>
+                    <tr th:each="e : ${inv.evenements}">
+                        <td class="text-nowrap ps-3" style="width: 11rem;" th:text="${#temporals.format(e.date, 'dd/MM/yyyy HH:mm')}"></td>
+                        <td style="width: 9rem;">
+                            <span class="badge"
+                                  th:classappend="${e.action.name() == 'VALIDATION' ? 'bg-success'
+                                                 : (e.action.name() == 'REJET' ? 'bg-danger'
+                                                 : (e.action.name() == 'ANNULATION' ? 'bg-secondary'
+                                                 : (e.action.name() == 'SOUMISSION' ? 'bg-primary' : 'bg-info text-dark')))}"
+                                  th:text="${e.action.libelle}"></span>
+                        </td>
+                        <td th:text="${e.auteur != null ? e.auteur.prenom + ' ' + e.auteur.nom : '—'}"></td>
+                        <td class="text-muted" th:text="${e.commentaire}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Rejet : motif obligatoire -->
+<div class="modal fade" id="rejetModal" tabindex="-1" aria-hidden="true" th:if="${peutDecider}">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" th:action="@{/stock/inventaire/{id}/rejeter(id=${inv.id})}" data-chargement="Envoi…">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-undo text-danger me-2"></i>Renvoyer en comptage</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="rejetMotif" class="form-label">Motif <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="rejetMotif" name="motif" rows="3" required
+                              placeholder="Ex. recompter ART000123 et ART000456, écarts trop importants"></textarea>
+                    <div class="form-text">Le stock n'est pas modifié ; l'inventaire repasse en comptage.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-undo me-1"></i> Renvoyer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Annulation -->
+<div class="modal fade" id="annulerModal" tabindex="-1" aria-hidden="true" th:if="${peutAnnuler}">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" th:action="@{/stock/inventaire/{id}/annuler(id=${inv.id})}" data-chargement="Annulation…">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-ban me-2"></i>Annuler l'inventaire</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="annulerMotif" class="form-label">Motif</label>
+                    <textarea class="form-control" id="annulerMotif" name="motif" rows="2"></textarea>
+                    <div class="form-text">L'inventaire reste dans l'historique ; le stock n'est pas modifié.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-ban me-1"></i> Annuler l'inventaire</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    (() => {
+        const table = document.getElementById('tableLignes');
+        const lignes = Array.from(table.querySelectorAll('tbody tr'));
+        const filtreTexte = document.getElementById('filtreTexte');
+        const filtreEtat = document.getElementById('filtreEtat');
+        const compteur = document.getElementById('compteurLignes');
+
+        function valeurQte(tr) {
+            const input = tr.querySelector('input.qte');
+            return input ? input.value.trim() : null;
+        }
+
+        function filtrer() {
+            const t = filtreTexte.value.trim().toLowerCase();
+            const etat = filtreEtat.value;
+            let visibles = 0;
+            lignes.forEach(tr => {
+                let ok = !t || tr.dataset.texte.includes(t);
+                if (ok && etat === 'non-compte') {
+                    const v = valeurQte(tr);
+                    ok = v !== null ? v === '' : tr.dataset.compte !== 'true';
+                }
+                if (ok && etat === 'ecart') ok = tr.dataset.ecart === 'true';
+                tr.style.display = ok ? '' : 'none';
+                if (ok) visibles++;
+            });
+            compteur.textContent = visibles + ' / ' + lignes.length + ' article(s)';
+        }
+        filtreTexte.addEventListener('input', filtrer);
+        filtreEtat.addEventListener('change', filtrer);
+        filtrer();
+
+        const voir = document.getElementById('voirTheorique');
+        if (voir) voir.addEventListener('change', () => table.classList.toggle('masquer-theorique', !voir.checked));
+
+        // Comptage : seuls les champs modifiés sont envoyés (un inventaire complet compte des centaines de lignes)
+        const form = document.getElementById('formComptage');
+        const champs = Array.from(form.querySelectorAll('input.qte, input.justif'));
+        const info = document.getElementById('infoModifs');
+        function majModifs() {
+            let n = 0;
+            champs.forEach(c => {
+                const modifie = c.value.trim() !== (c.dataset.initial || '').trim();
+                c.classList.toggle('modifie', modifie);
+                if (modifie) n++;
+            });
+            if (info) info.textContent = n ? n + ' champ(s) modifié(s) non enregistré(s)' : '';
+            return n;
+        }
+        champs.forEach(c => c.addEventListener('input', majModifs));
+
+        // Entrée : passe à la quantité suivante au lieu d'envoyer le formulaire
+        const qtes = champs.filter(c => c.classList.contains('qte'));
+        qtes.forEach((c, i) => c.addEventListener('keydown', e => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            const suivant = qtes.slice(i + 1).find(x => x.closest('tr').style.display !== 'none');
+            if (suivant) { suivant.focus(); suivant.select(); }
+        }));
+
+        let envoi = false;
+        form.addEventListener('submit', e => {
+            if (!champs.length) return;
+            if (e.submitter && e.submitter.value === 'soumettre' && !form.dataset.confirme) {
+                const nonComptes = qtes.filter(c => c.value.trim() === '').length;
+                if (nonComptes > 0) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    afficherAlerte(nonComptes + ' article(s) ne sont pas encore comptés. Saisissez 0 pour un article absent.', 'warning');
+                    return;
+                }
+                confirmerEnvoi(e, {
+                    titre: 'Soumettre l\'inventaire ?',
+                    texte: 'Le comptage ne sera plus modifiable, sauf renvoi par le valideur. Le stock ne sera ajusté qu\'à la validation.',
+                    bouton: 'Soumettre',
+                    type: 'question'
+                });
+                if (e.defaultPrevented) return;
+            }
+            champs.forEach(c => { if (c.value.trim() === (c.dataset.initial || '').trim()) c.disabled = true; });
+            envoi = true;
+        }, true);
+
+        window.addEventListener('beforeunload', e => {
+            if (!envoi && champs.length && majModifs() > 0) { e.preventDefault(); e.returnValue = ''; }
+        });
+    })();
+    /*]]>*/
+</script>
+</body>
+</html>

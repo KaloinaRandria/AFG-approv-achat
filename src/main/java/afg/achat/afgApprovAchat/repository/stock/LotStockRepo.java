@@ -27,6 +27,19 @@ public interface LotStockRepo extends JpaRepository<LotStock, Long> {
     """)
     double getStockDisponible(@Param("code") String code);
 
+    /** Stock disponible de plusieurs articles : [id article, quantité] (articles sans stock absents). */
+    @Query("""
+        SELECT l.article.id, SUM(l.quantiteRestante)
+        FROM LotStock l
+        WHERE l.article.id IN :ids
+        AND l.quantiteRestante > 0
+        GROUP BY l.article.id
+    """)
+    List<Object[]> stocksDisponibles(@Param("ids") java.util.Collection<Integer> ids);
+
+    /** Dernier lot reçu à un prix connu (valorisation d'un écart d'inventaire positif). */
+    java.util.Optional<LotStock> findFirstByArticle_IdAndPrixUnitaireGreaterThanOrderByDateEntreeDesc(int articleId, double prix);
+
     // Valeur totale du stock (pour reporting)
     @Query("""
         SELECT COALESCE(SUM(l.quantiteRestante * l.prixUnitaire), 0)

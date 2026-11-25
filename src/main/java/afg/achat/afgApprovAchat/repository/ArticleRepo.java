@@ -46,6 +46,15 @@ public interface ArticleRepo extends JpaRepository<Article,Integer>,
 
     List<Article> findByFamille(afg.achat.afgApprovAchat.model.Famille famille);
 
+    /** Articles actifs, tous ou d'une famille ({@code familleId} {@code null} : tous), par code. */
+    @Query("""
+        SELECT a FROM Article a LEFT JOIN a.famille f
+        WHERE (a.actif IS NULL OR a.actif = true)
+          AND (:familleId IS NULL OR f.id = :familleId)
+        ORDER BY a.codeArticle
+    """)
+    List<Article> findActifsParFamille(@Param("familleId") Integer familleId);
+
     long countByFamille(afg.achat.afgApprovAchat.model.Famille famille);
 
     /** Nombre d'articles par famille : [id famille, nombre]. */

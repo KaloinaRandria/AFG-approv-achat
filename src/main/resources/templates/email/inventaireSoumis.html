@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8" /></head>
+<body style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #0f1b3d;">
+<div class="container">
+    <p>Bonjour <span th:text="${destinataire.prenom + ' ' + destinataire.nom}"></span>,</p>
+    <p>
+        <span th:text="${maker.prenom + ' ' + maker.nom}"></span> a soumis le
+        <span th:text="${dateSoumission}"></span> un inventaire de stock qui attend votre validation :
+    </p>
+    <p>
+        <strong th:text="${reference}">INV-2026-0001</strong> —
+        <span th:text="${perimetre}">Inventaire complet</span><br/>
+        <span th:text="${lignes}">0</span> article(s) compté(s), dont
+        <strong th:text="${ecarts}">0</strong> en écart.
+    </p>
+    <p>
+        Le stock n'est ajusté qu'à la validation.<br/>
+        <a th:href="${lien}">Ouvrir l'inventaire pour le valider ou le renvoyer en comptage</a>
+    </p>
+    <br/>
+    <p>Cordialement,</p>
+    <p><img src="cid:signature-image" /></p>
+</div>
+</body>
+</html>
