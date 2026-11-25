@@ -83,7 +83,7 @@ CREATE INDEX IF NOT EXISTS idx_stock_mere_inventaire ON stock_mere (id_inventair
 
 
 -- Historique des mouvements : ajustements d'inventaire datés, référencés et attribués au valideur
--- (seule la première branche change par rapport à 2026-11-25_migration_PROD.sql)
+-- (seule la première branche change par rapport à 01_alignement_schema_preprod.sql)
 CREATE OR REPLACE VIEW v_historique_mouvement_stock AS
  WITH bs_confirme AS (
          SELECT bsf.id_bon_sortie_fille,
