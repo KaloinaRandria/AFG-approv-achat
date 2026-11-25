@@ -30,6 +30,22 @@ public interface DemandeFilleRepo extends JpaRepository<DemandeFille,Integer> {
                          @Param("statutRefuse") int statutRefuse);
 
     /**
+     * Lignes des demandes de la période (hors brouillons et lignes refusées) dont le mode
+     * d'approvisionnement est fixé : [STOCK ou ACHAT, nombre de lignes].
+     */
+    @Query("""
+    SELECT l.typeApprovisionnement, COUNT(l)
+    FROM DemandeFille l
+    WHERE l.demandeMere.dateDemande BETWEEN :du AND :au
+      AND l.demandeMere.statut <> 2
+      AND l.statut <> -1
+      AND l.typeApprovisionnement IS NOT NULL
+    GROUP BY l.typeApprovisionnement
+""")
+    List<Object[]> lignesParTypeApprovisionnement(@Param("du") java.time.LocalDateTime du,
+                                                  @Param("au") java.time.LocalDateTime au);
+
+    /**
      * Lignes à acheter : lignes non refusées des demandes de matériel validées, hors lignes
      * servies depuis le stock (scindées en type STOCK), dont le reste à commander est positif.
      * Reste = quantité demandée − sorties confirmées − commandes non annulées (voir BesoinAchatService).

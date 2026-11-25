@@ -134,11 +134,12 @@ public interface BonCommandeMereRepo extends JpaRepository<BonCommandeMere, Stri
 
 	/**
 	 * Bons validés sur la période (date de validation S.G., à défaut de création), par devise :
-	 * [code devise (null = bon antérieur, en ariary), nombre, montant TTC total]. Les montants de
-	 * devises différentes ne s'additionnent pas.
+	 * [code devise (null = bon antérieur, en ariary), nombre, montant TTC total, contre-valeur TTC
+	 * en ariary]. Les montants de devises différentes ne s'additionnent pas ; leurs contre-valeurs, si.
 	 */
 	@Query("""
-		SELECT d.acronyme, COUNT(bc), COALESCE(SUM(bc.montantTTC), 0)
+		SELECT d.acronyme, COUNT(bc), COALESCE(SUM(bc.montantTTC), 0),
+		       COALESCE(SUM(COALESCE(bc.montantTTCAriary, bc.montantTTC * COALESCE(bc.tauxChange, 1))), 0)
 		FROM BonCommandeMere bc LEFT JOIN bc.devise d
 		WHERE bc.statut = :statut
 		  AND COALESCE(bc.dateValidationSg, bc.dateCreation) BETWEEN :du AND :au
@@ -149,7 +150,7 @@ public interface BonCommandeMereRepo extends JpaRepository<BonCommandeMere, Stri
 
 	/**
 	 * Fournisseurs des bons validés sur la période, par devise : [nom, code devise (null = ariary),
-	 * nombre de bons, montant TTC]. Classés par contre-valeur en ariary (cours copié sur chaque bon),
+	 * nombre de bons, montant TTC]. Classés par contre-valeur en ariary (enregistrée sur chaque bon),
 	 * seulement pour l'ordre : les montants restent affichés dans leur devise.
 	 */
 	@Query("""
@@ -158,7 +159,7 @@ public interface BonCommandeMereRepo extends JpaRepository<BonCommandeMere, Stri
 		WHERE bc.statut = :statut
 		  AND COALESCE(bc.dateValidationSg, bc.dateCreation) BETWEEN :du AND :au
 		GROUP BY f.nom, d.acronyme
-		ORDER BY SUM(bc.montantTTC * COALESCE(bc.tauxChange, 1)) DESC
+		ORDER BY SUM(COALESCE(bc.montantTTCAriary, bc.montantTTC * COALESCE(bc.tauxChange, 1))) DESC
 		""")
 	List<Object[]> topFournisseurs(@Param("statut") BonCommandeMere.StatutBonCommande statut,
 	                               @Param("du") LocalDateTime du, @Param("au") LocalDateTime au,

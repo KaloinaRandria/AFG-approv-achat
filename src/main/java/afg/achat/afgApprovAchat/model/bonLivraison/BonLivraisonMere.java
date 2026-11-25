@@ -44,6 +44,28 @@ public class BonLivraisonMere {
     @ManyToOne @JoinColumn(name = "id_bc_mere", referencedColumnName = "id_bc_mere")
     BonCommandeMere bonCommandeMere;
 
+    /**
+     * {@link #totalPrix} en ariary, recalculé à chaque enregistrement : au cours figé du bon de
+     * commande réceptionné (comme la valorisation du stock), sinon au cours de la devise du BL.
+     */
+    @Column(name = "total_prix_ariary")
+    Double totalPrixAriary;
+
+    @PrePersist
+    @PreUpdate
+    void calculerContreValeurAriary() {
+        if (totalPrix == null) {
+            totalPrixAriary = null;
+        } else if (bonCommandeMere != null) {
+            totalPrixAriary = bonCommandeMere.contreValeurAriary(totalPrix);
+        } else {
+            boolean ariary = devise == null || devise.getAcronyme() == null
+                    || Devise.CODE_REFERENCE.equalsIgnoreCase(devise.getAcronyme());
+            double cours = ariary || devise.getCoursAriary() <= 0 ? 1 : devise.getCoursAriary();
+            totalPrixAriary = Math.round(totalPrix * cours * 100) / 100.0;
+        }
+    }
+
     public void setId(IdGenerator idGenerator) {
         this.id = idGenerator.generateId("BL","bon_livraison_mere_id_bl_mere_seq");
     }

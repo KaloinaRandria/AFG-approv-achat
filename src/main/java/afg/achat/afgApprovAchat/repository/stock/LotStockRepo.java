@@ -40,6 +40,33 @@ public interface LotStockRepo extends JpaRepository<LotStock, Long> {
     /** Dernier lot reçu à un prix connu (valorisation d'un écart d'inventaire positif). */
     java.util.Optional<LotStock> findFirstByArticle_IdAndPrixUnitaireGreaterThanOrderByDateEntreeDesc(int articleId, double prix);
 
+    /** Stock disponible : [valeur au coût des lots, nombre d'articles en stock]. */
+    @Query("""
+        SELECT COALESCE(SUM(l.quantiteRestante * l.prixUnitaire), 0), COUNT(DISTINCT l.article.id)
+        FROM LotStock l
+        WHERE l.quantiteRestante > 0
+    """)
+    List<Object[]> valeurStock();
+
+    /**
+     * Articles dormants : en stock depuis avant {@code depuis} et sans aucune sortie depuis
+     * cette date. [nombre d'articles, valeur immobilisée].
+     */
+    @Query(nativeQuery = true, value = """
+        SELECT COUNT(*), COALESCE(SUM(v.valeur), 0)
+        FROM (SELECT l.id_article, SUM(l.quantite_restante * l.prix_unitaire) AS valeur,
+                     MIN(l.date_entree) AS premiere_entree
+              FROM lot_stock l
+              WHERE l.quantite_restante > 0
+              GROUP BY l.id_article) v
+        WHERE v.premiere_entree < :depuis
+          AND NOT EXISTS (SELECT 1 FROM v_historique_mouvement_stock h
+                          WHERE h.id_article = v.id_article
+                            AND h.type_mouvement = 'SORTIE'
+                            AND h.date_mouvement >= :depuis)
+    """)
+    List<Object[]> articlesDormants(@Param("depuis") java.time.LocalDateTime depuis);
+
     // Valeur totale du stock (pour reporting)
     @Query("""
         SELECT COALESCE(SUM(l.quantiteRestante * l.prixUnitaire), 0)

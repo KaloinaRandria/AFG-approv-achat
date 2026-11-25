@@ -48,6 +48,14 @@ public interface DocumentEnDevise {
         return montant * getTauxEffectif();
     }
 
+    /**
+     * Contre-valeur en ariary à enregistrer (au centime), {@code null} si le montant ne l'est pas.
+     * Calculée au cours figé du document : elle ne bouge plus quand le cours de la devise change.
+     */
+    default Double contreValeurAriary(Double montant) {
+        return montant == null ? null : Math.round(enAriary(montant) * 100) / 100.0;
+    }
+
     /** Montant en ariary exprimé dans la devise du document. */
     default double depuisAriary(double montantAriary) {
         return montantAriary / getTauxEffectif();

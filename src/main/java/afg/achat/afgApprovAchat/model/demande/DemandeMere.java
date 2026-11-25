@@ -90,6 +90,21 @@ public class DemandeMere implements DocumentEnDevise {
     @Column(name = "date_taux")
     LocalDateTime dateTaux;
 
+    // ── Contre-valeurs en ariary (monnaie de référence), recalculées à chaque enregistrement ──
+    /** {@link #totalEstime} en ariary, au cours de la demande. */
+    @Column(name = "total_estime_ariary")
+    Double totalEstimeAriary;
+    /** {@link #totalPrix} en ariary, au cours de la demande. */
+    @Column(name = "total_prix_ariary")
+    Double totalPrixAriary;
+
+    @PrePersist
+    @PreUpdate
+    void calculerContreValeursAriary() {
+        totalEstimeAriary = contreValeurAriary(totalEstime);
+        totalPrixAriary = contreValeurAriary(totalPrix);
+    }
+
     /**
      * Suivi opérationnel après la validation finale. Il ne fait pas partie du
      * workflow de validation : une demande reste donc VALIDEE après son envoi

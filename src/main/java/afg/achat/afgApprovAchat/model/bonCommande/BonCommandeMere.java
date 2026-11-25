@@ -78,6 +78,19 @@ public class BonCommandeMere implements DocumentEnDevise {
     @Column(name = "date_taux")
     LocalDateTime dateTaux;
 
+    // ── Contre-valeurs en ariary (monnaie de référence), recalculées à chaque enregistrement ──
+    @Column(name = "montant_ht_ariary")
+    Double montantHTAriary;
+    @Column(name = "montant_ttc_ariary")
+    Double montantTTCAriary;
+
+    @PrePersist
+    @PreUpdate
+    void calculerContreValeursAriary() {
+        montantHTAriary = contreValeurAriary(montantHT);
+        montantTTCAriary = contreValeurAriary(montantTTC);
+    }
+
     // ── Informations du bon de commande imprimé ─────────────────────────────
 
     @Column(name = "modalite_paiement")

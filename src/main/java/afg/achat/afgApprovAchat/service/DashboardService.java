@@ -176,8 +176,15 @@ public class DashboardService {
                     return m;
                 }).toList();
 
-        // ── 8. Demandes par service ───────────────────────────────────────
-        List<ServiceDemandeDTO> demandesParService = demandeMereRepository.countDemandesByService();
+        // ── 8. Dépenses par service (période et périmètre de l'utilisateur), en ariary ──
+        List<ServiceDemandeDTO> demandesParService = (isAdminOrSpecial
+                ? demandeMereRepository.depensesParServiceAll(from, to)
+                : (demandeurIds == null || demandeurIds.isEmpty() ? List.<ServiceDemandeDTO>of()
+                        : demandeMereRepository.depensesParServiceByDemandeurIds(demandeurIds, from, to)))
+                .stream()
+                .sorted(java.util.Comparator.comparingDouble(ServiceDemandeDTO::getMontantTotal).reversed()
+                        .thenComparing(ServiceDemandeDTO::nbDemande, java.util.Comparator.reverseOrder()))
+                .toList();
 
         return new DashboardStatsDTO(
                 enCours, refusees, terminees,

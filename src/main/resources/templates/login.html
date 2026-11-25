@@ -1,80 +1,161 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
 
 <head>
-<meta charset="UTF-8" />
-<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-<link rel="icon" th:href="@{/img/favicon.png}" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ACHAT-APPROV     - LOGIN</title>
-    <!-- `src/main/resources/templates/login.html` -->
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" th:href="@{/img/favicon.png}" />
+    <title>AFG Procure - Connexion</title>
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <style>
+        :root {
+            --afg-bleu: #001051;       /* bleu de la charte */
+            --afg-bleu-2: #00129f;
+            --afg-vert: #0ca30c;
+            --afg-encre: #0f1b3d;
+            --afg-gris: #535d75;
+            --afg-ligne: #e6e9f0;
+        }
+        html, body { height: 100%; }
+        body { margin: 0; background: #fff; color: var(--afg-encre); }
+
+        .login { display: flex; min-height: 100vh; }
+
+        /* ── Moitié gauche : illustration sur le bleu de la charte ── */
+        .login-visuel {
+            flex: 1 1 50%;
+            position: relative;
+            overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            background:
+                radial-gradient(ellipse at 30% 15%, rgba(0, 18, 159, .55), transparent 60%),
+                var(--afg-bleu);
+            padding: 3rem;
+        }
+        /* Moitié du bâtiment, en très grand : collée au bord droit (côté formulaire) et plus haute
+           que l'écran, elle déborde comme si le bâtiment continuait derrière le formulaire */
+        .login-visuel img {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            /* Suit aussi la largeur : sur grand écran, le panneau est large et le bâtiment doit grandir */
+            height: max(90vh, 60vw);
+            width: auto;
+            max-width: none;
+            pointer-events: none;
+            user-select: none;
+        }
+        .login-visuel .legende {
+            position: absolute; left: 2.5rem; top: 2rem; z-index: 1;
+            color: rgba(255, 255, 255, .7); font-size: .85rem; letter-spacing: .02em;
+        }
+
+        /* ── Moitié droite : identification ── */
+        .login-formulaire {
+            flex: 1 1 50%;
+            display: flex; align-items: center; justify-content: center;
+            padding: 3rem 1.5rem;
+        }
+        .login-carte { width: 100%; max-width: 400px; }
+        .login-logo { height: 56px; width: auto; display: block; margin-bottom: 1.75rem; }
+        .login-titre {
+            font-size: 2rem; font-weight: 800; line-height: 1.1; margin: 0;
+            color: var(--afg-bleu); letter-spacing: -.01em;
+        }
+        .login-titre span { color: var(--afg-vert); }
+        .login-sous-titre { color: var(--afg-gris); margin: .5rem 0 2rem; }
+
+        .login-carte .form-label { font-weight: 600; font-size: .9rem; color: var(--afg-encre); }
+        .login-carte .form-control {
+            height: 46px; border-radius: 10px; border-color: var(--afg-ligne);
+        }
+        .login-carte .form-control:focus { border-color: var(--afg-bleu-2); box-shadow: 0 0 0 .2rem rgba(0, 18, 159, .12); }
+        .login-carte .input-group .form-control { border-right: 0; }
+        .login-carte .input-group-text {
+            background: #fff; border-color: var(--afg-ligne); border-radius: 0 10px 10px 0;
+            color: var(--afg-gris); cursor: pointer;
+        }
+        .btn-connexion {
+            height: 48px; border-radius: 10px; font-weight: 700; border: 0; color: #fff;
+            background: linear-gradient(45deg, var(--afg-bleu), var(--afg-bleu-2));
+        }
+        .btn-connexion:hover, .btn-connexion:focus { color: #fff; filter: brightness(1.15); }
+        .login-pied { margin-top: 2.5rem; font-size: .8rem; color: #8a92a6; }
+
+        /* Écran étroit : l'illustration devient un bandeau au-dessus du formulaire */
+        @media (max-width: 991.98px) {
+            .login { flex-direction: column; }
+            .login-visuel { flex: 0 0 auto; min-height: 200px; padding: 1.5rem; }
+            /* Bandeau : on garde la partie avec l'enseigne AFG */
+            .login-visuel img { height: 520px; bottom: -150px; }
+            .login-visuel .legende { display: none; }
+            .login-formulaire { padding: 2rem 1rem 3rem; }
+        }
+    </style>
 </head>
 <body>
-	<div class="vh-100 d-flex justify-content-center align-items-center">
-		<div class="container">
-			<div class="row d-flex justify-content-center">
-				<div class="col-12 col-md-8 col-lg-5">
-					<div class="card bg-white" style="border-radius : 15px">
-						<div class="card-body p-5" style="background-color : #001051; border-radius : 15px">
-						<img th:src="@{/img/logo_afg_email.png}" style="margin-left: auto;margin-right: auto;display: block;">
-							<form class="mb-3 mt-md-4" th:action="@{/login}" method="post">
-							<div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert" th:text="${errorMessage}"></div>
-								<div class="mb-3">
-									<label class="form-label" style="color:white"><strong>Email</strong></label> <input
-										type="text" class="form-control" name="email"
-										placeholder="xxxxxxxx@afgbank.mg" value=""  required>
-								</div>
-                                <div class="mb-3">
-                                    <label class="form-label" style="color:white"><strong>Mot de passe</strong></label>
-                                    <div class="input-group">
-                                        <input
-                                                type="password" class="form-control" name="password"
-                                                placeholder="*******"
-                                                id="password"
-                                                value=""
-                                                required>
+<main class="login">
 
-                                        <span class="input-group-text" style="cursor:pointer"
-                                              onclick="togglePassword()">
-                                            <i class="fa fa-eye" id="toggleIcon"></i>
-                                        </span>
-                                    </div>
-                                </div>
-								<br>
-								<div class="col-md-4" style="margin-left: auto;margin-right: auto;display: block;">
-									<div class="d-grid">
-										<button class="btn btn-success btn-sm" type="submit"><i class="fas fa-door-open"></i> Se connecter</button>
-									</div>
-								</div>
-								
-							</form>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-<script th:inline="javascript">
-    /*<![CDATA[*/
+    <!-- Moitié gauche : bâtiment AFG sur le bleu de la charte -->
+    <section class="login-visuel" aria-hidden="true">
+        <img th:src="@{/img/afg_affichage_login.png}" alt="">
+        <div class="legende">AFG Bank Madagascar · Atlantic Group</div>
+    </section>
+
+    <!-- Moitié droite : identification -->
+    <section class="login-formulaire">
+        <div class="login-carte">
+            <img class="login-logo" th:src="@{/img/logo_afg.png}" alt="AFG Bank">
+            <h1 class="login-titre">AFG <span>Procure</span></h1>
+            <p class="login-sous-titre">Approvisionnement et achats — connectez-vous avec votre compte AFG Bank.</p>
+
+            <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
+                <i class="fas fa-exclamation-circle me-1"></i><span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- data-chargement : roue sur le bouton et bouton bloqué pendant la connexion (load_script) -->
+            <form th:action="@{/login}" method="post" data-chargement="Connexion…">
+                <div class="mb-3">
+                    <label class="form-label" for="email">Adresse e-mail</label>
+                    <input type="text" class="form-control" id="email" name="email"
+                           placeholder="prenom.nom@afgbank.mg" autocomplete="username" autofocus required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label" for="password">Mot de passe</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="password" name="password"
+                               placeholder="Votre mot de passe" autocomplete="current-password" required>
+                        <span class="input-group-text" role="button" tabindex="0"
+                              aria-label="Afficher le mot de passe" onclick="togglePassword()"
+                              onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); togglePassword(); }">
+                            <i class="fa fa-eye" id="toggleIcon"></i>
+                        </span>
+                    </div>
+                </div>
+                <div class="d-grid">
+                    <button class="btn btn-connexion" type="submit">
+                        <i class="fas fa-sign-in-alt me-2"></i>Se connecter
+                    </button>
+                </div>
+            </form>
+
+            <div class="login-pied">© AFG Bank Madagascar — usage interne</div>
+        </div>
+    </section>
+</main>
+
+<script>
     function togglePassword() {
-        const input = document.getElementById("password");
-        const icon = document.getElementById("toggleIcon");
-
-        if (input.type === "password") {
-            input.type = "text";
-            icon.classList.remove("fa-eye");
-            icon.classList.add("fa-eye-slash");
-        } else {
-            input.type = "password";
-            icon.classList.remove("fa-eye-slash");
-            icon.classList.add("fa-eye");
-        }
+        const input = document.getElementById('password');
+        const icon = document.getElementById('toggleIcon');
+        const visible = input.type === 'password';
+        input.type = visible ? 'text' : 'password';
+        icon.classList.toggle('fa-eye', !visible);
+        icon.classList.toggle('fa-eye-slash', visible);
     }
-    /*]]>*/
 </script>
 </body>
-
 </html>

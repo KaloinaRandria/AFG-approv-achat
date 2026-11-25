@@ -47,6 +47,11 @@ public class TableauDeBordService {
     /** Au-delà, un élément en attente est signalé comme en retard. */
     public static final int JOURS_AVANT_RETARD = 3;
 
+    /** Un article en stock sans aucune sortie depuis ce nombre de jours est dormant. */
+    public static final int JOURS_DORMANT = 180;
+
+    private final afg.achat.afgApprovAchat.repository.stock.LotStockRepo lotStockRepo;
+    private final afg.achat.afgApprovAchat.repository.demande.DemandeFilleRepo demandeFilleRepo;
     private final DemandeMereRepo demandeMereRepo;
     private final ValidationDemandeRepo validationDemandeRepo;
     private final BonCommandeMereRepo bonCommandeMereRepo;
@@ -258,12 +263,36 @@ public class TableauDeBordService {
         public boolean plusLente() { return largeur == 100; }
     }
 
-    /** @param montants achats engagés par devise, l'ariary en premier */
-    public record Indicateurs(long nombreBc, List<MontantDevise> montants,
+    /**
+     * @param montants     achats engagés par devise, l'ariary en premier
+     * @param totalAriary  contre-valeur en ariary de tous les achats engagés, toutes devises confondues
+     */
+    public record Indicateurs(long nombreBc, List<MontantDevise> montants, double totalAriary,
                               List<Fournisseur> topFournisseurs,
                               long bcValides, long bcRecus, Double tauxReception,
                               long bcEnRetard, long alertesStock,
-                              List<DelaiEtape> delais) {
+                              List<DelaiEtape> delais,
+                              DelaiLivraison delaiLivraison, IndicateursStock stock) {
+    }
+
+    /**
+     * Délai de bout en bout (création de la demande → dernière sortie de stock confirmée) des
+     * demandes entièrement livrées sur la période.
+     *
+     * @param tauxATemps part livrée au plus tard à la date souhaitée, en % ({@code null} sans date souhaitée)
+     */
+    public record DelaiLivraison(long nombre, Double joursMoyens, Double joursMedian, Double tauxATemps) {
+    }
+
+    /**
+     * @param valeur           valeur du stock disponible (coût des lots FIFO), en ariary
+     * @param dormants         articles en stock sans sortie depuis {@link #JOURS_DORMANT} jours
+     * @param valeurDormante   valeur immobilisée dans ces articles
+     * @param tauxServiceStock part des lignes de demande de la période servies depuis le stock, en %
+     */
+    public record IndicateursStock(double valeur, long articles, long dormants, double valeurDormante,
+                                   Double tauxServiceStock, long lignesTypees) {
+        public int getJoursDormant() { return JOURS_DORMANT; }
     }
 
     /** Ordre d'affichage des étapes (ordre du circuit). */
@@ -278,10 +307,12 @@ public class TableauDeBordService {
 
         // Par devise ; les bons antérieurs (sans devise) sont en ariary
         Map<String, double[]> parDevise = new java.util.TreeMap<>();
+        double totalAriary = 0;
         for (Object[] r : bonCommandeMereRepo.totauxValides(valide, debut, fin)) {
             double[] cumul = parDevise.computeIfAbsent(codeDevise(r[0]), k -> new double[2]);
             cumul[0] += nombre(r[1]);
             cumul[1] += r[2] == null ? 0 : ((Number) r[2]).doubleValue();
+            totalAriary += r[3] == null ? 0 : ((Number) r[3]).doubleValue();
         }
         List<MontantDevise> montants = parDevise.entrySet().stream()
                 .map(e -> new MontantDevise(e.getKey(), (long) e.getValue()[0], e.getValue()[1]))
@@ -309,12 +340,45 @@ public class TableauDeBordService {
                 valide, BonCommandeService.RECEPTIONS_OUVERTES, LocalDateTime.now()));
 
         return new Indicateurs(
-                nombreBc, montants,
+                nombreBc, montants, totalAriary,
                 top,
                 total, recus, total == 0 ? null : Math.round(recus * 1000.0 / total) / 10.0,
                 nombre(aRecevoir[1]),
                 stockAlerteService.countAlertes(),
-                delaisParEtape(debut, fin));
+                delaisParEtape(debut, fin),
+                delaiLivraison(debut, fin),
+                indicateursStock(debut, fin));
+    }
+
+    DelaiLivraison delaiLivraison(LocalDateTime debut, LocalDateTime fin) {
+        Object[] r = premiere(demandeMereRepo.delaiLivraison(debut, fin));
+        long n = nombre(r[0]);
+        if (n == 0) return new DelaiLivraison(0, null, null, null);
+        long avecDate = nombre(r[4]);
+        return new DelaiLivraison(n, arrondi1(r[1]), arrondi1(r[2]),
+                avecDate == 0 ? null : Math.round(nombre(r[3]) * 1000.0 / avecDate) / 10.0);
+    }
+
+    IndicateursStock indicateursStock(LocalDateTime debut, LocalDateTime fin) {
+        Object[] valeur = premiere(lotStockRepo.valeurStock());
+        Object[] dormants = premiere(lotStockRepo.articlesDormants(LocalDateTime.now().minusDays(JOURS_DORMANT)));
+        long stock = 0, total = 0;
+        for (Object[] r : demandeFilleRepo.lignesParTypeApprovisionnement(debut, fin)) {
+            long n = nombre(r[1]);
+            total += n;
+            if (r[0] != null && "STOCK".equals(r[0].toString())) stock += n;
+        }
+        return new IndicateursStock(decimal(valeur[0]), nombre(valeur[1]),
+                nombre(dormants[0]), decimal(dormants[1]),
+                total == 0 ? null : Math.round(stock * 1000.0 / total) / 10.0, total);
+    }
+
+    private static Double arrondi1(Object o) {
+        return o == null ? null : Math.round(((Number) o).doubleValue() * 10.0) / 10.0;
+    }
+
+    private static double decimal(Object o) {
+        return o == null ? 0 : ((Number) o).doubleValue();
     }
 
     /**

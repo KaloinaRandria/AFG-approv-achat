@@ -472,6 +472,12 @@
                             <span th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).nombre(m.montantTtc, m.devise)}"></span>
                             <small th:text="${m.devise + ' TTC'}">MGA TTC</small>
                         </div>
+                        <!-- Plusieurs devises, ou une devise étrangère : total en ariary (contre-valeurs enregistrées) -->
+                        <div class="db-mini-sub fw-semibold"
+                             th:if="${#lists.size(indicateurs.montants) > 1
+                                     or (#lists.size(indicateurs.montants) == 1 and indicateurs.montants[0].devise != 'MGA')}">
+                            ≈ <span th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).montant(indicateurs.totalAriary, 'MGA')}"></span> TTC au total
+                        </div>
                         <div class="db-mini-sub">
                             <span th:text="${indicateurs.nombreBc}"></span> bon(s)
                             <th:block th:each="m : ${indicateurs.montants}">
@@ -507,6 +513,59 @@
                         <div class="db-mini-value"><span th:text="${indicateurs.alertesStock}"></span> <small>article(s)</small></div>
                         <div class="db-mini-sub">En rupture ou sous le seuil</div>
                     </a>
+                </div>
+            </div>
+
+            <!-- Délai de bout en bout et stock -->
+            <div class="row g-3 mb-3" th:with="dl=${indicateurs.delaiLivraison}, st=${indicateurs.stock},
+                                              FN=${T(afg.achat.afgApprovAchat.service.util.FormatNumber)}">
+                <div class="col-xl-3 col-md-6">
+                    <div class="db-card db-mini">
+                        <div class="db-mini-label"><i class="fas fa-stopwatch"></i>Délai de livraison</div>
+                        <div class="db-mini-value" th:if="${dl.nombre > 0}">
+                            <span th:text="${dl.joursMedian}">0</span> <small>j (médiane)</small>
+                        </div>
+                        <div class="db-mini-value" th:if="${dl.nombre == 0}">— </div>
+                        <div class="db-mini-sub" th:if="${dl.nombre > 0}">
+                            Moy. <span th:text="${dl.joursMoyens}"></span> j
+                            · <span th:text="${dl.nombre}"></span> demande(s) livrée(s)
+                            <th:block th:if="${dl.tauxATemps != null}">
+                                · <span th:text="${dl.tauxATemps}"></span> % à la date souhaitée
+                            </th:block>
+                        </div>
+                        <div class="db-mini-sub" th:if="${dl.nombre == 0}">De la demande à la dernière sortie : aucune demande soldée sur la période</div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <a class="db-card db-mini" th:href="@{/stock/etat-stock}">
+                        <div class="db-mini-label"><i class="fas fa-warehouse"></i>Valeur du stock</div>
+                        <div class="db-mini-value">
+                            <span th:text="${FN.nombre(st.valeur, 'MGA')}"></span> <small>MGA</small>
+                        </div>
+                        <div class="db-mini-sub"><span th:text="${st.articles}"></span> article(s) en stock · coût des lots, aujourd'hui</div>
+                    </a>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="db-card db-mini" th:classappend="${st.dormants > 0} ? 'alerte'">
+                        <div class="db-mini-label"><i class="fas fa-hourglass-end"></i>Articles dormants</div>
+                        <div class="db-mini-value"><span th:text="${st.dormants}"></span> <small>article(s)</small></div>
+                        <div class="db-mini-sub">
+                            <span th:text="${FN.montant(st.valeurDormante, 'MGA')}"></span> immobilisés
+                            · aucune sortie depuis <span th:text="${st.joursDormant}"></span> j
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="db-card db-mini">
+                        <div class="db-mini-label"><i class="fas fa-dolly"></i>Taux de service du stock</div>
+                        <div class="db-mini-value">
+                            <span th:text="${st.tauxServiceStock != null ? st.tauxServiceStock + ' %' : '—'}"></span>
+                        </div>
+                        <div class="db-mini-sub">
+                            Lignes de demande servies depuis le stock
+                            <th:block th:if="${st.lignesTypees > 0}">(sur <span th:text="${st.lignesTypees}"></span>)</th:block>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -643,8 +702,8 @@
                     <div class="db-card">
                         <div class="db-card-head">
                             <div>
-                                <h2 class="db-card-title">Demandes par service</h2>
-                                <div class="db-card-sub">Classées par volume</div>
+                                <h2 class="db-card-title">Dépenses par service</h2>
+                                <div class="db-card-sub">Montant estimé des demandes de la période, en ariary : validées, puis encore dans le circuit (hors refus)</div>
                             </div>
                             <span class="db-hint"><i class="fas fa-mouse-pointer me-1"></i>Cliquable</span>
                         </div>
@@ -903,12 +962,39 @@
                     if (n) window.location.href = listUrl + '?statut=' + n.statut;
                 });
 
-                // ── 6. Par service (hauteur adaptée au nombre de services)
-                const services = (demandesParService || []).slice().sort((a, b) => (b.nbDemande || 0) - (a.nbDemande || 0));
+                // ── 6. Dépenses par service, en ariary (déjà triées ; hauteur adaptée au nombre de services)
+                const services = demandesParService || [];
                 const servEl = document.getElementById('servicesChart');
-                servEl.style.height = Math.max(220, services.length * 34 + 20) + 'px';
-                hbar('servicesChart', services.map(d => d.acronymeService ?? 'N/A'), services.map(d => d.nbDemande),
-                    p => window.location.href = listUrl + '?demandeur=' + encodeURIComponent(p.name), C.navy);
+                servEl.style.height = Math.max(220, services.length * 34 + 40) + 'px';
+                const fmtMga = n => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n || 0) + ' MGA';
+                const fmtCourt = n => n >= 1e9 ? (n / 1e9).toFixed(1).replace('.', ',') + ' Md'
+                    : n >= 1e6 ? (n / 1e6).toFixed(1).replace('.', ',') + ' M'
+                    : n >= 1e3 ? Math.round(n / 1e3) + ' k' : fmt(Math.round(n));
+                const servLabels = services.map(d => d.acronymeService ?? 'Sans service');
+                const valides = services.map(d => d.montantValide || 0);
+                const enCoursServ = services.map(d => d.montantEnCours || 0);
+                if (services.length === 0) make('servicesChart', empty());
+                else make('servicesChart', {
+                    legend: { top: 0, right: 0, itemWidth: 10, itemHeight: 10, textStyle: { color: C.ink2, fontSize: 11.5 } },
+                    grid: { left: 4, right: 56, top: 28, bottom: 4, containLabel: true },
+                    tooltip: Object.assign({}, TOOLTIP, { trigger: 'axis', axisPointer: { type: 'shadow' },
+                        formatter: ps => {
+                            const d = services[ps[0].dataIndex];
+                            return '<b>' + ps[0].name + '</b> · ' + fmt(d.nbDemande) + ' demande(s)<br>'
+                                + 'Validées : <b>' + fmtMga(d.montantValide) + '</b><br>'
+                                + 'Dans le circuit : <b>' + fmtMga(d.montantEnCours) + '</b>';
+                        } }),
+                    xAxis: Object.assign({}, VALUE_AXIS, { minInterval: 0, axisLabel: { show: false }, splitLine: { show: false } }),
+                    yAxis: Object.assign({}, CAT_AXIS, { data: servLabels, inverse: true, axisLine: { show: false } }),
+                    series: [
+                        { name: 'Validées', type: 'bar', stack: 'm', barMaxWidth: 18, data: valides,
+                          itemStyle: { color: C.navy } },
+                        { name: 'Dans le circuit', type: 'bar', stack: 'm', barMaxWidth: 18, data: enCoursServ,
+                          itemStyle: { color: C.blueLight, borderRadius: [0, 4, 4, 0] },
+                          label: { show: true, position: 'right', color: C.ink, fontWeight: 700, fontSize: 12,
+                                   formatter: p => fmtCourt(valides[p.dataIndex] + enCoursServ[p.dataIndex]) } }
+                    ]
+                }, p => window.location.href = listUrl + '?demandeur=' + encodeURIComponent(p.name));
 
                 // ── Redimensionnement
                 let t;

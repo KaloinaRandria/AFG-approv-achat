@@ -9,6 +9,7 @@ exécuter en production, dans l'ordre de leur numéro.
 |----|--------|---------|--------------------|-----------------|
 | 01 | `01_alignement_schema_preprod.sql` | Alignement du schéma PROD sur la PREPROD au 25/11/2026 (regroupe les anciens scripts de `scriptSQL/`) | oui | **non** |
 | 02 | `02_inventaire_stock.sql` | Inventaires du stock : tables, lien `stock_mere` → `inventaire`, vue de l'historique des mouvements | oui (25/11/2026) | **non** |
+| 03 | `03_contre_valeurs_ariary.sql` | Contre-valeurs en ariary enregistrées sur les demandes, bons de commande et bons de livraison, avec reprise de l'existant | non | **non** |
 
 ## Mode d'emploi
 

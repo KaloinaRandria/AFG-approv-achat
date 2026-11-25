@@ -62,6 +62,64 @@ public interface DemandeMereRepo
             @Param("from") LocalDateTime from,
             @Param("to")   LocalDateTime to
     );
+
+    /**
+     * Délai de bout en bout des demandes entièrement livrées (soldées) dont la dernière sortie
+     * confirmée tombe dans la période : [nombre, jours moyens, jours médians, livrées au plus tard
+     * à la date souhaitée, demandes ayant une date souhaitée].
+     */
+    @Query(nativeQuery = true, value = """
+        WITH fin AS (
+            SELECT bs.id_demande_mere, MAX(COALESCE(bs.date_confirmation, bs.date_creation)) AS date_fin
+            FROM bon_sortie_mere bs
+            WHERE bs.statut = 'CONFIRME'
+            GROUP BY bs.id_demande_mere
+        ), d AS (
+            SELECT EXTRACT(EPOCH FROM (f.date_fin - dm.date_demande)) / 86400.0 AS jours,
+                   CASE WHEN dm.date_sortie IS NULL THEN NULL
+                        WHEN CAST(f.date_fin AS date) <= CAST(dm.date_sortie AS date) THEN 1 ELSE 0 END AS a_temps
+            FROM demande_mere dm
+            JOIN fin f ON f.id_demande_mere = dm.id_demande_mere
+            WHERE dm.etat_livraison = 'SOLDEE'
+              AND f.date_fin BETWEEN :du AND :au
+        )
+        SELECT COUNT(*), AVG(jours), PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY jours),
+               COALESCE(SUM(a_temps), 0), COUNT(a_temps)
+        FROM d
+        """)
+    List<Object[]> delaiLivraison(@Param("du") LocalDateTime du, @Param("au") LocalDateTime au);
+
+    /**
+     * Dépenses par service du demandeur sur la période (hors brouillons et refus) : nombre de
+     * demandes, montant en ariary des demandes validées, puis de celles encore dans le circuit.
+     */
+    @Query("""
+        SELECT new afg.achat.afgApprovAchat.DTO.ServiceDemandeDTO(
+            s.acronyme, COUNT(dm),
+            SUM(CASE WHEN dm.statut = 15 THEN COALESCE(dm.totalEstimeAriary, dm.totalPrixAriary, 0.0) ELSE 0.0 END),
+            SUM(CASE WHEN dm.statut <> 15 THEN COALESCE(dm.totalEstimeAriary, dm.totalPrixAriary, 0.0) ELSE 0.0 END))
+        FROM DemandeMere dm LEFT JOIN dm.demandeur u LEFT JOIN u.service s
+        WHERE dm.dateDemande >= :from AND dm.dateDemande <= :to
+          AND dm.statut <> 2 AND dm.statut <> -1
+        GROUP BY s.acronyme
+        """)
+    List<ServiceDemandeDTO> depensesParServiceAll(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    @Query("""
+        SELECT new afg.achat.afgApprovAchat.DTO.ServiceDemandeDTO(
+            s.acronyme, COUNT(dm),
+            SUM(CASE WHEN dm.statut = 15 THEN COALESCE(dm.totalEstimeAriary, dm.totalPrixAriary, 0.0) ELSE 0.0 END),
+            SUM(CASE WHEN dm.statut <> 15 THEN COALESCE(dm.totalEstimeAriary, dm.totalPrixAriary, 0.0) ELSE 0.0 END))
+        FROM DemandeMere dm LEFT JOIN dm.demandeur u LEFT JOIN u.service s
+        WHERE u.id IN :ids
+          AND dm.dateDemande >= :from AND dm.dateDemande <= :to
+          AND dm.statut <> 2 AND dm.statut <> -1
+        GROUP BY s.acronyme
+        """)
+    List<ServiceDemandeDTO> depensesParServiceByDemandeurIds(@Param("ids") List<Integer> ids,
+                                                             @Param("from") LocalDateTime from,
+                                                             @Param("to") LocalDateTime to);
+
     // Compteurs par statut (All vs Filtered)
     @Query("""
         SELECT dm.statut, COUNT(dm)
