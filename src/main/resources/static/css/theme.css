@@ -687,7 +687,6 @@ table.dataTable tbody tr:hover { background-color: #f3f6fc; }
         padding: .8rem 1rem;
         margin-bottom: 1rem;
         border: 1px solid var(--ui-line);
-        border-left: 4px solid var(--ui-brand);
         border-radius: 10px;
         background: #fafbfd;
         font-size: .88rem;
@@ -706,7 +705,7 @@ table.dataTable tbody tr:hover { background-color: #f3f6fc; }
     }
     .ui-callout-title { font-weight: 700; color: var(--ui-ink); margin-bottom: .15rem; }
     .ui-callout-meta { font-size: .78rem; color: var(--ui-muted); }
-    .ui-callout-danger { border-left-color: #d03b3b; background: #fff8f8; }
+    .ui-callout-danger { border-color: #f3c4c4; background: #fff8f8; }
     .ui-callout-danger .ui-callout-icon { background: #fdecec; color: #b42318; }
     .ui-callout-danger .ui-callout-title { color: #b42318; }
 
@@ -862,7 +861,7 @@ table.dataTable tbody tr:hover { background-color: #f3f6fc; }
 /* Motif et description */
 .dm-texts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .dm-text { border: 1px solid var(--ui-line); border-radius: 12px; padding: .8rem .95rem; background: var(--ui-surface); }
-.dm-text.dm-motif { border-left: 4px solid var(--ui-brand-2); }
+.dm-text.dm-motif { background: #f7f9fd; }
 .dm-text p { margin: 0; white-space: pre-wrap; color: var(--ui-ink); }
 
 @media screen and (max-width: 768px) {

@@ -16,7 +16,8 @@
 -- (CREATE / ALTER / DROP) : les évolutions passent par les scripts de ce dossier.
 --
 -- Le mot de passe n'est PAS dans ce script (il serait dans Git). Après exécution :
---   ALTER ROLE achat_approv_preprod_app PASSWORD '<mot de passe fort>';
+--   ALTER ROLE achat_approv_preprod_app PASSWORD 'Test@1234';
+-- ALTER ROLE achat_approv_migr_app PASSWORD 'Test@1234';
 -- puis le reporter dans application-secret.properties (non suivi par Git) avec
 --   spring.datasource.username=achat_approv_preprod_app
 --

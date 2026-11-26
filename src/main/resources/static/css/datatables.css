@@ -290,8 +290,7 @@ html.nav-en-cours, html.nav-en-cours * { cursor: progress !important; }
 .sidebar-sous-menu .sidebar-sub {
     padding: .42rem .6rem;
     margin-left: .35rem;
-    border-left: 2px solid rgba(255, 255, 255, .12);
-    border-radius: 0 6px 6px 0;
+    border-radius: 6px;
     font-size: .9rem;
     white-space: nowrap;
     overflow: hidden;
@@ -301,20 +300,14 @@ html.nav-en-cours, html.nav-en-cours * { cursor: progress !important; }
     background: rgba(255, 255, 255, .08);
 }
 
-/* Entrée active : fond blanc léger et liseré à gauche (sobre, sans dégradé ni ombre) */
+/* Entrée active : fond blanc léger (sobre, sans liseré, dégradé ni ombre) */
 .sidebar-sub.active,
 .sidebar-link.active {
     background: rgba(255, 255, 255, .12) !important;
     color: #fff !important;
     border-radius: 6px;
     font-weight: 600;
-    box-shadow: inset 3px 0 0 rgba(255, 255, 255, .9);
-}
-/* Sous-menu : le liseré remplace le trait vertical du groupe */
-.sidebar-sous-menu .sidebar-sub.active {
-    border-left-color: rgba(255, 255, 255, .9);
     box-shadow: none;
-    border-radius: 0 6px 6px 0;
 }
 
 /* Sous-menu ouvert : titre en blanc, fond à peine marqué */
@@ -1239,11 +1232,11 @@ table.dataTable tbody tr:hover {
 }
 
 .notification-item.alert-rupture {
-    border-left: 4px solid #dc3545;
+    background-color: rgba(220, 53, 69, .06);
 }
 
 .notification-item.alert-seuil {
-    border-left: 4px solid #ffc107;
+    background-color: rgba(255, 193, 7, .1);
 }
 
 @keyframes slideIn {
@@ -1287,7 +1280,6 @@ table.dataTable tbody tr:hover {
 
 .mv-row {
     transition: background .15s ease;
-    border-left: 4px solid transparent;
 }
 
 .mv-row:hover {
@@ -1296,12 +1288,10 @@ table.dataTable tbody tr:hover {
 
 .mv-entree {
     background: rgba(25, 135, 84, .06);
-    border-left-color: #198754;
 }
 
 .mv-sortie {
     background: rgba(220, 53, 69, .06);
-    border-left-color: #dc3545;
 }
 
 .mv-pill {
