@@ -1,6 +1,6 @@
 # Plan de migration : référentiel utilisateurs commun (AFG-approv-achat + AFG-process)
 
-> Statut : **proposition**, rien n'est exécuté. Rédigé le 26/11/2026 à partir de l'état des deux dépôts
+> Statut : décisions validées ; phase 0 commitée, phase 1 prête (non exécutée). Rédigé le 26/11/2026 à partir de l'état des deux dépôts
 > (achat : `fb8a0d7`, process : `ffc6c8b`).
 
 ## 1. Objectif
@@ -39,17 +39,19 @@ Côté achat, `Utilisateur` est référencé par **23 colonnes dans 11 entités*
 Avec une base séparée, chacune deviendrait un simple identifiant, sans FK ni jointure, et toutes les
 requêtes JPQL du type `JOIN dm.demandeur u JOIN u.service s` (`DemandeMereRepo`) seraient à réécrire.
 
-## 3. Décisions à valider avant de commencer
+## 3. Décisions
 
-| # | Question | Proposition |
+Toutes validées le 26/11/2026.
+
+| # | Question | Décision |
 |---|---|---|
 | D1 | Qui crée / modifie les utilisateurs ? | L'appli achat seule (écran Organisation + `DemandeCompte`). |
 | D2 | Les rôles sont-ils communs ou par appli ? | Par appli : `public.utilisateur_role` et `process.utilisateur_role`. |
 | D3 | Qui gère les directions ? Aujourd'hui **les deux** (`OrganisationService` côté achat, `DirectionController` côté process). | Achat seule ; l'écran Directions de process passe en lecture. |
 | D4 | Les valideurs (`utilisateur_validateur`) sont-ils communs ? | Oui, dans `referentiel` (process ne les utilise pas encore). |
-| D5 | Garde-t-on les noms actuels de l'achat (`service`, `id_service`) ou renomme-t-on en `direction` ? | Garder en phase 1 (zéro risque côté achat) ; renommer éventuellement plus tard. |
+| D5 | Garde-t-on les noms actuels de l'achat (`service`, `id_service`) ou renomme-t-on en `direction` ? | On garde les noms actuels ; renommage éventuel plus tard. |
 | D6 | Une base fusionnée, ou on garde `PROCESS_xxx` à part ? | Fusionner : c'est la condition pour avoir de vraies FK. |
-| D7 | Nom de la base PROD de process ? | À confirmer (seul `PROCESS_PREPROD` est connu). |
+| D7 | Nom de la base PROD de process ? | Il n'y a **pas encore de base PROD** pour process sur le serveur (seulement `PROCESS_PREPROD` et `PROCESS_UAT`). En PROD, process sera donc installé directement dans le schéma `process` de `ACHAT_APPROV_PROD`, sans reprise de données ; l'import de la phase 2 ne concerne que la PREPROD (et l'UAT si elle doit être conservée). |
 
 ## 4. Inventaire de l'existant
 
@@ -168,48 +170,55 @@ ignoré lors d'un `mvnw test` normal. Variable `SPRING_DATASOURCE_URL` pour vise
 
 ### Phase 1 — Référentiel dans la base achat (SQL + petit changement Java achat)
 
-Script `scriptSQL/PROD/06_schema_referentiel.sql` :
+**Statut (26/11/2026)** : script et code prêts, **rien n'est exécuté**.
 
-```sql
-BEGIN;
-CREATE SCHEMA IF NOT EXISTS referentiel;
+Script [`scriptSQL/PROD/06_schema_referentiel.sql`](../scriptSQL/PROD/06_schema_referentiel.sql), par `postgres`, application arrêtée :
 
--- SET SCHEMA déplace aussi index, contraintes et séquences des colonnes ;
--- les FK venant des tables de public restent valides.
-ALTER TABLE public.service                 SET SCHEMA referentiel;
-ALTER TABLE public.poste                   SET SCHEMA referentiel;
-ALTER TABLE public.pdp                     SET SCHEMA referentiel;
-ALTER TABLE public.utilisateur             SET SCHEMA referentiel;
-ALTER TABLE public.utilisateur_validateur  SET SCHEMA referentiel;
-ALTER TABLE public.demande_compte          SET SCHEMA referentiel;
+- crée le schéma `referentiel` et y déplace `service`, `poste`, `pdp`, `utilisateur`,
+  `utilisateur_validateur`, `demande_compte` (`ALTER TABLE … SET SCHEMA` : données, index,
+  contraintes, séquences identity et droits suivent ; les 32 FK entrantes et la vue
+  `v_historique_mouvement_stock` restent valides — vérifié sur la PREPROD le 26/11/2026) ;
+- ajoute `service.actif` (pour process, D3) ;
+- donne au login `<base>_app` (script 05) l'usage du schéma et les droits par défaut sur ses
+  futures tables ; s'arrête si le login n'existe pas ;
+- règle `search_path = public, referentiel` **au niveau de la base** (toutes les connexions,
+  pgAdmin compris), filet de sécurité pour le SQL écrit à la main ;
+- affiche 4 contrôles, et contient en commentaire le bloc de retour arrière.
 
-ALTER TABLE referentiel.service ADD COLUMN IF NOT EXISTS actif boolean NOT NULL DEFAULT true;
+Les droits de lecture du login process sur `referentiel` sont donnés en phase 2, quand process
+arrive dans la base.
 
--- Droits
-GRANT USAGE ON SCHEMA referentiel TO app_achat, app_process;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA referentiel TO app_achat;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA referentiel TO app_achat;
-GRANT SELECT ON ALL TABLES IN SCHEMA referentiel TO app_process;
-
--- Filet de sécurité pour le SQL non qualifié (vues recréées, scripts manuels)
-ALTER ROLE app_achat SET search_path = public, referentiel;
-COMMIT;
-```
-
-Changements Java achat (6 annotations) :
+Changements Java achat :
 
 | Fichier | Changement |
 |---|---|
-| `model/utilisateur/Utilisateur.java` | `@Table(name = "utilisateur", schema = "referentiel")` ; `@JoinTable(name = "utilisateur_validateur", schema = "referentiel", …)` ; `utilisateur_role` reste **sans** schéma (public) |
-| `model/utilisateur/Poste.java` | `@Table(name = "poste", schema = "referentiel")` |
-| `model/util/Service.java` | `@Table(name = "service", schema = "referentiel")` + champ `actif` |
-| `model/utilisateur/Pdp.java` | `@Table(name = "pdp", schema = "referentiel")` |
-| `model/utilisateur/DemandeCompte.java` | `@Table(name = "demande_compte", schema = "referentiel")` |
-| `application.properties` | `ddl-auto=validate`, login `app_achat` |
+| `model/Referentiel.java` (nouveau) | constante `SCHEMA = "referentiel"` |
+| `model/utilisateur/Utilisateur.java` | `@Table(…, schema = Referentiel.SCHEMA)` ; idem sur `@JoinTable utilisateur_validateur` ; `utilisateur_role` reste dans public |
+| `model/utilisateur/Poste.java`, `Pdp.java`, `DemandeCompte.java`, `model/util/Service.java` | `@Table(…, schema = Referentiel.SCHEMA)` |
 
-Tests : connexion AD et connexion de test, écran Organisation, création d'un compte par
-`DemandeCompte` (maker puis checker), création et validation d'une demande, bon de commande,
-inventaire, historique des mouvements de stock (vue).
+`service.actif` n'est pas encore mappé côté achat (valeur par défaut `true`) : à ajouter quand
+l'écran Organisation devra désactiver une direction.
+
+⚠️ **Script et code vont ensemble** : la nouvelle version ne démarre pas tant que le script n'a pas
+été exécuté (`Schema-validation: missing table [referentiel.demande_compte]`), et l'ancienne version
+ne démarre plus après.
+
+**Déroulé**
+
+1. Répétition : créer `ACHAT_APPROV_MIGR` (phase 0), y exécuter `05` puis `06`, lire les contrôles.
+2. Vérifier le code contre cette base :
+   ```powershell
+   $env:SPRING_DATASOURCE_URL = 'jdbc:postgresql://10.25.10.151:5432/ACHAT_APPROV_MIGR'
+   .\mvnw test "-Dtest=SchemaValidationTest" "-Dschema.validation=true"
+   ```
+   (le login `achat_approv_preprod_app` n'a pas accès à `ACHAT_APPROV_MIGR` : exécuter `05` sur
+   `ACHAT_APPROV_MIGR` crée `achat_approv_migr_app`, à mettre temporairement dans
+   `application-secret.properties`, ou lancer le test avec `SPRING_DATASOURCE_USERNAME` /
+   `SPRING_DATASOURCE_PASSWORD`.)
+3. Démarrer l'appli sur `ACHAT_APPROV_MIGR` et tester : connexion AD et connexion de test, écran
+   Organisation, création d'un compte par `DemandeCompte` (maker puis checker), création et
+   validation d'une demande, bon de commande, inventaire, historique des mouvements de stock.
+4. PREPROD : arrêter l'appli, exécuter `06`, déployer la nouvelle version, refaire le tour du point 3.
 
 La phase 1 peut partir en PROD **seule** : l'appli achat fonctionne comme avant, process n'est pas
 encore touchée.

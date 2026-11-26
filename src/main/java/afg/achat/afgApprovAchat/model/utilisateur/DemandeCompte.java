@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.model.utilisateur;
 
+import afg.achat.afgApprovAchat.model.Referentiel;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,7 +18,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(name = "demande_compte")
+@Table(name = "demande_compte", schema = Referentiel.SCHEMA)
 public class DemandeCompte {
 
     public enum TypeDemande {

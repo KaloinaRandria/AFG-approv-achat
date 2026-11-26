@@ -1,6 +1,7 @@
 package afg.achat.afgApprovAchat.model.utilisateur;
 
 
+import afg.achat.afgApprovAchat.model.Referentiel;
 import afg.achat.afgApprovAchat.model.util.Service;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -16,7 +17,7 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "utilisateur")
+@Table(name = "utilisateur", schema = Referentiel.SCHEMA)
 public class Utilisateur {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_utilisateur")
     int id;
@@ -41,7 +42,7 @@ public class Utilisateur {
     Service service;
     @ManyToMany
     @JoinTable(
-            name = "utilisateur_validateur",
+            name = "utilisateur_validateur", schema = Referentiel.SCHEMA,
             joinColumns = @JoinColumn(name = "id_utilisateur"),
             inverseJoinColumns = @JoinColumn(name = "id_validateur")
     )

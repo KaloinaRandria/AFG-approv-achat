@@ -1,5 +1,6 @@
 package afg.achat.afgApprovAchat.model.utilisateur;
 
+import afg.achat.afgApprovAchat.model.Referentiel;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,7 +12,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "poste")
+@Table(name = "poste", schema = Referentiel.SCHEMA)
 public class Poste {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "id_poste")
     int id;
