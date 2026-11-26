@@ -1,6 +1,6 @@
 # Plan de migration : référentiel utilisateurs commun (AFG-approv-achat + AFG-process)
 
-> Statut : décisions validées ; phase 0 commitée, phase 1 exécutée en PREPROD le 26/11/2026 (PROD : non). Rédigé le 26/11/2026 à partir de l'état des deux dépôts
+> Statut : décisions validées ; phase 0 commitée, phases 1 et 2 exécutées en PREPROD le 26/11/2026 (PROD : non). Rédigé le 26/11/2026 à partir de l'état des deux dépôts
 > (achat : `fb8a0d7`, process : `ffc6c8b`).
 
 ## 1. Objectif
@@ -223,30 +223,43 @@ ne démarre plus après.
 La phase 1 peut partir en PROD **seule** : l'appli achat fonctionne comme avant, process n'est pas
 encore touchée.
 
-### Phase 2 — Import de process dans la même base (SQL)
+### Phase 2 — Process dans la base commune (SQL)
 
-Script `scriptSQL/PROD/07_import_process.sql`, après restauration du dump process dans un schéma
-`process` de la base commune (`pg_dump -n public PROCESS_xxx`, restauration, puis
-`ALTER SCHEMA public RENAME TO process` sur une base de transit, ou `sed` du nom de schéma) :
+**Statut** : **répétée sur `ACHAT_APPROV_MIGR` le 26/11/2026** : 9 tables, 4 rôles, 11 attributions, 2 demandes, 7 FK vers `referentiel` ; login `process_migr_app` : écrit dans `process`, lit `referentiel` sans pouvoir y écrire, aucun accès aux tables de l'achat ; le login achat n'a aucun accès à `process`. **Exécutée en PREPROD le 26/11/2026** (mêmes résultats ; relevé de `PROCESS_PREPROD` revérifié juste avant, identique ; lecture des données réussie avec le login `process_preprod_app` sur `ACHAT_APPROV_PREPROD`). PROD : non exécutée.
 
-1. **Directions** : table de correspondance `process.map_direction(id_direction_process, id_service)`,
-   remplie par `acronyme = code`, complétée à la main, et insertion dans `referentiel.service` des
-   directions absentes côté achat. Contrôle : aucune direction process sans correspondance.
-2. **Utilisateurs** : table `process.map_utilisateur(id_process, id_referentiel)` remplie par
-   `lower(trim(mail))`. Les utilisateurs process absents de l'achat sont insérés dans
-   `referentiel.utilisateur` (nom, prenom, mail, actif, id_service via `map_direction`).
-   Contrôle : nombre d'utilisateurs process = nombre de lignes de `map_utilisateur`, et liste des
-   homonymes à mails différents (doublons possibles à vérifier avec le métier).
-3. **Réécriture des FK** de `evaluation`, `procedure`, `demande_utilisateur`, `utilisateur_role`
-   avec les tables de correspondance (supprimer d'abord les anciennes FK, mettre à jour, puis
-   recréer les FK vers `referentiel.utilisateur(id_utilisateur)` et `referentiel.service(id_service)`).
-4. `DROP TABLE process.utilisateur, process.direction;`
-5. Droits : `app_process` reçoit lecture + écriture sur toutes les tables et séquences de
-   `process` (`GRANT USAGE ON SCHEMA process`, `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES …`,
-   `GRANT USAGE, SELECT ON ALL SEQUENCES …`), puis
-   `ALTER ROLE app_process SET search_path = process, referentiel;`
+Relevé de `PROCESS_PREPROD` le 26/11/2026 (lecture seule), qui a simplifié la phase par rapport
+au plan initial (plus besoin de `pg_dump` ni de tables de correspondance) :
 
-Garder les tables `map_*` quelques semaines pour pouvoir tracer.
+| Donnée | PROCESS_PREPROD | Correspondance dans le référentiel |
+|---|---|---|
+| Utilisateurs | 147 | **147 / 147** par mail. 2 écarts issus de tests dans process, ignorés (le référentiel fait foi, D1) : prénom « Said Ibrahim test » (abdoul.malik), compte désactivé dans process mais actif dans le référentiel (aina.razafinimanana) |
+| Directions | 20 | **20 / 20** par `code = acronyme` |
+| Rôles / attributions | 4 / 11 | repris par nom de rôle et mail |
+| Demandes maker / checker | 2 (validées) | reprises, maker / checker / cible par mail, direction par code |
+| Procédures, questions, choix, évaluations | **0** | rien à reprendre |
+
+Le référentiel contient en plus un utilisateur sans adresse mail (id 134), inconnu de process.
+
+Deux scripts, par `postgres`, sur la base commune :
+
+1. [`scriptSQL/PROD/07_schema_process.sql`](../scriptSQL/PROD/07_schema_process.sql) — PREPROD **et**
+   PROD : crée le schéma `process` et ses 9 tables, **vides**, sans table utilisateur ni direction :
+   leurs FK pointent vers `referentiel.utilisateur` et `referentiel.service` (les colonnes
+   `id_direction` gardent leur nom). Crée le login `process_<env>_app` s'il n'existe pas
+   (`process_preprod_app` existe déjà ; `process_prod_app`, `process_migr_app` seront créés sans mot
+   de passe), lui donne lecture / écriture sur `process`, **lecture seule** sur `referentiel`, rien
+   sur `public`, et `search_path = process, referentiel` pour ce login dans cette base. Contrôles en
+   fin de script.
+2. [`scriptSQL/reprise_process_preprod.sql`](../scriptSQL/reprise_process_preprod.sql) — PREPROD
+   seulement (hors dossier PROD) : rôles, 11 attributions, 2 demandes. S'arrête si un mail est
+   introuvable dans le référentiel.
+
+Rien ne change pour les applis en service : l'appli process continue de tourner sur
+`PROCESS_PREPROD` jusqu'au déploiement de sa nouvelle version (phase 3). Ce qui y serait saisi
+d'ici là ne serait pas repris : refaire le relevé juste avant la bascule.
+
+**Déroulé** : `07` puis la reprise sur `ACHAT_APPROV_MIGR`, lecture des contrôles ; puis
+`ACHAT_APPROV_PREPROD`. `PROCESS_PREPROD` est conservée jusqu'à la validation de la phase 3.
 
 ### Phase 3 — Adaptation de l'appli process (Java)
 
@@ -271,7 +284,7 @@ Les deux applis ont des versions de Spring Boot différentes (3.3.5 et 4.2.0, do
 | 1 | Sauvegarde des deux bases PROD | — |
 | 2 | Exécuter `06_schema_referentiel.sql`, déployer l'achat (phase 1), tests de fumée | achat seule, ~15 min |
 | 3 | Quelques jours d'observation | — |
-| 4 | Arrêter process, exécuter `07_import_process.sql`, lire les contrôles | process seule |
+| 4 | Exécuter `07_schema_process.sql` (process n'a pas de données à reprendre en PROD), définir le mot de passe de `process_prod_app` | process seule |
 | 5 | Déployer process (phase 3), tests de fumée | process seule |
 | 6 | Mettre à jour `scriptSQL/PROD/README.md` | — |
 
@@ -284,7 +297,7 @@ version précédente. Phase 2 → restauration de la sauvegarde de la base proce
 | Risque | Parade |
 |---|---|
 | Hibernate `update` recrée des tables ou modifie le référentiel | `ddl-auto=validate` dans les deux applis (phase 0) |
-| Même personne avec deux mails différents dans les deux applis | Liste des homonymes produite par le script 07, arbitrage métier avant la PROD |
+| Même personne avec deux mails différents dans les deux applis | Vérifié en PREPROD le 26/11/2026 : 147 / 147 utilisateurs process retrouvés par mail, aucun doublon |
 | Directions sans correspondance | Table `map_direction` validée à la main ; le script s'arrête s'il en reste |
 | Process écrit encore dans le référentiel par un chemin oublié | Login `app_process` en `SELECT` seul : l'erreur apparaît immédiatement |
 | Script SQL qui recrée une vue sans préfixe de schéma | `search_path` des logins + règle « toujours écrire `referentiel.` » dans le README |
