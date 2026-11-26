@@ -50,6 +50,19 @@ public class FormatNumber {
         return nombre(montant, decimales(code)) + " " + code;
     }
 
+    /**
+     * Cours d'une devise en ariary, sans le code : 2 décimales (« 5 029,58 »), jusqu'à 4 sous
+     * 100 MGA pour les petites devises (« 7,6675 » pour le XOF). Vide si non renseigné.
+     */
+    public static String cours(Double cours) {
+        if (cours == null) return "";
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols();
+        symbols.setGroupingSeparator(' ');
+        symbols.setDecimalSeparator(',');
+        symbols.setMinusSign('-');
+        return new DecimalFormat(Math.abs(cours) < 100 ? "#,##0.00##" : "#,##0.00", symbols).format(cours);
+    }
+
     /** Montant sans le code de la devise, avec les décimales de la devise. */
     public static String nombre(Double montant, String codeDevise) {
         if (montant == null) return "";

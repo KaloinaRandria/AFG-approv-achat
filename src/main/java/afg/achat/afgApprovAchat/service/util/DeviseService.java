@@ -29,6 +29,10 @@ public class DeviseService {
         deviseRepo.save(devise);
     }
 
+    public boolean existeAcronyme(String acronyme) {
+        return deviseRepo.findByAcronymeIgnoreCase(acronyme).isPresent();
+    }
+
     public Optional<Devise> getDeviseById(int id) {
         return deviseRepo.findById(id);
     }

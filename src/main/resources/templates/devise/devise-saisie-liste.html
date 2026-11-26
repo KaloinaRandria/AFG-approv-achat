@@ -4,463 +4,591 @@
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
-    <title>Devise et Cours</title>
+    <title>Devises et cours</title>
     <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
     <th:block th:insert="~{fragment/font :: font}"></th:block>
     <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <meta name="context-path" th:content="@{/}"/>
+    <style>
+        .fx-kpi { background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-radius);
+                  box-shadow: var(--ui-shadow); padding: 16px 18px; height: 100%; display: flex; gap: 14px; align-items: center; }
+        .fx-kpi-icon { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; flex: none;
+                       background: rgba(0, 18, 159, .08); color: var(--ui-brand-2); }
+        .fx-kpi-icon.warn { background: rgba(255, 159, 28, .14); color: #b86e00; }
+        .fx-kpi-icon.ok { background: rgba(25, 135, 84, .12); color: #198754; }
+        .fx-kpi-label { font-size: .78rem; color: var(--ui-muted); text-transform: uppercase; letter-spacing: .04em; }
+        .fx-kpi-value { font-size: 1.25rem; font-weight: 800; color: var(--ui-ink); line-height: 1.2; }
 
-    <meta name="context-path" th:content="@{/}" />
+        .fx-card { background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-radius);
+                   box-shadow: var(--ui-shadow); padding: 18px; height: 100%; display: flex; flex-direction: column;
+                   transition: box-shadow .15s ease, transform .15s ease; }
+        .fx-card:hover { box-shadow: var(--ui-shadow-h); transform: translateY(-1px); }
+        .fx-card.is-stale { border-color: rgba(255, 159, 28, .55); }
+        .fx-code { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; flex: none;
+                   background: linear-gradient(135deg, var(--ui-brand), var(--ui-brand-2)); color: #fff;
+                   font-weight: 800; font-size: .8rem; letter-spacing: .03em; }
+        .fx-name { font-weight: 700; color: var(--ui-ink); line-height: 1.2; }
+        .fx-rate { font-size: 1.6rem; font-weight: 800; color: var(--ui-ink); letter-spacing: -.02em;
+                   font-variant-numeric: tabular-nums; margin: 14px 0 2px; }
+        .fx-rate small { font-size: .85rem; font-weight: 600; color: var(--ui-muted); }
+        .fx-inverse { font-size: .82rem; color: var(--ui-ink-2); font-variant-numeric: tabular-nums; }
+        .fx-foot { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--ui-line-2);
+                   display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .fx-pill { font-size: .72rem; font-weight: 700; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+        .fx-pill.ok { background: rgba(25, 135, 84, .12); color: #146c43; }
+        .fx-pill.warn { background: rgba(255, 159, 28, .16); color: #995c00; }
+
+        .fx-convert-result { font-size: 1.5rem; font-weight: 800; color: var(--ui-ink); font-variant-numeric: tabular-nums;
+                             word-break: break-word; }
+        .fx-swap { width: 38px; height: 38px; border-radius: 50%; padding: 0; }
+
+        .fx-up { color: #198754; }
+        .fx-down { color: #dc3545; }
+        .fx-hist td { font-variant-numeric: tabular-nums; }
+        .fx-indicatif-box { border: 1px dashed var(--ui-input); border-radius: var(--ui-radius-s); padding: 10px 12px;
+                            font-size: .85rem; display: flex; justify-content: space-between; align-items: center;
+                            gap: 10px; flex-wrap: wrap; }
+        .fx-indicatif-box .valeur { font-weight: 800; color: var(--ui-ink); font-variant-numeric: tabular-nums; }
+    </style>
 </head>
 <body>
 <div th:replace="~{fragment/sidebar :: sidebar}"></div>
 <div class="main-content">
-    <div class="container-fluid py-4">
-
+    <section th:with="FN=${T(afg.achat.afgApprovAchat.service.util.FormatNumber)}">
         <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
-        <!-- Section liste devise -->
-        <section class="mb-5">
-            <!-- En-tête avec icônes en dégradé bleu -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="fw-bold text-gradient-blue">
-                    <i class="fas fa-coins me-3 icon-gradient-blue"></i> Gestion des Devises
+
+        <!-- En-tête -->
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+            <div>
+                <h1 class="fw-bold text-gradient-blue mb-1">
+                    <i class="fas fa-coins icon-gradient-blue"></i> Devises et cours
                 </h1>
-            </div>
-            <div class="card shadow">
-                <div class="card-header btn-gradient-blue text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Liste des Devises</h5>
-                    <span class="badge bg-light text-primary"
-                          th:text="${devises != null ? devises.length: 0} + ' devises'"></span>
+                <div class="text-muted small">
+                    Cours de chaque devise en Ariary, utilisés pour convertir les demandes, bons de commande et
+                    bons de livraison saisis en devise. La comptabilité, le budget et le stock restent en Ariary.
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive" th:if="${devises != null}">
-                        <table id="devisesTable" class="table table-striped table-hover">
-                            <!-- Modifiez cette partie dans votre tableau -->
-                            <thead>
-                            <tr>
-                                <th>
-                                    <i class="fas fa-hashtag me-2 icon-gradient-light-blue"></i>ID
-                                </th>
-                                <th>
-                                    <i class="fas fa-tag me-2 icon-gradient-light-blue"></i>Désignation
-                                </th>
-                                <th>
-                                    <i class="fas fa-code me-2 icon-gradient-light-blue"></i>Acronyme
-                                </th>
-                                <th>
-                                    <i class="fas fa-calendar-alt me-2 icon-gradient-light-blue"></i>Date de Mise à Jour
-                                </th>
-                                <th>
-                                    <i class="fas fa-chart-line me-2 icon-gradient-light-blue"></i>Cours (MGA)
-                                </th>
-                                <th class="text-center">
-                                    <i class="fas fa-cog me-2 icon-gradient-light-blue"></i>Actions
-                                </th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:each="devise : ${devises}">
-                                <td th:text="${devise.id}"></td>
-                                <td th:text="${devise.designation}"></td>
-                                <td class="text-center">
-                                    <span class="badge bg-gradient-blue" th:text="${devise.acronyme}"></span>
-                                </td>
-                                <td th:text="${#temporals.format(devise.dateMiseAJour, 'dd/MM/yyyy HH:mm')}"></td>
-                                <td class="text-end">
-                                    <span class="fw-bold"
-                                          th:text="${T(afg.achat.afgApprovAchat.service.util.FormatNumber).formatDecimal(devise.coursAriary)}"></span>
-                                </td>
-                                <td class="text-center">
-                                    <!-- Vérifier si l'acronyme est différent de MGA -->
-                                    <th:block th:unless="${devise.acronyme == 'MGA'}">
-                                        <!-- Bouton Modifier -->
-                                        <button class="btn btn-sm edit-btn"
-                                                sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#editCoursModal"
-                                                th:data-id="${devise.id}"
-                                                th:data-cours="${devise.coursAriary}"
-                                                title="Modifier le cours">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
+            </div>
+            <button th:if="${peutModifier}" type="button" class="btn btn-gradient-green"
+                    data-bs-toggle="modal" data-bs-target="#ajoutDeviseModal">
+                <i class="fas fa-plus me-1"></i> Nouvelle devise
+            </button>
+        </div>
 
-                                        <!-- Bouton Historique -->
-                                        <button type="button"
-                                                class="btn btn-sm historique-btn"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#historiqueModal"
-                                                th:data-id="${devise.id}"
-                                                th:data-designation="${devise.designation}"
-                                                th:data-acronyme="${devise.acronyme}"
-                                                title="Historique des cours">
-                                            <i class="fas fa-history"></i>
-                                        </button>
-                                    </th:block>
-
-                                    <!-- Pour MGA, afficher un message ou rien -->
-                                    <th:block th:if="${devise.acronyme == 'MGA'}">
-                                        <span class="text-muted small">Devise de référence</span>
-                                    </th:block>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div th:if="${devises == null}" class="text-center py-5">
-                        <i class="fas fa-coins fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">Aucune devise enregistrée</h5>
-                        <p class="text-muted">Commencez par ajouter une devise en utilisant le formulaire
-                            ci-dessous.</p>
+        <!-- Indicateurs -->
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-xl-3">
+                <div class="fx-kpi">
+                    <div class="fx-kpi-icon"><i class="fas fa-landmark"></i></div>
+                    <div>
+                        <div class="fx-kpi-label">Référence</div>
+                        <div class="fx-kpi-value">MGA</div>
+                        <div class="small text-muted"
+                             th:text="${deviseReference != null ? deviseReference.designation : 'Ariary malgache'}">Ariary</div>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <!--         Section ajout devise -->
-        <section>
-            <div class="row">
-                <div class="col-lg-6" sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')">
-                    <div class="card shadow">
-                        <div class="card-header btn-gradient-green text-white">
-                            <h5 class="mb-0">Ajouter une nouvelle devise</h5>
-                        </div>
-                        <div class="card-body">
-                            <form th:action="@{/devise/save-devise}" method="post" id="deviseForm">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label for="acronyme" class="form-label required-field">Acronyme</label>
-                                        <input type="text"
-                                               class="form-control"
-                                               id="acronyme"
-                                               name="acronyme"
-                                               placeholder="Ex: USD, EUR"
-                                               required
-                                               maxlength="3"
-                                               oninput="this.value = this.value.toUpperCase()">
-                                        <div class="form-text">Code à 3 lettres (ex: USD, EUR)</div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="designation" class="form-label required-field">Désignation</label>
-                                        <input type="text"
-                                               class="form-control"
-                                               id="designation"
-                                               name="designation"
-                                               placeholder="Ex: Dollar américain, Euro"
-                                               required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="coursAriary" class="form-label required-field">Cours en
-                                            Ariary</label>
-                                        <input type="number"
-                                               class="form-control"
-                                               id="coursAriary"
-                                               name="coursAriary"
-                                               step="0.01"
-                                               min="0"
-                                               placeholder="Ex: 4500.00"
-                                               required>
-                                        <div class="form-text">Valeur de 1 unité de la devise en Ariary</div>
-                                    </div>
-                                </div>
-
-                                <div class="mt-4">
-                                    <button type="submit" class="btn btn-gradient-green px-4">
-                                        <i class="fas fa-plus-circle me-2"></i>Ajouter la devise
-                                    </button>
-                                    <button type="reset" class="btn btn-outline-secondary ms-2">
-                                        <i class="fas fa-redo me-2"></i>Réinitialiser
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+            <div class="col-6 col-xl-3">
+                <div class="fx-kpi">
+                    <div class="fx-kpi-icon"><i class="fas fa-globe"></i></div>
+                    <div>
+                        <div class="fx-kpi-label">Devises</div>
+                        <div class="fx-kpi-value" th:text="${#lists.size(devisesEtrangeres)}">0</div>
+                        <div class="small text-muted">hors Ariary</div>
                     </div>
                 </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="fx-kpi">
+                    <div class="fx-kpi-icon"><i class="fas fa-clock"></i></div>
+                    <div>
+                        <div class="fx-kpi-label">Dernière mise à jour</div>
+                        <div class="fx-kpi-value"
+                             th:text="${derniereMaj != null ? #temporals.format(derniereMaj, 'dd/MM/yyyy') : '—'}">—</div>
+                        <div class="small text-muted"
+                             th:text="${derniereMaj != null ? 'à ' + #temporals.format(derniereMaj, 'HH:mm') : 'aucun cours'}"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="fx-kpi">
+                    <div class="fx-kpi-icon" th:classappend="${coursAnciens > 0 ? 'warn' : 'ok'}">
+                        <i class="fas" th:classappend="${coursAnciens > 0 ? 'fa-exclamation-triangle' : 'fa-check'}"></i>
+                    </div>
+                    <div>
+                        <div class="fx-kpi-label">À mettre à jour</div>
+                        <div class="fx-kpi-value" th:text="${coursAnciens}">0</div>
+                        <div class="small text-muted" th:text="${'cours de plus de ' + joursCoursAncien + ' jours'}"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                <div class="col-lg-6 xs-mt-3">
-                    <div class="card shadow">
-                        <div class="card-header bg-info text-white">
-                            <h5 class="mb-0">Informations sur les devises</h5>
+        <div class="row g-3">
+            <!-- Liste des devises -->
+            <div class="col-xl-8">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5 class="mb-0 fw-bold">Cours en vigueur</h5>
+                        <div class="input-group input-group-sm" style="max-width: 260px;"
+                             th:if="${#lists.size(devisesEtrangeres) > 3}">
+                            <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                            <input type="search" class="form-control" id="rechercheDevise"
+                                   placeholder="Rechercher une devise…" aria-label="Rechercher une devise">
                         </div>
-                        <div class="card-body">
-                            <h6><i class="fas fa-info-circle text-info me-2"></i>À propos des devises</h6>
-                            <p class="text-muted">
-                                Les devises sont utilisées pour les conversions monétaires dans le système.
-                                Le cours est exprimé en Ariary (monnaie malgache).
-                            </p>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3" id="listeDevises" th:unless="${#lists.isEmpty(devisesEtrangeres)}">
+                            <div class="col-md-6 fx-item" th:each="d : ${devisesEtrangeres}"
+                                 th:with="jours=${joursDepuisMaj.get(d.id)}, ancien=${jours == null or jours > joursCoursAncien}"
+                                 th:attr="data-recherche=${#strings.toLowerCase(d.acronyme + ' ' + d.designation)}">
+                                <div class="fx-card" th:classappend="${ancien ? 'is-stale' : ''}">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="fx-code" th:text="${d.acronyme}">USD</div>
+                                        <div class="flex-grow-1 min-w-0">
+                                            <div class="fx-name text-truncate" th:text="${d.designation}">Dollar</div>
+                                            <div class="small text-muted" th:text="${d.acronyme + ' → MGA'}"></div>
+                                        </div>
+                                    </div>
 
-                            <h6 class="mt-4"><i class="fas fa-lightbulb text-warning me-2"></i>Exemples de cours</h6>
-                            <ul class="text-muted">
-                                <li>1 USD = 4 500 MGA</li>
-                                <li>1 EUR = 4 900 MGA</li>
-                            </ul>
+                                    <div class="fx-rate">
+                                        <span th:text="${FN.cours(d.coursAriary)}">0</span> <small>MGA</small>
+                                    </div>
+                                    <div class="fx-inverse">
+                                        1 <span th:text="${d.acronyme}"></span> = <span th:text="${FN.cours(d.coursAriary) + ' MGA'}"></span>
+                                        <span class="text-muted mx-1">·</span>
+                                        1 000 MGA = <span th:text="${FN.montant(1000 / d.coursAriary, d.acronyme)}"></span>
+                                    </div>
 
-                            <div class="alert alert-warning mt-3">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                <strong>Important :</strong>
-                                Le cours doit être mis à jour régulièrement pour refléter les taux de change actuels.
+                                    <div class="fx-foot">
+                                        <div class="small text-muted">
+                                            <i class="far fa-calendar me-1"></i>
+                                            <span th:text="${d.dateMiseAJour != null ? #temporals.format(d.dateMiseAJour, 'dd/MM/yyyy HH:mm') : 'jamais'}"></span>
+                                            <span class="fx-pill ms-1" th:classappend="${ancien ? 'warn' : 'ok'}"
+                                                  th:text="${jours == null ? 'Jamais mis à jour'
+                                                           : (jours == 0 ? 'Aujourd’hui'
+                                                           : (jours == 1 ? 'Hier' : 'Il y a ' + jours + ' j'))}"></span>
+                                        </div>
+                                        <div class="d-flex gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                    data-bs-toggle="modal" data-bs-target="#historiqueModal"
+                                                    th:attr="data-id=${d.id},data-designation=${d.designation},data-acronyme=${d.acronyme}"
+                                                    title="Historique des cours">
+                                                <i class="fas fa-history"></i>
+                                            </button>
+                                            <button th:if="${peutModifier}" type="button" class="btn btn-sm btn-gradient-blue"
+                                                    data-bs-toggle="modal" data-bs-target="#editCoursModal"
+                                                    th:attr="data-id=${d.id},data-cours=${d.coursAriary},data-acronyme=${d.acronyme},data-designation=${d.designation}">
+                                                <i class="fas fa-pen me-1"></i> Mettre à jour
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                        <div id="aucunResultat" class="text-center text-muted py-4 d-none">
+                            Aucune devise ne correspond à la recherche.
+                        </div>
+
+                        <div th:if="${#lists.isEmpty(devisesEtrangeres)}" class="text-center py-5">
+                            <i class="fas fa-coins fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Aucune devise étrangère</h5>
+                            <p class="text-muted mb-0">Ajoutez une devise (USD, EUR…) pour saisir des documents en devise.</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </section>
-    </div>
+
+            <!-- Convertisseur et rappels -->
+            <div class="col-xl-4">
+                <div class="card shadow-lg border-0 mb-3">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-exchange-alt me-2 text-primary"></i>Convertisseur</h5>
+                    </div>
+                    <div class="card-body">
+                        <label for="convMontant" class="form-label mb-1">Montant</label>
+                        <input type="text" inputmode="decimal" class="form-control mb-3" id="convMontant" value="1">
+
+                        <div class="d-flex align-items-end gap-2 mb-3">
+                            <div class="flex-grow-1">
+                                <label for="convDe" class="form-label mb-1">De</label>
+                                <select class="form-select" id="convDe">
+                                    <option th:each="d : ${devisesEtrangeres}" th:value="${d.coursAriary}"
+                                            th:attr="data-code=${d.acronyme}" th:text="${d.acronyme + ' — ' + d.designation}"></option>
+                                    <option value="1" data-code="MGA">MGA — Ariary</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary fx-swap" id="convInverser"
+                                    title="Inverser" aria-label="Inverser les devises">
+                                <i class="fas fa-arrows-alt-h"></i>
+                            </button>
+                            <div class="flex-grow-1">
+                                <label for="convVers" class="form-label mb-1">Vers</label>
+                                <select class="form-select" id="convVers">
+                                    <option value="1" data-code="MGA" selected>MGA — Ariary</option>
+                                    <option th:each="d : ${devisesEtrangeres}" th:value="${d.coursAriary}"
+                                            th:attr="data-code=${d.acronyme}" th:text="${d.acronyme + ' — ' + d.designation}"></option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="p-3 rounded-3" style="background: var(--ui-plane);">
+                            <div class="small text-muted mb-1">Contre-valeur</div>
+                            <div class="fx-convert-result" id="convResultat">—</div>
+                            <div class="small text-muted mt-1" id="convTaux"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-lg border-0">
+                    <div class="card-body small text-muted">
+                        <h6 class="fw-bold text-body"><i class="fas fa-info-circle text-primary me-2"></i>Bon à savoir</h6>
+                        <ul class="ps-3 mb-0">
+                            <li class="mb-1">Le cours est la valeur de <strong>1 unité</strong> de la devise en Ariary.</li>
+                            <li class="mb-1">Un document saisi en devise garde le cours du jour de sa saisie :
+                                une mise à jour ne modifie pas les documents existants.</li>
+                            <li>Chaque changement de cours est tracé (ancien cours, nouveau cours, auteur, date).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
-<div class="modal fade" id="editCoursModal" tabindex="-1" aria-labelledby="modifierModalLabel" aria-hidden="true">
+
+<!-- Ajout d'une devise -->
+<div class="modal fade" id="ajoutDeviseModal" tabindex="-1" aria-labelledby="ajoutDeviseLabel" aria-hidden="true"
+     sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-
-            <div class="modal-header btn-gradient-blue">
-                <h5 class="modal-title">Modifier le cours Ariary</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
-            </div>
-
-            <form th:action="@{/devise/modifier-cours}" method="post">
+            <form th:action="@{/devise/save-devise}" method="post" id="deviseForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ajoutDeviseLabel"><i class="fas fa-plus-circle me-2"></i>Nouvelle devise</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
                 <div class="modal-body">
-
-                    <!-- ID -->
-                    <input type="hidden" id="edit-id" name="idDevise">
-
-                    <!-- Cours -->
-                    <label for="edit-cours" class="form-label">Nouveau cours
-                        (Ariary)</label>
-                    <input type="number"
-                           class="form-control"
-                           id="edit-cours"
-                           name="coursAriary"
-                           step="0.01"
-                           required>
-
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-gradient-blue">
-                        <i class="fas fa-save me-2"></i>Modifier
-                    </button>
-
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i>Fermer
-                    </button>
-                </div>
-            </form>
-
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="historiqueModal" tabindex="-1" aria-labelledby="historiqueModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="historiqueModalLabel">
-                    <i class="fas fa-history me-2 icon-gradient-blue"></i>Historique des modifications
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 id="historiqueDeviseInfo" class="mb-0"></h6>
-                    <span class="badge bg-gradient-blue" id="historiqueCount">0 modification(s)</span>
-                </div>
-
-                <!-- Tableau pour l'historique - Style carte -->
-                <div class="card border-0 shadow-sm">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="bg-light">
-                            <tr>
-                                <th class="border-0 py-3 ps-4"><i class="far fa-clock me-2 text-muted"></i>Date & Heure
-                                </th>
-                                <th class="border-0 py-3">Libelle</th>
-                                <th class="border-0 py-3">Cours</th>
-                            </tr>
-                            </thead>
-                            <tbody id="historiqueTableBody">
-                            <!-- Les données seront chargées dynamiquement ici -->
-                            <tr id="historiqueEmptyRow">
-                                <td colspan="5" class="text-center py-5">
-                                    <div class="empty-state-content">
-                                        <div class="empty-state-icon bg-light rounded-circle p-4 mb-3">
-                                            <i class="fas fa-inbox fa-lg text-muted"></i>
-                                        </div>
-                                        <h5 class="text-muted">Aucun historique</h5>
-                                        <p class="text-muted mb-0">Les modifications apparaîtront dans ce journal</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+                    <div class="row g-3">
+                        <div class="col-4">
+                            <label for="acronyme" class="form-label required-field">Code</label>
+                            <input type="text" class="form-control text-uppercase" id="acronyme" name="acronyme"
+                                   placeholder="USD" required maxlength="3" pattern="[A-Za-z]{3}"
+                                   title="Code ISO à 3 lettres" autocomplete="off">
+                        </div>
+                        <div class="col-8">
+                            <label for="designation" class="form-label required-field">Désignation</label>
+                            <input type="text" class="form-control" id="designation" name="designation"
+                                   placeholder="Dollar américain" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="coursAriary" class="form-label required-field">Cours en Ariary</label>
+                            <div class="input-group">
+                                <span class="input-group-text" id="ajoutPrefixe">1 ??? =</span>
+                                <input type="text" inputmode="decimal" class="form-control" id="coursAriary"
+                                       name="coursAriary" placeholder="4 500,00" required>
+                                <span class="input-group-text">MGA</span>
+                            </div>
+                            <div class="form-text">Code ISO 4217 (USD, EUR, CNY…). Le code ne pourra plus être modifié.</div>
+                            <div class="fx-indicatif mt-2" data-cible="coursAriary"></div>
+                        </div>
                     </div>
                 </div>
-                <!-- Pagination pour l'historique -->
-                <nav aria-label="Historique pagination" id="historiquePagination" class="d-none">
-                    <ul class="pagination justify-content-center mb-0">
-                        <li class="page-item disabled">
-                            <a class="page-link" href="#" tabindex="-1">Précédent</a>
-                        </li>
-                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                        <li class="page-item"><a class="page-link" href="#">2</a></li>
-                        <li class="page-item">
-                            <a class="page-link" href="#">Suivant</a>
-                        </li>
-                    </ul>
-                </nav>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-gradient-green"><i class="fas fa-check me-1"></i>Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Mise à jour du cours -->
+<div class="modal fade" id="editCoursModal" tabindex="-1" aria-labelledby="editCoursLabel" aria-hidden="true"
+     sec:authorize="hasAnyRole('ROLE_ADMIN','ROLE_MOYENS_GENERAUX')">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form th:action="@{/devise/modifier-cours}" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCoursLabel"><i class="fas fa-pen me-2"></i>Mettre à jour le cours</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit-id" name="idDevise">
+                    <div class="d-flex justify-content-between align-items-center p-3 rounded-3 mb-3"
+                         style="background: var(--ui-plane);">
+                        <div>
+                            <div class="small text-muted">Cours actuel</div>
+                            <div class="fw-bold" id="edit-actuel">—</div>
+                        </div>
+                        <div class="text-end small text-muted" id="edit-designation"></div>
+                    </div>
+                    <label for="edit-cours" class="form-label">Nouveau cours</label>
+                    <div class="input-group">
+                        <span class="input-group-text" id="edit-prefixe">1 ??? =</span>
+                        <input type="text" inputmode="decimal" class="form-control" id="edit-cours" name="coursAriary" required>
+                        <span class="input-group-text">MGA</span>
+                    </div>
+                    <div class="form-text" id="edit-variation">&nbsp;</div>
+                    <div class="fx-indicatif mt-2" data-cible="edit-cours"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-gradient-blue"><i class="fas fa-save me-1"></i>Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Historique des cours -->
+<div class="modal fade" id="historiqueModal" tabindex="-1" aria-labelledby="historiqueModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="historiqueModalLabel"><i class="fas fa-history me-2"></i>Historique des cours</h5>
+                    <div class="small text-muted" id="historiqueDeviseInfo"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i>Fermer
-                </button>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 fx-hist">
+                        <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th class="text-end">Ancien cours</th>
+                            <th class="text-end">Nouveau cours</th>
+                            <th class="text-end">Variation</th>
+                            <th>Modifié par</th>
+                        </tr>
+                        </thead>
+                        <tbody id="historiqueTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <span class="small text-muted" id="historiqueCount"></span>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="historiquePrecedent" disabled>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="historiqueSuivant" disabled>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
 <script th:inline="none">
     /*<![CDATA[*/
-    document.addEventListener("DOMContentLoaded", () => {
-        const table = $('#devisesTable').DataTable({
-            language: {
-                zeroRecords: "Aucun article correspondant trouvé",
-                search: "Rechercher:",
-                lengthMenu: "Afficher _MENU_",
-                info: "Affichage de _START_ à _END_ sur _TOTAL_ articles",
-                infoEmpty: "Aucun article à afficher",
-                infoFiltered: "(filtrés sur _MAX_ articles au total)",
-                paginate: {first: "Première", last: "Dernière", next: "Suivante", previous: "Précédente"}
-            },
-            pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-            responsive: true,
-            dom: '<"row"<"col-md-6"l><"col-md-6">><"row"<"col-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
-            initComplete: function () {
-                const api = this.api();
-                $('#devisesTable thead tr').clone(true).appendTo('#devisesTable thead');
-                $('#devisesTable thead tr:eq(1) th').each(function (i) {
-                    if (i < 5) {
-                        $(this).html('<input class="form-control form-control-sm" type="text" placeholder="Filtrer..." />');
-                        $('input', this).on('keyup change', function () {
-                            if (api.column(i).search() !== this.value) {
-                                api.column(i).search(this.value).draw();
-                            }
-                        });
-                    } else {
-                        $(this).html('<div style="height:32px;"></div>');
-                    }
-                });
-
-                // Recherche mobile
-                $('<div class="mobile-search-container mb-3">' +
-                    '<div class="input-group">' +
-                    '<span class="input-group-text"><i class="fas fa-search icon-gradient-blue"></i></span>' +
-                    '<input type="text" class="form-control" id="mobileGlobalSearch" placeholder="Rechercher...">' +
-                    '</div></div>').insertBefore('#devisesTable');
-
-                $('#mobileGlobalSearch').on('keyup', function () {
-                    api.search(this.value).draw();
-                });
-
-                function toggleMobileSearch() {
-                    if ($(window).width() <= 768) {
-                        $('.mobile-search-container').show();
-                        $('#devisesTable thead tr:eq(1)').hide();
-                        $('.dataTables_filter').hide();
-                    } else {
-                        $('.mobile-search-container').hide();
-                        $('#devisesTable thead tr:eq(1)').show();
-                        $('.dataTables_filter').show();
-                    }
-                }
-
-                toggleMobileSearch();
-                $(window).on('resize', toggleMobileSearch);
-
-            }
-        });
-        const modal = document.getElementById("editCoursModal");
-
-        modal.addEventListener("show.bs.modal", event => {
-            const button = event.relatedTarget;
-
-            // Récupération via data-id et data-cours automatiquement remplis par Thymeleaf
-            const id = button.getAttribute("data-id");
-            const cours = button.getAttribute("data-cours");
-
-            document.getElementById("edit-id").value = id;
-            document.getElementById("edit-cours").value = cours;
-        });
-    });
-
-    $('#historiqueModal').on('show.bs.modal', function (event) {
-        var button = $(event.relatedTarget);
-        var deviseId = button.data('id');
-        var designation = button.data('designation');
-        var acronyme = button.data('acronyme');
-
-        console.log("Ouverture modal historique pour la devise ID:", deviseId);
-
-        $("historiqueDeviseInfo").text(designation + " (" + acronyme + ")");
-
-        $('#historiqueTableBody').html(`
-        <tr>
-            <td colspan="6" class="text-center py-4">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Chargement...</span>
-                </div>
-                <p class="mt-2 text-muted">Chargement de l'historique...</p>
-            </td>
-        </tr>`);
+    (function () {
         const CONTEXT_PATH = document.querySelector('meta[name="context-path"]').getAttribute('content');
+        const nf = (dec) => new Intl.NumberFormat('fr-FR', {minimumFractionDigits: dec, maximumFractionDigits: dec});
+        const decimales = (code) => {
+            try { return new Intl.NumberFormat('fr-FR', {style: 'currency', currency: code}).resolvedOptions().maximumFractionDigits; }
+            catch (e) { return 2; }
+        };
+        const montant = (v, code) => nf(decimales(code)).format(v) + ' ' + code;
+        /* Cours affiché / pré-rempli : 4 décimales sous 100 MGA (ex. XOF ≈ 7,6675), sinon 2 */
+        const coursTexte = (v) => new Intl.NumberFormat('fr-FR',
+            {minimumFractionDigits: 2, maximumFractionDigits: v < 100 ? 4 : 2}).format(v) + ' MGA';
+        const saisie = (v) => coursTexte(v).replace(' MGA', '').replace(/[  ]/g, ' ');
+        const lireNombre = (s) => {
+            const n = parseFloat(String(s || '').replace(/[\s  ]/g, '').replace(',', '.'));
+            return isFinite(n) ? n : NaN;
+        };
+        const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g,
+            c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 
-        const url = `${CONTEXT_PATH}api/historique/devise/${encodeURIComponent(deviseId)}?page=0&size=10`;
-        console.log("URL de requête:", url);
+        /* Recherche */
+        const recherche = document.getElementById('rechercheDevise');
+        if (recherche) {
+            recherche.addEventListener('input', () => {
+                const q = recherche.value.trim().toLowerCase();
+                let visibles = 0;
+                document.querySelectorAll('#listeDevises .fx-item').forEach(el => {
+                    const ok = !q || el.dataset.recherche.includes(q);
+                    el.classList.toggle('d-none', !ok);
+                    if (ok) visibles++;
+                });
+                document.getElementById('aucunResultat').classList.toggle('d-none', visibles > 0);
+            });
+        }
 
-        $.ajax({
-            url: url,
-            method: 'GET',
-            success: function (response) {
-                console.log("Réponse reçue:", response);
-
-                if (response.data && response.data.length > 0) {
-                    let html = '';
-                    response.data.forEach(function (historique) {
-                        console.log(historique);
-
-                        html += `
-                        <tr>
-                            <td class="ps-4">${historique.date || '-'}</td>
-                            <td class="ps-4">${designation + ' (' + acronyme + ')' || '-'}</td>
-                            <td class="ps-4">${historique.ancienCoursAriary || '-'}</td>
-                        </tr>`;
-                    });
-                    $('#historiqueTableBody').html(html);
-                    const totalElements = response.pagination ? response.pagination.totalElements : response.data.length;
-                    $('#historiqueCount').text(totalElements + ' modification(s)');
-                } else {
-                    console.log("Aucun historique trouvé.");
-                    $('#historiqueTableBody').html(`
-                     <tr>
-                        <td colspan="6" class="text-center py-4">
-                            <i class="fas fa-history fa-2x text-muted mb-2"></i>
-                            <p class="text-muted">Aucune modification trouvée</p>
-                        </td>
-                    </tr>`);
-                    $('#historiqueCount').text('0 modification(s)');
-                }
-            },
-            error: function (xhr, status, error) {
-                console.error("Erreur AJAX:", status, error, xhr.responseText);
-                $('historiqueTableBody').html(`<tr>
-                    <td colspan="6" class="text-center py-4 text-danger">
-                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                        <p>Erreur lors du chargement de l'historique</p>
-                        <small class="text-muted">Status: ${status}, Erreur: ${error}</small>
-                        <br><small>Réponse: ${xhr.responseText}</small>
-                    </td>
-                </tr>`)
+        /* Convertisseur */
+        const convMontant = document.getElementById('convMontant');
+        const convDe = document.getElementById('convDe');
+        const convVers = document.getElementById('convVers');
+        const convertir = () => {
+            const m = lireNombre(convMontant.value);
+            const de = convDe.selectedOptions[0], vers = convVers.selectedOptions[0];
+            if (!de || !vers || isNaN(m)) {
+                document.getElementById('convResultat').textContent = '—';
+                document.getElementById('convTaux').textContent = '';
+                return;
             }
+            const tauxDe = parseFloat(de.value), tauxVers = parseFloat(vers.value);
+            const res = m * tauxDe / tauxVers;
+            document.getElementById('convResultat').textContent = montant(res, vers.dataset.code);
+            document.getElementById('convTaux').textContent =
+                '1 ' + de.dataset.code + ' = ' + nf(4).format(tauxDe / tauxVers) + ' ' + vers.dataset.code;
+        };
+        [convMontant, convDe, convVers].forEach(el => el.addEventListener('input', convertir));
+        document.getElementById('convInverser').addEventListener('click', () => {
+            const a = convDe.selectedIndex, codeA = convDe.selectedOptions[0]?.dataset.code;
+            const codeB = convVers.selectedOptions[0]?.dataset.code;
+            [...convDe.options].forEach((o, i) => { if (o.dataset.code === codeB) convDe.selectedIndex = i; });
+            [...convVers.options].forEach((o, i) => { if (o.dataset.code === codeA) convVers.selectedIndex = i; });
+            convertir();
         });
-    });
+        convertir();
 
+        /* Cours indicatif (API publique) : affiché, puis copié dans le champ seulement sur clic */
+        const indicatif = {
+            reinitialiser(zone) {
+                zone.innerHTML = '<button type="button" class="btn btn-sm btn-outline-primary fx-indicatif-btn">'
+                    + '<i class="fas fa-cloud-download-alt me-1"></i>Cours indicatif</button>'
+                    + '<span class="small text-muted ms-2">taux de marché du jour, à vérifier avant d\'enregistrer</span>';
+            },
+            charger(zone, code) {
+                if (!/^[A-Z]{3}$/.test(code || '')) {
+                    zone.querySelector('.fx-indicatif-btn')?.insertAdjacentHTML('afterend',
+                        '<span class="small text-danger ms-2 fx-indicatif-err">Saisissez d\'abord le code à 3 lettres.</span>');
+                    return;
+                }
+                zone.innerHTML = '<div class="fx-indicatif-box text-muted"><span><span class="spinner-border spinner-border-sm me-2"></span>'
+                    + 'Recherche du cours ' + esc(code) + '…</span></div>';
+                fetch(CONTEXT_PATH + 'devise/cours-indicatif/' + encodeURIComponent(code), {headers: {'Accept': 'application/json'}})
+                    .then(r => r.json().catch(() => ({})).then(j => ({ok: r.ok, j})))
+                    .then(({ok, j}) => {
+                        if (!ok || !(j.coursAriary > 0)) throw new Error(j.message || 'Cours indisponible.');
+                        zone.innerHTML = '<div class="fx-indicatif-box">'
+                            + '<div><div>1 ' + esc(j.devise) + ' ≈ <span class="valeur">' + esc(coursTexte(j.coursAriary)) + '</span></div>'
+                            + '<div class="small text-muted">Source : ' + esc(j.source)
+                            + (j.dateSource ? ', mis à jour le ' + esc(j.dateSource) : '') + '</div></div>'
+                            + '<button type="button" class="btn btn-sm btn-outline-primary fx-indicatif-utiliser">Utiliser ce cours</button>'
+                            + '</div>';
+                        zone.querySelector('.fx-indicatif-utiliser').addEventListener('click', () => {
+                            const champ = document.getElementById(zone.dataset.cible);
+                            champ.value = saisie(j.coursAriary);
+                            champ.dispatchEvent(new Event('input'));
+                            champ.focus();
+                        });
+                    })
+                    .catch(e => {
+                        zone.innerHTML = '<div class="fx-indicatif-box text-danger"><span><i class="fas fa-exclamation-triangle me-1"></i>'
+                            + esc(e.message) + '</span><button type="button" class="btn btn-sm btn-link fx-indicatif-btn">Réessayer</button></div>';
+                    });
+            }
+        };
+        document.querySelectorAll('.fx-indicatif').forEach(zone => {
+            indicatif.reinitialiser(zone);
+            zone.addEventListener('click', (e) => {
+                if (!e.target.closest('.fx-indicatif-btn')) return;
+                zone.querySelector('.fx-indicatif-err')?.remove();
+                const code = zone.dataset.cible === 'edit-cours'
+                    ? zone.dataset.code
+                    : (document.getElementById('acronyme')?.value || '').toUpperCase();
+                indicatif.charger(zone, code);
+            });
+        });
+
+        /* Ajout : préfixe « 1 USD = » */
+        const acronyme = document.getElementById('acronyme');
+        if (acronyme) {
+            acronyme.addEventListener('input', () => {
+                acronyme.value = acronyme.value.toUpperCase().replace(/[^A-Z]/g, '');
+                document.getElementById('ajoutPrefixe').textContent = '1 ' + (acronyme.value || '???') + ' =';
+            });
+        }
+
+        /* Mise à jour du cours : variation en direct */
+        const editModal = document.getElementById('editCoursModal');
+        if (editModal) {
+            let coursActuel = 0;
+            const editCours = document.getElementById('edit-cours');
+            const variation = () => {
+                const n = lireNombre(editCours.value);
+                const el = document.getElementById('edit-variation');
+                if (isNaN(n) || n <= 0 || !coursActuel) { el.innerHTML = '&nbsp;'; el.className = 'form-text'; return; }
+                const pct = (n - coursActuel) / coursActuel * 100;
+                el.className = 'form-text fw-semibold ' + (pct > 0 ? 'fx-up' : (pct < 0 ? 'fx-down' : ''));
+                el.textContent = pct === 0 ? 'Cours inchangé'
+                    : (pct > 0 ? '▲ +' : '▼ ') + nf(2).format(pct) + ' % par rapport au cours actuel';
+            };
+            editCours.addEventListener('input', variation);
+            editModal.addEventListener('show.bs.modal', (event) => {
+                const b = event.relatedTarget;
+                coursActuel = parseFloat(b.dataset.cours);
+                document.getElementById('edit-id').value = b.dataset.id;
+                document.getElementById('edit-prefixe').textContent = '1 ' + b.dataset.acronyme + ' =';
+                document.getElementById('edit-actuel').textContent = '1 ' + b.dataset.acronyme + ' = ' + coursTexte(coursActuel);
+                document.getElementById('edit-designation').textContent = b.dataset.designation;
+                editCours.value = saisie(coursActuel);
+                variation();
+                const zone = editModal.querySelector('.fx-indicatif');
+                zone.dataset.code = b.dataset.acronyme;
+                indicatif.reinitialiser(zone);
+            });
+            editModal.addEventListener('shown.bs.modal', () => editCours.select());
+        }
+
+        /* Historique */
+        const TAILLE = 10;
+        let histDevise = null, histPage = 0;
+        const corps = document.getElementById('historiqueTableBody');
+        const ligneInfo = (html) => '<tr><td colspan="5" class="text-center text-muted py-4">' + html + '</td></tr>';
+
+        const chargerHistorique = () => {
+            corps.innerHTML = ligneInfo('<div class="spinner-border spinner-border-sm me-2"></div>Chargement…');
+            fetch(CONTEXT_PATH + 'api/historique/devise/' + encodeURIComponent(histDevise) + '?page=' + histPage + '&size=' + TAILLE)
+                .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                .then(res => {
+                    const lignes = res.data || [];
+                    const p = res.pagination || {totalElements: lignes.length, totalPages: 1};
+                    if (!lignes.length) {
+                        corps.innerHTML = ligneInfo('<i class="fas fa-inbox me-2"></i>Aucune modification de cours enregistrée.');
+                    } else {
+                        corps.innerHTML = lignes.map(h => {
+                            const a = parseFloat(h.ancienCoursAriary), n = parseFloat(h.nouvelleCoursAriary);
+                            let v = '—';
+                            if (a > 0 && isFinite(n)) {
+                                const pct = (n - a) / a * 100;
+                                v = '<span class="fw-semibold ' + (pct > 0 ? 'fx-up' : (pct < 0 ? 'fx-down' : '')) + '">'
+                                    + (pct > 0 ? '+' : '') + nf(2).format(pct) + ' %</span>';
+                            }
+                            return '<tr>'
+                                + '<td>' + esc(h.date) + '</td>'
+                                + '<td class="text-end text-muted">' + (isFinite(a) ? esc(montant(a, 'MGA')) : '—') + '</td>'
+                                + '<td class="text-end fw-semibold">' + (isFinite(n) ? esc(montant(n, 'MGA')) : '—') + '</td>'
+                                + '<td class="text-end">' + v + '</td>'
+                                + '<td>' + esc(h.modifiePar || '—') + '</td>'
+                                + '</tr>';
+                        }).join('');
+                    }
+                    document.getElementById('historiqueCount').textContent = p.totalElements + ' modification(s)'
+                        + (p.totalPages > 1 ? ' · page ' + (histPage + 1) + ' / ' + p.totalPages : '');
+                    document.getElementById('historiquePrecedent').disabled = histPage <= 0;
+                    document.getElementById('historiqueSuivant').disabled = histPage >= p.totalPages - 1;
+                })
+                .catch(() => {
+                    corps.innerHTML = ligneInfo('<span class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>'
+                        + 'Impossible de charger l\'historique.</span>');
+                });
+        };
+
+        document.getElementById('historiqueModal').addEventListener('show.bs.modal', (event) => {
+            const b = event.relatedTarget;
+            histDevise = b.dataset.id;
+            histPage = 0;
+            document.getElementById('historiqueDeviseInfo').textContent = b.dataset.designation + ' (' + b.dataset.acronyme + ')';
+            document.getElementById('historiqueCount').textContent = '';
+            chargerHistorique();
+        });
+        document.getElementById('historiquePrecedent').addEventListener('click', () => { histPage--; chargerHistorique(); });
+        document.getElementById('historiqueSuivant').addEventListener('click', () => { histPage++; chargerHistorique(); });
+    })();
     /*]]>*/
 </script>
 </body>
