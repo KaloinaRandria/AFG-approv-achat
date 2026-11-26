@@ -10,9 +10,9 @@
     <meta name="context-path" th:content="@{/}" />
     <style>
         .grille-bareme th, .grille-bareme td { white-space: nowrap; }
-        .grille-bareme td.case { min-width: 9rem; }
+        .grille-bareme td.case { min-width: 10rem; }
         .grille-bareme .montant { font-weight: 600; }
-        .grille-bareme .depuis { font-size: .75rem; }
+        .grille-bareme .petit { font-size: .75rem; }
     </style>
 </head>
 <body>
@@ -24,7 +24,7 @@
     <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
 
     <section class="mb-4">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <h1 class="fw-bold text-gradient-blue mb-0">
                 <i class="fas fa-table me-3 icon-gradient-blue"></i> Barème des per diem
             </h1>
@@ -38,6 +38,11 @@
                 </button>
             </div>
         </div>
+        <p class="text-muted mb-3">
+            <i class="fas fa-info-circle me-1"></i>
+            Montant <strong>par jour</strong> de mission : il couvre les repas et les déplacements locaux.
+            L'hébergement est payé directement par la banque.
+        </p>
 
         <div th:if="${#lists.isEmpty(categories) or #lists.isEmpty(zones)}" class="alert alert-warning">
             <i class="fas fa-exclamation-triangle me-2"></i>
@@ -60,10 +65,9 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead>
                         <tr>
-                            <th>Indemnité</th>
                             <th>Catégorie</th>
                             <th>Zone</th>
-                            <th class="text-end">Nouveau montant</th>
+                            <th class="text-end">Nouveau montant / jour</th>
                             <th>Date d'effet</th>
                             <th>Proposé par</th>
                             <th>Motif</th>
@@ -73,14 +77,14 @@
                         <tbody>
                         <tr th:each="p : ${enAttente}"
                             th:with="estAuteur=${p.proposePar != null and moi != null and p.proposePar.id == moi.id}">
-                            <td>
-                                <span th:text="${p.typeIndemnite.libelle}"></span>
-                                <small class="text-muted d-block" th:text="'par ' + ${p.typeIndemnite.unite.singulier}"></small>
-                            </td>
                             <td th:text="${p.categorie.libelle}"></td>
                             <td th:text="${p.zone.libelle}"></td>
-                            <td class="text-end fw-semibold"
-                                th:text="${#numbers.formatDecimal(p.montant, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${p.devise.acronyme}"></td>
+                            <td class="text-end">
+                                <span class="fw-semibold"
+                                      th:text="${#numbers.formatDecimal(p.montant, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${p.devise.acronyme}"></span>
+                                <small class="text-muted d-block" th:if="${equivalents[p.id] != null}"
+                                       th:text="'≈ ' + ${equivalents[p.id]}"></small>
+                            </td>
                             <td th:text="${#temporals.format(p.dateEffet, 'dd/MM/yyyy')}"></td>
                             <td>
                                 <span th:text="${p.proposePar != null ? p.proposePar.prenom + ' ' + p.proposePar.nom : '—'}"></span>
@@ -92,7 +96,7 @@
                                         class="btn btn-sm btn-outline-success"
                                         data-bs-toggle="modal" data-bs-target="#traiterModal"
                                         th:data-id="${p.id}"
-                                        th:data-libelle="${p.typeIndemnite.libelle + ' / ' + p.categorie.libelle + ' / ' + p.zone.libelle}"
+                                        th:data-libelle="${p.categorie.libelle + ' / ' + p.zone.libelle}"
                                         title="Valider ou rejeter">
                                     <i class="fas fa-check-double me-1"></i> Traiter
                                 </button>
@@ -123,7 +127,7 @@
         <div class="card shadow-sm border-0">
             <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <h5 class="mb-0">
-                    <i class="fas fa-th me-2"></i> Taux en vigueur le
+                    <i class="fas fa-th me-2"></i> Per diem par jour en vigueur le
                     <span th:text="${#temporals.format(dateGrille, 'dd/MM/yyyy')}"></span>
                 </h5>
                 <form th:action="@{/perdiem/bareme}" method="get" class="d-flex align-items-center gap-2">
@@ -136,65 +140,57 @@
                 </form>
             </div>
             <div class="card-body">
-                <ul class="nav nav-tabs mb-3" role="tablist">
-                    <li class="nav-item" role="presentation" th:each="t, it : ${types}">
-                        <button class="nav-link" type="button" role="tab" data-bs-toggle="tab"
-                                th:classappend="${it.first} ? 'active'"
-                                th:attr="data-bs-target='#onglet-' + ${t.name()}"
-                                th:text="${t.libelle} + ' (par ' + ${t.unite.singulier} + ')'"></button>
-                    </li>
-                </ul>
-
-                <div class="tab-content">
-                    <div class="tab-pane fade" role="tabpanel" th:each="t, it : ${types}"
-                         th:id="'onglet-' + ${t.name()}" th:classappend="${it.first} ? 'show active'">
-                        <div class="table-responsive" th:if="${!#lists.isEmpty(categories) and !#lists.isEmpty(zones)}">
-                            <table class="table table-bordered align-middle grille-bareme mb-0">
-                                <thead class="table-light">
-                                <tr>
-                                    <th>Catégorie \ Zone</th>
-                                    <th th:each="z : ${zones}" class="text-center">
-                                        <span th:text="${z.libelle}"></span>
-                                        <i th:if="${z.estEtranger()}" class="fas fa-globe-africa ms-1 text-muted" title="Étranger"></i>
-                                    </th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr th:each="c : ${categories}">
-                                    <th class="table-light" th:text="${c.libelle}"></th>
-                                    <td th:each="z : ${zones}" class="case text-center"
-                                        th:with="ligne=${grille[t.name()][c.id]},
-                                                 b=${ligne != null ? ligne[z.id] : null},
-                                                 ligneAttente=${grilleEnAttente[t.name()][c.id]},
-                                                 att=${ligneAttente != null ? ligneAttente[z.id] : null}">
-                                        <div th:if="${b != null}">
-                                            <span class="montant"
-                                                  th:text="${#numbers.formatDecimal(b.montant, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${b.devise.acronyme}"></span>
-                                            <div class="depuis text-muted"
-                                                 th:text="'depuis le ' + ${#temporals.format(b.dateEffet, 'dd/MM/yyyy')}"></div>
-                                        </div>
-                                        <span th:if="${b == null}" class="text-muted">—</span>
-                                        <div th:if="${att != null}" class="mt-1">
-                                            <span class="badge bg-warning text-dark"
-                                                  th:title="'Proposé : ' + ${#numbers.formatDecimal(att.montant, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${att.devise.acronyme} + ' au ' + ${#temporals.format(att.dateEffet, 'dd/MM/yyyy')}">
-                                                <i class="fas fa-hourglass-half me-1"></i>En attente
-                                            </span>
-                                        </div>
-                                        <button th:if="${peutProposer and att == null}" type="button"
-                                                class="btn btn-link btn-sm p-0 mt-1"
-                                                data-bs-toggle="modal" data-bs-target="#proposerModal"
-                                                th:data-categorie="${c.id}" th:data-zone="${z.id}" th:data-type="${t.name()}"
-                                                th:data-devise="${b != null ? b.devise.id : ''}"
-                                                th:title="${b != null} ? 'Proposer un nouveau taux' : 'Proposer un taux'">
-                                            <i th:class="${b != null} ? 'fas fa-pen' : 'fas fa-plus'"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                <div class="table-responsive" th:if="${!#lists.isEmpty(categories) and !#lists.isEmpty(zones)}">
+                    <table class="table table-bordered align-middle grille-bareme mb-0">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Catégorie \ Zone</th>
+                            <th th:each="z : ${zones}" class="text-center">
+                                <span th:text="${z.libelle}"></span>
+                                <i th:if="${z.estEtranger()}" class="fas fa-globe-africa ms-1 text-muted" title="Étranger"></i>
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="c : ${categories}">
+                            <th class="table-light" th:text="${c.libelle}"></th>
+                            <td th:each="z : ${zones}" class="case text-center"
+                                th:with="ligne=${grille[c.id]},
+                                         b=${ligne != null ? ligne[z.id] : null},
+                                         ligneAttente=${grilleEnAttente[c.id]},
+                                         att=${ligneAttente != null ? ligneAttente[z.id] : null}">
+                                <div th:if="${b != null}">
+                                    <span class="montant"
+                                          th:text="${#numbers.formatDecimal(b.montant, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${b.devise.acronyme}"></span>
+                                    <div class="petit text-muted" th:if="${equivalents[b.id] != null}"
+                                         th:text="'≈ ' + ${equivalents[b.id]}"></div>
+                                    <div class="petit text-muted"
+                                         th:text="'depuis le ' + ${#temporals.format(b.dateEffet, 'dd/MM/yyyy')}"></div>
+                                </div>
+                                <span th:if="${b == null}" class="text-muted">—</span>
+                                <div th:if="${att != null}" class="mt-1">
+                                    <span class="badge bg-warning text-dark"
+                                          th:title="'Proposé : ' + ${#numbers.formatDecimal(att.montant, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${att.devise.acronyme} + ' au ' + ${#temporals.format(att.dateEffet, 'dd/MM/yyyy')}">
+                                        <i class="fas fa-hourglass-half me-1"></i>En attente
+                                    </span>
+                                </div>
+                                <button th:if="${peutProposer and att == null}" type="button"
+                                        class="btn btn-link btn-sm p-0 mt-1"
+                                        data-bs-toggle="modal" data-bs-target="#proposerModal"
+                                        th:data-categorie="${c.id}" th:data-zone="${z.id}"
+                                        th:data-devise="${b != null ? b.devise.id : ''}"
+                                        th:title="${b != null} ? 'Proposer un nouveau taux' : 'Proposer un taux'">
+                                    <i th:class="${b != null} ? 'fas fa-pen' : 'fas fa-plus'"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
                 </div>
+                <p class="text-muted small mt-2 mb-0">
+                    <i class="fas fa-exchange-alt me-1"></i>
+                    Les contre-valeurs (≈) entre franc CFA et euro sont calculées au cours enregistré des devises.
+                </p>
             </div>
         </div>
     </section>
@@ -209,12 +205,11 @@
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
                         <thead>
-                        <tr><th>Date d'effet</th><th>Indemnité</th><th>Catégorie</th><th>Zone</th><th class="text-end">Montant</th></tr>
+                        <tr><th>Date d'effet</th><th>Catégorie</th><th>Zone</th><th class="text-end">Montant / jour</th></tr>
                         </thead>
                         <tbody>
                         <tr th:each="b : ${programmes}">
                             <td th:text="${#temporals.format(b.dateEffet, 'dd/MM/yyyy')}"></td>
-                            <td th:text="${b.typeIndemnite.libelle}"></td>
                             <td th:text="${b.categorie.libelle}"></td>
                             <td th:text="${b.zone.libelle}"></td>
                             <td class="text-end" th:text="${#numbers.formatDecimal(b.montant, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${b.devise.acronyme}"></td>
@@ -238,10 +233,9 @@
                         <thead>
                         <tr>
                             <th>Statut</th>
-                            <th>Indemnité</th>
                             <th>Catégorie</th>
                             <th>Zone</th>
-                            <th class="text-end">Montant</th>
+                            <th class="text-end">Montant / jour</th>
                             <th>Validité</th>
                             <th>Proposé par</th>
                             <th>Traité par</th>
@@ -255,7 +249,6 @@
                                       th:classappend="${h.statut.name() == 'VALIDE'} ? 'bg-success' : (${h.statut.name() == 'PROPOSE'} ? 'bg-warning text-dark' : (${h.statut.name() == 'REJETE'} ? 'bg-danger' : 'bg-secondary'))"
                                       th:text="${h.statut.libelle}"></span>
                             </td>
-                            <td th:text="${h.typeIndemnite.libelle}"></td>
                             <td th:text="${h.categorie.libelle}"></td>
                             <td th:text="${h.zone.libelle}"></td>
                             <td class="text-end" th:text="${#numbers.formatDecimal(h.montant, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${h.devise.acronyme}"></td>
@@ -297,27 +290,20 @@
             <form th:action="@{/perdiem/bareme/proposer}" method="post">
                 <div class="modal-header">
                     <h5 class="modal-title" id="proposerModalLabel">
-                        <i class="fas fa-plus-circle me-2"></i>Proposer un taux
+                        <i class="fas fa-plus-circle me-2"></i>Proposer un taux journalier
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-md-4">
-                            <label for="p-type" class="form-label required-field">Indemnité</label>
-                            <select id="p-type" name="typeIndemnite" class="form-select" required>
-                                <option th:each="t : ${types}" th:value="${t.name()}"
-                                        th:text="${t.libelle} + ' (par ' + ${t.unite.singulier} + ')'"></option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="p-categorie" class="form-label required-field">Catégorie de personnel</label>
                             <select id="p-categorie" name="idCategorie" class="form-select" required>
                                 <option value="">— Choisir —</option>
                                 <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.libelle}"></option>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="p-zone" class="form-label required-field">Zone</label>
                             <select id="p-zone" name="idZone" class="form-select" required>
                                 <option value="">— Choisir —</option>
@@ -325,9 +311,9 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label for="p-montant" class="form-label required-field">Montant unitaire</label>
+                            <label for="p-montant" class="form-label required-field">Montant par jour</label>
                             <input type="text" id="p-montant" name="montant" class="form-control" required
-                                   inputmode="decimal" placeholder="Ex. 45 000">
+                                   inputmode="decimal" placeholder="Ex. 150 000">
                         </div>
                         <div class="col-md-4">
                             <label for="p-devise" class="form-label required-field">Devise</label>
@@ -349,7 +335,7 @@
                     </div>
                     <div class="alert alert-info mt-3 mb-0 small">
                         <i class="fas fa-info-circle me-1"></i>
-                        Le taux sera appliqué aux missions qui partent à partir de la date d'effet, après validation par le DRH.
+                        Le taux s'appliquera aux missions qui partent à partir de la date d'effet, après validation par le DRH.
                         Le taux en vigueur de la même case s'arrête alors la veille.
                     </div>
                 </div>
@@ -407,7 +393,6 @@
                 if (!b || !b.dataset.categorie) return;
                 document.getElementById("p-categorie").value = b.dataset.categorie;
                 document.getElementById("p-zone").value = b.dataset.zone;
-                document.getElementById("p-type").value = b.dataset.type;
                 if (b.dataset.devise) document.getElementById("p-devise").value = b.dataset.devise;
                 document.getElementById("p-montant").value = "";
             });

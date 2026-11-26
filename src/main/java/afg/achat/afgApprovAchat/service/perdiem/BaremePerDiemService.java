@@ -3,7 +3,6 @@ package afg.achat.afgApprovAchat.service.perdiem;
 import afg.achat.afgApprovAchat.model.perdiem.BaremePerDiem;
 import afg.achat.afgApprovAchat.model.perdiem.BaremePerDiem.Statut;
 import afg.achat.afgApprovAchat.model.perdiem.CategoriePersonnel;
-import afg.achat.afgApprovAchat.model.perdiem.TypeIndemnite;
 import afg.achat.afgApprovAchat.model.perdiem.ZoneMission;
 import afg.achat.afgApprovAchat.model.util.Devise;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
@@ -17,28 +16,34 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashMap;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
 /**
  * Barème des per diem, en circuit maker / checker.
  *
+ * <p>Le per diem est un forfait <b>par jour</b> de mission qui couvre les repas et les déplacements
+ * locaux ; l'hébergement est payé directement par la banque. Une case du barème = une catégorie
+ * de personnel × une zone de mission.</p>
+ *
  * <ul>
- *   <li>Le RH MAKER <b>propose</b> un taux pour une catégorie, une zone et un type d'indemnité,
- *       à partir d'une date d'effet. Une seule proposition en attente par ligne du barème.</li>
+ *   <li>Le RH MAKER <b>propose</b> un taux pour une case, à partir d'une date d'effet.
+ *       Une seule proposition en attente par case.</li>
  *   <li>Le RH CHECKER (DRH) <b>valide</b> ou <b>rejette</b> ; il ne valide pas sa propre proposition
- *       (sauf administrateur). À la validation, le taux en vigueur de la même ligne est clos
+ *       (sauf administrateur). À la validation, le taux en vigueur de la même case s'arrête
  *       la veille de la nouvelle date d'effet ({@code dateFin} = date d'effet, exclue).</li>
  *   <li>L'auteur d'une proposition peut l'<b>annuler</b> tant qu'elle est en attente.</li>
  * </ul>
  *
- * <p>Une date d'effet doit être postérieure à celle du dernier taux validé de la même ligne :
+ * <p>Une date d'effet doit être postérieure à celle du dernier taux validé de la même case :
  * les périodes de validité se suivent sans se chevaucher, et un taux validé n'est jamais modifié.</p>
  */
 @Service
@@ -46,6 +51,9 @@ import java.util.Optional;
 public class BaremePerDiemService {
 
     private static final DateTimeFormatter JJ_MM_AAAA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    /** Devises affichées l'une pour l'autre (barème Afrique / hors Afrique : euro ou franc CFA). */
+    private static final Map<String, String> DEVISE_EQUIVALENTE = Map.of("XOF", "EUR", "EUR", "XOF");
 
     private final BaremePerDiemRepo baremeRepo;
     private final ReferentielMissionService referentielService;
@@ -65,19 +73,18 @@ public class BaremePerDiemService {
 
     // ── Lecture ──────────────────────────────────────────────────────────────
 
-    /** Taux qui s'applique à une mission (catégorie, zone, type) à la date donnée. */
-    public Optional<BaremePerDiem> tauxApplicable(Integer idCategorie, Integer idZone,
-                                                   TypeIndemnite type, LocalDate date) {
-        return baremeRepo.findApplicable(idCategorie, idZone, type, date);
+    /** Taux journalier qui s'applique à une mission (catégorie, zone) partant à la date donnée. */
+    public Optional<BaremePerDiem> tauxApplicable(Integer idCategorie, Integer idZone, LocalDate date) {
+        return baremeRepo.findApplicable(idCategorie, idZone, date);
     }
 
-    /** Grille des taux validés applicables à la date : nom du type d'indemnité → catégorie → zone → taux. */
-    public Map<String, Map<Integer, Map<Integer, BaremePerDiem>>> grille(LocalDate date) {
+    /** Grille des taux validés applicables à la date : catégorie → zone → taux. */
+    public Map<Integer, Map<Integer, BaremePerDiem>> grille(LocalDate date) {
         return indexer(baremeRepo.findApplicablesLe(date));
     }
 
     /** Propositions en attente, indexées comme la grille (repérage des cases concernées). */
-    public Map<String, Map<Integer, Map<Integer, BaremePerDiem>>> grilleEnAttente() {
+    public Map<Integer, Map<Integer, BaremePerDiem>> grilleEnAttente() {
         return indexer(enAttente());
     }
 
@@ -94,17 +101,45 @@ public class BaremePerDiemService {
         return baremeRepo.findHistorique();
     }
 
+    /**
+     * Contre-valeur indicative de chaque taux en franc CFA ou en euro (clé : identifiant du taux),
+     * au cours enregistré des devises. Ex. 90 000 XOF ≈ 137,20 EUR. Les taux dans une autre devise
+     * n'ont pas de contre-valeur.
+     */
+    public Map<Integer, String> equivalents(Collection<BaremePerDiem> taux) {
+        Map<String, Optional<Devise>> devises = new HashMap<>();
+        Map<Integer, String> m = new HashMap<>();
+        for (BaremePerDiem b : taux) {
+            if (b.getId() == null || b.getDevise() == null || b.getDevise().getAcronyme() == null) continue;
+            String cible = DEVISE_EQUIVALENTE.get(b.getDevise().getAcronyme().toUpperCase());
+            if (cible == null) continue;
+            devises.computeIfAbsent(cible, deviseRepo::findByAcronymeIgnoreCase)
+                    .flatMap(vers -> convertir(b.getMontant(), b.getDevise(), vers))
+                    .ifPresent(v -> m.put(b.getId(), String.format(Locale.FRANCE, "%,.2f", v) + " " + cible));
+        }
+        return m;
+    }
+
+    /** Montant converti au cours en ariary des deux devises, arrondi au centime ; vide sans cours. */
+    static Optional<BigDecimal> convertir(BigDecimal montant, Devise de, Devise vers) {
+        if (montant == null || de == null || vers == null || de.getCoursAriary() <= 0 || vers.getCoursAriary() <= 0) {
+            return Optional.empty();
+        }
+        return Optional.of(montant.multiply(BigDecimal.valueOf(de.getCoursAriary()))
+                .divide(BigDecimal.valueOf(vers.getCoursAriary()), 2, RoundingMode.HALF_UP));
+    }
+
     // ── Circuit maker / checker ──────────────────────────────────────────────
 
     /**
-     * Le RH MAKER propose un taux.
+     * Le RH MAKER propose un taux journalier.
      *
-     * @throws IllegalArgumentException saisie invalide, proposition déjà en attente pour la même ligne,
+     * @throws IllegalArgumentException saisie invalide, proposition déjà en attente pour la même case,
      *                                  ou date d'effet antérieure au dernier taux validé
      */
     @Transactional
     public BaremePerDiem proposer(Authentication auth, Utilisateur auteur,
-                                  Integer idCategorie, Integer idZone, String type,
+                                  Integer idCategorie, Integer idZone,
                                   String montant, Integer idDevise, LocalDate dateEffet, String motif) {
         if (!peutProposer(auth)) {
             throw new AccessDeniedException("Seuls les RH (MAKER) proposent un taux du barème.");
@@ -117,23 +152,20 @@ public class BaremePerDiemService {
         if (!zone.estActif()) {
             throw new IllegalArgumentException("La zone « " + zone.getLibelle() + " » est désactivée.");
         }
-        TypeIndemnite typeIndemnite = TypeIndemnite.parse(type);
         BigDecimal valeur = lireMontant(montant);
         if (dateEffet == null) {
             throw new IllegalArgumentException("La date d'effet est obligatoire.");
         }
 
-        if (!baremeRepo.findLigne(categorie.getId(), zone.getId(), typeIndemnite, Statut.PROPOSE).isEmpty()) {
+        if (!baremeRepo.findCase(categorie.getId(), zone.getId(), Statut.PROPOSE).isEmpty()) {
             throw new IllegalArgumentException("Une proposition est déjà en attente pour "
-                    + designation(categorie, zone, typeIndemnite)
-                    + " : la faire valider, rejeter ou annuler d'abord.");
+                    + designation(categorie, zone) + " : la faire valider, rejeter ou annuler d'abord.");
         }
-        verifierDateEffet(categorie, zone, typeIndemnite, dateEffet);
+        verifierDateEffet(categorie, zone, dateEffet);
 
         BaremePerDiem b = new BaremePerDiem();
         b.setCategorie(categorie);
         b.setZone(zone);
-        b.setTypeIndemnite(typeIndemnite);
         b.setMontant(valeur);
         b.setDevise(lireDevise(idDevise));
         b.setDateEffet(dateEffet);
@@ -145,7 +177,7 @@ public class BaremePerDiemService {
     }
 
     /**
-     * Le DRH valide : le taux entre en vigueur à sa date d'effet et clôt le taux précédent de la même ligne.
+     * Le DRH valide : le taux entre en vigueur à sa date d'effet et clôt le taux précédent de la même case.
      *
      * @throws AccessDeniedException    pas RH + CHECKER, ou validation de sa propre proposition
      * @throws IllegalArgumentException proposition déjà traitée, ou date d'effet devenue invalide
@@ -158,13 +190,12 @@ public class BaremePerDiemService {
                     ? "Une proposition se valide par une autre personne que son auteur."
                     : "Seul le DRH (RH + CHECKER) valide le barème.");
         }
-        verifierDateEffet(b.getCategorie(), b.getZone(), b.getTypeIndemnite(), b.getDateEffet());
+        verifierDateEffet(b.getCategorie(), b.getZone(), b.getDateEffet());
 
-        // Clôture du taux en cours de la même ligne (au plus un taux ouvert, cf. verifierDateEffet).
+        // Clôture du taux en cours de la même case (au plus un taux ouvert, cf. verifierDateEffet).
         // Écrite en base avant que le nouveau taux devienne VALIDE : l'index unique
-        // ux_bareme_per_diem_ouvert n'admet qu'un taux validé sans date de fin par ligne.
-        for (BaremePerDiem precedent : baremeRepo.findLigne(b.getCategorie().getId(), b.getZone().getId(),
-                b.getTypeIndemnite(), Statut.VALIDE)) {
+        // ux_bareme_per_diem_ouvert n'admet qu'un taux validé sans date de fin par case.
+        for (BaremePerDiem precedent : baremeRepo.findCase(b.getCategorie().getId(), b.getZone().getId(), Statut.VALIDE)) {
             if (precedent.getDateFin() == null) {
                 precedent.setDateFin(b.getDateEffet());
                 baremeRepo.saveAndFlush(precedent);
@@ -225,12 +256,11 @@ public class BaremePerDiemService {
         return b;
     }
 
-    /** La date d'effet suit strictement celle du dernier taux validé de la même ligne. */
-    private void verifierDateEffet(CategoriePersonnel categorie, ZoneMission zone,
-                                   TypeIndemnite type, LocalDate dateEffet) {
-        List<BaremePerDiem> valides = baremeRepo.findLigne(categorie.getId(), zone.getId(), type, Statut.VALIDE);
+    /** La date d'effet suit strictement celle du dernier taux validé de la même case. */
+    private void verifierDateEffet(CategoriePersonnel categorie, ZoneMission zone, LocalDate dateEffet) {
+        List<BaremePerDiem> valides = baremeRepo.findCase(categorie.getId(), zone.getId(), Statut.VALIDE);
         if (!valides.isEmpty() && !dateEffet.isAfter(valides.get(0).getDateEffet())) {
-            throw new IllegalArgumentException("Pour " + designation(categorie, zone, type)
+            throw new IllegalArgumentException("Pour " + designation(categorie, zone)
                     + ", la date d'effet doit être postérieure au " + valides.get(0).getDateEffet().format(JJ_MM_AAAA)
                     + " (date d'effet du dernier taux validé).");
         }
@@ -273,17 +303,14 @@ public class BaremePerDiemService {
         return s == null || s.isBlank() ? null : s.trim();
     }
 
-    private static String designation(CategoriePersonnel c, ZoneMission z, TypeIndemnite t) {
-        return t.getLibelle().toLowerCase() + " / " + c.getLibelle() + " / " + z.getLibelle();
+    private static String designation(CategoriePersonnel c, ZoneMission z) {
+        return c.getLibelle() + " / " + z.getLibelle();
     }
 
-    private static Map<String, Map<Integer, Map<Integer, BaremePerDiem>>> indexer(List<BaremePerDiem> taux) {
-        Map<String, Map<Integer, Map<Integer, BaremePerDiem>>> m = new LinkedHashMap<>();
-        for (TypeIndemnite t : TypeIndemnite.values()) m.put(t.name(), new HashMap<>());
+    private static Map<Integer, Map<Integer, BaremePerDiem>> indexer(List<BaremePerDiem> taux) {
+        Map<Integer, Map<Integer, BaremePerDiem>> m = new HashMap<>();
         for (BaremePerDiem b : taux) {
-            m.get(b.getTypeIndemnite().name())
-                    .computeIfAbsent(b.getCategorie().getId(), k -> new HashMap<>())
-                    .put(b.getZone().getId(), b);
+            m.computeIfAbsent(b.getCategorie().getId(), k -> new HashMap<>()).put(b.getZone().getId(), b);
         }
         return m;
     }

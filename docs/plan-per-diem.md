@@ -1,7 +1,7 @@
 # Plan : demande de Per Diem et ordre de mission
 
 > Statut : **proposition**, rédigée le 26/11/2026. Lots 0 et 1 codés le 26/11/2026
-> (script `scriptSQL/PROD/08_per_diem_bareme.sql` : PREPROD oui le 26/11/2026, schéma validé ; PROD non). Les points marqués **[à confirmer]** reprennent
+> (scripts `scriptSQL/PROD/08_per_diem_bareme.sql` et `09_per_diem_bareme_initial.sql` ; exécutés en PREPROD le 26/11/2026 avec la correction `scriptSQL/per_diem_correction_preprod.sql`, schéma validé ; PROD non). Les points marqués **[à confirmer]** reprennent
 > les questions ouvertes du §9 ; la valeur indiquée est la recommandation retenue par défaut.
 > Modèle de référence : ordre de mission n° 093/26 (mission à Tuléar, 25 au 27/10/2026).
 
@@ -10,7 +10,7 @@
 Gérer dans l'application, de bout en bout, une mission d'un collaborateur :
 
 1. saisie de la mission (missionnaire, destination, objet, itinéraire, transport) ;
-2. calcul du per diem à partir d'un **barème** et du **nombre de jours / nuitées** ;
+2. calcul du per diem à partir d'un **barème** et du **nombre de jours** (taux journalier ; l'hébergement est payé par la banque) ;
 3. circuit de validation **RH → DRH → Contrôleur de gestion → S.G.** ;
 4. émission de l'**ordre de mission** numéroté `NNN/AA` (ex. `093/26`), imprimable ;
 5. paiement du per diem par la Finance, puis régularisation au retour.
@@ -25,7 +25,7 @@ N+1 → Moyens Généraux → Contrôleur → D.F.C. → S.G., que `TypeDemande`
 
 - d'étapes absentes du circuit achat (RH, DRH) ;
 - d'une étape où l'on **saisit** une donnée (le montant), pas seulement où l'on approuve ;
-- de données propres (itinéraire, nuitées, barème, numéro d'OM) sans rapport avec `DemandeMere`
+- de données propres (itinéraire, nombre de jours, barème, numéro d'OM) sans rapport avec `DemandeMere`
   (articles, bon de commande, stock).
 
 On crée donc un module `perdiem` avec ses propres entités et son propre enum d'étapes,
@@ -119,8 +119,7 @@ BROUILLON ─▶ SOUMISE ─▶ [N+1] ─▶ SAISIE_RH ─▶ VALIDATION_DRH ─
 | `date_depart_aller` / `date_arrivee_aller` | date (+ heure optionnelle) | |
 | `date_depart_retour` / `date_arrivee_retour` | date (+ heure optionnelle) | |
 | `id_transport` | FK `transport` | avion, voiture de service, taxi-brousse… (table existante) |
-| `hebergement_pris_en_charge` | boolean | hôtel réservé et payé par AFG → pas d'indemnité d'hébergement |
-| `nb_jours` / `nb_nuitees` | int | calculés, figés à la saisie RH, ajustables |
+| `nb_jours` | int | calculé, figé à la saisie RH, ajustable (cf. §5.4) |
 | `montant_per_diem` | numeric | total figé (somme des lignes §5.4) |
 | `id_devise` | FK `devise` | MGA par défaut |
 | `id_centre_budgetaire` / ligne budgétaire | FK | imputation, contrôlée par le CG |
@@ -133,11 +132,9 @@ BROUILLON ─▶ SOUMISE ─▶ [N+1] ─▶ SAISIE_RH ─▶ VALIDATION_DRH ─
 | Colonne | Remarque |
 |---|---|
 | `id_bareme` | PK |
-| `id_categorie_personnel` | Directeur, Cadre, Agent… |
-| `id_zone` | Antananarivo, chef-lieu de province, autre ville, étranger (Afrique, Europe…) |
-| `type_indemnite` | `REPAS`, `HEBERGEMENT`, `FORFAIT_JOURNALIER`, `DEPLACEMENT_LOCAL` |
-| `unite` | `JOUR` ou `NUITEE` |
-| `montant`, `id_devise` | |
+| `id_categorie_personnel` | DG / DGA / SG, Cadre supérieur (CODIR), Cadre moyen, Non cadre |
+| `id_zone` | Madagascar, Afrique, Hors Afrique (y c. Afrique du Nord, océan Indien, Afrique du Sud) |
+| `montant`, `id_devise` | **par jour** : repas + déplacements locaux (l'hébergement est payé par la banque) |
 | `date_effet`, `date_fin` | `date_fin` null = en vigueur |
 | `statut` | `PROPOSE` → `VALIDE` (RH MAKER propose, DRH valide) |
 
@@ -146,8 +143,22 @@ jamais une ligne validée ; on la clôt (`date_fin`) et on en crée une nouvelle
 déjà calculées gardent leur montant (§5.4).
 
 Tables de référence : `categorie_personnel` (code, libellé, ordre, actif) et `zone_mission`
-(code, libellé, pays, actif). Lien `poste → categorie_personnel` pour proposer la catégorie
-automatiquement.
+(code, libellé, étranger, ordre, actif). Lien `poste → categorie_personnel` pour proposer la
+catégorie automatiquement (lot 2).
+
+Barème en vigueur (grille DRH, chargée par `scriptSQL/PROD/09_per_diem_bareme_initial.sql`,
+date d'effet 01/01/2026) :
+
+| Catégorie | Madagascar | Afrique | Hors Afrique |
+|---|---|---|---|
+| DG / DGA / SG | 180 000 MGA | 90 000 XOF (≈ 137,20 €) | 110 000 XOF (≈ 167,69 €) |
+| Cadre supérieur (CODIR) | 150 000 MGA | 75 000 XOF (≈ 114,34 €) | 90 000 XOF (≈ 137,20 €) |
+| Cadre moyen (chef de service ou de département) | 150 000 MGA | 60 000 XOF (≈ 91,47 €) | 80 000 XOF (≈ 121,96 €) |
+| Non cadre | 110 000 MGA | 50 000 XOF (≈ 76,22 €) | 75 000 XOF (≈ 114,34 €) |
+
+À Madagascar, la grille ne distingue que « Cadres » : même taux pour CODIR et cadre moyen.
+À l'étranger, le taux est enregistré en franc CFA ; l'écran affiche la contre-valeur en euro
+(parité fixe 655,957) au cours enregistré des devises.
 
 ### 5.3 `mission_etape` (itinéraire multi-villes, optionnel en V1)
 
@@ -155,16 +166,16 @@ Une ligne par tronçon (ville départ, ville arrivée, date, transport). En V1, 
 de `mission` suffisent pour le modèle 093/26 ; la table permet ensuite Tana → Tuléar →
 Fianarantsoa → Tana sans changer le reste.
 
-### 5.4 `mission_ligne_per_diem` (détail figé du calcul)
+### 5.4 Calcul figé sur la mission
+
+Un seul taux par jour : pas de table de lignes, le détail tient dans `mission`.
 
 | Colonne | Remarque |
 |---|---|
-| `id_mission` | |
-| `type_indemnite`, `unite` | copiés du barème |
-| `quantite` | nb de jours ou de nuitées |
-| `montant_unitaire` | **copié** du barème au moment du calcul |
-| `id_bareme` | traçabilité de la ligne d'origine |
-| `montant` | quantité × montant unitaire |
+| `id_bareme_per_diem` | traçabilité du taux appliqué |
+| `taux_journalier`, `id_devise` | **copiés** du barème au moment du calcul |
+| `nb_jours` | calculé (§6.1), ajustable |
+| `montant_per_diem` | nb de jours × taux journalier |
 | `ajuste` / `motif_ajustement` | si le RH MAKER a modifié la valeur proposée |
 
 ### 5.5 Autres tables
@@ -178,21 +189,20 @@ Fianarantsoa → Tana sans changer le reste.
 
 ## 6. Calculs
 
-### 6.1 Jours et nuitées
+### 6.1 Nombre de jours
 
 - `nb_jours = date_arrivee_retour − date_depart_aller + 1`
-- `nb_nuitees = date_arrivee_retour − date_depart_aller` (0 pour un aller-retour dans la journée)
-- Exemple 093/26 : départ 25/10, retour 27/10 → **3 jours, 2 nuitées**.
-- Option **[à confirmer]** : demi-journée selon les heures de départ / retour (ex. départ après
-  14 h → pas de repas du midi le premier jour). Non retenu en V1 sauf si la note RH le prévoit.
+- Exemple 093/26 : départ 25/10, retour 27/10 → **3 jours**.
+- Option **[à confirmer]** : demi-journée selon les heures de départ / retour. Non retenu en V1
+  sauf si la note RH le prévoit.
 
 ### 6.2 Montant
 
-Pour chaque ligne du barème applicable (catégorie × zone × date de départ) :
-`montant = quantité (jours ou nuitées) × montant unitaire`.
-Si `hebergement_pris_en_charge = true`, la ligne `HEBERGEMENT` est omise.
-Le total est la somme des lignes ; le RH MAKER peut ajuster une ligne avec un motif obligatoire,
-visible du DRH.
+Taux applicable : celui de la catégorie et de la zone de la mission, à la date de départ.
+`montant_per_diem = nb_jours × taux journalier`, dans la devise du barème (MGA à Madagascar,
+XOF à l'étranger, avec la contre-valeur en euro). L'hébergement est payé directement par la
+banque et ne fait pas partie du per diem. Le RH MAKER peut ajuster le nombre de jours ou le
+montant avec un motif obligatoire, visible du DRH.
 
 ### 6.3 Numéro d'ordre de mission
 
@@ -228,11 +238,11 @@ Une mission **annulée avant le départ** passe à `ANNULEE` ; son numéro d'OM 
 | Écran | Accès | Contenu |
 |---|---|---|
 | Mes missions | tous | liste + bouton « Nouvelle mission » |
-| Saisie mission | demandeur, RH MAKER | missionnaire (lui-même ou, pour le RH, recherche), destination, zone, objet, 4 dates, transport, hébergement pris en charge, imputation |
+| Saisie mission | demandeur, RH MAKER | missionnaire (lui-même ou, pour le RH, recherche), destination, zone, objet, 4 dates, transport, imputation |
 | Fiche mission | acteurs + missionnaire | données, détail du calcul, frise du circuit, historique, pièces jointes, boutons de l'étape en cours |
 | Missions à traiter | RH, DRH, CG, SG, Finance | missions en attente de l'utilisateur connecté (badge dans le menu) |
 | Ordre de mission (impression) | tous, une fois `EMISE` | reproduction du modèle 093/26 : logo, « Antananarivo, le … », cadre « ORDRE DE MISSION N° … », civilité + nom + fonction, destination, objet, 4 dates, transport, mentions, signataire S.G., pied de page légal ; `@media print`, bouton Imprimer (comme le bon de commande) |
-| Barème | RH (consultation), RH MAKER (proposition), RH CHECKER (validation) | grille catégorie × zone × type, historique des versions |
+| Barème | RH (consultation), RH MAKER (proposition), RH CHECKER (validation) | grille catégorie × zone (taux par jour, contre-valeur €), historique des versions |
 | Référentiels | RH MAKER | catégories de personnel, zones, lien poste → catégorie |
 | Tableau de bord RH | RH, CG, SG | missions en cours, coût par direction / mois / zone |
 
@@ -259,7 +269,7 @@ reste possible (image stockée, affichée seulement quand le statut est `EMISE`)
 
 - date de retour ≥ date de départ ; dates cohérentes entre aller et retour ;
 - pas de chevauchement avec une autre mission non refusée du même missionnaire ;
-- une ligne de barème `VALIDE` doit exister pour la catégorie, la zone et la date, sinon saisie RH bloquée avec un message clair ;
+- un taux `VALIDE` doit exister pour la catégorie, la zone et la date de départ, sinon saisie RH bloquée avec un message clair ;
 - séparation des tâches : le DRH ne valide ni sa propre mission, ni un montant qu'il a lui-même saisi ;
 - le CG voit le disponible de la ligne budgétaire imputée (si l'information existe déjà côté achat).
 
@@ -269,7 +279,7 @@ reste possible (image stockée, affichée seulement quand le statut est `EMISE`)
 |---|---|---|
 | **0** | Rôle `RH` (script rejouable + PROD), menu « Missions » visible selon les rôles | un utilisateur RH voit le menu |
 | **1** | Référentiels : `categorie_personnel`, `zone_mission`, `bareme_per_diem` versionné + écrans barème (maker / checker) | barème saisi et validé en PREPROD |
-| **2** | `mission` + saisie + brouillon / soumission + calcul jours / nuitées / montant (`mission_ligne_per_diem`) | une mission calculée comme l'exemple 093/26 |
+| **2** | `mission` + saisie + brouillon / soumission + calcul jours × taux journalier (figé sur la mission) | une mission calculée comme l'exemple 093/26 |
 | **3** | Circuit `EtapeMission` + `validation_mission` + écrans « à traiter » + mails | une mission va de la soumission à `EMISE` |
 | **4** | Numérotation `compteur_ordre_mission` + gabarit d'impression de l'OM (modèle fourni) | OM `001/26` imprimé, conforme au modèle |
 | **5** | Paiement (avance) par la Finance + régularisation au retour + annulation | mission `CLOTUREE` |

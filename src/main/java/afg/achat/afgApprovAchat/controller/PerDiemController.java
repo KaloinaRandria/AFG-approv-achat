@@ -2,7 +2,6 @@ package afg.achat.afgApprovAchat.controller;
 
 import afg.achat.afgApprovAchat.model.perdiem.BaremePerDiem;
 import afg.achat.afgApprovAchat.model.perdiem.CategoriePersonnel;
-import afg.achat.afgApprovAchat.model.perdiem.TypeIndemnite;
 import afg.achat.afgApprovAchat.model.perdiem.ZoneMission;
 import afg.achat.afgApprovAchat.model.util.Devise;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
@@ -23,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -53,14 +53,16 @@ public class PerDiemController {
         LocalDate jour = date != null ? date : LocalDate.now();
         model.addAttribute("dateGrille", jour);
         model.addAttribute("aujourdhui", LocalDate.now());
-        model.addAttribute("types", TypeIndemnite.values());
         model.addAttribute("categories", referentielService.categoriesActives());
         model.addAttribute("zones", referentielService.zonesActives());
         model.addAttribute("grille", baremeService.grille(jour));
         model.addAttribute("grilleEnAttente", baremeService.grilleEnAttente());
         model.addAttribute("enAttente", baremeService.enAttente());
         model.addAttribute("programmes", baremeService.programmesApres(LocalDate.now()));
-        model.addAttribute("historique", baremeService.historique());
+        List<BaremePerDiem> historique = baremeService.historique();
+        model.addAttribute("historique", historique);
+        // L'historique contient tous les taux affichés : contre-valeur EUR / XOF de chacun
+        model.addAttribute("equivalents", baremeService.equivalents(historique));
         model.addAttribute("devises", deviseRepo.findAll());
         model.addAttribute("codeDeviseReference", Devise.CODE_REFERENCE);
         model.addAttribute("peutProposer", BaremePerDiemService.peutProposer(auth));
@@ -73,7 +75,6 @@ public class PerDiemController {
     @PostMapping("/bareme/proposer")
     public String proposer(@RequestParam(name = "idCategorie", required = false) Integer idCategorie,
                            @RequestParam(name = "idZone", required = false) Integer idZone,
-                           @RequestParam(name = "typeIndemnite", required = false) String type,
                            @RequestParam(name = "montant", required = false) String montant,
                            @RequestParam(name = "idDevise", required = false) Integer idDevise,
                            @RequestParam(name = "dateEffet", required = false)
@@ -81,7 +82,7 @@ public class PerDiemController {
                            @RequestParam(name = "motif", required = false) String motif,
                            RedirectAttributes ra) {
         return executer(ra, BAREME, () -> {
-            BaremePerDiem b = baremeService.proposer(auth(), connecte(), idCategorie, idZone, type,
+            BaremePerDiem b = baremeService.proposer(auth(), connecte(), idCategorie, idZone,
                     montant, idDevise, dateEffet, motif);
             return "Taux proposé (" + libelle(b) + ") : en attente de validation par le DRH.";
         });
@@ -200,8 +201,7 @@ public class PerDiemController {
     }
 
     private static String libelle(BaremePerDiem b) {
-        return b.getTypeIndemnite().getLibelle() + " / " + b.getCategorie().getLibelle()
-                + " / " + b.getZone().getLibelle();
+        return b.getCategorie().getLibelle() + " / " + b.getZone().getLibelle();
     }
 
     private static Authentication auth() {

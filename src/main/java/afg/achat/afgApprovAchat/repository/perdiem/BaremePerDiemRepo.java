@@ -2,7 +2,6 @@ package afg.achat.afgApprovAchat.repository.perdiem;
 
 import afg.achat.afgApprovAchat.model.perdiem.BaremePerDiem;
 import afg.achat.afgApprovAchat.model.perdiem.BaremePerDiem.Statut;
-import afg.achat.afgApprovAchat.model.perdiem.TypeIndemnite;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,28 +14,24 @@ import java.util.Optional;
 @Repository
 public interface BaremePerDiemRepo extends JpaRepository<BaremePerDiem, Integer> {
 
-    /** Taux d'une même ligne du barème (catégorie, zone, type) ayant le statut donné, du plus récent au plus ancien. */
+    /** Taux d'une même case du barème (catégorie, zone) ayant le statut donné, du plus récent au plus ancien. */
     @Query("""
             SELECT b FROM BaremePerDiem b
-            WHERE b.categorie.id = :idCategorie AND b.zone.id = :idZone
-              AND b.typeIndemnite = :type AND b.statut = :statut
+            WHERE b.categorie.id = :idCategorie AND b.zone.id = :idZone AND b.statut = :statut
             ORDER BY b.dateEffet DESC
             """)
-    List<BaremePerDiem> findLigne(@Param("idCategorie") Integer idCategorie,
-                                  @Param("idZone") Integer idZone,
-                                  @Param("type") TypeIndemnite type,
-                                  @Param("statut") Statut statut);
+    List<BaremePerDiem> findCase(@Param("idCategorie") Integer idCategorie,
+                                 @Param("idZone") Integer idZone,
+                                 @Param("statut") Statut statut);
 
     /** Taux validé qui s'applique à la date donnée (au plus un, les périodes ne se chevauchent pas). */
     @Query("""
             SELECT b FROM BaremePerDiem b
-            WHERE b.categorie.id = :idCategorie AND b.zone.id = :idZone
-              AND b.typeIndemnite = :type AND b.statut = 'VALIDE'
+            WHERE b.categorie.id = :idCategorie AND b.zone.id = :idZone AND b.statut = 'VALIDE'
               AND b.dateEffet <= :date AND (b.dateFin IS NULL OR b.dateFin > :date)
             """)
     Optional<BaremePerDiem> findApplicable(@Param("idCategorie") Integer idCategorie,
                                            @Param("idZone") Integer idZone,
-                                           @Param("type") TypeIndemnite type,
                                            @Param("date") LocalDate date);
 
     /** Tous les taux validés applicables à la date donnée (grille du barème). */

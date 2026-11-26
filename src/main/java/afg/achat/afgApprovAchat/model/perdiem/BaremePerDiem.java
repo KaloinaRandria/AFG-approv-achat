@@ -13,12 +13,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Un taux du barème des per diem : montant d'un type d'indemnité, pour une catégorie de personnel
- * et une zone, valable à partir d'une date d'effet.
+ * Un taux du barème des per diem : montant <b>par jour</b> de mission pour une catégorie de personnel
+ * et une zone, valable à partir d'une date d'effet. Il couvre les repas et les déplacements locaux ;
+ * l'hébergement est payé directement par la banque.
  *
  * <p>Circuit maker / checker : le RH MAKER propose ({@link Statut#PROPOSE}), le RH CHECKER (DRH)
  * valide ou rejette. Un taux validé n'est jamais modifié : un nouveau taux pour la même
- * catégorie, zone et type clôt le précédent ({@code dateFin} = date d'effet du nouveau).
+ * catégorie et la même zone clôt le précédent ({@code dateFin} = date d'effet du nouveau).
  * Les missions copieront le montant au moment du calcul : changer le barème ne les modifie pas.</p>
  *
  * <p>Période de validité : {@code dateEffet ≤ date < dateFin} ({@code dateFin} exclue, {@code null} = en vigueur).</p>
@@ -58,10 +59,7 @@ public class BaremePerDiem {
     @JoinColumn(name = "id_zone_mission", referencedColumnName = "id_zone_mission", nullable = false)
     ZoneMission zone;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "type_indemnite", nullable = false, length = 30)
-    TypeIndemnite typeIndemnite;
-
+    /** Montant par jour de mission. */
     @Column(name = "montant", nullable = false, precision = 15, scale = 2)
     BigDecimal montant;
 

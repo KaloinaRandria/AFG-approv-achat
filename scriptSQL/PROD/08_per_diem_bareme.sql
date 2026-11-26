@@ -1,12 +1,18 @@
 -- Missions et per diem, lots 0 et 1 (docs/plan-per-diem.md) :
 --   - rôle RH (RH seul : consultation ; RH + MAKER : saisie ; RH + CHECKER : DRH, validation) ;
 --   - référentiels du barème : catégories de personnel, zones de mission ;
---   - barème des per diem, versionné par date d'effet, en circuit maker / checker.
+--   - barème des per diem : un montant PAR JOUR (repas + déplacements locaux ; l'hébergement
+--     est payé par la banque) par catégorie et par zone, versionné par date d'effet,
+--     en circuit maker / checker.
 --
 -- À exécuter AVANT de démarrer la version de l'appli qui contient les entités
--- CategoriePersonnel, ZoneMission et BaremePerDiem (ddl-auto=validate).
+-- CategoriePersonnel, ZoneMission et BaremePerDiem (ddl-auto=validate). Le barème initial
+-- est chargé ensuite par 09_per_diem_bareme_initial.sql.
 -- Rejouable : ne crée que ce qui manque. Aucune donnée existante n'est modifiée.
 -- Les droits du login applicatif suivent par les privilèges par défaut (05_login_applicatif.sql).
+--
+-- PREPROD : une première version de ce script (avec une colonne type_indemnite) y a été exécutée
+-- le 26/11/2026 ; elle est corrigée par scriptSQL/per_diem_correction_preprod.sql.
 
 BEGIN;
 
@@ -33,14 +39,12 @@ CREATE TABLE IF NOT EXISTS zone_mission (
     actif           BOOLEAN DEFAULT TRUE
 );
 
--- 4. Barème des per diem -------------------------------------------------------
+-- 4. Barème des per diem (montant par jour) ------------------------------------
 -- Validité : date_effet <= jour < date_fin (date_fin exclue, NULL = en vigueur).
 CREATE TABLE IF NOT EXISTS bareme_per_diem (
     id_bareme_per_diem     SERIAL PRIMARY KEY,
     id_categorie_personnel INTEGER        NOT NULL REFERENCES categorie_personnel (id_categorie_personnel),
     id_zone_mission        INTEGER        NOT NULL REFERENCES zone_mission (id_zone_mission),
-    type_indemnite         VARCHAR(30)    NOT NULL
-        CHECK (type_indemnite IN ('REPAS', 'HEBERGEMENT', 'FORFAIT_JOURNALIER', 'DEPLACEMENT_LOCAL')),
     montant                NUMERIC(15, 2) NOT NULL CHECK (montant > 0),
     id_devise              INTEGER        NOT NULL REFERENCES devise (id_devise),
     date_effet             DATE           NOT NULL,
@@ -56,24 +60,24 @@ CREATE TABLE IF NOT EXISTS bareme_per_diem (
     CONSTRAINT ck_bareme_periode CHECK (date_fin IS NULL OR date_fin > date_effet)
 );
 
--- Une seule proposition en attente par case du barème (catégorie, zone, type)
+-- Une seule proposition en attente par case du barème (catégorie, zone)
 CREATE UNIQUE INDEX IF NOT EXISTS ux_bareme_per_diem_propose
-    ON bareme_per_diem (id_categorie_personnel, id_zone_mission, type_indemnite)
+    ON bareme_per_diem (id_categorie_personnel, id_zone_mission)
     WHERE statut = 'PROPOSE';
 
 -- Deux taux validés d'une même case n'ont pas la même date d'effet
 CREATE UNIQUE INDEX IF NOT EXISTS ux_bareme_per_diem_valide
-    ON bareme_per_diem (id_categorie_personnel, id_zone_mission, type_indemnite, date_effet)
+    ON bareme_per_diem (id_categorie_personnel, id_zone_mission, date_effet)
     WHERE statut = 'VALIDE';
 
--- Au plus un taux validé ouvert (en vigueur ou programmé sans fin) par case
+-- Au plus un taux validé ouvert (sans date de fin) par case
 CREATE UNIQUE INDEX IF NOT EXISTS ux_bareme_per_diem_ouvert
-    ON bareme_per_diem (id_categorie_personnel, id_zone_mission, type_indemnite)
+    ON bareme_per_diem (id_categorie_personnel, id_zone_mission)
     WHERE statut = 'VALIDE' AND date_fin IS NULL;
 
 -- Recherche du taux applicable à une mission
 CREATE INDEX IF NOT EXISTS ix_bareme_per_diem_recherche
-    ON bareme_per_diem (id_categorie_personnel, id_zone_mission, type_indemnite, statut, date_effet);
+    ON bareme_per_diem (id_categorie_personnel, id_zone_mission, statut, date_effet);
 
 COMMIT;
 

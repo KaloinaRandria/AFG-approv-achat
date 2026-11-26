@@ -3,7 +3,6 @@ package afg.achat.afgApprovAchat.service.perdiem;
 import afg.achat.afgApprovAchat.model.perdiem.BaremePerDiem;
 import afg.achat.afgApprovAchat.model.perdiem.BaremePerDiem.Statut;
 import afg.achat.afgApprovAchat.model.perdiem.CategoriePersonnel;
-import afg.achat.afgApprovAchat.model.perdiem.TypeIndemnite;
 import afg.achat.afgApprovAchat.model.perdiem.ZoneMission;
 import afg.achat.afgApprovAchat.model.util.Devise;
 import afg.achat.afgApprovAchat.model.utilisateur.Utilisateur;
@@ -66,7 +65,7 @@ class BaremePerDiemServiceTest {
         when(referentielService.categorie(10)).thenReturn(cadre);
         when(referentielService.zone(20)).thenReturn(province);
         when(deviseRepo.findByAcronymeIgnoreCase("MGA")).thenReturn(Optional.of(mga));
-        when(baremeRepo.findLigne(anyInt(), anyInt(), any(), any())).thenReturn(List.of());
+        when(baremeRepo.findCase(anyInt(), anyInt(), any())).thenReturn(List.of());
         when(baremeRepo.save(any())).thenAnswer(i -> i.getArgument(0));
         when(baremeRepo.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
     }
@@ -75,13 +74,12 @@ class BaremePerDiemServiceTest {
 
     @Test
     void leMakerProposeUnTauxEnAttenteEnAriaryParDefaut() {
-        BaremePerDiem b = service.proposer(maker, gestionnaire, 10, 20, "REPAS",
+        BaremePerDiem b = service.proposer(maker, gestionnaire, 10, 20,
                 "45 000", null, LocalDate.of(2027, 1, 1), " Note DRH ");
 
         assertEquals(Statut.PROPOSE, b.getStatut());
         assertEquals(new BigDecimal("45000"), b.getMontant());
         assertEquals(mga, b.getDevise());
-        assertEquals(TypeIndemnite.REPAS, b.getTypeIndemnite());
         assertEquals(gestionnaire, b.getProposePar());
         assertEquals("Note DRH", b.getMotif());
         assertNull(b.getDateFin());
@@ -90,36 +88,36 @@ class BaremePerDiemServiceTest {
     @Test
     void unRhSansMakerNePropose() {
         assertThrows(AccessDeniedException.class, () -> service.proposer(rhSeul, gestionnaire, 10, 20,
-                "REPAS", "45000", null, LocalDate.of(2027, 1, 1), null));
+                "45000", null, LocalDate.of(2027, 1, 1), null));
         verify(baremeRepo, never()).save(any());
     }
 
     @Test
     void uneSeulePropositionEnAttenteParCase() {
-        when(baremeRepo.findLigne(10, 20, TypeIndemnite.REPAS, Statut.PROPOSE))
+        when(baremeRepo.findCase(10, 20, Statut.PROPOSE))
                 .thenReturn(List.of(taux(5, Statut.PROPOSE, LocalDate.of(2027, 1, 1), null)));
 
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> service.proposer(
-                maker, gestionnaire, 10, 20, "REPAS", "50000", null, LocalDate.of(2027, 2, 1), null));
+                maker, gestionnaire, 10, 20, "50000", null, LocalDate.of(2027, 2, 1), null));
         assertTrue(e.getMessage().contains("déjà en attente"));
     }
 
     @Test
     void laDateEffetSuitLeDernierTauxValide() {
-        when(baremeRepo.findLigne(10, 20, TypeIndemnite.REPAS, Statut.VALIDE))
+        when(baremeRepo.findCase(10, 20, Statut.VALIDE))
                 .thenReturn(List.of(taux(5, Statut.VALIDE, LocalDate.of(2027, 1, 1), null)));
 
         assertThrows(IllegalArgumentException.class, () -> service.proposer(maker, gestionnaire, 10, 20,
-                "REPAS", "50000", null, LocalDate.of(2027, 1, 1), null));
+                "50000", null, LocalDate.of(2027, 1, 1), null));
         assertDoesNotThrow(() -> service.proposer(maker, gestionnaire, 10, 20,
-                "REPAS", "50000", null, LocalDate.of(2027, 1, 2), null));
+                "50000", null, LocalDate.of(2027, 1, 2), null));
     }
 
     @Test
     void uneCategorieDesactiveeNEstPlusProposee() {
         cadre.setActif(false);
         assertThrows(IllegalArgumentException.class, () -> service.proposer(maker, gestionnaire, 10, 20,
-                "REPAS", "45000", null, LocalDate.of(2027, 1, 1), null));
+                "45000", null, LocalDate.of(2027, 1, 1), null));
     }
 
     @Test
@@ -140,7 +138,7 @@ class BaremePerDiemServiceTest {
         BaremePerDiem ancien = taux(5, Statut.VALIDE, LocalDate.of(2026, 1, 1), null);
         BaremePerDiem propose = taux(6, Statut.PROPOSE, LocalDate.of(2027, 1, 1), gestionnaire);
         when(baremeRepo.findById(6)).thenReturn(Optional.of(propose));
-        when(baremeRepo.findLigne(10, 20, TypeIndemnite.REPAS, Statut.VALIDE)).thenReturn(List.of(ancien));
+        when(baremeRepo.findCase(10, 20, Statut.VALIDE)).thenReturn(List.of(ancien));
 
         BaremePerDiem b = service.valider(drh, directeurRh, 6, null);
 
@@ -211,14 +209,45 @@ class BaremePerDiemServiceTest {
     // ── Grille ───────────────────────────────────────────────────────────────
 
     @Test
-    void laGrilleIndexeParTypeCategorieZone() {
-        BaremePerDiem repas = taux(5, Statut.VALIDE, LocalDate.of(2026, 1, 1), null);
-        when(baremeRepo.findApplicablesLe(any())).thenReturn(List.of(repas));
+    void laGrilleIndexeParCategoriePuisZone() {
+        BaremePerDiem taux = taux(5, Statut.VALIDE, LocalDate.of(2026, 1, 1), null);
+        when(baremeRepo.findApplicablesLe(any())).thenReturn(List.of(taux));
 
         var grille = service.grille(LocalDate.of(2026, 6, 1));
 
-        assertSame(repas, grille.get("REPAS").get(10).get(20));
-        assertTrue(grille.get("HEBERGEMENT").isEmpty());
+        assertSame(taux, grille.get(10).get(20));
+        assertNull(grille.get(11));
+    }
+
+    // ── Contre-valeurs franc CFA / euro ──────────────────────────────────────
+
+    @Test
+    void lesTauxEnFrancCfaOntLeurContreValeurEnEuro() {
+        // Cours PREPROD du 26/11/2026 : EUR 5 029,58 Ar, XOF 7,6675 Ar (parité 655,957)
+        Devise eur = devise(2, "EUR", 5029.58);
+        Devise xof = devise(12, "XOF", 7.6675);
+        when(deviseRepo.findByAcronymeIgnoreCase("EUR")).thenReturn(Optional.of(eur));
+        when(deviseRepo.findByAcronymeIgnoreCase("XOF")).thenReturn(Optional.of(xof));
+
+        BaremePerDiem dg = taux(1, Statut.VALIDE, LocalDate.of(2026, 1, 1), null);
+        dg.setMontant(new BigDecimal("90000"));
+        dg.setDevise(xof);
+        BaremePerDiem nonCadre = taux(2, Statut.VALIDE, LocalDate.of(2026, 1, 1), null);
+        nonCadre.setMontant(new BigDecimal("50000"));
+        nonCadre.setDevise(xof);
+        BaremePerDiem enEuro = taux(3, Statut.PROPOSE, LocalDate.of(2027, 1, 1), null);
+        enEuro.setMontant(new BigDecimal("167.69"));
+        enEuro.setDevise(eur);
+        BaremePerDiem ariary = taux(4, Statut.VALIDE, LocalDate.of(2026, 1, 1), null);
+
+        var eq = service.equivalents(List.of(dg, nonCadre, enEuro, ariary));
+
+        // Valeurs de la grille DRH : 90 000 XOF = 137,20 € ; 50 000 XOF = 76,22 €
+        assertEquals(new BigDecimal("137.20"), BaremePerDiemService.convertir(dg.getMontant(), xof, eur).orElseThrow());
+        assertEquals(new BigDecimal("76.22"), BaremePerDiemService.convertir(nonCadre.getMontant(), xof, eur).orElseThrow());
+        assertTrue(eq.get(1).startsWith("137,20") && eq.get(1).endsWith(" EUR"));
+        assertTrue(eq.get(3).endsWith(" XOF"));
+        assertFalse(eq.containsKey(4));   // ariary : pas de contre-valeur
     }
 
     // ── Utilitaires ──────────────────────────────────────────────────────────
@@ -228,13 +257,20 @@ class BaremePerDiemServiceTest {
         b.setId(id);
         b.setCategorie(cadre);
         b.setZone(province);
-        b.setTypeIndemnite(TypeIndemnite.REPAS);
         b.setMontant(new BigDecimal("40000"));
         b.setDevise(mga);
         b.setDateEffet(dateEffet);
         b.setStatut(statut);
         b.setProposePar(auteur);
         return b;
+    }
+
+    private static Devise devise(int id, String acronyme, double cours) {
+        Devise d = new Devise();
+        d.setId(id);
+        d.setAcronyme(acronyme);
+        d.setCoursAriary(String.valueOf(cours));
+        return d;
     }
 
     private static Utilisateur utilisateur(int id) {
