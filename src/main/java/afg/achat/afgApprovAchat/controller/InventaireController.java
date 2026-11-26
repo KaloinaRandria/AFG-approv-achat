@@ -52,7 +52,7 @@ public class InventaireController {
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate au,
                         @RequestParam(required = false) String reference,
                         @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "20") int size) {
+                        @RequestParam(defaultValue = "10") int size) {
         Authentication auth = auth();
         Inventaire.Statut filtreStatut = null;
         if (statut != null && !statut.isBlank()) {

@@ -122,7 +122,7 @@ public class StockController {
             @RequestParam(required = false) String famille,
 
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "10") int size
     ) {
         int taille = Math.min(Math.max(size, 5), 100);
         Pageable pageable = PageRequest.of(Math.max(page, 0), taille);

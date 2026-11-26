@@ -558,6 +558,7 @@ public class DemandeController {
         );
         String returnUrl = buildReturnUrl(page, size, sort, dir, statut, priorite, motif, num, demandeur, type, typeDemande, dateFrom, dateTo, scope);
         model.addAttribute("returnUrl", returnUrl);
+        model.addAttribute("urlPagination", PaginationUrl.sansPage(request));
 
         model.addAttribute("motif",                  motif);
         model.addAttribute("nbUtilisateursAValider",  idsAValider.size());

@@ -183,7 +183,7 @@ public class BonSortieController {
     @PreAuthorize("hasAnyRole('ADMIN','MOYENS_GENERAUX')")
     @GetMapping("/list")
     public String listeBonsSortie(@RequestParam(defaultValue = "0") int page,
-                                  @RequestParam(defaultValue = "20") int size,
+                                  @RequestParam(defaultValue = "10") int size,
                                   @RequestParam(required = false) String statut,
                                   @RequestParam(required = false) String numero,
                                   @RequestParam(required = false) String demandeur,

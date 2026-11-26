@@ -74,7 +74,7 @@ public class FournisseurController {
 
     @GetMapping("/list")
     public String getListFournisseur(@RequestParam(defaultValue = "0") int page,
-                                     @RequestParam(defaultValue = "20") int size,
+                                     @RequestParam(defaultValue = "10") int size,
                                      @RequestParam(required = false) String nom,
                                      @RequestParam(required = false) String mail,
                                      @RequestParam(required = false) String contact,
@@ -96,7 +96,7 @@ public class FournisseurController {
     @GetMapping("/list/ajax")
     @ResponseBody
     public Page<FournisseurDTO> getListFournisseurAjax(@RequestParam(defaultValue = "0") int page,
-                                                      @RequestParam(defaultValue = "20") int size,
+                                                      @RequestParam(defaultValue = "10") int size,
                                                       @RequestParam(required = false) String nom,
                                                       @RequestParam(required = false) String mail,
                                                       @RequestParam(required = false) String contact) {
