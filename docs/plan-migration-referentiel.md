@@ -1,6 +1,6 @@
 # Plan de migration : référentiel utilisateurs commun (AFG-approv-achat + AFG-process)
 
-> Statut : décisions validées ; phase 0 commitée, phase 1 prête (non exécutée). Rédigé le 26/11/2026 à partir de l'état des deux dépôts
+> Statut : décisions validées ; phase 0 commitée, phase 1 exécutée en PREPROD le 26/11/2026 (PROD : non). Rédigé le 26/11/2026 à partir de l'état des deux dépôts
 > (achat : `fb8a0d7`, process : `ffc6c8b`).
 
 ## 1. Objectif
@@ -170,7 +170,7 @@ ignoré lors d'un `mvnw test` normal. Variable `SPRING_DATASOURCE_URL` pour vise
 
 ### Phase 1 — Référentiel dans la base achat (SQL + petit changement Java achat)
 
-**Statut (26/11/2026)** : script et code prêts, **rien n'est exécuté**.
+**Statut** : répétée sur `ACHAT_APPROV_MIGR` puis **exécutée en PREPROD le 26/11/2026** (contrôles du script OK : 6 tables, 32 FK, vue d'historique ; `SchemaValidationTest` OK ; sur MIGR, 20 écrans, historique du stock et création d'un utilisateur testés sans erreur ; circuit maker / checker de `DemandeCompte` non testé). **PROD : non exécuté.**
 
 Script [`scriptSQL/PROD/06_schema_referentiel.sql`](../scriptSQL/PROD/06_schema_referentiel.sql), par `postgres`, application arrêtée :
 
