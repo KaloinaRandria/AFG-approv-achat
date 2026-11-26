@@ -263,15 +263,22 @@ d'ici là ne serait pas repris : refaire le relevé juste avant la bascule.
 
 ### Phase 3 — Adaptation de l'appli process (Java)
 
+**Statut (26/11/2026)** : code fait dans AFG-process (branche `features`, non commité), compile, `SchemaValidationTest` OK contre `ACHAT_APPROV_PREPROD`. Appli démarrée en local sur `ACHAT_APPROV_PREPROD` (profil dev) sans erreur : connexion ADMIN et MAKER, directions (20), utilisateurs (filtres rôle et direction cohérents avec la reprise : 3 ADMIN, 2 MAKER), demandes et fiches des 2 demandes reprises, formulaire de demande de rôles (identité lue dans le référentiel). **Non testé** : saisie et validation d'une demande de rôles (écriture en PREPROD). L'appli process de PREPROD tourne encore sur `PROCESS_PREPROD` tant que cette version n'est pas déployée.
+
 | Élément | Changement |
 |---|---|
-| `application.properties` | URL de la base commune, login `app_process`, `spring.jpa.properties.hibernate.default_schema=process`, `ddl-auto=validate` |
-| `Utilisateur` | `@Table(name = "utilisateur", schema = "referentiel")`, `@JoinColumn(name = "id_service")` pour la direction, `@JoinTable(name = "utilisateur_role")` dans `process` ; colonnes inutiles pour process non mappées |
-| `Direction` | `@Table(name = "service", schema = "referentiel")`, `code` → `@Column(name = "acronyme")` |
-| `DemandeUtilisateur` / service associé | les demandes de **création** et de modification d'identité disparaissent ; restent les demandes d'**attribution ou retrait de rôles** sur un utilisateur existant (recherche dans le référentiel) |
-| `DirectionController` / `DirectionService` | lecture seule (selon D3) |
-| Écrans | « Créer un utilisateur » remplacé par « Donner accès à l'application » ; message renvoyant vers l'appli achat pour créer la personne |
-| `scriptSQL/init_utilisateur_admin.sql` | réécrit : il n'insère plus d'utilisateur, il donne seulement le rôle ADMIN à un utilisateur existant |
+| `application.properties` | URL `ACHAT_APPROV_PREPROD`, login `process_preprod_app`, `hibernate.default_schema=process` |
+| `model/Referentiel.java` (nouveau) | constante `SCHEMA = "referentiel"` |
+| `Utilisateur` | `referentiel.utilisateur`, direction par `id_service` ; **lecture seule** : plus de setter, colonnes `insertable = false, updatable = false`, plus d'identifiant généré. Seuls les rôles (`process.utilisateur_role`) se modifient |
+| `Direction` | `referentiel.service`, `code` = colonne `acronyme` ; lecture seule de la même façon |
+| `DemandeUtilisateur` / `DemandeUtilisateurService` | une demande ne porte plus que sur les **rôles** d'un collaborateur existant du référentiel (actif et avec un mail) ; type `CREATION` = « Ouverture d'accès » (il n'avait aucun rôle), `MODIFICATION` = « Modification des rôles » ; l'identité est recopiée dans la demande pour l'historique ; une ancienne demande de création de compte en attente ne peut plus être validée (message) |
+| `UtilisateurService.appliquerRoles` | remplace `appliquer` : ne touche qu'aux rôles |
+| `UtilisateurController`, écrans utilisateurs | plus de page « Demande de création » (`/user/add` renvoie vers la liste avec un message) ; formulaire de demande de rôles avec l'identité en lecture seule ; bandeau « les comptes se gèrent dans l'appli achat » |
+| `DirectionController` / `DirectionService` / écran Directions | lecture seule (D3) : plus d'enregistrement ni de renommage de dossier |
+| `scriptSQL/init_utilisateur_admin.sql`, `init_roles_it.sql` | n'insèrent plus d'utilisateur : ils donnent des rôles à des collaborateurs existants du référentiel |
+
+Si une direction est renommée dans l'appli achat, les PDF déjà déposés restent lisibles (chemin
+complet enregistré sur chaque procédure) ; les nouveaux iront dans un dossier au nouveau code.
 
 Les deux applis ont des versions de Spring Boot différentes (3.3.5 et 4.2.0, donc Hibernate 6 et 7) :
 **ne pas partager de JAR d'entités** pour l'instant ; chaque appli garde sa propre classe
