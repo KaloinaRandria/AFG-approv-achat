@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.Immutable;
+import org.hibernate.annotations.Subselect;
 
 import java.time.LocalDateTime;
 
@@ -15,7 +16,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Entity
 @Immutable
-@Table(name = "v_historique_mouvement_stock")
+// Vue en lecture seule : lue via @Subselect, que Hibernate ne compare pas au schéma
+// (ddl-auto=validate). L'identifiant numérique de la vue est lu en texte.
+@Subselect("SELECT * FROM v_historique_mouvement_stock")
 public class HistoriqueMouvementStockView {
 
     @Id

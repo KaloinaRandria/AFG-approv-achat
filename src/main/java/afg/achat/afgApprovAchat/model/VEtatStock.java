@@ -3,11 +3,13 @@ package afg.achat.afgApprovAchat.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Immutable;
+import org.hibernate.annotations.Subselect;
+import org.hibernate.annotations.Synchronize;
 
 import java.beans.ConstructorProperties;
 import java.time.LocalDateTime;
@@ -17,7 +19,11 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "v_etat_stock")
+@Immutable
+// Vue en lecture seule : lue via @Subselect, que Hibernate ne compare pas au schéma
+// (ddl-auto=validate). Les quantités numériques de la vue sont lues en texte.
+@Subselect("SELECT * FROM v_etat_stock")
+@Synchronize({"article", "stock_article", "udm"})
 public class VEtatStock {
     @Id @Column(name = "id_article")
     int idArticle;
