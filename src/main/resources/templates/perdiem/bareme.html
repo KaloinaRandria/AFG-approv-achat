@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Barème des per diem</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <meta name="context-path" th:content="@{/}" />
+    <style>
+        .grille-bareme th, .grille-bareme td { white-space: nowrap; }
+        .grille-bareme td.case { min-width: 9rem; }
+        .grille-bareme .montant { font-weight: 600; }
+        .grille-bareme .depuis { font-size: .75rem; }
+    </style>
+</head>
+<body>
+
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+
+<div class="main-content">
+    <div class="container-fluid py-4"></div>
+    <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+    <section class="mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+            <h1 class="fw-bold text-gradient-blue mb-0">
+                <i class="fas fa-table me-3 icon-gradient-blue"></i> Barème des per diem
+            </h1>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" th:href="@{/perdiem/referentiels}">
+                    <i class="fas fa-layer-group me-2"></i> Catégories et zones
+                </a>
+                <button th:if="${peutProposer}" type="button" class="btn btn-gradient-green"
+                        data-bs-toggle="modal" data-bs-target="#proposerModal">
+                    <i class="fas fa-plus-circle me-2"></i> Proposer un taux
+                </button>
+            </div>
+        </div>
+
+        <div th:if="${#lists.isEmpty(categories) or #lists.isEmpty(zones)}" class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Le barème a besoin d'au moins une <strong>catégorie de personnel</strong> et une <strong>zone</strong> actives :
+            <a th:href="@{/perdiem/referentiels}">les créer</a>.
+        </div>
+    </section>
+
+    <!-- ===================== PROPOSITIONS EN ATTENTE ===================== -->
+    <section class="mb-4" th:if="${!#lists.isEmpty(enAttente)}">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-warning-subtle">
+                <h5 class="mb-0">
+                    <i class="fas fa-hourglass-half me-2"></i> Propositions en attente de validation
+                    <span class="badge bg-warning text-dark ms-1" th:text="${#lists.size(enAttente)}">0</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>Indemnité</th>
+                            <th>Catégorie</th>
+                            <th>Zone</th>
+                            <th class="text-end">Nouveau montant</th>
+                            <th>Date d'effet</th>
+                            <th>Proposé par</th>
+                            <th>Motif</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="p : ${enAttente}"
+                            th:with="estAuteur=${p.proposePar != null and moi != null and p.proposePar.id == moi.id}">
+                            <td>
+                                <span th:text="${p.typeIndemnite.libelle}"></span>
+                                <small class="text-muted d-block" th:text="'par ' + ${p.typeIndemnite.unite.singulier}"></small>
+                            </td>
+                            <td th:text="${p.categorie.libelle}"></td>
+                            <td th:text="${p.zone.libelle}"></td>
+                            <td class="text-end fw-semibold"
+                                th:text="${#numbers.formatDecimal(p.montant, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${p.devise.acronyme}"></td>
+                            <td th:text="${#temporals.format(p.dateEffet, 'dd/MM/yyyy')}"></td>
+                            <td>
+                                <span th:text="${p.proposePar != null ? p.proposePar.prenom + ' ' + p.proposePar.nom : '—'}"></span>
+                                <small class="text-muted d-block" th:text="${#temporals.format(p.dateProposition, 'dd/MM/yyyy HH:mm')}"></small>
+                            </td>
+                            <td class="text-muted small" th:text="${p.motif != null ? p.motif : '—'}"></td>
+                            <td class="text-center text-nowrap">
+                                <button th:if="${peutValider and (estAdmin or !estAuteur)}" type="button"
+                                        class="btn btn-sm btn-outline-success"
+                                        data-bs-toggle="modal" data-bs-target="#traiterModal"
+                                        th:data-id="${p.id}"
+                                        th:data-libelle="${p.typeIndemnite.libelle + ' / ' + p.categorie.libelle + ' / ' + p.zone.libelle}"
+                                        title="Valider ou rejeter">
+                                    <i class="fas fa-check-double me-1"></i> Traiter
+                                </button>
+                                <span th:if="${peutValider and !estAdmin and estAuteur}" class="badge bg-light text-muted border"
+                                      title="Une proposition se valide par une autre personne que son auteur">
+                                    Votre proposition
+                                </span>
+                                <form th:if="${estAuteur or estAdmin}"
+                                      th:action="@{/perdiem/bareme/{id}/annuler(id=${p.id})}" method="post" class="d-inline"
+                                      data-confirmer="Annuler cette proposition ?"
+                                      data-confirmer-texte="Elle ne sera pas soumise au DRH."
+                                      data-confirmer-bouton="Annuler la proposition" data-confirmer-type="warning">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Annuler la proposition">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== GRILLE EN VIGUEUR ===================== -->
+    <section class="mb-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h5 class="mb-0">
+                    <i class="fas fa-th me-2"></i> Taux en vigueur le
+                    <span th:text="${#temporals.format(dateGrille, 'dd/MM/yyyy')}"></span>
+                </h5>
+                <form th:action="@{/perdiem/bareme}" method="get" class="d-flex align-items-center gap-2">
+                    <label for="date" class="form-label mb-0 small text-muted">Voir à la date du</label>
+                    <input type="date" id="date" name="date" class="form-control form-control-sm"
+                           th:value="${dateGrille}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-search"></i></button>
+                    <a th:if="${dateGrille != aujourdhui}" th:href="@{/perdiem/bareme}"
+                       class="btn btn-sm btn-outline-secondary">Aujourd'hui</a>
+                </form>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item" role="presentation" th:each="t, it : ${types}">
+                        <button class="nav-link" type="button" role="tab" data-bs-toggle="tab"
+                                th:classappend="${it.first} ? 'active'"
+                                th:attr="data-bs-target='#onglet-' + ${t.name()}"
+                                th:text="${t.libelle} + ' (par ' + ${t.unite.singulier} + ')'"></button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade" role="tabpanel" th:each="t, it : ${types}"
+                         th:id="'onglet-' + ${t.name()}" th:classappend="${it.first} ? 'show active'">
+                        <div class="table-responsive" th:if="${!#lists.isEmpty(categories) and !#lists.isEmpty(zones)}">
+                            <table class="table table-bordered align-middle grille-bareme mb-0">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>Catégorie \ Zone</th>
+                                    <th th:each="z : ${zones}" class="text-center">
+                                        <span th:text="${z.libelle}"></span>
+                                        <i th:if="${z.estEtranger()}" class="fas fa-globe-africa ms-1 text-muted" title="Étranger"></i>
+                                    </th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="c : ${categories}">
+                                    <th class="table-light" th:text="${c.libelle}"></th>
+                                    <td th:each="z : ${zones}" class="case text-center"
+                                        th:with="ligne=${grille[t.name()][c.id]},
+                                                 b=${ligne != null ? ligne[z.id] : null},
+                                                 ligneAttente=${grilleEnAttente[t.name()][c.id]},
+                                                 att=${ligneAttente != null ? ligneAttente[z.id] : null}">
+                                        <div th:if="${b != null}">
+                                            <span class="montant"
+                                                  th:text="${#numbers.formatDecimal(b.montant, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${b.devise.acronyme}"></span>
+                                            <div class="depuis text-muted"
+                                                 th:text="'depuis le ' + ${#temporals.format(b.dateEffet, 'dd/MM/yyyy')}"></div>
+                                        </div>
+                                        <span th:if="${b == null}" class="text-muted">—</span>
+                                        <div th:if="${att != null}" class="mt-1">
+                                            <span class="badge bg-warning text-dark"
+                                                  th:title="'Proposé : ' + ${#numbers.formatDecimal(att.montant, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${att.devise.acronyme} + ' au ' + ${#temporals.format(att.dateEffet, 'dd/MM/yyyy')}">
+                                                <i class="fas fa-hourglass-half me-1"></i>En attente
+                                            </span>
+                                        </div>
+                                        <button th:if="${peutProposer and att == null}" type="button"
+                                                class="btn btn-link btn-sm p-0 mt-1"
+                                                data-bs-toggle="modal" data-bs-target="#proposerModal"
+                                                th:data-categorie="${c.id}" th:data-zone="${z.id}" th:data-type="${t.name()}"
+                                                th:data-devise="${b != null ? b.devise.id : ''}"
+                                                th:title="${b != null} ? 'Proposer un nouveau taux' : 'Proposer un taux'">
+                                            <i th:class="${b != null} ? 'fas fa-pen' : 'fas fa-plus'"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== TAUX PROGRAMMÉS ===================== -->
+    <section class="mb-4" th:if="${!#lists.isEmpty(programmes)}">
+        <div class="card shadow-sm border-0">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i> Taux validés à venir</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                        <tr><th>Date d'effet</th><th>Indemnité</th><th>Catégorie</th><th>Zone</th><th class="text-end">Montant</th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="b : ${programmes}">
+                            <td th:text="${#temporals.format(b.dateEffet, 'dd/MM/yyyy')}"></td>
+                            <td th:text="${b.typeIndemnite.libelle}"></td>
+                            <td th:text="${b.categorie.libelle}"></td>
+                            <td th:text="${b.zone.libelle}"></td>
+                            <td class="text-end" th:text="${#numbers.formatDecimal(b.montant, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${b.devise.acronyme}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== HISTORIQUE ===================== -->
+    <section class="mb-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i> Historique du barème</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" th:if="${!#lists.isEmpty(historique)}">
+                    <table class="table table-sm table-striped align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>Statut</th>
+                            <th>Indemnité</th>
+                            <th>Catégorie</th>
+                            <th>Zone</th>
+                            <th class="text-end">Montant</th>
+                            <th>Validité</th>
+                            <th>Proposé par</th>
+                            <th>Traité par</th>
+                            <th>Commentaire</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="h : ${historique}">
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${h.statut.name() == 'VALIDE'} ? 'bg-success' : (${h.statut.name() == 'PROPOSE'} ? 'bg-warning text-dark' : (${h.statut.name() == 'REJETE'} ? 'bg-danger' : 'bg-secondary'))"
+                                      th:text="${h.statut.libelle}"></span>
+                            </td>
+                            <td th:text="${h.typeIndemnite.libelle}"></td>
+                            <td th:text="${h.categorie.libelle}"></td>
+                            <td th:text="${h.zone.libelle}"></td>
+                            <td class="text-end" th:text="${#numbers.formatDecimal(h.montant, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${h.devise.acronyme}"></td>
+                            <td class="small">
+                                <span th:text="'du ' + ${#temporals.format(h.dateEffet, 'dd/MM/yyyy')}"></span>
+                                <span th:if="${h.dateFin != null}"
+                                      th:text="' au ' + ${#temporals.format(h.dateFin.minusDays(1), 'dd/MM/yyyy')}"></span>
+                            </td>
+                            <td class="small">
+                                <span th:text="${h.proposePar != null ? h.proposePar.prenom + ' ' + h.proposePar.nom : '—'}"></span>
+                                <span class="text-muted d-block" th:text="${#temporals.format(h.dateProposition, 'dd/MM/yyyy HH:mm')}"></span>
+                            </td>
+                            <td class="small">
+                                <span th:text="${h.traitePar != null ? h.traitePar.prenom + ' ' + h.traitePar.nom : '—'}"></span>
+                                <span class="text-muted d-block" th:if="${h.dateTraitement != null}"
+                                      th:text="${#temporals.format(h.dateTraitement, 'dd/MM/yyyy HH:mm')}"></span>
+                            </td>
+                            <td class="small text-muted">
+                                <div th:if="${h.motif != null}" th:text="'Motif : ' + ${h.motif}"></div>
+                                <div th:if="${h.commentaireTraitement != null}" th:text="${h.commentaireTraitement}"></div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div th:if="${#lists.isEmpty(historique)}" class="text-center py-4 text-muted">
+                    <i class="fas fa-table fa-2x mb-2"></i>
+                    <div>Aucun taux saisi pour l'instant.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Modal : proposer un taux (RH + MAKER) -->
+<div th:if="${peutProposer}" class="modal fade" id="proposerModal" tabindex="-1" aria-labelledby="proposerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form th:action="@{/perdiem/bareme/proposer}" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="proposerModalLabel">
+                        <i class="fas fa-plus-circle me-2"></i>Proposer un taux
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="p-type" class="form-label required-field">Indemnité</label>
+                            <select id="p-type" name="typeIndemnite" class="form-select" required>
+                                <option th:each="t : ${types}" th:value="${t.name()}"
+                                        th:text="${t.libelle} + ' (par ' + ${t.unite.singulier} + ')'"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="p-categorie" class="form-label required-field">Catégorie de personnel</label>
+                            <select id="p-categorie" name="idCategorie" class="form-select" required>
+                                <option value="">— Choisir —</option>
+                                <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.libelle}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="p-zone" class="form-label required-field">Zone</label>
+                            <select id="p-zone" name="idZone" class="form-select" required>
+                                <option value="">— Choisir —</option>
+                                <option th:each="z : ${zones}" th:value="${z.id}" th:text="${z.libelle}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="p-montant" class="form-label required-field">Montant unitaire</label>
+                            <input type="text" id="p-montant" name="montant" class="form-control" required
+                                   inputmode="decimal" placeholder="Ex. 45 000">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="p-devise" class="form-label required-field">Devise</label>
+                            <select id="p-devise" name="idDevise" class="form-select" required>
+                                <option th:each="d : ${devises}" th:value="${d.id}" th:text="${d.acronyme}"
+                                        th:selected="${d.acronyme == codeDeviseReference}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="p-date" class="form-label required-field">Date d'effet</label>
+                            <input type="date" id="p-date" name="dateEffet" class="form-control" required
+                                   th:value="${aujourdhui}">
+                        </div>
+                        <div class="col-12">
+                            <label for="p-motif" class="form-label">Motif / référence</label>
+                            <textarea id="p-motif" name="motif" class="form-control" rows="2"
+                                      placeholder="Ex. Note de service DRH n° … du …"></textarea>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3 mb-0 small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Le taux sera appliqué aux missions qui partent à partir de la date d'effet, après validation par le DRH.
+                        Le taux en vigueur de la même case s'arrête alors la veille.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="submit" class="btn btn-gradient-green">
+                        <i class="fas fa-paper-plane me-1"></i>Soumettre au DRH
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal : valider ou rejeter une proposition (RH + CHECKER) -->
+<div th:if="${peutValider}" class="modal fade" id="traiterModal" tabindex="-1" aria-labelledby="traiterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <!-- th:action ajoute le jeton CSRF ; l'adresse est complétée selon le bouton -->
+            <form id="traiterForm" method="post" th:action="@{/perdiem/bareme/0/valider}"
+                  th:attr="data-action-base=@{/perdiem/bareme/}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="traiterModalLabel">
+                        <i class="fas fa-check-double me-2"></i>Traiter la proposition
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="fw-semibold" id="traiter-libelle"></p>
+                    <label for="traiter-commentaire" class="form-label">Commentaire</label>
+                    <textarea id="traiter-commentaire" name="commentaire" class="form-control" rows="3"
+                              placeholder="Obligatoire en cas de rejet"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="submit" class="btn btn-outline-danger" data-decision="rejeter">
+                        <i class="fas fa-times me-1"></i>Rejeter
+                    </button>
+                    <button type="submit" class="btn btn-gradient-green" data-decision="valider">
+                        <i class="fas fa-check me-1"></i>Valider
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Proposition : pré-remplie depuis une case de la grille
+        const proposer = document.getElementById("proposerModal");
+        if (proposer) {
+            proposer.addEventListener("show.bs.modal", event => {
+                const b = event.relatedTarget;
+                if (!b || !b.dataset.categorie) return;
+                document.getElementById("p-categorie").value = b.dataset.categorie;
+                document.getElementById("p-zone").value = b.dataset.zone;
+                document.getElementById("p-type").value = b.dataset.type;
+                if (b.dataset.devise) document.getElementById("p-devise").value = b.dataset.devise;
+                document.getElementById("p-montant").value = "";
+            });
+        }
+
+        // Traitement : validation ou rejet (le rejet exige un commentaire)
+        const traiter = document.getElementById("traiterModal");
+        if (traiter) {
+            const form = document.getElementById("traiterForm");
+            const commentaire = document.getElementById("traiter-commentaire");
+            let idProposition = null;
+            traiter.addEventListener("show.bs.modal", event => {
+                const b = event.relatedTarget;
+                idProposition = b.dataset.id;
+                document.getElementById("traiter-libelle").textContent = b.dataset.libelle || "";
+                commentaire.value = "";
+            });
+            form.querySelectorAll("button[data-decision]").forEach(bouton => {
+                bouton.addEventListener("click", event => {
+                    const decision = bouton.dataset.decision;
+                    if (decision === "rejeter" && !commentaire.value.trim()) {
+                        event.preventDefault();
+                        commentaire.classList.add("is-invalid");
+                        commentaire.focus();
+                        return;
+                    }
+                    commentaire.classList.remove("is-invalid");
+                    form.action = form.dataset.actionBase + idProposition + "/" + decision;
+                });
+            });
+        }
+    });
+</script>
+</body>
+</html>

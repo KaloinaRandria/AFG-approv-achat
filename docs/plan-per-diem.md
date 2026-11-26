@@ -1,6 +1,7 @@
 # Plan : demande de Per Diem et ordre de mission
 
-> Statut : **proposition**, rédigée le 26/11/2026. Les points marqués **[à confirmer]** reprennent
+> Statut : **proposition**, rédigée le 26/11/2026. Lots 0 et 1 codés le 26/11/2026
+> (script `scriptSQL/PROD/08_per_diem_bareme.sql` : PREPROD oui le 26/11/2026, schéma validé ; PROD non). Les points marqués **[à confirmer]** reprennent
 > les questions ouvertes du §9 ; la valeur indiquée est la recommandation retenue par défaut.
 > Modèle de référence : ordre de mission n° 093/26 (mission à Tuléar, 25 au 27/10/2026).
 

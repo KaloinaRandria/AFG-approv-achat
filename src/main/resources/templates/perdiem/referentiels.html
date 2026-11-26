@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="fr"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Catégories et zones des missions</title>
+    <th:block th:insert="~{fragment/load_css :: load_css}"></th:block>
+    <th:block th:insert="~{fragment/font :: font}"></th:block>
+    <th:block th:insert="~{fragment/load_script :: load_script}"></th:block>
+    <meta name="context-path" th:content="@{/}" />
+</head>
+<body>
+
+<div th:replace="~{fragment/sidebar :: sidebar}"></div>
+
+<div class="main-content">
+    <div class="container-fluid py-4"></div>
+    <div th:replace="~{fragment/load_pop_up :: pop_up}"></div>
+
+    <section class="mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h1 class="fw-bold text-gradient-blue mb-0">
+                <i class="fas fa-layer-group me-3 icon-gradient-blue"></i> Catégories et zones des missions
+            </h1>
+            <a class="btn btn-gradient-blue" th:href="@{/perdiem/bareme}">
+                <i class="fas fa-table me-2"></i> Barème des per diem
+            </a>
+        </div>
+        <p class="text-muted">
+            Le barème donne un montant par <strong>catégorie de personnel</strong> (lignes de la grille) et par
+            <strong>zone</strong> de destination (colonnes). Un élément ne se supprime pas : désactivé, il n'est plus
+            proposé, mais le barème et les missions existantes le conservent.
+            <span th:unless="${peutGerer}">Seuls les RH (MAKER) modifient ces listes.</span>
+        </p>
+    </section>
+
+    <div class="row g-4 mb-5">
+        <!-- ===================== CATÉGORIES DE PERSONNEL ===================== -->
+        <div class="col-xl-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i> Catégories de personnel</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive" th:if="${!#lists.isEmpty(categories)}">
+                        <table class="table table-striped table-hover align-middle">
+                            <thead>
+                            <tr>
+                                <th style="width:10%">Ordre</th>
+                                <th>Libellé</th>
+                                <th>Code</th>
+                                <th class="text-center">Statut</th>
+                                <th th:if="${peutGerer}" class="text-center">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="c : ${categories}" th:classappend="${c.estActif()} ? '' : 'text-muted'">
+                                <td th:text="${c.ordre != null ? c.ordre : '—'}"></td>
+                                <td class="fw-semibold" th:text="${c.libelle}"></td>
+                                <td><code th:text="${c.code}"></code></td>
+                                <td class="text-center">
+                                    <span th:if="${c.estActif()}" class="badge bg-success">Active</span>
+                                    <span th:unless="${c.estActif()}" class="badge bg-secondary">Inactive</span>
+                                </td>
+                                <td th:if="${peutGerer}" class="text-center text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" title="Modifier"
+                                            data-bs-toggle="modal" data-bs-target="#modifierModal"
+                                            data-type="categorie" th:data-id="${c.id}"
+                                            th:data-libelle="${c.libelle}" th:data-ordre="${c.ordre}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <form th:action="@{/perdiem/categorie/{id}/activation(id=${c.id})}" method="post" class="d-inline">
+                                        <input type="hidden" name="actif" th:value="${!c.estActif()}">
+                                        <button type="submit"
+                                                th:class="${c.estActif()} ? 'btn btn-sm btn-outline-secondary' : 'btn btn-sm btn-outline-success'"
+                                                th:title="${c.estActif()} ? 'Désactiver' : 'Réactiver'"
+                                                th:data-confirm="${c.estActif()} ? 'Désactiver « ' + ${c.libelle} + ' » ?' : null"
+                                                data-confirm-texte="Elle ne sera plus proposée ; le barème et les missions existantes la conservent."
+                                                data-confirm-bouton="Désactiver" data-confirm-type="warning">
+                                            <i th:class="${c.estActif()} ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p th:if="${#lists.isEmpty(categories)}" class="text-muted text-center py-3">
+                        Aucune catégorie : par exemple Directeur, Cadre, Agent.
+                    </p>
+
+                    <form th:if="${peutGerer}" th:action="@{/perdiem/categorie/ajouter}" method="post"
+                          class="row g-2 align-items-end border-top pt-3">
+                        <div class="col-md-7">
+                            <label for="cat-libelle" class="form-label required-field">Nouvelle catégorie</label>
+                            <input type="text" id="cat-libelle" name="libelle" class="form-control" maxlength="255"
+                                   required placeholder="Ex. Cadre">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="cat-ordre" class="form-label">Ordre</label>
+                            <input type="number" id="cat-ordre" name="ordre" class="form-control" min="0" step="1">
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-gradient-green w-100">
+                                <i class="fas fa-plus-circle me-1"></i> Ajouter
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== ZONES ===================== -->
+        <div class="col-xl-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i> Zones de mission</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive" th:if="${!#lists.isEmpty(zones)}">
+                        <table class="table table-striped table-hover align-middle">
+                            <thead>
+                            <tr>
+                                <th style="width:10%">Ordre</th>
+                                <th>Libellé</th>
+                                <th>Code</th>
+                                <th class="text-center">Étranger</th>
+                                <th class="text-center">Statut</th>
+                                <th th:if="${peutGerer}" class="text-center">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="z : ${zones}" th:classappend="${z.estActif()} ? '' : 'text-muted'">
+                                <td th:text="${z.ordre != null ? z.ordre : '—'}"></td>
+                                <td class="fw-semibold" th:text="${z.libelle}"></td>
+                                <td><code th:text="${z.code}"></code></td>
+                                <td class="text-center">
+                                    <i th:if="${z.estEtranger()}" class="fas fa-globe-africa text-primary" title="Étranger"></i>
+                                    <span th:unless="${z.estEtranger()}" class="text-muted">—</span>
+                                </td>
+                                <td class="text-center">
+                                    <span th:if="${z.estActif()}" class="badge bg-success">Active</span>
+                                    <span th:unless="${z.estActif()}" class="badge bg-secondary">Inactive</span>
+                                </td>
+                                <td th:if="${peutGerer}" class="text-center text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" title="Modifier"
+                                            data-bs-toggle="modal" data-bs-target="#modifierModal"
+                                            data-type="zone" th:data-id="${z.id}"
+                                            th:data-libelle="${z.libelle}" th:data-ordre="${z.ordre}"
+                                            th:data-etranger="${z.estEtranger()}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <form th:action="@{/perdiem/zone/{id}/activation(id=${z.id})}" method="post" class="d-inline">
+                                        <input type="hidden" name="actif" th:value="${!z.estActif()}">
+                                        <button type="submit"
+                                                th:class="${z.estActif()} ? 'btn btn-sm btn-outline-secondary' : 'btn btn-sm btn-outline-success'"
+                                                th:title="${z.estActif()} ? 'Désactiver' : 'Réactiver'"
+                                                th:data-confirm="${z.estActif()} ? 'Désactiver « ' + ${z.libelle} + ' » ?' : null"
+                                                data-confirm-texte="Elle ne sera plus proposée ; le barème et les missions existantes la conservent."
+                                                data-confirm-bouton="Désactiver" data-confirm-type="warning">
+                                            <i th:class="${z.estActif()} ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p th:if="${#lists.isEmpty(zones)}" class="text-muted text-center py-3">
+                        Aucune zone : par exemple Antananarivo, Chef-lieu de province, Autre localité, Étranger.
+                    </p>
+
+                    <form th:if="${peutGerer}" th:action="@{/perdiem/zone/ajouter}" method="post"
+                          class="row g-2 align-items-end border-top pt-3">
+                        <div class="col-md-5">
+                            <label for="zone-libelle" class="form-label required-field">Nouvelle zone</label>
+                            <input type="text" id="zone-libelle" name="libelle" class="form-control" maxlength="255"
+                                   required placeholder="Ex. Chef-lieu de province">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="zone-ordre" class="form-label">Ordre</label>
+                            <input type="number" id="zone-ordre" name="ordre" class="form-control" min="0" step="1">
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="zone-etranger" name="etranger" value="true">
+                                <label class="form-check-label" for="zone-etranger">Étranger</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-gradient-green w-100">
+                                <i class="fas fa-plus-circle me-1"></i> Ajouter
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de modification (catégorie ou zone) -->
+<div th:if="${peutGerer}" class="modal fade" id="modifierModal" tabindex="-1" aria-labelledby="modifierModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <!-- th:action ajoute le jeton CSRF ; l'adresse est complétée à l'ouverture du modal -->
+            <form id="modifierForm" method="post" th:action="@{/perdiem/categorie/0/modifier}"
+                  th:attr="data-action-base=@{/perdiem/}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modifierModalLabel"><i class="fas fa-edit me-2"></i>Modifier</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="m-libelle" class="form-label required-field">Libellé</label>
+                        <input type="text" id="m-libelle" name="libelle" class="form-control" maxlength="255" required>
+                        <div class="form-text">Le code ne change pas.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="m-ordre" class="form-label">Ordre d'affichage</label>
+                        <input type="number" id="m-ordre" name="ordre" class="form-control" min="0" step="1">
+                    </div>
+                    <div class="form-check" id="m-bloc-etranger">
+                        <input class="form-check-input" type="checkbox" id="m-etranger" name="etranger" value="true">
+                        <label class="form-check-label" for="m-etranger">Zone à l'étranger</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-gradient-blue"><i class="fas fa-save me-1"></i>Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Confirmation avant désactivation : bouton data-confirm (modèle commun, load_script)
+        const modal = document.getElementById("modifierModal");
+        if (!modal) return;
+        const form = document.getElementById("modifierForm");
+        modal.addEventListener("show.bs.modal", event => {
+            const b = event.relatedTarget;
+            const estZone = b.dataset.type === "zone";
+            form.action = form.dataset.actionBase + b.dataset.type + "/" + b.dataset.id + "/modifier";
+            document.getElementById("modifierModalLabel").lastChild.textContent =
+                estZone ? "Modifier la zone" : "Modifier la catégorie";
+            document.getElementById("m-libelle").value = b.dataset.libelle || "";
+            document.getElementById("m-ordre").value = b.dataset.ordre || "";
+            document.getElementById("m-bloc-etranger").classList.toggle("d-none", !estZone);
+            document.getElementById("m-etranger").checked = b.dataset.etranger === "true";
+        });
+    });
+</script>
+</body>
+</html>

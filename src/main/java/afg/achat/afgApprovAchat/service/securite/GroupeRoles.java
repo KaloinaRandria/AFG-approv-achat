@@ -22,7 +22,7 @@ public record GroupeRoles(String libelle, String aide, String icone, List<Role> 
             new Type("Accès", "Connexion à l'application, saisie de ses propres demandes.",
                     "fa-user", Set.of("USER")),
             new Type("Service", "Domaine métier de la personne.",
-                    "fa-building", Set.of("MOYENS_GENERAUX", "IT", "FINANCE", "FINANCE_CONSULT")),
+                    "fa-building", Set.of("MOYENS_GENERAUX", "IT", "FINANCE", "FINANCE_CONSULT", Habilitations.RH)),
             new Type("Circuit de validation", "Étape tenue dans le circuit des demandes d'achat.",
                     "fa-route", Set.of("CONTROLEUR", "DFC", "SG")),
             new Type("Maker / checker", "Saisit (MAKER) ou valide (CHECKER) dans son service.",

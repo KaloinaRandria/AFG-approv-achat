@@ -31,6 +31,11 @@ public final class Habilitations {
     public static final String MG = "MOYENS_GENERAUX";
     /** Domaine Informatique (rôle métier) : gestion des utilisateurs. */
     public static final String IT = "IT";
+    /**
+     * Domaine Ressources humaines (rôle métier) : missions et per diem.
+     * RH seul consulte ; RH + MAKER saisit (barème, montant des missions) ; RH + CHECKER (DRH) valide.
+     */
+    public static final String RH = "RH";
 
     public static final String ADMIN = "ADMIN";
 
